@@ -22,6 +22,38 @@
 
 {% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
 
+{% set items = cfg.get('items') or [] %}
+<div class="card mb-3 border-primary-subtle">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-lg-5">
+        <strong><i class="bi bi-upload"></i> Importar dados da filial nova</strong>
+        <div class="small text-muted">Uma planilha com as abas <b>Imóvel</b>, <b>Estruturas</b>, <b>Bins</b> e <b>SKUs</b> (dimensões, peso, saldo, min e max level), todas opcionais. Um CSV é lido como a lista de SKUs.</div>
+      </div>
+      <div class="col-lg-7">
+        <form method="post" action="/optimization/site/{{ project.id }}/upload" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-lg-end">
+          <a class="btn btn-sm btn-outline-secondary" href="/optimization/site/{{ project.id }}/template.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Baixar modelo (com os dados atuais)</a>
+          <input class="form-control form-control-sm" style="max-width:260px" type="file" name="file" accept=".xlsx,.xlsm,.csv,.txt" required>
+          <button class="btn btn-sm btn-primary"><i class="bi bi-upload"></i> Importar</button>
+        </form>
+      </div>
+    </div>
+    {% if items %}
+    <div class="small mt-2 d-flex align-items-center gap-2 flex-wrap">
+      <span class="badge text-bg-primary">{{ items|length }} SKU(s) do arquivo no projeto</span>
+      <a data-bs-toggle="collapse" href="#itemsPrev">ver amostra</a>
+      <form method="post" action="/optimization/site/{{ project.id }}/clear-items" class="d-inline" onsubmit="return confirm('Remover os SKUs importados deste projeto?');"><button class="btn btn-link btn-sm text-danger p-0">remover</button></form>
+    </div>
+    <div class="collapse" id="itemsPrev"><div class="table-responsive mt-2" style="max-height:260px"><table class="table table-sm small mb-0" data-no-resize>
+      <thead class="sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">A × L × C (cm)</th><th class="text-end">Peso</th><th class="text-end">Saldo</th><th class="text-end">Min</th><th class="text-end">Max</th></tr></thead>
+      <tbody>{% for it in items[:100] %}<tr><td class="mono">{{ it.sku }}</td><td>{{ it.name }}</td><td>{{ it.material }}</td>
+        <td class="text-end">{{ it.h|dec }} × {{ it.w|dec }} × {{ it.l|dec }}</td><td class="text-end">{{ it.wt|dec }}</td><td class="text-end">{{ it.stock|dec }}</td><td class="text-end">{{ it.min|dec }}</td><td class="text-end">{{ it.max|dec }}</td></tr>{% endfor %}
+      {% if items|length > 100 %}<tr><td colspan="8" class="text-muted text-center">… e mais {{ items|length - 100 }}</td></tr>{% endif %}</tbody>
+    </table></div></div>
+    {% endif %}
+  </div>
+</div>
+
 <form method="post" id="siteForm" autocomplete="off">
 <div class="row g-3">
   {# ------------------------- Imóvel ------------------------- #}
@@ -94,6 +126,12 @@
     <div class="card h-100">
       <div class="card-header bg-white"><strong>3. Demanda (o que será guardado)</strong></div>
       <div class="card-body">
+        <label class="form-label small mb-0">Fonte dos SKUs e quantidades</label>
+        <select class="form-select form-select-sm mb-2" name="d_source" id="d_source">
+          <option value="catalog" {% if d.source != 'upload' %}selected{% endif %}>Cadastro de produtos / filial de referência</option>
+          <option value="upload" {% if d.source == 'upload' %}selected{% endif %}>Arquivo importado ({{ items|length }} SKUs)</option>
+        </select>
+        <div id="refBox">
         <label class="form-label small mb-0">Filial de referência</label>
         <select class="form-select form-select-sm mb-2" name="d_branch_id">
           <option value="">Todas as filiais</option>
@@ -105,6 +143,7 @@
           <option value="none" {% if d.warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
           {% for w in warehouses %}<option value="{{ w.id }}" {% if d.warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
         </select>
+        </div>
         <div class="row g-2">
           <div class="col-6"><label class="form-label small mb-0">SKU ou produto</label>
             <input class="form-control form-control-sm" name="d_sku" value="{{ d.sku }}"></div>
@@ -119,7 +158,7 @@
           <div class="col-6"><label class="form-label small mb-0">Margem de crescimento (%)</label>
             <input class="form-control form-control-sm text-end" name="d_growth" inputmode="decimal" value="{{ d.growth }}"></div>
         </div>
-        <div class="form-text">Os SKUs vêm do cadastro de produtos (com dimensões). Min/max level sem valor usa o saldo atual.</div>
+        <div class="form-text">Com o arquivo, valem os saldos e min/max levels da filial nova informados na planilha; dimensões vazias vêm do cadastro de produtos. Min/max level sem valor usa o saldo. Filtros de SKU e material valem para as duas fontes.</div>
       </div>
     </div>
   </div>
@@ -338,6 +377,8 @@
     };
     sel.addEventListener('change', upd); upd();
   });
+  const src = document.getElementById('d_source'), ref = document.getElementById('refBox');
+  if (src) { const u = () => ref.classList.toggle('d-none', src.value === 'upload'); src.addEventListener('change', u); u(); }
   const f = document.getElementById('posFilter');
   if (f) f.addEventListener('input', () => {
     const q = f.value.trim().toLowerCase();

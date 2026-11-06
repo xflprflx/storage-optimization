@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -77,7 +77,9 @@ def save_project(pid: int, form: FormData = Depends(form_data), db: Session = De
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
     pr.name = (form.get("name") or "").strip()[:150] or pr.name
-    pr.config = config_from_form(form)
+    cfg = config_from_form(form)
+    cfg["items"] = list((pr.config or {}).get("items") or [])  # SKUs do arquivo não vêm no formulário
+    pr.config = cfg
     db.commit()
     if form.get("action") == "run":
         return redirect(f"/optimization/site/{pid}?run=1#resultado")
@@ -140,3 +142,58 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
     return redirect(f"/layout?branch_id={br.id}",
                     f"Filial {br.code} criada: {stats['levels']} níveis, {stats['locations']} endereços e "
                     f"{stats['bins']} bins.")
+
+
+# --------------------------------------------------------------------------- #
+# Importação dos dados da filial nova (planilha modelo)
+# --------------------------------------------------------------------------- #
+@router.get("/{pid}/template.xlsx")
+def download_template(pid: int, db: Session = Depends(get_db)):
+    from services.site_import import template_xlsx
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    data = template_xlsx(db, merged(copy.deepcopy(pr.config)))
+    return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f'attachment; filename="modelo_filial_nova_{pid}.xlsx"'})
+
+
+@router.post("/{pid}/upload")
+async def upload_data(pid: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    from services.file_reader import UPLOAD_DIR, remove_upload, save_upload
+    from services.site_import import import_file
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    try:
+        token = await save_upload(file)
+    except ValueError as exc:
+        return redirect(f"/optimization/site/{pid}", str(exc), "danger")
+    try:
+        cfg, msgs, errs = import_file(db, UPLOAD_DIR / token, merged(copy.deepcopy(pr.config)))
+    except Exception as exc:  # arquivo corrompido / formato inesperado
+        db.rollback()
+        return redirect(f"/optimization/site/{pid}", f"Não foi possível ler o arquivo: {exc}", "danger")
+    finally:
+        remove_upload(token)
+    pr.config = cfg
+    db.commit()
+    text = " ".join(msgs)
+    if errs:
+        text += " Avisos: " + " ".join(errs[:12]) + (" …" if len(errs) > 12 else "")
+    return redirect(f"/optimization/site/{pid}", text or "Nada importado.", "warning" if errs else "success")
+
+
+@router.post("/{pid}/clear-items")
+def clear_items(pid: int, db: Session = Depends(get_db)):
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    cfg = merged(copy.deepcopy(pr.config))
+    cfg["items"] = []
+    cfg["demand"]["source"] = "catalog"
+    pr.config = cfg
+    db.commit()
+    return redirect(f"/optimization/site/{pid}", "SKUs do arquivo removidos; a demanda volta a vir do cadastro.")

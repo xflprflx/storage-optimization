@@ -51,7 +51,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
 DEFAULT_CONFIG = {
     "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto"},
     "structures": {},
-    "demand": {"branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
+    "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
                "factor": "100"},
     "params": {"objective": "modules", "bin_objective": "min_volume", "fill_limit": "85", "rotation": "upright",
                "single_type": "1", "weight": "1", "level_fill": "100", "top_gap_cm": "5", "side_gap_cm": "0",
@@ -87,6 +87,7 @@ def merged(config: Optional[dict]) -> dict:
             out[sec] = {**dflt, **(cfg.get(sec) or {})}
         else:
             out[sec] = dict(cfg.get(sec) or {})
+    out["items"] = list(cfg.get("items") or [])  # SKUs enviados por arquivo (fonte "upload")
     return out
 
 
@@ -109,6 +110,7 @@ def config_from_form(form: Mapping) -> dict:
     for k in ("branch_id", "warehouse_id", "sku", "material", "growth", "factor"):
         cfg["demand"][k] = str(form.get(f"d_{k}") or "").strip()
     cfg["demand"]["basis"] = form.get("d_basis") if form.get("d_basis") in BASES else "stock"
+    cfg["demand"]["source"] = "upload" if form.get("d_source") == "upload" else "catalog"
     p = cfg["params"]
     p["objective"] = form.get("p_objective") if form.get("p_objective") in SITE_OBJECTIVES else "modules"
     p["bin_objective"] = form.get("p_bin_objective") if form.get("p_bin_objective") in OBJECTIVES else "min_volume"
@@ -186,6 +188,59 @@ def parents_of(db: Session, types: dict[int, BinSpec]) -> dict:
     return out
 
 
+def _factor(dc: dict) -> float:
+    try:
+        return float(parse_decimal(str(dc.get("factor") or "100")) or 100) / 100
+    except ValueError:
+        return 1.0
+
+
+def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list[Demand], list[str]]:
+    """Demanda a partir dos SKUs enviados no arquivo do projeto (dados da filial NOVA).
+    Dimensões/peso/nome vazios vêm do cadastro de produtos quando o SKU existe nele."""
+    notes: list[str] = []
+    basis = dc.get("basis") if dc.get("basis") in BASES else "stock"
+    factor = _factor(dc)
+    term = (dc.get("sku") or "").strip().casefold()
+    mat = (dc.get("material") or "").strip()
+    skus = [it["sku"] for it in items]
+    cat = {}
+    for i in range(0, len(skus), 900):
+        for p in db.scalars(select(Product).where(Product.sku.in_(skus[i:i + 900]))):
+            cat[p.sku] = p
+    f = lambda v: float(v) if v is not None else None  # noqa: E731
+    out, no_level, from_cat = [], 0, 0
+    for it in items:
+        p = cat.get(it["sku"])
+        name = it.get("name") or (p.name if p else "")
+        material = it.get("material") or (p.material_type if p else "") or ""
+        if term and term not in it["sku"].casefold() and term not in name.casefold():
+            continue
+        if mat and ((mat == "__none__" and material) or (mat != "__none__" and material != mat)):
+            continue
+        q = it.get("stock") or 0.0
+        if basis != "stock":
+            lvl = it.get(basis)
+            if lvl:
+                q = max(lvl, q)
+            elif q > 0:
+                no_level += 1
+        if q <= 0:
+            continue
+        dims = [it.get(k) for k in ("h", "w", "l", "wt")]
+        if p is not None and any(v is None for v in dims):
+            filled = [v if v is not None else f(pv) for v, pv in zip(dims, (p.height, p.width, p.length, p.weight))]
+            if filled != dims:
+                from_cat += 1
+            dims = filled
+        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims)))
+    if no_level:
+        notes.append(f"{no_level} SKU(s) do arquivo sem {'min' if basis == 'min' else 'max'} level: usou o saldo.")
+    if from_cat:
+        notes.append(f"{from_cat} SKU(s) do arquivo tiveram dimensões/peso completados pelo cadastro de produtos.")
+    return out, notes
+
+
 def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
     """SKUs e quantidades a guardar na filial nova, a partir dos produtos cadastrados.
     Base: saldo atual (da filial/armazém de referência, ou de todas) ou o nível mínimo/máximo do produto
@@ -211,10 +266,7 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
         like = f"%{term}%"
         stmt = stmt.where(Product.sku.ilike(like) | Product.name.ilike(like))
     basis = dc.get("basis") if dc.get("basis") in BASES else "stock"
-    try:
-        factor = float(parse_decimal(str(dc.get("factor") or "100")) or 100) / 100
-    except ValueError:
-        factor = 1.0
+    factor = _factor(dc)
     scoped = str(bid).isdigit()
     out, no_level = [], 0
     for p in db.scalars(stmt.order_by(Product.sku)):
@@ -244,7 +296,12 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
         return None, errors
     types = load_types(db)
     structs = structure_specs(db, modes)
-    demands, notes = load_demand(db, cfg["demand"])
+    if cfg["demand"].get("source") == "upload":
+        if not cfg.get("items"):
+            return None, ["Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs)."]
+        demands, notes = load_uploaded_demand(db, cfg["items"], cfg["demand"])
+    else:
+        demands, notes = load_demand(db, cfg["demand"])
     plan = plan_site(b, structs, types, demands, prm, parents_of(db, types))
     plan.notes = notes + plan.notes
     return plan, []

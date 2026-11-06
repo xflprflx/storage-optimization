@@ -88,6 +88,7 @@ def merged(config: Optional[dict]) -> dict:
         else:
             out[sec] = dict(cfg.get(sec) or {})
     out["items"] = list(cfg.get("items") or [])  # SKUs enviados por arquivo (fonte "upload")
+    out["import_mapping"] = dict(cfg.get("import_mapping") or {})  # colunas da última importação
     return out
 
 

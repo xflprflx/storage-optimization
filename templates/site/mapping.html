@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Mapear colunas — {{ project.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-diagram-3"></i> Mapear colunas da planilha</h1>
+  <a href="/optimization/site/{{ project.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+</div>
+<div class="small text-muted mb-3">
+  Arquivo <b>{{ filename }}</b> · projeto <b>{{ project.name }}</b>. Para cada tipo de dado, escolha a aba e a coluna de cada campo.
+  As sugestões vêm dos nomes das colunas e da última importação deste projeto. Use <i>— não importar —</i> para pular um tipo
+  e <i>— não usar —</i> para ignorar um campo. Campos com * são obrigatórios. A primeira linha de cada aba é o cabeçalho.
+</div>
+
+<form method="post" action="/optimization/site/{{ project.id }}/upload/confirm" id="mapForm">
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="row g-3">
+  {% for kind, label in KIND_LABELS.items() %}
+    <div class="col-xl-6">
+      <div class="card h-100" data-kind="{{ kind }}">
+        <div class="card-header bg-white d-flex align-items-center gap-2 flex-wrap">
+          <strong class="me-auto">{{ label }}</strong>
+          <label class="small text-muted mb-0">Aba</label>
+          <select class="form-select form-select-sm sheet-sel" name="sheet_{{ kind }}" style="max-width:240px">
+            <option value="">— não importar —</option>
+            {% for name in sheets %}<option value="{{ name }}" {% if mapping.get(kind, {}).get('sheet') == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="card-body py-2">
+          <div class="text-muted small skip-msg">Não será importado.</div>
+          <div class="fields">
+            {% if kind == 'building' %}<div class="small text-muted mb-2">Formato Campo | Valor: uma linha por parâmetro (ex.: “Comprimento (m)” | 40). Os nomes reconhecidos são os mesmos do formulário do projeto.</div>{% endif %}
+            <div class="row g-2">
+            {% for field, flabel in FIELD_LABELS[kind].items() %}
+              <div class="col-md-6 d-flex align-items-center gap-2">
+                <label class="small mb-0 text-nowrap" style="width:150px">{{ flabel }}{% if field in REQUIRED[kind] %} *{% endif %}</label>
+                <select class="form-select form-select-sm col-sel" name="col_{{ kind }}_{{ field }}" data-field="{{ field }}" {% if field in REQUIRED[kind] %}data-required{% endif %}></select>
+              </div>
+            {% endfor %}
+            </div>
+            {% if kind == 'skus' %}<div class="small text-muted mt-2">Informe ao menos uma quantidade (Saldo, Min level ou Max level). Dimensões vazias são completadas pelo cadastro de produtos.</div>{% endif %}
+            <div class="table-responsive mt-2"><table class="table table-sm table-bordered small mb-0 preview" data-no-resize></table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+  </div>
+  <div class="alert alert-danger py-2 mt-3 d-none" id="mapErr"></div>
+  <div class="d-flex gap-2 mt-3">
+    <button class="btn btn-accent" name="action" value="import"><i class="bi bi-check-lg"></i> Importar</button>
+    <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate><i class="bi bi-x-lg"></i> Cancelar</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const SHEETS = {{ sheets|tojson }}, GUESS = {{ guesses|tojson }}, MAP = {{ mapping|tojson }};
+  const letter = i => { let s = ''; i += 1; while (i) { const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; };
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+
+  function render(card, initial) {
+    const kind = card.dataset.kind, sheet = card.querySelector('.sheet-sel').value;
+    card.querySelector('.skip-msg').classList.toggle('d-none', !!sheet);
+    card.querySelector('.fields').classList.toggle('d-none', !sheet);
+    if (!sheet) return;
+    const sh = SHEETS[sheet], cols = (initial && MAP[kind] && MAP[kind].sheet === sheet) ? MAP[kind].cols : GUESS[kind][sheet];
+    card.querySelectorAll('.col-sel').forEach(sel => {
+      const f = sel.dataset.field, cur = cols[f];
+      let html = '<option value="">— não usar —</option>';
+      sh.headers.forEach((h, i) => {
+        const ex = sh.rows.map(r => r[i]).find(v => v !== '' && v != null);
+        html += `<option value="${i}" ${cur === i ? 'selected' : ''}>${letter(i)} · ${esc(h || '(sem título)')}${ex !== undefined ? ' — ex.: ' + esc(String(ex).slice(0, 24)) : ''}</option>`;
+      });
+      sel.innerHTML = html;
+    });
+    preview(card);
+  }
+  function preview(card) {
+    const sheet = card.querySelector('.sheet-sel').value; if (!sheet) return;
+    const sh = SHEETS[sheet], used = {};
+    card.querySelectorAll('.col-sel').forEach(s => { if (s.value !== '') used[s.value] = s.selectedOptions[0] && s.closest('div').querySelector('label').textContent.replace(' *', ''); });
+    let h = '<thead><tr>' + sh.headers.map((c, i) => `<th class="${used[i] ? 'table-success' : 'text-muted'}" title="${esc(used[i] || 'não usada')}">${letter(i)} ${esc(c)}${used[i] ? '<div class="fw-normal text-success">→ ' + esc(used[i]) + '</div>' : ''}</th>`).join('') + '</tr></thead><tbody>';
+    sh.rows.forEach(r => { h += '<tr>' + sh.headers.map((_, i) => `<td class="${used[i] ? '' : 'text-muted'}">${esc(r[i])}</td>`).join('') + '</tr>'; });
+    card.querySelector('.preview').innerHTML = h + '</tbody>';
+  }
+  document.querySelectorAll('[data-kind]').forEach(card => {
+    card.querySelector('.sheet-sel').addEventListener('change', () => render(card, false));
+    card.addEventListener('change', e => { if (e.target.classList.contains('col-sel')) preview(card); document.getElementById('mapErr').classList.add('d-none'); });
+    render(card, true);
+  });
+  document.getElementById('mapForm').addEventListener('submit', e => {
+    if (e.submitter && e.submitter.value === 'cancel') return;
+    const errs = [];
+    document.querySelectorAll('[data-kind]').forEach(card => {
+      if (!card.querySelector('.sheet-sel').value) return;
+      const title = card.querySelector('strong').textContent, seen = {};
+      card.querySelectorAll('.col-sel').forEach(s => {
+        const lbl = s.closest('div').querySelector('label').textContent.replace(' *', '');
+        if (s.hasAttribute('data-required') && s.value === '') errs.push(`${title}: escolha a coluna de ${lbl}.`);
+        if (s.value !== '') { if (seen[s.value]) errs.push(`${title}: a coluna ${letter(+s.value)} está em ${seen[s.value]} e ${lbl}.`); seen[s.value] = lbl; }
+      });
+      if (card.dataset.kind === 'skus' && ['stock', 'min', 'max'].every(f => card.querySelector(`[data-field="${f}"]`).value === ''))
+        errs.push('SKUs: escolha ao menos uma coluna de quantidade (Saldo, Min level ou Max level).');
+    });
+    if (![...document.querySelectorAll('.sheet-sel')].some(s => s.value)) errs.push('Escolha ao menos uma aba para importar.');
+    const box = document.getElementById('mapErr');
+    if (errs.length) { e.preventDefault(); box.innerHTML = errs.map(esc).join('<br>'); box.classList.remove('d-none'); box.scrollIntoView({block: 'center'}); }
+  });
+})();
+</script>
+{% endblock %}

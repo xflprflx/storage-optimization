@@ -79,6 +79,7 @@ def save_project(pid: int, form: FormData = Depends(form_data), db: Session = De
     pr.name = (form.get("name") or "").strip()[:150] or pr.name
     cfg = config_from_form(form)
     cfg["items"] = list((pr.config or {}).get("items") or [])  # SKUs do arquivo não vêm no formulário
+    cfg["import_mapping"] = dict((pr.config or {}).get("import_mapping") or {})
     pr.config = cfg
     db.commit()
     if form.get("action") == "run":
@@ -160,9 +161,10 @@ def download_template(pid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{pid}/upload")
-async def upload_data(pid: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_data(pid: int, request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """1ª etapa: guarda o arquivo e mostra o mapeamento de abas e colunas (pré-preenchido)."""
     from services.file_reader import UPLOAD_DIR, remove_upload, save_upload
-    from services.site_import import import_file
+    from services.site_import import FIELD_LABELS, KIND_LABELS, REQUIRED, auto_mapping, guess_columns, read_sheets
 
     pr = _get(db, pid)
     if not pr:
@@ -172,18 +174,63 @@ async def upload_data(pid: int, file: UploadFile = File(...), db: Session = Depe
     except ValueError as exc:
         return redirect(f"/optimization/site/{pid}", str(exc), "danger")
     try:
-        cfg, msgs, errs = import_file(db, UPLOAD_DIR / token, merged(copy.deepcopy(pr.config)))
+        preview = read_sheets(UPLOAD_DIR / token, limit=6)
     except Exception as exc:  # arquivo corrompido / formato inesperado
-        db.rollback()
-        return redirect(f"/optimization/site/{pid}", f"Não foi possível ler o arquivo: {exc}", "danger")
-    finally:
         remove_upload(token)
+        return redirect(f"/optimization/site/{pid}", f"Não foi possível ler o arquivo: {exc}", "danger")
+    if not preview or not any(preview.values()):
+        remove_upload(token)
+        return redirect(f"/optimization/site/{pid}", "O arquivo não tem linhas.", "danger")
+    remembered = ((pr.config or {}).get("import_mapping") or {})
+    sheets = {name: {"headers": rows[0] if rows else [], "rows": rows[1:6]} for name, rows in preview.items()}
+    # mapeamento automático de cada tipo para CADA aba (a tela reaplica ao trocar a aba)
+    guesses = {kind: {name: guess_columns(kind, sh["headers"], remembered.get(kind)) for name, sh in sheets.items()}
+               for kind in KIND_LABELS}
+    return render(request, "site/mapping.html", project=pr, token=token, filename=file.filename or "",
+                  sheets=sheets, mapping=auto_mapping(preview, remembered), guesses=guesses,
+                  KIND_LABELS=KIND_LABELS, FIELD_LABELS=FIELD_LABELS, REQUIRED=REQUIRED)
+
+
+@router.post("/{pid}/upload/confirm")
+def confirm_upload(pid: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """2ª etapa: importa com as abas/colunas escolhidas."""
+    from services.file_reader import remove_upload, token_path
+    from services.site_import import FIELD_LABELS, KIND_LABELS, import_file
+
+    pr = _get(db, pid)
+    token = str(form.get("token") or "")
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    try:
+        path = token_path(token)
+    except ValueError as exc:
+        return redirect(f"/optimization/site/{pid}", str(exc), "danger")
+    if form.get("action") == "cancel":
+        remove_upload(token)
+        return redirect(f"/optimization/site/{pid}", "Importação cancelada.", "secondary")
+    mapping = {}
+    for kind in KIND_LABELS:
+        sheet = form.get(f"sheet_{kind}") or ""
+        if not sheet:
+            continue
+        cols = {}
+        for field in FIELD_LABELS[kind]:
+            raw = str(form.get(f"col_{kind}_{field}") or "")
+            cols[field] = int(raw) if raw.isdigit() else None
+        mapping[kind] = {"sheet": sheet, "cols": cols}
+    try:
+        cfg, msgs, errs = import_file(db, path, merged(copy.deepcopy(pr.config)), mapping)
+    except Exception as exc:
+        db.rollback()
+        remove_upload(token)
+        return redirect(f"/optimization/site/{pid}", f"Não foi possível importar: {exc}", "danger")
+    remove_upload(token)
     pr.config = cfg
     db.commit()
     text = " ".join(msgs)
     if errs:
-        text += " Avisos: " + " ".join(errs[:12]) + (" …" if len(errs) > 12 else "")
-    return redirect(f"/optimization/site/{pid}", text or "Nada importado.", "warning" if errs else "success")
+        text = (text + " Avisos: " if text else "Nada importado. ") + " ".join(errs[:12]) + (" …" if len(errs) > 12 else "")
+    return redirect(f"/optimization/site/{pid}", text or "Nada importado.", ("warning" if msgs else "danger") if errs else "success")
 
 
 @router.post("/{pid}/clear-items")

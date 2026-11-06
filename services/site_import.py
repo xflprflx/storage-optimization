@@ -118,37 +118,132 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
     return float(v) if v is not None else None
 
 
-def _sheets(path: Path) -> dict[str, list[list[str]]]:
-    """Abas reconhecidas -> linhas (cabeçalho incluso). CSV ou aba sem nome reconhecido = SKUs."""
+BUILDING_COLS = {"field": ["campo", "parametro", "item", "descricao"], "value": ["valor", "value", "medida"]}
+SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS}
+KIND_LABELS = {"building": "Imóvel", "structures": "Estruturas", "bins": "Bins", "skus": "SKUs"}
+FIELD_LABELS = {
+    "building": {"field": "Campo (nome do parâmetro)", "value": "Valor"},
+    "structures": {"code": "Código", "name": "Nome", "kind": "Tipo", "width": "Frente (cm)", "depth": "Profundidade (cm)",
+                   "height": "Altura total (cm)", "levels": "Nº de níveis", "level_height": "Vão útil (cm)",
+                   "max_load": "Carga por nível (kg)", "cost": "Custo por módulo (R$)", "mode": "Modo",
+                   "qty": "Qtd fixa", "min_qty": "Mínimo", "max_qty": "Máximo"},
+    "bins": {"code": "Código", "name": "Nome", "height": "Altura (cm)", "width": "Largura (cm)",
+             "length": "Comprimento (cm)", "max_weight": "Peso máx. (kg)", "max_volume": "Volume (L)"},
+    "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
+             "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
+             "max": "Max level"},
+}
+REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"]}
+
+
+def read_sheets(path: Path, limit: Optional[int] = None) -> dict[str, list[list[str]]]:
+    """Todas as abas (nome -> linhas não vazias, cabeçalho incluso). CSV = uma aba "CSV".
+    `limit` = máximo de linhas lidas por aba (prévia)."""
+    from itertools import islice
+
     if path.suffix.lower() in {".csv", ".txt"}:
-        rows = [r for _, r in iter_rows(path, has_header=False)]
-        return {"skus": rows}
+        return {"CSV": [r for _, r in islice(iter_rows(path, has_header=False), limit)]}
     from openpyxl import load_workbook
 
     wb = load_workbook(path, read_only=True, data_only=True)
     out: dict[str, list[list[str]]] = {}
     try:
         for ws in wb.worksheets:
-            name = normalize_header(ws.title)
-            kind = next((k for k, names in SHEETS.items() if name in {normalize_header(n) for n in names}), None)
-            if kind is None:
-                continue
-            out[kind] = [[cell_to_str(c) for c in r] for r in ws.iter_rows(values_only=True) if any(c not in (None, "") for c in r)]
-        if not out and wb.worksheets:
-            ws = wb.worksheets[0]
-            out["skus"] = [[cell_to_str(c) for c in r] for r in ws.iter_rows(values_only=True) if any(c not in (None, "") for c in r)]
+            rows = (r for r in ws.iter_rows(values_only=True) if any(c not in (None, "") for c in r))
+            out[ws.title] = [[cell_to_str(c) for c in r] for r in islice(rows, limit)]
     finally:
         wb.close()
     return out
 
 
-def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], list[str]]:
+def guess_sheets(sheets: dict[str, list[list[str]]], remembered: Optional[dict] = None) -> dict[str, Optional[str]]:
+    """Aba de cada tipo: 1º a aba usada na última importação do projeto, 2º pelo nome da aba, 3º pela aba cujos
+    cabeçalhos mais se parecem com os campos do tipo (precisa achar os obrigatórios)."""
+    names = list(sheets)
+    out: dict[str, Optional[str]] = {}
+    for kind, syns in SHEETS.items():
+        last = ((remembered or {}).get(kind) or {}).get("__sheet__")
+        cand = {normalize_header(n) for n in syns}
+        out[kind] = last if last in sheets else next((n for n in names if normalize_header(n) in cand), None)
+    taken = {v for v in out.values() if v}
+    for kind in ("skus", "structures", "bins"):
+        if out[kind]:
+            continue
+        best, score = None, 0
+        for n in names:
+            if n in taken or not sheets[n]:
+                continue
+            cols = _map(sheets[n][0], SPECS[kind])
+            if any(cols[f] is None for f in REQUIRED[kind]):
+                continue
+            sc = sum(v is not None for v in cols.values())
+            if sc > score:
+                best, score = n, sc
+        if best and score >= 3:
+            out[kind] = best
+            taken.add(best)
+    if not any(out.values()) and len(names) == 1:
+        out["skus"] = names[0]
+    return out
+
+
+def guess_columns(kind: str, headers: list[str], remembered: Optional[dict] = None) -> dict[str, Optional[int]]:
+    """Coluna de cada campo: 1º o cabeçalho usado na última importação do projeto, depois os sinônimos."""
+    cols = _map(headers, SPECS[kind])
+    if kind == "building":
+        cols["field"] = 0 if cols["field"] is None and headers else cols["field"]
+        cols["value"] = 1 if cols["value"] is None and len(headers) > 1 else cols["value"]
+    for field, header in (remembered or {}).items():
+        if field in cols and header in headers and field != "__sheet__":
+            idx = headers.index(header)
+            for f, i in cols.items():  # a coluna lembrada sai de outro campo que a tivesse pegado
+                if i == idx and f != field:
+                    cols[f] = None
+            cols[field] = idx
+    return cols
+
+
+def auto_mapping(sheets: dict[str, list[list[str]]], remembered: Optional[dict] = None) -> dict:
+    out = {}
+    for kind, name in guess_sheets(sheets, remembered).items():
+        if name is None:
+            continue
+        headers = sheets[name][0] if sheets[name] else []
+        out[kind] = {"sheet": name, "cols": guess_columns(kind, headers, (remembered or {}).get(kind))}
+    return out
+
+
+def remember(mapping: dict, sheets: dict[str, list[list[str]]]) -> dict:
+    """Cabeçalhos escolhidos por campo (para pré-selecionar na próxima importação)."""
+    out = {}
+    for kind, m in mapping.items():
+        headers = sheets.get(m["sheet"], [[]])[0] if sheets.get(m["sheet"]) else []
+        out[kind] = {f: headers[i] for f, i in m["cols"].items() if i is not None and i < len(headers)}
+        out[kind]["__sheet__"] = m["sheet"]
+    return out
+
+
+def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = None) -> tuple[dict, list[str], list[str]]:
     """Lê a planilha e atualiza `cfg` (imóvel, modos das estruturas, SKUs) e o cadastro de estruturas/bins.
+    `mapping` = {tipo: {"sheet": aba, "cols": {campo: índice da coluna | None}}}; None = automático.
     Retorna (cfg, mensagens, erros)."""
-    sheets = _sheets(path)
+    all_sheets = read_sheets(path)
+    mapping = mapping if mapping is not None else auto_mapping(all_sheets, cfg.get("import_mapping"))
     msgs, errs = [], []
+    sheets, cms = {}, {}
+    for kind, m in mapping.items():
+        if m.get("sheet") not in all_sheets:
+            continue
+        cols = {f: None for f in SPECS[kind]} | {f: i for f, i in (m.get("cols") or {}).items() if f in SPECS[kind]}
+        missing = [FIELD_LABELS[kind][f] for f in REQUIRED[kind] if cols.get(f) is None]
+        if missing:
+            errs.append(f"{KIND_LABELS[kind]}: escolha a coluna de {', '.join(missing)}.")
+            continue
+        sheets[kind], cms[kind] = all_sheets[m["sheet"]], cols
     if not sheets:
-        return cfg, msgs, ["Nenhuma aba reconhecida (use Imóvel, Estruturas, Bins e SKUs — baixe o modelo)."]
+        return cfg, msgs, errs or ["Nenhuma aba para importar (use Imóvel, Estruturas, Bins e SKUs — baixe o modelo)."]
+    cfg["import_mapping"] = {**(cfg.get("import_mapping") or {}), **remember(
+        {k: m for k, m in mapping.items() if k in sheets}, all_sheets)}
 
     # ---- Imóvel ----
     if "building" in sheets:
@@ -158,11 +253,12 @@ def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], li
         lookup = {normalize_header(s): k for k, syns in BUILDING_KEYS.items() for s in syns}
         lookup.update({normalize_header(label): k for k, label, _, _ in BUILDING_FIELDS})
         lookup[normalize_header("Orientação das fileiras")] = "orientation"
+        fi, vi = cms["building"]["field"], cms["building"]["value"]
         for row in sheets["building"]:
-            key = lookup.get(normalize_header(row[0] if row else ""))
-            if key is None or len(row) < 2:
+            key = lookup.get(normalize_header(_cell(row, fi)))
+            if key is None:
                 continue
-            val = (row[1] or "").strip()
+            val = _cell(row, vi)
             if key == "orientation":
                 v = normalize_header(val)
                 cfg["building"][key] = ("length" if "compr" in v else "width" if "larg" in v else "auto")
@@ -170,7 +266,7 @@ def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], li
                 try:
                     parse_decimal(val)
                 except ValueError:
-                    errs.append(f"Imóvel: valor inválido para {row[0]} ({val!r}).")
+                    errs.append(f"Imóvel: valor inválido para {_cell(row, fi)} ({val!r}).")
                     continue
                 cfg["building"][key] = val.replace(".", ",") if val.count(".") == 1 and "," not in val else val
             n += 1
@@ -179,7 +275,7 @@ def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], li
     # ---- Bins ----
     if "bins" in sheets and len(sheets["bins"]) > 1:
         hdr, *rows = sheets["bins"]
-        cm = _map(hdr, BIN_COLS)
+        cm = cms["bins"]
         if cm["code"] is None:
             errs.append("Bins: coluna Código não encontrada.")
         else:
@@ -207,7 +303,7 @@ def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], li
     # ---- Estruturas ----
     if "structures" in sheets and len(sheets["structures"]) > 1:
         hdr, *rows = sheets["structures"]
-        cm = _map(hdr, STRUCT_COLS)
+        cm = cms["structures"]
         if cm["code"] is None:
             errs.append("Estruturas: coluna Código não encontrada.")
         else:
@@ -255,7 +351,7 @@ def import_file(db: Session, path: Path, cfg: dict) -> tuple[dict, list[str], li
             errs.append("SKUs: a aba não tem linhas.")
         else:
             hdr, *rows = sheets["skus"]
-            cm = _map(hdr, SKU_COLS)
+            cm = cms["skus"]
             if cm["sku"] is None:
                 errs.append("SKUs: coluna SKU não encontrada.")
             elif all(cm[k] is None for k in ("stock", "min", "max")):

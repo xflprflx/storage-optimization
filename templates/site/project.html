@@ -15,9 +15,9 @@
   </div>
 </div>
 <ul class="nav nav-tabs mb-3">
-  <li class="nav-item"><a class="nav-link" href="/optimization">Por endereço</a></li>
-  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Cega aos endereços (pool de bins)</a></li>
-  <li class="nav-item"><a class="nav-link active" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization">Por endereço <small class="text-muted">(troca as bins de cada endereço)</small></a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Pool de bins <small class="text-muted">(bins fixas, produtos mudam de lugar)</small></a></li>
+  <li class="nav-item"><a class="nav-link active" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova <small class="text-muted">(imóvel e estruturas do zero)</small></a></li>
 </ul>
 
 {% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
@@ -28,7 +28,7 @@
     <div class="row g-2 align-items-center">
       <div class="col-lg-5">
         <strong><i class="bi bi-upload"></i> Importar dados da filial nova</strong>
-        <div class="small text-muted">Uma planilha com as abas <b>Imóvel</b>, <b>Estruturas</b>, <b>Bins</b> e <b>SKUs</b> (dimensões, peso, saldo, min e max level), todas opcionais. Um CSV é lido como a lista de SKUs.</div>
+        <div class="small text-muted">Excel ou CSV com Imóvel, Estruturas, Bins e/ou SKUs (dimensões, peso, saldo, min e max level). Depois de enviar, você confere e ajusta qual aba e qual coluna correspondem a cada campo.</div>
       </div>
       <div class="col-lg-7">
         <form method="post" action="/optimization/site/{{ project.id }}/upload" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-lg-end">

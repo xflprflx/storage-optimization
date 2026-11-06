@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% block title %}{{ 'Editar' if item else 'Nova' }} estrutura{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-bookshelf"></i> {{ 'Editar estrutura ' ~ item.code if item else 'Nova estrutura de armazenagem' }}</h1>
+  <a href="/structures" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+<div class="card" style="max-width: 900px">
+  <div class="card-body">
+    {{ form_alert(errors) }}
+    <form method="post" autocomplete="off" id="stForm">
+      {% if request.query_params.get('back') %}<input type="hidden" name="back" value="{{ request.query_params.get('back') }}">{% endif %}
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Código *</label>
+          <input class="form-control mono text-uppercase {{ invalid(errors, 'code') }}" name="code" maxlength="30" value="{{ data.get('code') or '' }}" required autofocus placeholder="Ex.: EST-100">
+          {{ field_error(errors, 'code') }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Nome *</label>
+          <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="150" value="{{ data.get('name') or '' }}" required placeholder="Ex.: Estante leve 100 × 60, 5 níveis">
+          {{ field_error(errors, 'name') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo</label>
+          <select class="form-select" name="kind">
+            {% for k in kinds %}<option {% if data.get('kind') == k %}selected{% endif %}>{{ k }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <hr class="my-4">
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> Dimensões do módulo (cm)</h6>
+      <div class="row g-3">
+        {% for key, label, hint in [('width', 'Frente (largura útil) *', 'Espaço livre entre as colunas, onde ficam as bins lado a lado.'),
+                                    ('depth', 'Profundidade *', 'Da frente ao fundo do nível.'),
+                                    ('height', 'Altura total *', 'Precisa caber no pé-direito útil do imóvel.')] %}
+        <div class="col-md-4">
+          <label class="form-label">{{ label }}</label>
+          <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
+          {{ field_error(errors, key) }}
+          <div class="form-text">{{ hint }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <hr class="my-4">
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-layers"></i> Níveis e capacidade</h6>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Nº de níveis *</label>
+          <input class="form-control text-end {{ invalid(errors, 'levels') }}" name="levels" inputmode="numeric" value="{{ data.get('levels') or '' }}">
+          {{ field_error(errors, 'levels') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Vão útil por nível (cm) *</label>
+          <input class="form-control text-end {{ invalid(errors, 'level_height') }}" name="level_height" inputmode="decimal" value="{{ data.get('level_height')|dec_input }}">
+          {{ field_error(errors, 'level_height') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Carga máx. por nível (kg)</label>
+          <input class="form-control text-end {{ invalid(errors, 'max_load') }}" name="max_load" inputmode="decimal" value="{{ data.get('max_load')|dec_input }}">
+          {{ field_error(errors, 'max_load') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Custo por módulo (R$)</label>
+          <input class="form-control text-end {{ invalid(errors, 'cost') }}" name="cost" inputmode="decimal" value="{{ data.get('cost')|dec_input }}">
+          {{ field_error(errors, 'cost') }}
+          <div class="form-text">Usado no objetivo "menor custo".</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Observações</label>
+          <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="Fornecedor, modelo, prazo…">
+        </div>
+      </div>
+      <div class="mt-4">
+        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="/structures" class="btn btn-link">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

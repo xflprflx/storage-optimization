@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% block title %}Estruturas de armazenagem{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-bookshelf"></i> Estruturas de armazenagem</h1>
+  <div class="d-flex gap-2">
+    <a href="/optimization/site" class="btn btn-outline-secondary"><i class="bi bi-building-add"></i> Projeto de filial nova</a>
+    <a href="/structures/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Nova estrutura</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">Módulos (estantes, porta-paletes…) candidatos no projeto de filial nova. Medidas em cm; o vão útil é a altura livre de cada nível.</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código, nome ou tipo"></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}{{ th(request, sort, 'kind', 'Tipo') }}
+        {{ th(request, sort, 'width', 'Frente', 'text-end') }}{{ th(request, sort, 'depth', 'Prof.', 'text-end') }}
+        {{ th(request, sort, 'height', 'Altura', 'text-end') }}{{ th(request, sort, 'levels', 'Níveis', 'text-end') }}
+        {{ th(request, sort, 'level_height', 'Vão', 'text-end') }}<th class="text-end">Carga/nível (kg)</th>
+        {{ th(request, sort, 'cost', 'Custo (R$)', 'text-end') }}
+        <th class="text-end" style="width:110px">Ações</th>
+      </tr></thead>
+      <tbody>
+      {% for s in page.items %}
+        <tr>
+          <td class="mono fw-semibold">{{ s.code }}</td>
+          <td>{{ s.name }}</td>
+          <td>{{ s.kind }}</td>
+          <td class="text-end">{{ s.width|dec }}</td>
+          <td class="text-end">{{ s.depth|dec }}</td>
+          <td class="text-end">{{ s.height|dec }}</td>
+          <td class="text-end">{{ s.levels }}</td>
+          <td class="text-end">{{ s.level_height|dec }}</td>
+          <td class="text-end">{{ s.max_load|dec }}</td>
+          <td class="text-end">{{ s.cost|dec(2) if s.cost is not none else '' }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/structures/{{ s.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/structures/' ~ s.id ~ '/delete', '', 'Excluir a estrutura ' ~ s.code ~ '?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="11" class="text-center text-muted py-4">Nenhuma estrutura cadastrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% from "_macros.html" import material_select %}
+{% block title %}{{ project.name }} — Projeto de filial{% endblock %}
+
+{% macro pct(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}{{ v|dec(1) }}%{% endif %}{%- endmacro %}
+{% macro money(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}R$ {{ v|dec(2) }}{% endif %}{%- endmacro %}
+
+{% block content %}
+{% set b = cfg.building %}{% set d = cfg.demand %}{% set p = cfg.params %}
+<div class="page-header">
+  <h1><i class="bi bi-building-add"></i> {{ project.name }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/optimization/site" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Projetos</a>
+    <form method="post" action="/optimization/site/{{ project.id }}/duplicate"><button class="btn btn-outline-secondary"><i class="bi bi-files"></i> Duplicar cenário</button></form>
+  </div>
+</div>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link" href="/optimization">Por endereço</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Cega aos endereços (pool de bins)</a></li>
+  <li class="nav-item"><a class="nav-link active" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova</a></li>
+</ul>
+
+{% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
+
+<form method="post" id="siteForm" autocomplete="off">
+<div class="row g-3">
+  {# ------------------------- Imóvel ------------------------- #}
+  <div class="col-xl-4 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>1. Imóvel</strong></div>
+      <div class="card-body">
+        <label class="form-label small mb-0">Nome do projeto</label>
+        <input class="form-control form-control-sm mb-2" name="name" maxlength="150" value="{{ project.name }}">
+        <div class="row g-2">
+          {% for key, label, dflt, mn in BUILDING_FIELDS %}
+          <div class="col-{{ '4' if loop.index <= 3 else '6' }}">
+            <label class="form-label small mb-0">{{ label }}{% if loop.index <= 3 %} *{% endif %}</label>
+            <input class="form-control form-control-sm text-end" name="b_{{ key }}" inputmode="decimal" value="{{ b.get(key) or '' }}" {% if loop.index <= 3 %}required{% endif %}>
+          </div>
+          {% endfor %}
+          <div class="col-12">
+            <label class="form-label small mb-0">Orientação das fileiras</label>
+            <select class="form-select form-select-sm" name="b_orientation">
+              {% for k, v in ORIENTATIONS.items() %}<option value="{{ k }}" {% if b.orientation == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-text">Pé-direito útil = altura livre (abaixo de vigas, sprinklers, iluminação). As estruturas são dispostas em fileiras
+          simples junto às paredes e duplas (costas com costas) no meio, com corredor entre elas.</div>
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------- Estruturas ------------------------- #}
+  <div class="col-xl-8 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>2. Estruturas de armazenagem</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="/structures/new?back=/optimization/site/{{ project.id }}"><i class="bi bi-plus-lg"></i> Nova estrutura</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead class="small"><tr><th>Estrutura</th><th class="text-end">Frente × prof. × alt. (cm)</th><th class="text-end">Níveis × vão</th>
+            <th style="min-width:170px">Quantidade</th><th style="width:90px">Fixa</th><th style="width:90px">Mín.</th><th style="width:90px">Máx.</th></tr></thead>
+          <tbody>
+          {% for st in structures %}{% set sc = cfg.structures.get(st.id|string, {}) %}
+            <tr class="st-row">
+              <td><input type="hidden" name="s_id" value="{{ st.id }}"><span class="mono fw-semibold">{{ st.code }}</span> <span class="small text-muted">{{ st.name }}</span>
+                {% if st.cost is not none %}<div class="small text-muted">R$ {{ st.cost|dec(2) }}/módulo{% if st.max_load %} · {{ st.max_load|dec }} kg/nível{% endif %}</div>{% endif %}</td>
+              <td class="text-end small">{{ st.width|dec }} × {{ st.depth|dec }} × {{ st.height|dec }}</td>
+              <td class="text-end small">{{ st.levels }} × {{ st.level_height|dec }}</td>
+              <td><select class="form-select form-select-sm st-mode" name="s_mode_{{ st.id }}">
+                {% for k, v in STRUCT_MODES.items() %}<option value="{{ k }}" {% if (sc.get('mode') or 'off') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+              </select></td>
+              <td><input class="form-control form-control-sm text-end st-fixed" name="s_qty_{{ st.id }}" inputmode="numeric" value="{{ sc.get('qty') or '' }}" placeholder="qtd"></td>
+              <td><input class="form-control form-control-sm text-end st-auto" name="s_min_{{ st.id }}" inputmode="numeric" value="{{ sc.get('min_qty') or '' }}" placeholder="0"></td>
+              <td><input class="form-control form-control-sm text-end st-auto" name="s_max_{{ st.id }}" inputmode="numeric" value="{{ sc.get('max_qty') or '' }}" placeholder="∞"></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="7" class="text-center text-muted py-4">Nenhuma estrutura cadastrada. <a href="/structures/new?back=/optimization/site/{{ project.id }}">Cadastrar</a></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body pt-2 small text-muted">
+        <b>Otimizar quantidade</b>: o sistema decide quantos módulos usar (opcionalmente entre um mínimo e um máximo — ex.: o que o fornecedor tem
+        em estoque). <b>Quantidade fixa</b>: usa exatamente a quantidade informada (ex.: estruturas que já foram compradas) e mostra a sobra ou a falta.
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------- Demanda ------------------------- #}
+  <div class="col-xl-4 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>3. Demanda (o que será guardado)</strong></div>
+      <div class="card-body">
+        <label class="form-label small mb-0">Filial de referência</label>
+        <select class="form-select form-select-sm mb-2" name="d_branch_id">
+          <option value="">Todas as filiais</option>
+          {% for br in branches %}<option value="{{ br.id }}" {% if d.branch_id == br.id|string %}selected{% endif %}>{{ br.code }} - {{ br.name }}</option>{% endfor %}
+        </select>
+        <label class="form-label small mb-0">Armazém de referência</label>
+        <select class="form-select form-select-sm mb-2" name="d_warehouse_id">
+          <option value="">Todos</option>
+          <option value="none" {% if d.warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          {% for w in warehouses %}<option value="{{ w.id }}" {% if d.warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
+        </select>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label small mb-0">SKU ou produto</label>
+            <input class="form-control form-control-sm" name="d_sku" value="{{ d.sku }}"></div>
+          <div class="col-6"><label class="form-label small mb-0">Tipo de material</label>
+            {{ material_select(d.material, name='d_material', cls='form-select form-select-sm', all_label='Todos') }}</div>
+          <div class="col-12"><label class="form-label small mb-0">Quantidade considerada</label>
+            <select class="form-select form-select-sm" name="d_basis">
+              {% for k, v in BASES.items() %}<option value="{{ k }}" {% if d.basis == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select></div>
+          <div class="col-6"><label class="form-label small mb-0" title="Escala a demanda da referência para a filial nova (ex.: 60% do volume)">Fator da demanda (%)</label>
+            <input class="form-control form-control-sm text-end" name="d_factor" inputmode="decimal" value="{{ d.factor }}"></div>
+          <div class="col-6"><label class="form-label small mb-0">Margem de crescimento (%)</label>
+            <input class="form-control form-control-sm text-end" name="d_growth" inputmode="decimal" value="{{ d.growth }}"></div>
+        </div>
+        <div class="form-text">Os SKUs vêm do cadastro de produtos (com dimensões). Min/max level sem valor usa o saldo atual.</div>
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------- Bins e regras ------------------------- #}
+  <div class="col-xl-4 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>4. Bins e regras</strong></div>
+      <div class="card-body">
+        <label class="form-label small mb-0">Tipos de bin permitidos <span class="text-muted">(nenhum marcado = todos)</span></label>
+        <div class="border rounded p-2 mb-2" style="max-height:130px;overflow:auto">
+          {% for bt in bin_types %}
+          <div class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" name="p_types" value="{{ bt.id }}" id="bt{{ bt.id }}" {% if bt.id|string in p.types %}checked{% endif %}>
+            <label class="form-check-label mono" for="bt{{ bt.id }}" title="{{ bt.name }} — {{ bt.height|dec }} × {{ bt.width|dec }} × {{ bt.length|dec }} cm">{{ bt.code }}</label></div>
+          {% else %}<span class="text-muted small">Nenhum tipo de bin cadastrado.</span>{% endfor %}
+        </div>
+        <label class="form-label small mb-0">Bins de cada SKU</label>
+        <select class="form-select form-select-sm mb-2" name="p_bin_objective">
+          {% for k, v in OBJECTIVES.items() if k != 'min_changes' %}<option value="{{ k }}" {% if p.bin_objective == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label small mb-0">Enchimento máx. da bin (%)</label>
+            <input class="form-control form-control-sm text-end" name="p_fill_limit" inputmode="decimal" value="{{ p.fill_limit }}"></div>
+          <div class="col-6"><label class="form-label small mb-0">Uso da frente do nível (%)</label>
+            <input class="form-control form-control-sm text-end" name="p_level_fill" inputmode="decimal" value="{{ p.level_fill }}"></div>
+          <div class="col-6"><label class="form-label small mb-0" title="Espaço acima da bin para retirá-la do nível">Folga acima da bin (cm)</label>
+            <input class="form-control form-control-sm text-end" name="p_top_gap_cm" inputmode="decimal" value="{{ p.top_gap_cm }}"></div>
+          <div class="col-6"><label class="form-label small mb-0">Folga entre bins (cm)</label>
+            <input class="form-control form-control-sm text-end" name="p_side_gap_cm" inputmode="decimal" value="{{ p.side_gap_cm }}"></div>
+          <div class="col-12"><label class="form-label small mb-0">Rotação das unidades</label>
+            <select class="form-select form-select-sm" name="p_rotation">
+              <option value="upright" {% if p.rotation != 'any' %}selected{% endif %}>Altura sempre na vertical</option>
+              <option value="any" {% if p.rotation == 'any' %}selected{% endif %}>Qualquer orientação</option>
+            </select></div>
+        </div>
+        <div class="form-check mt-2 small"><input class="form-check-input" type="checkbox" name="p_single_type" value="1" id="pst" {% if p.single_type %}checked{% endif %}>
+          <label class="form-check-label" for="pst">Um único tipo de bin por SKU</label></div>
+        <div class="form-check small"><input class="form-check-input" type="checkbox" name="p_weight" value="1" id="pwt" {% if p.weight %}checked{% endif %}>
+          <label class="form-check-label" for="pwt">Respeitar peso (bin e carga do nível)</label></div>
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------- Objetivo ------------------------- #}
+  <div class="col-xl-4 col-lg-12">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>5. Objetivo</strong></div>
+      <div class="card-body">
+        {% for k, v in SITE_OBJECTIVES.items() %}
+        <div class="form-check"><input class="form-check-input" type="radio" name="p_objective" value="{{ k }}" id="obj_{{ k }}" {% if p.objective == k %}checked{% endif %}>
+          <label class="form-check-label" for="obj_{{ k }}">{{ v }}</label></div>
+        {% endfor %}
+        <div class="form-text mb-2">Prioridade: 1º guardar toda a demanda; 2º o objetivo escolhido; 3º desempate (metros de fileira ou módulos); por último, o menor nº de níveis ocupados.</div>
+        <label class="form-label small mb-0">Tempo limite do solver (s)</label>
+        <input class="form-control form-control-sm text-end mb-3" name="p_time_limit" inputmode="decimal" value="{{ p.time_limit }}" style="max-width:120px">
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-accent" name="action" value="run"><i class="bi bi-play-fill"></i> Salvar e otimizar</button>
+          <button class="btn btn-outline-secondary" name="action" value="save"><i class="bi bi-check-lg"></i> Só salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+
+{# ============================ Resultado ============================ #}
+{% if plan %}
+<hr class="my-4" id="resultado">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h2 class="h4 mb-0"><i class="bi bi-clipboard-data"></i> Plano otimizado</h2>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-success" href="/optimization/site/{{ project.id }}/plan.xlsx"><i class="bi bi-file-earmark-excel"></i> Exportar Excel</a>
+    {% if plan.modules and not plan.errors %}
+    <button class="btn btn-accent" type="button" data-bs-toggle="collapse" data-bs-target="#createBranch"><i class="bi bi-building-check"></i> Gerar cadastro da filial</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="collapse mb-3" id="createBranch">
+  <div class="card card-body">
+    <form method="post" action="/optimization/site/{{ project.id }}/create-branch" class="row g-2 align-items-end" onsubmit="return confirm('Criar a filial com os endereços, níveis e bins deste plano?');">
+      <div class="col-md-2"><label class="form-label small mb-0">Código da filial *</label><input class="form-control form-control-sm mono text-uppercase" name="branch_code" maxlength="30" required></div>
+      <div class="col-md-3"><label class="form-label small mb-0">Nome da filial *</label><input class="form-control form-control-sm" name="branch_name" maxlength="150" value="{{ project.name }}" required></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Armazém (código)</label><input class="form-control form-control-sm mono text-uppercase" name="wh_code" maxlength="30" placeholder="opcional"></div>
+      <div class="col-md-2"><label class="form-label small mb-0">Nome do armazém</label><input class="form-control form-control-sm" name="wh_name" maxlength="150"></div>
+      <div class="col-md-2"><div class="form-check small"><input class="form-check-input" type="checkbox" name="link_skus" value="1" id="lnk" checked>
+        <label class="form-check-label" for="lnk" title="Cria registro de saldo zerado de cada SKU no seu endereço">Vincular SKUs aos endereços</label></div></div>
+      <div class="col-md-1"><button class="btn btn-sm btn-accent w-100">Criar</button></div>
+      <div class="col-12 form-text">Cria a filial com {{ plan.levels_total }} níveis (vão e capacidade de cada um), {{ plan.positions|length }} endereços e as bins de cada endereço. Saldos não são lançados.</div>
+    </form>
+  </div>
+</div>
+
+{% for e in plan.errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
+{% for n in plan.notes %}<div class="alert alert-warning py-2 small"><i class="bi bi-info-circle"></i> {{ n }}</div>{% endfor %}
+
+<div class="row g-3 mb-3">
+  {% set kpis = [
+    ('Módulos de estrutura', plan.total_modules, plan.structs|selectattr('qty')|map(attribute='struct.code')|join(', ')),
+    ('Custo das estruturas', money(plan.total_cost), 'sem custo cadastrado' if plan.total_cost is none else ''),
+    ('Bins', plan.bins_placed ~ ' / ' ~ plan.bins_needed, 'alocadas / necessárias'),
+    ('Ocupação dos níveis', pct(plan.fill), plan.levels_used ~ ' de ' ~ plan.levels_total ~ ' níveis em uso'),
+    ('Uso das fileiras', pct(plan.row_use), plan.front_m|dec(1) ~ ' de ' ~ plan.floor.total_row_m|dec(1) ~ ' m'),
+    ('Área das estruturas', plan.footprint_m2|dec(1) ~ ' m²', 'de ' ~ plan.building.area_m2|dec(0) ~ ' m² do imóvel'),
+  ] %}
+  {% for label, val, sub in kpis %}
+  <div class="col-xl-2 col-md-4 col-6"><div class="card h-100"><div class="card-body py-2">
+    <div class="small text-muted">{{ label }}</div><div class="fs-4 fw-semibold">{{ val }}</div><div class="small text-muted text-truncate" title="{{ sub }}">{{ sub }}</div>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+<div class="card mb-3">
+  <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong>
+    <span class="small">{% for s in plan.structs if s.qty %}<span class="me-3"><span class="d-inline-block rounded-1 align-middle" style="width:12px;height:12px;background:{{ colors[s.struct.id] }}"></span> {{ s.struct.code }} ({{ s.qty }})</span>{% endfor %}
+      <span class="text-muted">· cor mais forte = mais ocupado · tracejado = espaço de fileira livre</span></span></div>
+  <div class="card-body">{{ svg|safe }}</div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>Estruturas — quantidades</strong></div>
+      <div class="table-responsive"><table class="table table-sm mb-0 align-middle">
+        <thead class="small"><tr><th>Estrutura</th><th>Modo</th><th class="text-end">Qtd.</th><th class="text-end">Níveis</th><th>Níveis por tipo de bin</th>
+          <th class="text-end">Metros</th><th class="text-end">Custo</th><th class="text-end" title="Quantos módulos dessa estrutura caberiam sozinhos na planta">Máx. na planta</th></tr></thead>
+        <tbody>
+        {% for s in plan.structs if s.qty or s.struct.mode != 'off' %}
+          <tr>
+            <td><span class="mono fw-semibold">{{ s.struct.code }}</span></td>
+            <td class="small">{{ STRUCT_MODES[s.struct.mode] }}{% if s.struct.mode == 'fixed' %} ({{ s.struct.qty }}){% elif s.struct.mode == 'auto' and (s.struct.min_qty or s.struct.max_qty is not none) %} ({{ s.struct.min_qty }}–{{ s.struct.max_qty if s.struct.max_qty is not none else '∞' }}){% endif %}</td>
+            <td class="text-end fw-semibold">{{ s.qty }}</td>
+            <td class="text-end">{{ s.levels }}</td>
+            <td>{% for t, n in s.levels_by_type|dictsort %}<span class="badge text-bg-light border mono me-1">{{ n }}× {{ types[t].code if t in types else '?' }}</span>{% endfor %}
+              {% set free = s.levels - (s.levels_by_type.values()|sum) %}{% if free > 0 %}<span class="badge bg-success-subtle text-success-emphasis border">{{ free }} livres</span>{% endif %}</td>
+            <td class="text-end">{{ s.front_m|dec(1) }}</td>
+            <td class="text-end">{{ money(s.cost) }}</td>
+            <td class="text-end text-muted">{{ s.floor_max }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>Bins — quantidades</strong></div>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead class="small"><tr><th>Tipo</th><th class="text-end">Necessárias</th><th class="text-end">Capacidade</th><th class="text-end">Ocupação</th><th class="text-end">Falta</th></tr></thead>
+        <tbody>
+        {% for t in plan.types %}
+          <tr><td class="mono">{{ t.spec.code }}{% if t.parent_code %} <span class="small text-muted" title="Compartimento: comprar {{ t.parents }} bin(s) {{ t.parent_code }}">({{ t.parents }}× {{ t.parent_code }})</span>{% endif %}</td>
+            <td class="text-end">{{ t.needed }}</td><td class="text-end">{{ t.capacity }}</td><td class="text-end">{{ pct(t.fill) }}</td>
+            <td class="text-end {{ 'text-danger fw-semibold' if t.shortage else 'text-muted' }}">{{ t.shortage }}</td></tr>
+        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Nenhuma bin.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+      {% if plan.solver.stages %}
+      <div class="card-body small text-muted border-top">
+        <b>Solver:</b> {{ plan.solver.status }} em {{ plan.solver.time|dec(1) }} s ·
+        {% for st in plan.solver.stages %}{{ st.label }} = {{ st.value }}{% if not st.optimal %}*{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% set st = plan.by_status %}
+<div class="card mb-3">
+  <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>SKUs ({{ plan.demands|length }})</strong>
+    <span class="small">{% for k, n in st.items() %}<span class="badge {{ 'text-bg-success' if k == 'ok' else 'text-bg-warning' }} me-1">{{ n }} {{ {'ok': 'alocados', 'sem_dados': 'sem dimensões', 'nao_cabe': 'não cabem', 'falta': 'sem espaço', 'sem_qtd': 'sem quantidade'}.get(k, k) }}</span>{% endfor %}</span></div>
+  <div class="table-responsive" style="max-height:420px">
+    <table class="table table-sm table-hover mb-0" data-no-resize>
+      <thead class="small sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">Qtd.</th><th>Bins</th><th>Situação</th><th>Observação</th></tr></thead>
+      <tbody class="small">
+      {% for dm in plan.demands|sort(attribute='status', reverse=true) %}
+        <tr><td class="mono">{{ dm.sku }}</td><td>{{ dm.name }}</td><td>{{ dm.material }}</td><td class="text-end">{{ dm.units }}</td>
+          <td>{% for t, n in (dm.bins or {}).items() %}<span class="badge text-bg-light border mono">{{ n }}× {{ types[t].code if t in types else '?' }}</span>{% endfor %}</td>
+          <td><span class="badge {{ 'text-bg-success' if dm.status == 'ok' else 'text-bg-warning' }}">{{ dm.status_label }}</span></td><td>{{ dm.note }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% set positions = plan.positions %}
+<div class="card mb-4">
+  <div class="card-header bg-white d-flex justify-content-between"><strong>Endereços gerados ({{ positions|length }})</strong>
+    <input class="form-control form-control-sm" style="max-width:240px" type="search" placeholder="Filtrar endereço/SKU" id="posFilter"></div>
+  <div class="table-responsive" style="max-height:480px">
+    <table class="table table-sm table-hover mb-0" id="posTable" data-no-resize>
+      <thead class="small sticky-top bg-white"><tr><th>Endereço</th><th>Estrutura</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unidades</th><th class="text-end">Peso (kg)</th></tr></thead>
+      <tbody class="small">
+      {% for ps in positions[:3000] %}
+        <tr><td class="mono">{{ ps.address }}</td><td class="mono">{{ ps.struct_code }}</td><td class="mono">{{ types[ps.type_id].code if ps.type_id in types else '?' }}</td>
+          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
+      {% endfor %}
+      {% if positions|length > 3000 %}<tr><td colspan="8" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // habilita só os campos que valem para o modo de cada estrutura
+  document.querySelectorAll('.st-row').forEach(row => {
+    const sel = row.querySelector('.st-mode');
+    const upd = () => {
+      row.querySelectorAll('.st-fixed').forEach(i => i.disabled = sel.value !== 'fixed');
+      row.querySelectorAll('.st-auto').forEach(i => i.disabled = sel.value !== 'auto');
+      row.classList.toggle('opacity-50', sel.value === 'off');
+    };
+    sel.addEventListener('change', upd); upd();
+  });
+  const f = document.getElementById('posFilter');
+  if (f) f.addEventListener('input', () => {
+    const q = f.value.trim().toLowerCase();
+    document.querySelectorAll('#posTable tbody tr').forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  });
+})();
+</script>
+{% endblock %}

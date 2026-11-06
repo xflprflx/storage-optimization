@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
@@ -441,3 +442,41 @@ class BinContent(TimestampMixin, Base):
     product: Mapped["Product"] = relationship()
     bin_type: Mapped[BinType] = relationship()
 
+
+
+# --------------------------------------------------------------------------- #
+# Projeto de filial nova (greenfield): estruturas de armazenagem e projetos
+# --------------------------------------------------------------------------- #
+class StructureType(TimestampMixin, Base):
+    """Estrutura de armazenagem modular (estante, porta-palete, flow rack...): um MÓDULO com frente,
+    profundidade, altura total, nº de níveis e vão útil por nível (cm). Usada no projeto de filial nova."""
+
+    __tablename__ = "structure_types"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    kind: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")
+    width: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # frente do módulo (cm, útil)
+    depth: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # profundidade (cm)
+    height: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # altura total (cm)
+    levels: Mapped[int] = mapped_column(Integer, nullable=False)
+    level_height: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # vão útil de cada nível (cm)
+    max_load: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # carga máx. por nível (kg)
+    cost: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # custo por módulo (R$)
+    notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+    @property
+    def label(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+class SiteProject(TimestampMixin, Base):
+    """Projeto de uma filial nova: dimensões do imóvel, estruturas candidatas, demanda e parâmetros.
+    Tudo fica em `config` (JSON) para o projeto poder evoluir sem migrações."""
+
+    __tablename__ = "site_projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Projeto de filial nova{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-sliders"></i> Otimização de bins</h1>
+  <div class="small text-muted">Projete uma filial do zero: imóvel, estruturas e bins dimensionados pela demanda.</div>
+</div>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link" href="/optimization">Por endereço</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Cega aos endereços (pool de bins)</a></li>
+  <li class="nav-item"><a class="nav-link active" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova</a></li>
+</ul>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header bg-white"><strong>Novo projeto</strong></div>
+      <div class="card-body">
+        <form method="post" action="/optimization/site/new">
+          <label class="form-label small mb-0">Nome do projeto</label>
+          <input class="form-control mb-2" name="name" maxlength="150" placeholder="Ex.: Filial Campinas — galpão 2.000 m²" required>
+          <button class="btn btn-accent w-100"><i class="bi bi-plus-lg"></i> Criar projeto</button>
+        </form>
+        {% if not n_structs %}
+        <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle"></i> Nenhuma estrutura de armazenagem cadastrada.
+          <a href="/structures/new">Cadastre as estantes/porta-paletes</a> que podem ser usadas antes de otimizar.</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body small text-muted">
+        <p class="mb-2"><b>Como funciona</b></p>
+        <ol class="ps-3 mb-0">
+          <li>Cadastre as <a href="/structures">estruturas de armazenagem</a> (frente, profundidade, altura, níveis e vão) e os <a href="/bin-types">tipos de bin</a>.</li>
+          <li>No projeto, informe as dimensões do imóvel, corredores e áreas reservadas.</li>
+          <li>Escolha, por estrutura, se o sistema <b>otimiza a quantidade</b> (com mínimo/máximo opcional) ou se a quantidade é <b>fixa</b>.</li>
+          <li>Defina a demanda (saldo ou min/max level de uma filial de referência, com fator e crescimento).</li>
+          <li>O sistema monta a planta, escolhe as bins de cada SKU, calcula quantos módulos de cada estrutura são necessários e gera os endereços.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white"><strong>Projetos</strong></div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead><tr><th>Projeto</th><th>Imóvel</th><th>Atualizado</th><th class="text-end" style="width:170px">Ações</th></tr></thead>
+          <tbody>
+          {% for p in projects %}
+            {% set b = (p.config or {}).get('building', {}) %}
+            <tr>
+              <td><a class="fw-semibold" href="/optimization/site/{{ p.id }}">{{ p.name }}</a></td>
+              <td class="small">{% if b.get('length_m') and b.get('width_m') %}{{ b.length_m }} × {{ b.width_m }} m{% if b.get('clear_height_m') %} · pé-direito {{ b.clear_height_m }} m{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td class="small text-muted">{{ p.updated_at.strftime('%d/%m/%Y %H:%M') if p.updated_at else '' }}</td>
+              <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-outline-primary" href="/optimization/site/{{ p.id }}" title="Abrir"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="/optimization/site/{{ p.id }}/duplicate" class="d-inline"><button class="btn btn-sm btn-outline-secondary" title="Duplicar (comparar cenários)"><i class="bi bi-files"></i></button></form>
+                <form method="post" action="/optimization/site/{{ p.id }}/delete" class="d-inline" onsubmit="return confirm('Excluir o projeto?');"><button class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bi bi-trash"></i></button></form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-4">Nenhum projeto ainda.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

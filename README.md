@@ -124,6 +124,31 @@ flowchart TD
 
 ---
 
+## 5. Projeto de Filial Nova (greenfield)
+
+Em **Otimização de bins → Projeto de filial nova** (`/optimization/site`) o sistema projeta uma filial do zero. O plano sai com a quantidade de estruturas e de bins, a planta e os endereços.
+
+```mermaid
+flowchart TD
+    A[Cadastro: Estruturas de armazenagem\nfrente, profundidade, altura, níveis, vão, carga, custo] --> C
+    B[Projeto: Imóvel\ncomprimento × largura × pé-direito, corredores, docas, transversais] --> C
+    D[Demanda: produtos\nsaldo ou min/max de uma filial de referência, fator e crescimento] --> C
+    C[Planta: fileiras simples/duplas e corredores\nna orientação que comporta mais] --> E[Bins por SKU\ntipo e quantidade]
+    E --> F[CP-SAT: módulos por trecho de fileira\ne níveis por tipo de bin]
+    F --> G[Endereçamento\nCorredor-Estante-Nível-Posição]
+    G --> H(Planta 2D, quantidades, Excel)
+    G --> I[Gerar cadastro da filial\nníveis, capacidades, endereços e bins]
+```
+
+- **Estruturas** (`Cadastros → Estruturas de armazenagem`): cada módulo tem frente útil, profundidade, altura total, nº de níveis, vão útil por nível, carga por nível e custo.
+- **Quantidade de estruturas**: para cada estrutura você escolhe *Otimizar quantidade* (o sistema decide, com mínimo/máximo opcionais), *Quantidade fixa* (por exemplo, estruturas já compradas: o plano mostra a sobra ou a falta) ou *Não usar*.
+- **Objetivo**: menos módulos, menor custo ou menos metros de fileira. A prioridade é sempre esta: 1º guardar toda a demanda, 2º o objetivo, 3º o desempate e, por último, o menor nº de níveis ocupados.
+- **Regras**: tipos de bin permitidos, enchimento máximo da bin, folga acima da bin e entre bins, aproveitamento da frente do nível, rotação, um tipo de bin por SKU e peso (da bin e da carga do nível). Cada nível recebe um único tipo de bin, e as bins maiores ficam nos níveis de baixo.
+- **Cenários**: duplique o projeto para comparar alternativas (outro imóvel, outras estruturas, outro fator de demanda).
+- **Saídas**: indicadores, planta vista de cima, quantidades por estrutura e por tipo de bin (incluindo as bins pai dos compartimentos), situação de cada SKU, lista de endereços e exportação para Excel. *Gerar cadastro da filial* cria a filial com níveis (vão e capacidade), endereços e bins. Opcionalmente vincula cada SKU ao seu endereço com saldo zerado.
+
+---
+
 ## Estrutura do Projeto
 
 - `main.py` : Entrypoint FastAPI.

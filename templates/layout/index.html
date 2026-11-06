@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+{% block title %}Mapa do estoque{% endblock %}
+{% block head %}
+<style>
+  .nk-map-toolbar { position: sticky; top: 0; z-index: 20; }
+  .nk-aisle { overflow-x: auto; overflow-y: hidden; background: #fbfcfd; }
+  .nk-aisle svg { display: block; }
+  .nk-leaf { cursor: pointer; }
+  .nk-leaf:hover .nk-box { stroke: #0f2a2a; stroke-width: 2; }
+  .nk-dim { opacity: .18; }
+  .nk-hit .nk-box { stroke: #d6336c; stroke-width: 3; }
+  .nk-extra { cursor: pointer; }
+  .nk-link .nk-box { stroke: #0d6efd !important; stroke-width: 3 !important; stroke-dasharray: none !important; }
+  #nkTip { position: fixed; z-index: 2000; pointer-events: none; max-width: 340px; display: none;
+           background: #fff; border: 1px solid #ccd3d8; border-radius: .4rem; box-shadow: 0 6px 18px rgba(0,0,0,.15);
+           padding: .5rem .65rem; font-size: .8rem; }
+  #nkTip table td { padding: 0 .35rem 0 0; }
+  .nk-legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; border: 1px solid rgba(0,0,0,.2); }
+  .nk-stat b { font-size: 1.05rem; }
+  {% if embed %}nav.navbar, .page-header, footer { display: none !important; } body { padding-top: 0 !important; } main, .container-fluid { padding-top: .25rem !important; }
+  .nk-map-toolbar { top: 0; }{% endif %}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-bricks"></i> Mapa do estoque</h1>
+  <div class="small text-muted">Elevação frontal em escala: cada endereço tem a largura e a altura das suas bins.</div>
+</div>
+
+<div class="card nk-map-toolbar mb-3">
+  <div class="card-body py-2">
+    <form class="row g-2 align-items-end" id="mapForm" onsubmit="return false">
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-0">Filial</label>
+        <select class="form-select form-select-sm" id="branch_id">
+          {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-0">Armazém</label>
+        <select class="form-select form-select-sm" id="warehouse_id">
+          <option value="none" data-branches="{{ branches_no_wh|join(',') }}" {% if warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          {% for w in warehouses %}<option value="{{ w.id }}" data-branches="{{ (wh_branches.get(w.id) or [])|join(',') }}" {% if warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-4 col-md-1">
+        <label class="form-label small mb-0">Corredor</label>
+        <select class="form-select form-select-sm" id="aisle"><option value="">Todos</option></select>
+      </div>
+      <div class="col-8 col-md-2">
+        <label class="form-label small mb-0">Destacar (endereço ou SKU)</label>
+        <input class="form-control form-control-sm" type="search" id="highlight" placeholder="Ex.: A-01 ou PRD-001">
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label small mb-0">Colorir por</label>
+        <div class="btn-group btn-group-sm w-100" role="group">
+          <input type="radio" class="btn-check" name="mode" id="mOcc" value="occ" checked><label class="btn btn-outline-secondary" for="mOcc">Ocupação</label>
+          <input type="radio" class="btn-check" name="mode" id="mFill" value="fill"><label class="btn btn-outline-secondary" for="mFill">% enchimento</label>
+          <input type="radio" class="btn-check" name="mode" id="mBin" value="bin"><label class="btn btn-outline-secondary" for="mBin">Tipo de bin</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-2">
+        <label class="form-label small mb-0">Escala: <span id="zoomLabel" class="mono"></span></label>
+        <div class="d-flex gap-1 align-items-center">
+          <input type="range" class="form-range" id="zoom" min="0.3" max="8" step="0.1" value="2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="fit" title="Ajustar à largura"><i class="bi bi-arrows-angle-contract"></i></button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="card-footer bg-white py-1 d-flex flex-wrap gap-3 align-items-center small">
+    <div id="stats" class="d-flex flex-wrap gap-3"></div>
+    <div id="legend" class="ms-auto d-flex flex-wrap gap-2 align-items-center"></div>
+  </div>
+</div>
+
+{% if preview %}<div class="alert alert-primary py-2 small mb-2" id="pvBanner"><i class="bi bi-eye"></i> <b>Pré-visualização do cadastro em lote</b> — nada foi gravado.
+  <span class="ms-2"><span class="nk-legend-swatch" style="background:#cfe2ff;border:1.5px dashed #0d6efd"></span>novo</span>
+  <span class="ms-2"><span class="nk-legend-swatch" style="background:#fff;border:2px solid #d6336c"></span>existente em conflito</span>
+  <span id="pvCounts" class="ms-2"></span></div>{% endif %}
+<div id="mapMsg"></div>
+<div id="map"></div>
+<div id="nkTip"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmt = (n, d = 0) => n == null ? '—' : Number(n).toLocaleString('pt-BR', { maximumFractionDigits: d });
+  const fold = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toUpperCase();
+  const compact = s => fold(s).replace(/[-./\s|\\]+/g, '');
+
+  // ---- Dimensões do desenho (px) ----
+  const G = { MIN: 8, COMP: 1, POS: 6, BEAM: 5, HEAD: 4, BAY: 64, UP: 4, LEFT: 34, TOP: 10, FLOOR: 26, EXTRA: 10, RES_W: 60, RES_H: 30 };
+  const COLORS = { free: '#d8f0dc', occ: '#f6c453', nodim: '#eef1f4', none: '#e9ecef', over: '#d6336c' };
+
+  let data = null, binTypes = {}, leafIndex = {}, leafIndexAll = {};
+  const state = { mode: 'occ', zoom: 2, hl: '' };
+  const PREVIEW = {{ (preview or '')|tojson }};
+
+  // ---------------- Carga ----------------
+  function filterWarehouses() {
+    const b = $('branch_id').value; let keep = false;
+    [...$('warehouse_id').options].forEach(o => {
+      const ok = (o.dataset.branches || '').split(',').includes(b);
+      o.hidden = !ok; o.disabled = !ok; if (ok && o.selected) keep = true;
+    });
+    if (!keep) { const first = [...$('warehouse_id').options].find(o => !o.disabled); if (first) $('warehouse_id').value = first.value; }
+  }
+  async function load() {
+    const params = new URLSearchParams({ branch_id: $('branch_id').value, warehouse_id: $('warehouse_id').value, aisle: $('aisle').value });
+    if (PREVIEW) params.set('preview', PREVIEW);
+    history.replaceState(null, '', '/layout?' + params.toString() + ({{ 'true' if embed else 'false' }} ? '&embed=1' : ''));
+    $('map').innerHTML = '<div class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm"></span> Carregando…</div>';
+    $('mapMsg').innerHTML = '';
+    try {
+      const r = await fetch('/layout/data?' + params.toString());
+      data = await r.json();
+      if (!r.ok) throw new Error(data.detail || 'Erro ao carregar');
+    } catch (e) { $('map').innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; return; }
+    binTypes = Object.fromEntries((data.bin_types || []).map(b => [b.id, b]));
+    if (data.preview && $('pvCounts')) $('pvCounts').innerHTML = `· <b>${fmt(data.preview.new)}</b> novo(s)` +
+      (data.preview.removed ? ` · <b>${fmt(data.preview.removed)}</b> antigo(s) removido(s) (não aparecem)` : '') +
+      (data.preview.conflicts ? ` · <b class="text-danger">${fmt(data.preview.conflicts)}</b> em conflito` : '');
+    // Corredores disponíveis
+    const cur = $('aisle').value;
+    $('aisle').innerHTML = '<option value="">Todos</option>' + (data.aisles_all || []).map(a => `<option ${a === cur ? 'selected' : ''}>${esc(a)}</option>`).join('');
+    if (data.too_many) {
+      $('mapMsg').innerHTML = `<div class="alert alert-warning">Este depósito tem ${fmt(data.total)} endereços (limite de ${fmt(data.limit)} por desenho). Escolha um corredor.</div>`;
+      $('map').innerHTML = ''; renderStats(); return;
+    }
+    renderStats(); render();
+  }
+
+  // ---------------- Medidas ----------------
+  function leafSize(lf) {
+    const S = state.zoom;
+    return { w: Math.max(G.MIN, lf.w * S), h: Math.max(G.MIN, lf.h * S) };
+  }
+  function gapFor(depth) { return depth === 2 ? G.POS : depth === 3 ? G.COMP : G.POS; }
+  function measure(node) {
+    if (node.depth === 2 && node.lvl) return measureLevel(node);
+    if (node.leaf) return node._s = leafSize(node.leaf);
+    const kids = node.children || [];
+    kids.forEach(measure);
+    let w = 0, h = 0;
+    if (node.depth === 1) {          // estante: níveis empilhados
+      kids.forEach(k => { w = Math.max(w, k._s.w); h += k._s.h + G.BEAM + G.HEAD; });
+    } else {                          // nível/posição: lado a lado
+      kids.forEach((k, i) => { w += k._s.w + (i ? gapFor(node.depth) : 0); h = Math.max(h, k._s.h + (k.depth === 3 && !k.leaf ? 10 : 0)); });
+    }
+    return node._s = { w: Math.max(w, G.MIN), h: Math.max(h, G.MIN) };
+  }
+
+  function extraSize(e) { const S = state.zoom; return { w: Math.max(G.MIN, e.w * S), h: Math.max(G.MIN, e.h * S) }; }
+  function measureLevel(node) {
+    const S = state.zoom, lv = node.lvl;
+    node._stretch = 0;
+    const own = node.leaf ? [{ _s: leafSize(node.leaf) }] : (node.children || []);
+    if (!node.leaf) own.forEach(measure);
+    let w = 0, h = 0;
+    own.forEach((k, i) => { w += k._s.w + (i ? G.POS : 0); h = Math.max(h, k._s.h + (k.depth === 3 && !k.leaf ? 10 : 0)); });
+    if (lv.extra.length) {
+      if (own.length) w += G.EXTRA;
+      lv.extra.forEach((e, i) => { const es = extraSize(e); w += es.w + (i ? G.POS : 0); h = Math.max(h, es.h); });
+    }
+    if (lv.usable_w) w = Math.max(w, lv.usable_w * S);
+    // Altura do nível: vão cadastrado (distância entre níveis) prevalece sobre a altura das bins
+    if (lv.height) h = Math.max(h, lv.height * S);
+    else if (lv.usable_h) h = Math.max(h, lv.usable_h * S);
+    if (!own.length && !lv.extra.length) {     // nível reservado vazio
+      w = Math.max(w, G.RES_W * S); h = Math.max(h, G.RES_H * S);
+    }
+    return node._s = { w: Math.max(w, G.MIN), h: Math.max(h, G.MIN) };
+  }
+
+  // ---------------- Cores ----------------
+  function heat(p) {           // 0% claro -> 100% verde-escuro; >100% vermelho
+    if (p == null) return COLORS.nodim;
+    if (p > 100) return COLORS.over;
+    const t = Math.max(0, Math.min(1, p / 100));
+    const a = [233, 245, 236], b = [26, 122, 76];
+    return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
+  }
+  function fillColor(lf) {
+    if (state.mode === 'occ') return lf.occupied ? COLORS.occ : COLORS.free;
+    if (state.mode === 'fill') return lf.n_bins ? heat(lf.fill) : COLORS.none;
+    if (!lf.bins.length) return COLORS.none;
+    return (binTypes[lf.bins[0].type] || {}).color || COLORS.none;
+  }
+
+  // ---------------- Desenho ----------------
+  function matches(lf) {
+    if (!state.hl) return true;
+    const q = compact(state.hl);
+    return compact(lf.address).includes(q) || lf.items.some(it => compact(it.sku).includes(q) || compact(it.name).includes(q));
+  }
+  function drawLeaf(out, lf, x, y, w, h) {
+    leafIndex[lf.id] = lf;
+    const hit = state.hl && matches(lf);
+    const cls = 'nk-leaf' + (state.hl ? (hit ? ' nk-hit' : ' nk-dim') : '');
+    out.push(`<g class="${cls}" data-id="${lf.id}">`);
+    const isNew = lf.mark === 'new', isConf = lf.mark && !isNew;
+    out.push(`<rect class="nk-box" x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${isNew && state.mode !== 'bin' ? '#cfe2ff' : fillColor(lf)}" stroke="${isNew ? '#0d6efd' : isConf ? '#d6336c' : lf.dims ? '#6c7a84' : '#9aa5ad'}" stroke-width="${isNew ? 1.5 : isConf ? 2.5 : 1}" ${isNew || !lf.dims ? 'stroke-dasharray="3 2"' : ''}/>`);
+    // Bins individuais (contorno proporcional, lado a lado, alinhadas por baixo)
+    if (lf.dims && lf.n_bins <= 60) drawBins(out, lf.bins, x, y + h, h);
+    // Enchimento: barra vertical à direita (modo ocupação e tipo de bin)
+    if (state.mode !== 'fill' && lf.fill != null && w > 10) {
+      const fh = Math.min(1, lf.fill / 100) * (h - 2);
+      out.push(`<rect x="${x + w - 4}" y="${y + h - 1 - fh}" width="3" height="${fh}" fill="${lf.fill > 100 ? COLORS.over : '#1a7a4c'}" opacity=".85"/>`);
+    }
+    if (lf.extra && lf.extra.length) {
+      const n = lf.extra.reduce((a, e) => a + e.qty, 0);
+      out.push(`<g pointer-events="none"><rect x="${x + 1}" y="${y + 1}" width="${Math.min(w - 2, 22)}" height="9" rx="2" fill="#0d6efd"/><text x="${x + 2.5}" y="${y + 6}" font-size="7" fill="#fff" dominant-baseline="central" font-family="ui-monospace,monospace">↗${n}</text></g>`);
+    }
+    const seg = lf.address.split('-').pop();
+    const fs = Math.min(11, Math.max(7, Math.min(w / (seg.length * .65), h * .45)));
+    if (w >= 14 && h >= 9) out.push(`<text x="${x + w / 2}" y="${y + h / 2}" font-size="${fs}" text-anchor="middle" dominant-baseline="central" fill="#1f2d33" pointer-events="none" font-family="ui-monospace,monospace">${esc(seg)}</text>`);
+    out.push('</g>');
+  }
+  // Desenha as bins lado a lado a partir de (x, bottom). Compartimentos (frações) aparecem dentro da bin pai:
+  // divisórias tracejadas e os compartimentos sem uso do endereço clareados ("vazio").
+  function drawBins(out, bins, x, bottom, h) {
+    let bx = x; const S = state.zoom;
+    for (const b of bins) {
+      const t = binTypes[b.type]; if (!t || t.w == null || t.h == null) continue;
+      const fr = t.frac;
+      if (fr && fr.pw) {
+        const k = fr.k, parents = Math.ceil(b.qty / k), pw = fr.pw * S, ph = (fr.ph || t.h) * S;
+        for (let p = 0; p < parents; p++) {
+          const used = Math.min(k, b.qty - p * k);
+          if (p || bx > x) out.push(`<line x1="${bx}" y1="${bottom - ph}" x2="${bx}" y2="${bottom}" stroke="rgba(0,0,0,.35)" stroke-width="1"/>`);
+          if (ph < h - 1) out.push(`<line x1="${bx}" y1="${bottom - ph}" x2="${bx + pw}" y2="${bottom - ph}" stroke="rgba(0,0,0,.25)" stroke-width="1"/>`);
+          // grade nx (largura, colunas visíveis de frente) × nz (comprimento, frente→fundo): de frente, cada coluna
+          // mostra as suas fileiras empilhadas como faixas (a de baixo = frente). Compartimentos sem uso: clareados.
+          const nx = fr.nx || k, nz = fr.nz || 1, cw = pw / nx, rh = ph / nz;
+          for (let c = 1; c < nx; c++) out.push(`<line x1="${bx + cw * c}" y1="${bottom - ph + 1}" x2="${bx + cw * c}" y2="${bottom}" stroke="rgba(0,0,0,.5)" stroke-width=".8" stroke-dasharray="2 1.5" pointer-events="none"/>`);
+          for (let r = 1; r < nz; r++) out.push(`<line x1="${bx + 1}" y1="${bottom - rh * r}" x2="${bx + pw - 1}" y2="${bottom - rh * r}" stroke="rgba(0,0,0,.3)" stroke-width=".6" stroke-dasharray="1 1.5" pointer-events="none"/>`);
+          for (let s = used; s < k; s++) {
+            const col = s % nx, row = Math.floor(s / nx);
+            out.push(`<rect x="${bx + cw * col + .5}" y="${bottom - rh * (row + 1) + .5}" width="${cw - 1}" height="${rh - 1}" fill="#fff" opacity=".65" stroke="#9aa5ad" stroke-dasharray="2 1.5" pointer-events="none"><title>Compartimento ${s + 1} de ${k} (${esc(fr.grid)}) vazio nesta ${esc(fr.parent)}</title></rect>`);
+          }
+          if (pw >= 16 && ph >= 9) out.push(`<text x="${bx + 2}" y="${bottom - ph + 6}" font-size="6" fill="#3b5b8c" pointer-events="none" font-family="ui-monospace,monospace">${esc(fr.label)}</text>`);
+          bx += pw;
+        }
+        continue;
+      }
+      for (let i = 0; i < b.qty; i++) {
+        const bw = t.w * S, bh = t.h * S;
+        if (i || bx > x) out.push(`<line x1="${bx}" y1="${bottom - bh}" x2="${bx}" y2="${bottom}" stroke="rgba(0,0,0,.35)" stroke-width="1"/>`);
+        if (bh < h - 1) out.push(`<line x1="${bx}" y1="${bottom - bh}" x2="${bx + bw}" y2="${bottom - bh}" stroke="rgba(0,0,0,.25)" stroke-width="1"/>`);
+        bx += bw;
+      }
+    }
+  }
+  function usageColor(f) { return f > 1.0001 ? COLORS.over : f >= 0.85 ? '#b7791f' : '#1a7a4c'; }
+  function drawLevel(out, node, x, bottom) {
+    const s = node._s, lv = node.lvl, S = state.zoom;
+    const over = lv.fraction != null && lv.fraction > 1.0001;
+    // Vão do nível (distância até o nível de cima): linha pontilhada na altura cadastrada
+    if (lv.height) {
+      const vy = bottom - lv.height * S;
+      out.push(`<line x1="${x}" y1="${vy}" x2="${x + s.w}" y2="${vy}" stroke="${lv.tall.length ? COLORS.over : '#9aa5ad'}" stroke-width="1" stroke-dasharray="1 3"><title>Vão do nível: ${fmt(lv.height, 1)} cm</title></line>`);
+    }
+    // Área de capacidade cadastrada (quanto cabe no nível)
+    if (lv.usable_w || lv.reserved) {
+      const aw = lv.usable_w ? lv.usable_w * S : s.w;
+      out.push(`<rect x="${x}" y="${bottom - s.h}" width="${aw}" height="${s.h}" fill="${lv.reserved ? '#f1f3f5' : '#f4f7f9'}" stroke="${over ? COLORS.over : '#aeb8c0'}" stroke-width="${over ? 1.5 : 1}" stroke-dasharray="4 3"/>`);
+      if (lv.reserved && !lv.extra.length) out.push(`<text x="${x + aw / 2}" y="${bottom - s.h / 2}" font-size="9" text-anchor="middle" dominant-baseline="central" fill="#8a96a0" font-style="italic">nível reservado</text>`);
+    }
+    let cx = x;
+    // 1) Bins de endereços de outros níveis desta estante (ex.: transbordo do nível de baixo).
+    //    Desenhadas como bins normais (cor do endereço dono, uma caixa por bin), alinhadas à esquerda
+    //    como no nível do dono, com contorno azul tracejado e o endereço dono.
+    for (const e of lv.extra) {
+      const es = extraSize(e), owner = leafIndexAll[e.owner_id];
+      const base = owner ? fillColor(owner) : COLORS.none;
+      const hit = state.hl && owner && matches(owner);
+      const n = Math.max(1, e.qty), bw = es.w / n, y0 = bottom - es.h;
+      out.push(`<g class="nk-extra ${state.hl ? (hit ? 'nk-hit' : 'nk-dim') : ''}" data-owner="${e.owner_id}" data-type="${e.type}" data-qty="${e.qty}" data-level="${esc(node.code)}">`);
+      out.push(`<rect class="nk-box" x="${cx}" y="${y0}" width="${es.w}" height="${es.h}" rx="1.5" fill="${base}" stroke="#6c7a84" stroke-width="1"/>`);
+      if ((binTypes[e.type] || {}).frac) drawBins(out, [{ type: e.type, qty: e.qty }], cx, bottom, es.h);
+      else if (n > 1 && n <= 60 && bw >= 3) {
+        for (let k = 1; k < n; k++) out.push(`<line x1="${cx + bw * k}" y1="${y0}" x2="${cx + bw * k}" y2="${bottom}" stroke="rgba(0,0,0,.35)" stroke-width="1" pointer-events="none"/>`);
+      }
+      out.push(`<rect x="${cx - 1}" y="${y0 - 1}" width="${es.w + 2}" height="${es.h + 2}" rx="2" fill="none" stroke="#0d6efd" stroke-width="1.2" stroke-dasharray="4 2" pointer-events="none"/>`);
+      const label = (es.w >= 75 ? e.owner : (e.owner.split('-').slice(2).join('-') || e.owner));
+      if (es.w >= 22 && es.h >= 9) out.push(`<text x="${cx + es.w / 2}" y="${y0 + es.h / 2}" font-size="${Math.min(11, Math.max(7, es.h * .4))}" text-anchor="middle" dominant-baseline="central" fill="#1f2d33" pointer-events="none" font-family="ui-monospace,monospace">↳${esc(label)}</text>`);
+      out.push('</g>');
+      cx += es.w + G.POS;
+    }
+    if (lv.extra.length && (node.leaf || (node.children || []).length)) cx += G.EXTRA - G.POS;
+    // 2) Endereços do próprio nível
+    if (node.leaf) { const ls = leafSize(node.leaf); drawLeaf(out, node.leaf, cx, bottom - ls.h, ls.w, ls.h); cx += ls.w; }
+    else for (const k of (node.children || [])) { drawNode(out, k, cx, bottom); cx += k._s.w + G.POS; }
+    // Uso do nível (fração da capacidade) à direita do montante
+    const ux = x + (node._bayW || s.w) + G.UP + 3, uy = bottom - s.h / 2;
+    if (lv.fraction != null) {
+      out.push(`<text x="${ux}" y="${uy}" font-size="9" font-weight="600" dominant-baseline="central" fill="${usageColor(lv.fraction)}" font-family="ui-monospace,monospace"><title>Uso do nível: ${fmt(lv.fraction * 100, 0)}% da capacidade</title>${fmt(lv.fraction * 100, 0)}%</text>`);
+    } else if (Object.keys(lv.caps).length && lv.unknown.length) {
+      out.push(`<text x="${ux}" y="${uy}" font-size="9" dominant-baseline="central" fill="#8a96a0"><title>Há bins de tipo sem capacidade cadastrada neste nível</title>?%</text>`);
+    }
+    if (node._stretch) {
+      const eff = s.h / S;
+      out.push(`<text x="${ux}" y="${uy + 11}" font-size="8" dominant-baseline="central" fill="#8a96a0" font-family="ui-monospace,monospace"><title>Distância entre níveis compensada para o porta-palete ter a mesma altura das outras estantes do corredor (${fmt(eff, 0)} cm)</title>↕${fmt(eff, 0)}</text>`);
+    } else if (lv.height) {
+      out.push(`<text x="${ux}" y="${uy + 11}" font-size="8" dominant-baseline="central" fill="${lv.tall.length ? COLORS.over : '#8a96a0'}" font-family="ui-monospace,monospace"><title>${lv.tall.length ? 'Bin mais alta que o vão: ' + esc(lv.tall.join(', ')) : 'Vão do nível (distância até o nível de cima)'}</title>↕${fmt(lv.height, 0)}</text>`);
+    }
+  }
+  function drawNode(out, node, x, bottom) {
+    const s = node._s;
+    if (node.depth === 2 && node.lvl) { drawLevel(out, node, x, bottom); return; }
+    if (node.leaf) { drawLeaf(out, node.leaf, x, bottom - s.h, s.w, s.h); return; }
+    if (node.depth === 1) {            // estante: níveis de baixo para cima, com longarinas
+      let y = bottom;
+      for (const lv of node.children) {
+        lv._bayW = s.w;
+        out.push(`<rect x="${x - G.UP}" y="${y - G.BEAM}" width="${s.w + 2 * G.UP}" height="${G.BEAM}" fill="#e07a1f" opacity=".9"/>`);
+        drawNode(out, lv, x, y - G.BEAM);
+        const mid = y - G.BEAM - lv._s.h / 2;
+        out.push(`<text x="${x - G.UP - 4}" y="${mid}" font-size="9" text-anchor="end" dominant-baseline="central" fill="#6b7780" font-family="ui-monospace,monospace" ${lv.lvl && lv.lvl.reserved ? 'font-style="italic"' : ''}>${esc(lv.code)}</text>`);
+        y -= lv._s.h + G.BEAM + G.HEAD;
+      }
+      return;
+    }
+    // Posição com compartimentos: contorno discreto agrupando os compartimentos
+    if (node.depth === 3) {
+      out.push(`<rect x="${x - 1.5}" y="${bottom - s.h - 1.5}" width="${s.w + 3}" height="${s.h + 3}" rx="2" fill="none" stroke="#3b5b8c" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/>`);
+      if (s.w > 18) out.push(`<text x="${x + s.w / 2}" y="${bottom - s.h - 3}" font-size="8" text-anchor="middle" fill="#3b5b8c" font-family="ui-monospace,monospace">${esc(node.code)}</text>`);
+    }
+    let cx = x;
+    for (const k of node.children) { drawNode(out, k, cx, bottom); cx += k._s.w + gapFor(node.depth); }
+  }
+  // Porta-paletes do corredor têm a mesma altura: a estante mais baixa é esticada até a mais alta,
+  // aumentando a distância entre os níveis (a estrutura cresce; as bins mantêm o tamanho real).
+  // O acréscimo vai para os níveis sem vão cadastrado; se todos têm vão, é dividido entre todos.
+  function equalizeBays(bays, target) {
+    for (const b of bays) {
+      if (b.depth !== 1 || b.leaf || !b.children) continue;
+      const lvls = b.children.filter(k => k.lvl);
+      const extra = target - b._s.h;
+      if (extra < 0.5 || !lvls.length) continue;
+      const free = lvls.filter(k => !k.lvl.height);
+      const recv = free.length ? free : lvls;
+      for (const k of recv) { k._s.h += extra / recv.length; k._stretch = extra / recv.length; }
+      b._s.h = target;
+    }
+  }
+  function renderAisle(aisle) {
+    // Estantes (filhos do corredor) lado a lado, apoiadas no piso
+    const bays = aisle.leaf ? [aisle] : aisle.children;
+    let maxH = 0, x = G.LEFT;
+    const placed = [];
+    for (const b of bays) {
+      measure(b);
+      placed.push({ b, x });
+      maxH = Math.max(maxH, b._s.h);
+      x += b._s.w + G.BAY;
+    }
+    equalizeBays(bays, maxH);
+    const W = Math.max(x - G.BAY + G.LEFT, 200), floor = G.TOP + maxH, H = floor + G.FLOOR;
+    const out = [`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`,
+      `<defs><pattern id="nkHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#0d6efd" stroke-width="1.5" opacity=".35"/></pattern></defs>`];
+    out.push(`<line x1="0" y1="${floor + 0.5}" x2="${W}" y2="${floor + 0.5}" stroke="#9aa5ad" stroke-width="1"/>`);
+    let nLeaves = 0, nOcc = 0;
+    for (const { b, x: bx } of placed) {
+      const s = b._s;
+      if (b.depth === 1 && !b.leaf) {   // montantes da estante
+        out.push(`<rect x="${bx - G.UP}" y="${floor - s.h}" width="${G.UP}" height="${s.h}" fill="#3b5b8c"/>`);
+        out.push(`<rect x="${bx + s.w}" y="${floor - s.h}" width="${G.UP}" height="${s.h}" fill="#3b5b8c"/>`);
+      }
+      drawNode(out, b, bx, floor);
+      out.push(`<text x="${bx + s.w / 2}" y="${floor + 15}" font-size="11" font-weight="600" text-anchor="middle" fill="#1f2d33" font-family="ui-monospace,monospace">${esc(b.leaf ? b.leaf.address : aisle.code + '-' + b.code)}</text>`);
+    }
+    (function count(n) { if (n.leaf) { nLeaves++; if (n.leaf.occupied) nOcc++; } (n.children || []).forEach(count); })(aisle);
+    out.push('</svg>');
+    return { svg: out.join(''), nLeaves, nOcc, W };
+  }
+  function indexLeaves() {
+    leafIndexAll = {};
+    (function walk(n) { if (n.leaf) leafIndexAll[n.leaf.id] = n.leaf; (n.children || []).forEach(walk); })({ children: data.aisles });
+  }
+  function render() {
+    if (!data || data.too_many) return;
+    leafIndex = {}; indexLeaves();
+    $('zoomLabel').textContent = `${state.zoom.toFixed(1)} px/cm`;
+    if (!data.aisles.length) { $('map').innerHTML = '<div class="alert alert-info">Nenhum endereço neste depósito. <a href="/locations/batch">Gerar endereços em lote</a></div>'; return; }
+    const html = [];
+    for (const a of data.aisles) {
+      const r = renderAisle(a);
+      html.push(`<div class="card mb-3"><div class="card-header bg-white py-1 d-flex justify-content-between small">
+        <strong>Corredor ${esc(a.code)}</strong>
+        <span class="text-muted">${fmt(r.nLeaves)} endereço(s) · ${fmt(r.nOcc)} ocupado(s) · ${fmt(r.nLeaves - r.nOcc)} livre(s)</span></div>
+        <div class="nk-aisle p-2">${r.svg}</div></div>`);
+    }
+    $('map').innerHTML = html.join('');
+    renderLegend();
+  }
+  function fit() {
+    if (!data || !data.aisles.length) return;
+    // Maior largura de corredor em cm (aproximação: soma das larguras das estantes)
+    const avail = $('map').clientWidth - 40;
+    let lo = 0.3, hi = 8;
+    for (let i = 0; i < 18; i++) {
+      const mid = (lo + hi) / 2; state.zoom = mid;
+      const w = Math.max(...data.aisles.map(a => renderWidth(a)));
+      if (w > avail) hi = mid; else lo = mid;
+    }
+    state.zoom = Math.max(0.3, Math.round(lo * 10) / 10); $('zoom').value = state.zoom; render();
+  }
+  function renderWidth(a) {
+    if (!Object.keys(leafIndexAll).length) indexLeaves();
+    const bays = a.leaf ? [a] : a.children; let x = G.LEFT;
+    for (const b of bays) { measure(b); x += b._s.w + G.BAY; }
+    return x - G.BAY + G.LEFT;
+  }
+
+  // ---------------- Estatísticas / legenda ----------------
+  function renderStats() {
+    const s = data && data.stats || {};
+    if (!s.locations && !(data && data.too_many)) { $('stats').innerHTML = ''; return; }
+    $('stats').innerHTML = data.too_many ? '' : [
+      `<span class="nk-stat"><b>${fmt(s.locations)}</b> endereços</span>`,
+      `<span class="nk-stat"><b>${fmt(s.occupied)}</b> ocupados</span>`,
+      `<span class="nk-stat"><b>${fmt(s.free)}</b> livres</span>`,
+      `<span class="nk-stat" title="Endereços sem bin (ou bin sem dimensões): desenhados com tamanho padrão e borda tracejada"><b>${fmt(s.no_dims)}</b> sem dimensão</span>`,
+      `<span class="nk-stat" title="Volume das unidades ÷ volume das bins (produtos com dimensões)">enchimento médio <b>${s.fill_avg == null ? '—' : fmt(s.fill_avg, 1) + '%'}</b></span>`,
+      s.over ? `<span class="nk-stat text-danger"><b>${fmt(s.over)}</b> acima de 100%</span>` : '',
+      s.levels_over ? `<span class="nk-stat text-danger" title="Níveis com mais bins do que a capacidade cadastrada"><b>${fmt(s.levels_over)}</b> nível(is) acima da capacidade</span>` : '',
+      s.extra_blocks ? `<span class="nk-stat text-primary" title="Grupos de bins alocados em outro nível da estante"><b>${fmt(s.extra_blocks)}</b> alocação(ões) em nível extra</span>` : '',
+      s.levels_tall ? `<span class="nk-stat text-danger" title="Níveis com bin mais alta que o vão cadastrado"><b>${fmt(s.levels_tall)}</b> nível(is) com bin mais alta que o vão</span>` : '',
+    ].join('');
+  }
+  function renderLegend() {
+    let h = '';
+    if (state.mode === 'occ') {
+      h = `<span><span class="nk-legend-swatch" style="background:${COLORS.occ}"></span>Ocupado</span>
+           <span><span class="nk-legend-swatch" style="background:${COLORS.free}"></span>Livre</span>`;
+    } else if (state.mode === 'fill') {
+      h = [0, 25, 50, 75, 100].map(p => `<span><span class="nk-legend-swatch" style="background:${heat(p)}"></span>${p}%</span>`).join('') +
+          `<span><span class="nk-legend-swatch" style="background:${COLORS.over}"></span>&gt;100%</span>
+           <span><span class="nk-legend-swatch" style="background:${COLORS.none}"></span>sem bin / sem dados</span>`;
+    } else {
+      const used = new Set(); Object.values(leafIndex).forEach(l => l.bins.forEach(b => used.add(b.type)));
+      h = [...used].map(id => binTypes[id]).filter(Boolean).map(t => `<span title="${esc(t.name)}"><span class="nk-legend-swatch" style="background:${t.color}"></span>${esc(t.code)}</span>`).join('') +
+          `<span><span class="nk-legend-swatch" style="background:${COLORS.none}"></span>sem bin</span>`;
+    }
+    h += `<span class="text-muted"><span class="nk-legend-swatch" style="background:#fff;border:1px dashed #9aa5ad"></span>sem dimensão</span>`;
+    h += `<span class="text-muted" title="Bins de um endereço alocadas em outro nível da mesma estante"><span class="nk-legend-swatch" style="background:repeating-linear-gradient(45deg,#cfe2ff 0 3px,#fff 3px 6px);border:1px dashed #0d6efd"></span>bins em outro nível</span>`;
+    h += `<span class="text-muted" title="Área = capacidade cadastrada do nível; % à direita = uso"><span class="nk-legend-swatch" style="background:#f4f7f9;border:1px dashed #aeb8c0"></span>capacidade do nível</span>`;
+    $('legend').innerHTML = h;
+  }
+
+  // ---------------- Tooltip / clique ----------------
+  const tip = $('nkTip');
+  let linked = null;
+  function link(ownerId) {
+    if (linked === ownerId) return;
+    document.querySelectorAll('.nk-link').forEach(el => el.classList.remove('nk-link'));
+    linked = ownerId;
+    if (ownerId == null) return;
+    document.querySelectorAll(`.nk-extra[data-owner="${ownerId}"], .nk-leaf[data-id="${ownerId}"]`).forEach(el => el.classList.add('nk-link'));
+  }
+  document.addEventListener('mousemove', e => {
+    const ex = e.target.closest && e.target.closest('.nk-extra');
+    const g = ex ? null : (e.target.closest && e.target.closest('.nk-leaf'));
+    if (!g && !ex) { tip.style.display = 'none'; link(null); return; }
+    const ownerId = ex ? ex.dataset.owner : g.dataset.id;
+    const lf = leafIndexAll[ownerId] || leafIndex[ownerId]; if (!lf) return;
+    link(ownerId);
+    const extraHead = ex ? `<div class="mb-1 p-1 rounded" style="background:#e7f1ff">Bins <b>${esc(ex.dataset.qty)}× ${esc((binTypes[ex.dataset.type] || {}).code)}</b> deste endereço alocadas no <b>nível ${esc(ex.dataset.level)}</b></div>` : '';
+    const extraList = (lf.extra || []).map(x => `${x.qty}× <b>${esc((binTypes[x.type] || {}).code)}</b> <span class="text-primary">↳ nível ${esc(x.level)}</span>`).join('<br>');
+    const bins = lf.bins.map(b => { const t = binTypes[b.type] || {}; return `${b.qty}× <b>${esc(t.code)}</b>${t.w != null ? ` <span class="text-muted">${fmt(t.w,1)}×${fmt(t.h,1)}×${fmt(t.d,1)} cm</span>` : ''}`; }).join('<br>') || '<span class="text-muted">sem bin</span>';
+    const items = lf.items.slice(0, 8).map(it => `<tr><td class="mono">${esc(it.sku)}</td><td class="text-end">${it.qty == null ? '<span class="text-muted">padrão</span>' : fmt(it.qty, 3)}</td></tr>`).join('');
+    const markHead = lf.mark === 'new' ? '<div class="mb-1 p-1 rounded" style="background:#cfe2ff"><b>Novo</b> — será criado pelo lote</div>'
+      : lf.mark ? `<div class="mb-1 p-1 rounded text-danger" style="background:#fbe3ea">${esc(lf.mark)}</div>` : '';
+    tip.innerHTML = markHead + extraHead + `<div class="d-flex justify-content-between gap-3"><b class="mono">${esc(lf.address)}</b>
+        <span class="badge ${lf.occupied ? 'text-bg-warning' : 'text-bg-light border'}">${lf.occupied ? 'Ocupado' : 'Livre'}</span></div>
+      <div class="text-muted">${lf.dims ? `${fmt(lf.w,1)} × ${fmt(lf.h,1)} cm (L×A) · prof. ${fmt(lf.d,1)} cm` : 'Sem dimensão (tamanho padrão no desenho)'}</div>
+      <div class="mt-1">${bins}${extraList ? '<br>' + extraList : ''}</div>
+      ${lf.fill != null ? `<div class="mt-1">Enchimento: <b>${fmt(lf.fill, 1)}%</b> <span class="text-muted">(vol. ${fmt(lf.fill_vol, 1)}%${lf.fill_w != null ? ` · peso ${fmt(lf.fill_w, 1)}%` : ''})${lf.fill_partial ? ' · parcial: há produto sem dimensão/peso' : ''}</span></div>` : ''}
+      ${items ? `<table class="mt-1">${items}</table>${lf.n_items > 8 ? `<div class="text-muted">+${lf.n_items - 8} SKU(s)</div>` : ''}` : ''}
+      ${lf.id > 0 ? '<div class="text-muted mt-1" style="font-size:.7rem">Clique para abrir o endereço</div>' : ''}`;
+    tip.style.display = 'block';
+    const pad = 14, r = tip.getBoundingClientRect();
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + r.width > innerWidth) x = e.clientX - r.width - pad;
+    if (y + r.height > innerHeight) y = e.clientY - r.height - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  $('map').addEventListener('click', e => {
+    const ex = e.target.closest('.nk-extra'), g = e.target.closest('.nk-leaf');
+    if (!ex && !g) return;
+    const id = ex ? ex.dataset.owner : g.dataset.id;
+    if (+id < 0) return;  // endereço novo (pré-visualização): ainda não existe
+    const url = `/locations/${id}/edit`;
+    if (e.ctrlKey || e.metaKey || PREVIEW) window.open(url, '_blank'); else location.href = url;
+  });
+
+  // ---------------- Eventos ----------------
+  $('branch_id').addEventListener('change', () => { filterWarehouses(); $('aisle').value = ''; load(); });
+  $('warehouse_id').addEventListener('change', () => { $('aisle').value = ''; load(); });
+  $('aisle').addEventListener('change', load);
+  document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { state.mode = r.value; try { localStorage.setItem('nk-map-mode', r.value); } catch (e) {} render(); }));
+  let zt; $('zoom').addEventListener('input', () => { state.zoom = parseFloat($('zoom').value); $('zoomLabel').textContent = `${state.zoom.toFixed(1)} px/cm`; clearTimeout(zt); zt = setTimeout(render, 60); });
+  $('fit').addEventListener('click', fit);
+  let ht; $('highlight').addEventListener('input', () => { clearTimeout(ht); ht = setTimeout(() => { state.hl = $('highlight').value.trim(); render(); }, 250); });
+
+  try { const m = localStorage.getItem('nk-map-mode'); if (m) { state.mode = m; const el = document.querySelector(`input[name=mode][value="${m}"]`); if (el) el.checked = true; } } catch (e) {}
+  if ($('branch_id').value) { filterWarehouses(); const initAisle = {{ aisle|tojson }}; if (initAisle) $('aisle').innerHTML = `<option value="${esc(initAisle)}" selected>${esc(initAisle)}</option>`; load(); }
+  else $('map').innerHTML = '<div class="alert alert-info">Cadastre uma filial e endereços para ver o mapa.</div>';
+})();
+</script>
+{% endblock %}

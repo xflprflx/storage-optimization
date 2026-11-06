@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% set fv = form_values if form_values is defined else none %}
+{% macro chk(name, default) -%}{% if fv is not none %}{% if fv.get(name) %}checked{% endif %}{% elif default %}checked{% endif %}{%- endmacro %}
+<div class="page-header">
+  <h1><i class="bi bi-upload"></i> {{ title }}</h1>
+  <a href="/imports/{{ kind }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Outro arquivo</a>
+</div>
+<div class="mb-3">
+  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
+  <span class="badge rounded-pill text-bg-primary">2. Mapear colunas</span>
+  <span class="badge rounded-pill text-bg-light border">3. Resultado</span>
+</div>
+{% if errors %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ errors }}</div>{% endif %}
+
+<form method="post" action="/imports/{{ kind }}/process">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="filename" value="{{ filename }}">
+  {% if has_header %}<input type="hidden" name="has_header" value="1">{% endif %}
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header bg-white"><strong>Mapeamento de colunas</strong> <small class="text-muted">(sugerido automaticamente pelo nome)</small></div>
+        <div class="card-body">
+          <div class="row g-2">
+          {% for key, (label, required, _syn) in fields.items() %}
+            <div class="col-md-6">
+              <label class="form-label small mb-1">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
+              <select class="form-select form-select-sm" name="map_{{ key }}" {% if required %}required{% endif %}>
+                <option value="">— não importar —</option>
+                {% for h in headers %}<option value="{{ loop.index0 }}" {% if mapping.get(key) == loop.index0 %}selected{% endif %}>#{{ loop.index }} · {{ h }}</option>{% endfor %}
+              </select>
+            </div>
+          {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header bg-white"><strong>Opções</strong></div>
+        <div class="card-body">
+          {% if master.scope %}
+          <div class="mb-2">
+            <label class="form-label small mb-1">Filial padrão (quando a coluna estiver vazia/ausente)</label>
+            <input class="form-control form-control-sm mono text-uppercase" name="default_branch_code" list="branchCodes" value="{{ fv.get('default_branch_code', '') if fv is not none else '' }}" placeholder="Código">
+            <datalist id="branchCodes">{% for b in branches %}<option value="{{ b.code }}">{{ b.name }}</option>{% endfor %}</datalist>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small mb-1">Armazém padrão</label>
+            <input class="form-control form-control-sm mono text-uppercase" name="default_warehouse_code" list="whCodes" value="{{ fv.get('default_warehouse_code', '') if fv is not none else '' }}" placeholder="Código">
+            <datalist id="whCodes">{% for w in warehouses %}<option value="{{ w.code }}">{{ w.name }}</option>{% endfor %}</datalist>
+          </div>
+          {% endif %}
+          {% if kind in ('branches', 'warehouses', 'bin_types') %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="update_existing" value="1" id="upd" {{ chk('update_existing', True) }}>
+            <label class="form-check-label small" for="upd">Atualizar os já existentes (somente campos preenchidos)</label>
+          </div>
+          {% endif %}
+          {% if master.bins_option %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="replace_bins" value="1" id="rb" {{ chk('replace_bins', True) }}>
+            <label class="form-check-label small" for="rb">As bins do arquivo <b>substituem</b> as bins dos endereços (desmarcado: somam às existentes)</label>
+          </div>
+          {% endif %}
+          {% if master.sync_help %}
+          <div class="border border-danger-subtle rounded p-2 mt-2">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="sync" value="1" id="sync" {{ chk('sync', False) }}>
+              <label class="form-check-label small" for="sync"><b class="text-danger">Sincronizar:</b> excluir o que <b>não está no arquivo</b></label>
+            </div>
+            <div class="form-text">{{ master.sync_help }} Só roda se <b>nenhuma linha</b> do arquivo der erro (senão nada é excluído).</div>
+            {% if kind == 'locations' %}
+            <div class="form-check mt-1 ms-3">
+              <input class="form-check-input" type="checkbox" name="drop_levels" value="1" id="dl" {{ chk('drop_levels', False) }}>
+              <label class="form-check-label small" for="dl">Excluir também a posição física (nível da estante: vão e capacidades) que ficar sem endereços</label>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+          <ul class="form-text ps-3 mt-2 mb-0">{% for h in master.help %}<li>{{ h }}</li>{% endfor %}</ul>
+        </div>
+        <div class="card-footer bg-white">
+          <button class="btn btn-accent w-100" onclick="if (this.form.sync && this.form.sync.checked && !confirm('Sincronizar: o que não está no arquivo (e não está em uso) será EXCLUÍDO. Continuar?')) return false; this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Processando...'; this.form.submit();">
+            <i class="bi bi-play-fill"></i> Processar importação</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% include "imports/_preview.html" %}
+{% endblock %}

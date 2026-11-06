@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons, material_select, search_help %}
+{% block title %}Produtos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-tag"></i> Produtos</h1>
+  <div class="d-flex gap-2">
+    <a href="/imports/products" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar</a>
+    <a href="/products/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Novo produto</a>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-2"><select class="form-select" name="field" title="Em qual campo buscar">
+        {% for k, v in search_fields.items() %}<option value="{{ k }}" {% if field == k %}selected{% endif %}>{{ 'Buscar em: ' ~ v if not k else v }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><select class="form-select" name="mode" title="Como comparar">
+        {% for k, v in search_modes.items() %}<option value="{{ k }}" {% if mode == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><div class="input-group"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ 'Buscar por SKU, nome, tipo de material ou endereço' if not field else 'Buscar ' ~ search_fields[field]|lower }}">
+        {{ search_help() }}</div></div>
+      <div class="col-md-2">{{ material_select(material) }}</div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".prod-check" title="Selecionar todos da página"></th>
+        {{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'name', 'Nome') }}{{ th(request, sort, 'material', 'Tipo de material') }}{{ th(request, sort, 'location', 'Endereço padrão') }}
+        {{ th(request, sort, 'height', 'Alt.', 'text-end') }}{{ th(request, sort, 'width', 'Larg.', 'text-end') }}
+        {{ th(request, sort, 'length', 'Comp.', 'text-end') }}{{ th(request, sort, 'weight', 'Peso', 'text-end') }}{{ th(request, sort, 'min_level', 'Mín.', 'text-end') }}{{ th(request, sort, 'max_level', 'Máx.', 'text-end') }}
+        {{ th(request, sort, 'total', 'Saldo total', 'text-end') }}
+        <th class="text-end" style="width:150px">Ações</th>
+      </tr></thead>
+      <tbody>
+      {% for p in page.items %}
+        <tr>
+          <td><input type="checkbox" class="form-check-input prod-check" name="ids" value="{{ p.id }}" form="bulkDims"></td>
+          <td class="mono fw-semibold"><a href="/products/{{ p.id }}">{{ p.sku }}</a></td>
+          <td>{{ p.name }}</td>
+          <td class="small">{% if p.material_type %}<a class="badge text-bg-light border text-decoration-none" href="{{ url_with(request, material=p.material_type, page=None) }}">{{ p.material_type }}</a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          {% set pl = places.get(p.id, []) %}
+          <td class="small">
+            {% for x in pl[:3] %}<div class="nk-line {{ 'fw-semibold' if x.default else 'text-muted' }}">{% if not x.default and loop.index0 <= 1 %}<span style="font-size:.7rem">também em </span>{% endif %}<a class="mono" href="/locations/{{ x.id }}/edit" title="{{ x.scope }} / {{ x.address }}{{ ' · endereço padrão' if x.default }}">{{ x.address }}</a>
+              {% if x.qty is not none %}<span class="text-muted fw-normal">· {{ x.qty|dec }}</span>{% elif x.default %}<span class="text-muted fw-normal" style="font-size:.7rem" title="Sem saldo lançado">· sem saldo</span>{% endif %}</div>{% endfor %}
+            {% if pl|length > 3 %}<div class="nk-line"><a href="/products/{{ p.id }}">+{{ pl|length - 3 }} endereço(s)…</a></div>{% endif %}
+            {% if not pl %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-end">{{ p.dimensions.height|dec }}</td>
+          <td class="text-end">{{ p.dimensions.width|dec }}</td>
+          <td class="text-end">{{ p.dimensions.length|dec }}</td>
+          <td class="text-end">{{ p.dimensions.weight|dec }}</td>
+          <td class="text-end">{{ p.min_level|dec }}</td>
+          <td class="text-end">{{ p.max_level|dec }}</td>
+          <td class="text-end fw-semibold">{{ (totals.get(p.id) or 0)|dec }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-secondary" href="/products/{{ p.id }}" title="Detalhes"><i class="bi bi-eye"></i></a>
+            <a class="btn btn-sm btn-outline-primary" href="/products/{{ p.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/products/' ~ p.id ~ '/delete', '', 'Excluir o produto ' ~ p.sku ~ '? Os saldos dele também serão excluídos.') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="13" class="text-center text-muted py-4">Nenhum produto cadastrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.items %}
+  <form method="post" action="/products/bulk-dims" id="bulkDims" class="card-footer bg-white">
+    <input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}">
+    <input type="hidden" name="f_q" value="{{ q }}"><input type="hidden" name="f_material" value="{{ material }}">
+    <input type="hidden" name="f_field" value="{{ field }}"><input type="hidden" name="f_mode" value="{{ mode }}">
+    <div class="d-flex flex-wrap align-items-end gap-2">
+      <strong class="small me-1 mb-1"><i class="bi bi-rulers"></i> Medidas em massa:</strong>
+      {% for k, lbl, ph in [('height','Altura','cm'), ('width','Largura','cm'), ('length','Comprimento','cm'), ('weight','Peso','kg')] %}
+      <div><label class="form-label small mb-0" for="bd_{{ k }}">{{ lbl }}</label>
+        <input class="form-control form-control-sm text-end" style="width:95px" name="{{ k }}" id="bd_{{ k }}" inputmode="decimal" placeholder="{{ ph }}"></div>
+      {% endfor %}
+      <div><label class="form-label small mb-0" for="bd_copy">ou copiar do SKU</label>
+        <input class="form-control form-control-sm mono text-uppercase" style="width:130px" name="copy_sku" id="bd_copy" placeholder="modelo"></div>
+      <select class="form-select form-select-sm w-auto" name="scope" id="bdScope">
+        <option value="selected">nos produtos selecionados</option>
+        <option value="filtered">em TODOS os {{ page.total }} produto(s) filtrados</option>
+      </select>
+      <button class="btn btn-sm btn-accent" id="bdApply"><i class="bi bi-check2-all"></i> Aplicar</button>
+    </div>
+    <div class="form-text">Campo vazio não muda. Com "copiar do SKU", os campos vazios vêm do produto modelo (os preenchidos valem).
+      A distribuição presumida nas bins é recalculada.</div>
+  </form>
+  {% endif %}
+</div>
+{{ pagination(request, page) }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const f = document.getElementById('bulkDims');
+  if (!f) return;
+  document.getElementById('bdApply').addEventListener('click', e => {
+    const all = document.getElementById('bdScope').value === 'filtered';
+    const n = all ? {{ page.total }} : document.querySelectorAll('.prod-check:checked').length;
+    if (!n) { e.preventDefault(); alert('Selecione ao menos um produto (ou escolha "todos os filtrados").'); return; }
+    const vals = ['height', 'width', 'length', 'weight'].map(k => f.elements[k].value.trim()).filter(Boolean);
+    if (!vals.length && !f.elements.copy_sku.value.trim()) { e.preventDefault(); alert('Informe ao menos uma medida ou um SKU modelo.'); return; }
+    if (!confirm(`Aplicar as medidas em ${n} produto(s)?`)) e.preventDefault();
+  });
+})();
+</script>
+{% endblock %}

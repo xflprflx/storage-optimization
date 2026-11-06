@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Importações{% endblock %}
+{% block content %}
+<div class="page-header"><h1><i class="bi bi-upload"></i> Importações</h1></div>
+<div class="row g-3">
+  <div class="col-12"><h6 class="text-muted text-uppercase small mb-0">Cadastros-base — importe nesta ordem</h6></div>
+  {% for kind, icon, title, text in [
+      ('branches', 'bi-building', '1. Filiais', 'Código e nome. Atualiza o nome das existentes.'),
+      ('warehouses', 'bi-house-gear', '2. Armazéns', 'Código, nome e filiais (lista "01, 02"). Cria filiais inexistentes e as associações.'),
+      ('bin_types', 'bi-inboxes', '3. Tipos de bin', 'Código, nome, dimensões (cm), peso máximo (kg) e volume (L).'),
+      ('locations', 'bi-grid-3x3-gap', '4. Endereços', 'Endereço completo ou corredor/estante/nível/posição/compartimento, com tipo e quantidade de bins.'),
+      ('levels', 'bi-layers', '5. Capacidade dos níveis', 'Por corredor/estante/nível (aceita faixas): quantas bins de cada tipo cabem e o vão (cm).')] %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100"><div class="card-body">
+      <h5><i class="bi {{ icon }}"></i> {{ title }}</h5>
+      <p class="text-muted small">{{ text }}</p>
+      <a href="/imports/{{ kind }}" class="btn btn-accent btn-sm">Importar</a>
+      <a href="/imports/template/{{ kind }}.csv" class="btn btn-link btn-sm">Baixar modelo CSV</a>
+    </div></div>
+  </div>
+  {% endfor %}
+  <div class="col-12 mt-4"><h6 class="text-muted text-uppercase small mb-0">Produtos e estoque</h6></div>
+
+  <div class="col-md-6">
+    <div class="card h-100"><div class="card-body">
+      <h5><i class="bi bi-tag"></i> 6. Produtos</h5>
+      <p class="text-muted small">Cadastra/atualiza produtos por SKU (nome e dimensões) e define o endereço padrão. Filiais e armazéns informados são criados automaticamente pelos códigos.</p>
+      <a href="/imports/products" class="btn btn-accent">Importar produtos</a>
+      <a href="/imports/template/products.csv" class="btn btn-link">Baixar modelo CSV</a>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100"><div class="card-body">
+      <h5><i class="bi bi-boxes"></i> 7. Saldos de estoque</h5>
+      <p class="text-muted small">Sincroniza o saldo físico por Filial × Armazém × Posição × SKU. Várias colunas de quantidade podem ser somadas. Cria filiais, armazéns e posições inexistentes.</p>
+      <a href="/imports/stock" class="btn btn-accent">Importar saldos</a>
+      <a href="/imports/template/stock.csv" class="btn btn-link">Baixar modelo CSV</a>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

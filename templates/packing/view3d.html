@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Arranjo 3D{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-box"></i> Arranjo na bin {% if arr %}<span class="mono">{{ arr.code }}</span>{% endif %}</h1>
+    <div class="small text-muted">{{ title }}{% if arr and arr.parent %} · compartimento {{ arr.parent.label }} · {{ arr.parent.code }} nº {{ arr.parent.n }}, posição {{ arr.parent.slot }} de {{ arr.parent.k }} (grade {{ arr.parent.grid }}){% endif %}{% if arr and arr.dims %} · bin interna {{ arr.dims[1]|dec }} (larg.) × {{ arr.dims[2]|dec }} (comp.) × {{ arr.dims[0]|dec }} (alt.) cm{% endif %}
+      · rotação: {{ 'qualquer orientação' if rot == 'any' else 'só girar no plano (altura sempre para cima)' }}</div>
+  </div>
+  <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : window.close()"><i class="bi bi-arrow-left"></i> Voltar</button>
+</div>
+{% if not arr %}<div class="alert alert-warning">Tipo de bin não encontrado.</div>
+{% elif not arr.dims %}<div class="alert alert-warning">O tipo de bin {{ arr.code }} não tem dimensões cadastradas.</div>
+{% else %}
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card"><div class="card-body p-0 position-relative">
+      <div id="view3d" style="height: 70vh; min-height: 420px; background: #f4f6f8; border-radius: .375rem"></div>
+      <div class="position-absolute top-0 start-0 m-2 small text-muted bg-white bg-opacity-75 rounded px-2">Arraste para girar · roda do mouse para zoom · botão direito para mover</div>
+      <div class="position-absolute top-0 end-0 m-2 btn-group btn-group-sm">
+        <button class="btn btn-light border" data-view="iso">3D</button>
+        <button class="btn btn-light border" data-view="top">Cima</button>
+        <button class="btn btn-light border" data-view="front">Frente</button>
+        <button class="btn btn-light border" data-view="side">Lado</button>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-body small">
+      <div class="fw-semibold mb-2">Itens nesta bin{% if arr.approx %} <span class="badge bg-warning-subtle text-warning-emphasis border">vários SKUs: divisão aproximada</span>{% endif %}</div>
+      {% for it in arr.items %}
+      <div class="mb-2">
+        <div><span class="d-inline-block rounded me-1" style="width:12px;height:12px;background:{{ it.color }};vertical-align:-1px"></span>
+          <span class="mono fw-semibold">{{ it.sku }}</span> · {{ it.qty }} un.
+          {% if it.dims[0] %}<span class="text-muted">(produto {{ it.dims[0]|dec }}×{{ it.dims[1]|dec }}×{{ it.dims[2]|dec }} cm, A×L×C)</span>{% endif %}</div>
+        <div class="text-muted">{{ it.text }}</div>
+        {% if it.oriented %}<div class="text-muted">Capacidade nesta orientação: {{ it.per_bin }} un. ({{ it.nx }} × {{ it.nz }} × {{ it.ny }})</div>{% endif %}
+        {% if it.overflow %}<div class="text-danger">{{ it.overflow }} unidade(s) não cabem na bin pela geometria.</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div></div>
+    <div class="card"><div class="card-body small">
+      <div class="fw-semibold mb-1">Vista de cima e de frente</div>
+      {{ svg|safe }}
+    </div></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if arr and arr.dims %}
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+const data = {{ data|safe }};
+const el = document.getElementById('view3d');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf4f6f8);
+const camera = new THREE.PerspectiveCamera(40, el.clientWidth / el.clientHeight, 0.1, 10000);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(el.clientWidth, el.clientHeight);
+el.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(1, 2, 1.5); scene.add(sun);
+const W = data.w, H = data.h, L = data.l;
+// compartimento (fração): a bin pai inteira aparece em volta, com as divisórias; o compartimento fica na sua posição
+const PR = data.parent, PW = PR ? PR.w : W, PH = PR ? PR.h : H, PL = PR ? PR.l : L, M = Math.max(PW, PH, PL);
+const outer = new THREE.Group(); outer.position.set(-PW / 2, 0, -PL / 2); scene.add(outer);
+const root = new THREE.Group(); root.position.set(PR ? PR.x0 : 0, 0, PR ? PR.z0 : 0); outer.add(root);
+if (PR) {
+  const pg = new THREE.BoxGeometry(PW, PH, PL);
+  const pe = new THREE.LineSegments(new THREE.EdgesGeometry(pg), new THREE.LineBasicMaterial({ color: 0x1f2d33 }));
+  pe.position.set(PW / 2, PH / 2, PL / 2); outer.add(pe);
+  const pf = new THREE.Mesh(new THREE.PlaneGeometry(PW, PL), new THREE.MeshBasicMaterial({ color: 0xe9edf0, side: THREE.DoubleSide }));
+  pf.rotation.x = -Math.PI / 2; pf.position.set(PW / 2, -0.02, PL / 2); outer.add(pf);
+  for (let c = 1; c < (PR.nx || 1); c++) {  // divisórias na largura
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(PL, PH), new THREE.MeshBasicMaterial({ color: 0x3b5b8c, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }));
+    d.rotation.y = Math.PI / 2; d.position.set(PW / PR.nx * c, PH / 2, PL / 2); outer.add(d);
+  }
+  for (let r = 1; r < (PR.nz || 1); r++) {  // divisórias no comprimento
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH), new THREE.MeshBasicMaterial({ color: 0x3b5b8c, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }));
+    d.position.set(PW / 2, PH / 2, PL / PR.nz * r); outer.add(d);
+  }
+}
+// bin: caixa transparente + arestas
+const binGeo = new THREE.BoxGeometry(W, H, L);
+const binMesh = new THREE.Mesh(binGeo, new THREE.MeshBasicMaterial({ color: 0x9aa5ad, transparent: true, opacity: 0.08, depthWrite: false }));
+binMesh.position.set(W / 2, H / 2, L / 2); root.add(binMesh);
+const edges = new THREE.LineSegments(new THREE.EdgesGeometry(binGeo), new THREE.LineBasicMaterial({ color: 0x3b5b8c }));
+edges.position.copy(binMesh.position); root.add(edges);
+// fundo
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, L), new THREE.MeshBasicMaterial({ color: 0xdde3e7, side: THREE.DoubleSide }));
+floor.rotation.x = -Math.PI / 2; floor.position.set(W / 2, -0.01, L / 2); root.add(floor);
+// unidades
+for (const it of data.items) {
+  const mat = new THREE.MeshLambertMaterial({ color: it.color });
+  const lineMat = new THREE.LineBasicMaterial({ color: 0x1f2d33, transparent: true, opacity: 0.45 });
+  const ghostMat = new THREE.LineDashedMaterial({ color: it.color, dashSize: 1, gapSize: 0.8 });
+  it.boxes.forEach(([x, y, z, dx, dy, dz], k) => {
+    const g = new THREE.BoxGeometry(dx * 0.97, dy * 0.97, dz * 0.97);
+    const pos = new THREE.Vector3(x + dx / 2, y + dy / 2, z + dz / 2);
+    if (it.real !== undefined && k >= it.real) {  // espaço reservado (min/max level): só o contorno tracejado
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), ghostMat); e.computeLineDistances(); e.position.copy(pos); root.add(e);
+      return;
+    }
+    const m = new THREE.Mesh(g, mat); m.position.copy(pos); root.add(m);
+    const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), lineMat); e.position.copy(pos); root.add(e);
+  });
+}
+// indicação da frente
+const arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, PL / 2 + Math.max(PW, PL) * 0.08), Math.max(PW, PL) * 0.12, 0xe07a1f);
+scene.add(arrow);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, PH / 2, 0);
+const R = M * 2.1;
+const views = { iso: [R * 0.75, R * 0.65, R * 0.9], top: [0, R * 1.3, 0.001], front: [0, PH / 2, R * 1.2], side: [R * 1.2, PH / 2, 0] };
+function setView(v) { camera.position.set(...views[v]); controls.update(); }
+setView('iso');
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+window.addEventListener('resize', () => { camera.aspect = el.clientWidth / el.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(el.clientWidth, el.clientHeight); });
+(function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+</script>
+{% endif %}
+{% endblock %}

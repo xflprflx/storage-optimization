@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons, material_select %}
+{% block title %}Saldos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-boxes"></i> Saldos Físicos <small class="text-muted fs-6">por produto × endereço</small></h1>
+  <div class="d-flex gap-2">
+    <a href="/imports/stock" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar saldos</a>
+    <a href="/stock/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Lançar saldo</a>
+  </div>
+</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-2"><input class="form-control" type="search" name="sku" value="{{ sku }}" placeholder="SKU ou nome" title="10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · &quot;frase inteira&quot; · sku:10* só no SKU, nome:… só no nome"></div>
+      <div class="col-md-2">{{ material_select(material) }}</div>
+      <div class="col-md-2"><input class="form-control mono" type="search" name="address" value="{{ address }}" placeholder="Endereço" title="A01 encontra A-01 · A-01* começa com · =A-01-1-1 igual"></div>
+      <div class="col-md-2">
+        <select class="form-select" name="branch_id"><option value="">Todas as filiais</option>
+          {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select class="form-select" name="warehouse_id"><option value="">Todos os armazéns</option>
+          {% for w in warehouses %}<option value="{{ w.id }}" {% if warehouse_id == w.id %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select class="form-select" name="only_positive">
+          <option value="1" {% if only_positive == '1' %}selected{% endif %}>Somente com saldo</option>
+          <option value="0" {% if only_positive == '0' %}selected{% endif %}>Incluir zerados</option>
+        </select>
+      </div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr>
+        {{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'name', 'Produto') }}{{ th(request, sort, 'material', 'Tipo de material') }}
+        {{ th(request, sort, 'branch', 'Filial') }}{{ th(request, sort, 'warehouse', 'Armazém') }}
+        {{ th(request, sort, 'address', 'Endereço') }}{{ th(request, sort, 'quantity', 'Quantidade', 'text-end') }}
+        {{ th(request, sort, 'updated', 'Atualizado') }}
+        <th class="text-end" style="width:110px">Ações</th>
+      </tr></thead>
+      <tbody>
+      {% for s in page.items %}
+        <tr>
+          <td class="mono fw-semibold"><a href="/products/{{ s.product_id }}">{{ s.product.sku }}</a></td>
+          <td>{{ s.product.name }}</td>
+          <td class="small">{{ s.product.material_type or '—' }}</td>
+          <td>{{ s.location.branch.code }}</td>
+          <td>{{ s.location.warehouse.code if s.location.warehouse else '—' }}</td>
+          <td class="mono"><a href="/locations/{{ s.location_id }}/edit">{{ s.location.address }}</a></td>
+          <td class="text-end fw-semibold {% if s.quantity < 0 %}text-danger{% endif %}">{{ s.quantity|dec }}</td>
+          <td class="small text-muted">{{ s.updated_at.strftime('%d/%m/%Y %H:%M') if s.updated_at else '' }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/stock/{{ s.id }}/edit" title="Ajustar"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/stock/' ~ s.id ~ '/delete', '', 'Excluir o registro de saldo?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="text-center text-muted py-4">Nenhum saldo encontrado.</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if page.items %}
+      <tfoot><tr><th colspan="6" class="text-end">Total filtrado</th><th class="text-end">{{ total_qty|dec }}</th><th colspan="2"></th></tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

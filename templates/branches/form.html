@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% block title %}{{ 'Editar' if branch else 'Nova' }} filial{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-building"></i> {{ 'Editar filial ' ~ branch.code if branch else 'Nova filial' }}</h1>
+  <a href="/branches" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+<div class="card" style="max-width: 760px">
+  <div class="card-body">
+    {{ form_alert(errors) }}
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Código *</label>
+          <input class="form-control mono {{ invalid(errors, 'code') }}" name="code" maxlength="30" value="{{ data.get('code', '') }}" required autofocus>
+          {{ field_error(errors, 'code') }}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Nome *</label>
+          <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="150" value="{{ data.get('name', '') }}" required>
+          {{ field_error(errors, 'name') }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Armazéns desta filial</label>
+          {% if warehouses %}
+          <div class="border rounded p-2 {{ invalid(errors, 'warehouse_ids') }}" style="max-height: 260px; overflow-y:auto">
+            {% for w in warehouses %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="warehouse_ids" value="{{ w.id }}" id="wh{{ w.id }}" {% if w.id in data.get('warehouse_ids', []) %}checked{% endif %}>
+              <label class="form-check-label" for="wh{{ w.id }}"><span class="mono">{{ w.code }}</span> - {{ w.name }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-muted small">Nenhum armazém cadastrado. <a href="/warehouses/new">Cadastrar armazém</a></div>
+          {% endif %}
+          {{ field_error(errors, 'warehouse_ids') }}
+        </div>
+      </div>
+      <div class="mt-4">
+        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="/branches" class="btn btn-link">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

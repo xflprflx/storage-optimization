@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import delete_button %}
+{% block title %}{{ product.sku }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-tag"></i> <span class="mono">{{ product.sku }}</span> <small class="text-muted fs-6">{{ product.name }}</small></h1>
+  <div class="d-flex gap-2">
+    <a href="/products" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Produtos</a>
+    <a href="/products/{{ product.id }}/edit" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
+    {{ delete_button('/products/' ~ product.id ~ '/delete', 'Excluir', 'Excluir o produto ' ~ product.sku ~ '? Os saldos dele também serão excluídos.') }}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h6 class="text-muted text-uppercase small">Dados</h6>
+      <dl class="row mb-0 small">
+        <dt class="col-5">Endereço padrão</dt><dd class="col-7 mono">{{ product.default_location.full_label if product.default_location else '—' }}</dd>
+        <dt class="col-5">Tipo de material</dt><dd class="col-7">{% if product.material_type %}<a href="/products?material={{ product.material_type|urlencode }}">{{ product.material_type }}</a>{% else %}—{% endif %}</dd>
+        <dt class="col-5">Altura</dt><dd class="col-7">{{ product.dimensions.height|dec or '—' }}</dd>
+        <dt class="col-5">Largura</dt><dd class="col-7">{{ product.dimensions.width|dec or '—' }}</dd>
+        <dt class="col-5">Comprimento</dt><dd class="col-7">{{ product.dimensions.length|dec or '—' }}</dd>
+        <dt class="col-5">Volume</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
+        <dt class="col-5">Peso</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
+        <dt class="col-5">Nível mínimo</dt><dd class="col-7">{{ product.min_level|dec if product.min_level is not none else '—' }}</dd>
+        <dt class="col-5">Nível máximo</dt><dd class="col-7">{{ product.max_level|dec if product.max_level is not none else '—' }}</dd>
+        <dt class="col-5">Saldo total</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white"><strong>Saldo físico por endereço</strong></div>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead><tr><th>Filial</th><th>Armazém</th><th>Endereço</th><th class="text-end">Quantidade</th><th></th></tr></thead>
+        <tbody>
+        {% for s in stock %}
+          <tr>
+            <td>{{ s.location.branch.code }}</td><td>{{ s.location.warehouse.code if s.location.warehouse else '—' }}</td>
+            <td class="mono">{{ s.location.address }}</td><td class="text-end fw-semibold">{{ s.quantity|dec }}</td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/stock/{{ s.id }}/edit"><i class="bi bi-pencil"></i></a></td>
+          </tr>
+        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Sem saldo.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

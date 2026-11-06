@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% block title %}{{ 'Editar' if product else 'Novo' }} produto{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-tag"></i> {{ 'Editar produto ' ~ product.sku if product else 'Novo produto' }}</h1>
+  <a href="{{ '/products/' ~ product.id if product else '/products' }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+<div class="card" style="max-width: 900px">
+  <div class="card-body">
+    {{ form_alert(errors) }}
+    <form method="post" autocomplete="off">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">SKU *</label>
+          <input class="form-control mono text-uppercase {{ invalid(errors, 'sku') }}" name="sku" maxlength="60" value="{{ data.get('sku') or '' }}" required autofocus>
+          {{ field_error(errors, 'sku') }}
+        </div>
+        <div class="col-md-5">
+          <label class="form-label">Nome *</label>
+          <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="255" value="{{ data.get('name') or '' }}" required>
+          {{ field_error(errors, 'name') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tipo de material</label>
+          <input class="form-control" name="material_type" maxlength="60" list="materialTypes" value="{{ data.get('material_type') or '' }}" placeholder="Ex.: Eletrônico">
+          <datalist id="materialTypes">{% for mt, n in material_types() if mt %}<option value="{{ mt }}">{% endfor %}</datalist>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Endereço padrão</label>
+          <div>
+            <input class="form-control mono {{ invalid(errors, 'default_location_id') }}" name="default_location_label"
+                   value="{{ data.get('default_location_label') or '' }}" placeholder="Digite para buscar (ex.: A-01-01)"
+                   data-autocomplete="/api/locations/search" data-hidden="default_location_id">
+          </div>
+          <input type="hidden" name="default_location_id" id="default_location_id" value="{{ data.get('default_location_id') or '' }}">
+          {{ field_error(errors, 'default_location_id') }}
+          <div class="form-text">É o endereço onde o produto fica. Quando o produto tem saldo, é preenchido automaticamente com o endereço de maior saldo; você pode escolher outro entre os endereços onde ele tem saldo. Sem saldo lançado, vale o endereço informado aqui.</div>
+        </div>
+      </div>
+      <hr class="my-4">
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> Dimensões físicas</h6>
+      <div class="row g-3">
+        {% for key, label in dim_fields %}
+        <div class="col-md-3">
+          <label class="form-label">{{ label }} {% if key == 'weight' %}<small class="text-muted">(kg)</small>{% else %}<small class="text-muted">(cm)</small>{% endif %}</label>
+          <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
+          {{ field_error(errors, key) }}
+        </div>
+        {% endfor %}
+      </div>
+      <hr class="my-4">
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-bar-chart-steps"></i> Níveis de estoque no endereço padrão (unidades)</h6>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Nível mínimo <small class="text-muted">(min level)</small></label>
+          <input class="form-control text-end {{ invalid(errors, 'min_level') }}" name="min_level" inputmode="decimal" value="{{ data.get('min_level')|dec_input }}">
+          {{ field_error(errors, 'min_level') }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Nível máximo <small class="text-muted">(max level)</small></label>
+          <input class="form-control text-end {{ invalid(errors, 'max_level') }}" name="max_level" inputmode="decimal" value="{{ data.get('max_level')|dec_input }}">
+          {{ field_error(errors, 'max_level') }}
+        </div>
+        <div class="col-md-6 form-text align-self-end">Usados na otimização de bins quando a base de cálculo é "Nível mínimo" ou "Nível máximo".</div>
+      </div>
+      <div class="mt-4">
+        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
+        <a href="/products" class="btn btn-link">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

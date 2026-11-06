@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} - Resultado{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-clipboard-check"></i> {{ title }} — Resultado</h1>
+  <div class="d-flex gap-2">
+    <a href="/imports/{{ kind }}" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Nova importação</a>
+    <a href="{{ '/products' if kind == 'products' else '/stock' }}" class="btn btn-accent">Ver {{ 'produtos' if kind == 'products' else 'saldos' }}</a>
+  </div>
+</div>
+<div class="mb-3">
+  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
+  <span class="badge rounded-pill text-bg-success">2. Colunas mapeadas</span>
+  <span class="badge rounded-pill text-bg-primary">3. Resultado</span>
+</div>
+
+{% set r = result %}
+<div class="alert {% if r.error_count == 0 %}alert-success{% elif r.rows_ok %}alert-warning{% else %}alert-danger{% endif %}">
+  <strong>{{ filename }}</strong>: {{ r.rows_read|dec }} linha(s) lida(s) em {{ r.chunks }} lote(s) · {{ r.rows_ok|dec }} processada(s) ·
+  {{ r.error_count|dec }} com erro · {{ (r.elapsed_ms / 1000)|round(2) }} s
+  {% if qty_labels %}<br><small>Quantidade = soma de: <b>{{ qty_labels|join(' + ') }}</b></small>{% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+  {% if kind == 'products' %}
+    {% set cards = [('Produtos criados', r.products_created), ('Produtos atualizados', r.products_updated),
+                    ('Filiais criadas', r.branches_created), ('Armazéns criados', r.warehouses_created),
+                    ('Filial×Armazém associados', r.branch_warehouse_links_created), ('Endereços criados', r.locations_created),
+                    ('Endereços padrão definidos', r.default_locations_set), ('Produtos excluídos', r.products_deleted)] %}
+  {% else %}
+    {% set cards = [('Saldos gravados', r.stock_items_written), ('Saldos zerados (ausentes)', r.stock_items_zeroed),
+                    ('Endereços criados', r.locations_created), ('Produtos criados', r.products_created),
+                    ('Filiais criadas', r.branches_created), ('Armazéns criados', r.warehouses_created),
+                    ('Filial×Armazém associados', r.branch_warehouse_links_created),
+                    ('Endereços padrão atualizados', r.default_locations_set), ('Endereços com divisão por bin', r.bin_contents_set)] %}
+  {% endif %}
+  {% for label, value in cards %}
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="card-body py-2">
+    <div class="label">{{ label }}</div><div class="value fs-3">{{ value|dec }}</div>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+{% if r.notes %}
+<div class="alert alert-info small">
+  <strong><i class="bi bi-link-45deg"></i> Associações automáticas</strong> — códigos que o Excel costuma converter em número (ex.: <span class="mono">01</span> → <span class="mono">1</span>) foram ligados aos cadastros existentes:
+  <ul class="mb-0 mt-1">{% for n in r.notes[:50] %}<li>{{ n }}</li>{% endfor %}{% if r.notes|length > 50 %}<li>… e mais {{ r.notes|length - 50 }}</li>{% endif %}</ul>
+</div>
+{% endif %}
+{% if r.errors %}
+<div class="card mb-3">
+  <div class="card-header bg-white text-danger"><strong><i class="bi bi-x-circle"></i> Erros</strong>
+    {% if r.error_count > r.errors|length %}<small class="text-muted">(exibindo {{ r.errors|length }} de {{ r.error_count }})</small>{% endif %}</div>
+  <div class="table-responsive" style="max-height: 400px">
+    <table class="table table-sm mb-0 small"><thead><tr><th style="width:90px">Linha</th><th>Mensagem</th></tr></thead>
+      <tbody>{% for line, msg in r.errors %}<tr><td class="mono">{{ line }}</td><td>{{ msg }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% if r.warnings %}
+<div class="card">
+  <div class="card-header bg-white text-warning-emphasis"><strong><i class="bi bi-exclamation-circle"></i> Avisos</strong></div>
+  <div class="table-responsive" style="max-height: 400px">
+    <table class="table table-sm mb-0 small"><thead><tr><th style="width:90px">Linha</th><th>Mensagem</th></tr></thead>
+      <tbody>{% for line, msg in r.warnings %}<tr><td class="mono">{{ line }}</td><td>{{ msg }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

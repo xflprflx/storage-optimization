@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Capacidade dos níveis{% endblock %}
+{% macro hidden_filters() -%}
+<input type="hidden" name="f_branch_id" value="{{ branch_id or '' }}">
+<input type="hidden" name="f_warehouse_id" value="{{ warehouse_id or '' }}">
+<input type="hidden" name="f_aisle" value="{{ aisle }}"><input type="hidden" name="f_bay" value="{{ bay }}">
+<input type="hidden" name="f_level" value="{{ level }}"><input type="hidden" name="f_status" value="{{ status }}">
+<input type="hidden" name="f_page" value="{{ page_no }}">
+{%- endmacro %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-layers"></i> Capacidade dos níveis</h1>
+  <div class="small text-muted">"Neste nível cabem X bins do tipo Y". Tipos diferentes são alternativas: o uso soma as frações (3/6 CX-P + 1/3 CX-M = 83%).</div>
+  <a href="/imports/levels" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar</a>
+</div>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="card mb-3">
+  <div class="card-body border-bottom">
+    <form class="row g-2 align-items-end" method="get" data-autofilter>
+      <div class="col-md-2">
+        <label class="form-label small mb-0">Filial</label>
+        <select class="form-select form-select-sm" name="branch_id" id="branch_id">
+          {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-0">Armazém</label>
+        <select class="form-select form-select-sm" name="warehouse_id">
+          <option value="none" {% if warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          {% for w in warehouses %}<option value="{{ w.id }}" {% if warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-4 col-md-1"><label class="form-label small mb-0">Corredor</label><input class="form-control form-control-sm mono" type="search" name="aisle" value="{{ aisle }}" placeholder="A ou A-C"></div>
+      <div class="col-4 col-md-1"><label class="form-label small mb-0">Estante</label><input class="form-control form-control-sm mono" type="search" name="bay" value="{{ bay }}" placeholder="01-04"></div>
+      <div class="col-4 col-md-1"><label class="form-label small mb-0">Nível</label><input class="form-control form-control-sm mono" type="search" name="level" value="{{ level }}" placeholder="01,03"></div>
+      <div class="col-md-2">
+        <label class="form-label small mb-0">Situação</label>
+        <select class="form-select form-select-sm" name="status">
+          <option value="">Todas</option>
+          <option value="over" {% if status == 'over' %}selected{% endif %}>Acima da capacidade</option>
+          <option value="full" {% if status == 'full' %}selected{% endif %}>Cheios (100%)</option>
+          <option value="free" {% if status == 'free' %}selected{% endif %}>Com espaço livre</option>
+          <option value="extra" {% if status == 'extra' %}selected{% endif %}>Com bins em outro nível</option>
+          <option value="nocap" {% if status == 'nocap' %}selected{% endif %}>Sem capacidade cadastrada</option>
+          <option value="noheight" {% if status == 'noheight' %}selected{% endif %}>Sem altura do vão</option>
+        </select>
+      </div>
+      <div class="col-auto"><a class="btn btn-sm btn-outline-secondary" href="/layout?branch_id={{ branch_id }}&warehouse_id={{ warehouse_id }}"><i class="bi bi-bricks"></i> Ver no mapa</a></div>
+    </form>
+  </div>
+
+  <div class="card-body border-bottom bg-light-subtle">
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <form method="post" action="/levels/bulk" class="row g-2 align-items-end">
+          {{ hidden_filters() }}
+          <div class="col-12 small fw-semibold"><i class="bi bi-lightning-charge"></i> Definir em lote <span class="text-muted fw-normal">(condições: vazio = todos · <span class="mono">01-04</span> · <span class="mono">A,C</span>) — capacidade e/ou altura do vão</span></div>
+          <div class="col-4 col-md-2"><input class="form-control form-control-sm mono" name="b_aisle" placeholder="Corredor" value="{{ aisle }}"></div>
+          <div class="col-4 col-md-2"><input class="form-control form-control-sm mono" name="b_bay" placeholder="Estante" value="{{ bay }}"></div>
+          <div class="col-4 col-md-2"><input class="form-control form-control-sm mono" name="b_level" placeholder="Nível" value="{{ level }}"></div>
+          <div class="col-6 col-md-3">
+            <select class="form-select form-select-sm" name="bin_type_id">
+              <option value="">— capacidade: não alterar —</option>
+              {% for bt in bin_types %}<option value="{{ bt.id }}">Cabem de {{ bt.code }}{% if bt.width is not none %} ({{ bt.width|dec }} cm larg.){% endif %}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-3 col-md-1"><input class="form-control form-control-sm text-end" name="max_bins" type="number" min="0" placeholder="qtd" title="Vazio ou 0 = remover a capacidade deste tipo"></div>
+          <div class="col-3 col-md-2"><input class="form-control form-control-sm text-end" name="height" inputmode="decimal" placeholder="vão (cm)" title="Distância entre este nível e o de cima (cm). Ex.: porta-paletes: 150"></div>
+          <div class="col-auto form-check ms-2 small"><input class="form-check-input" type="checkbox" name="clear_height" value="1" id="clrh"><label class="form-check-label" for="clrh">limpar vão</label></div>
+          <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm('Aplicar a todos os níveis que atendem às condições?')">Aplicar</button></div>
+        </form>
+      </div>
+      <div class="col-lg-5">
+        <form method="post" action="/levels/reserved" class="row g-2 align-items-end">
+          {{ hidden_filters() }}
+          <div class="col-12 small fw-semibold"><i class="bi bi-plus-square-dotted"></i> Nível reservado <span class="text-muted fw-normal">(sem endereço, só recebe bins de outros níveis da estante)</span></div>
+          <div class="col-3"><input class="form-control form-control-sm mono text-uppercase" name="r_aisle" placeholder="Corredor" required></div>
+          <div class="col-3"><input class="form-control form-control-sm mono text-uppercase" name="r_bay" placeholder="Estante" required></div>
+          <div class="col-3"><input class="form-control form-control-sm mono text-uppercase" name="r_level" placeholder="Nível" required></div>
+          <div class="col-3"><button class="btn btn-sm btn-outline-primary w-100">Cadastrar</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="/levels/save">
+    {{ hidden_filters() }}
+    <div class="table-responsive" style="max-height: 68vh">
+      <table class="table table-sm table-hover mb-0 small align-middle">
+        <thead class="sticky-top"><tr>
+          <th>Nível</th><th class="text-end">Endereços</th>
+          {% for bt in bin_types %}<th class="text-center" title="{{ bt.name }}">Cabem<br><span class="mono">{{ bt.code }}</span></th>{% endfor %}
+          <th class="text-center" title="Distância entre este nível e o de cima (cm)">Vão<br>(cm)</th>
+          <th>Bins no nível</th><th style="width:170px">Uso</th><th>Observação</th><th></th>
+        </tr></thead>
+        <tbody>
+        {% for r in rows %}
+          {% set u = r.usage %}{% set f = u.fraction %}
+          <tr class="{% if u.over %}table-danger{% endif %}">
+            <td class="mono fw-semibold text-nowrap">{{ r.code }}
+              {% if not r.locations %}<span class="badge text-bg-secondary ms-1" title="Nível sem endereços: só recebe bins de outros níveis">reservado</span>{% endif %}</td>
+            <td class="text-end">{% if r.locations %}<a href="/locations?branch_id={{ branch_id }}&warehouse_id={{ warehouse_id }}&q={{ r.code|urlencode }}">{{ r.locations }}</a>{% else %}0{% endif %}</td>
+            {% for bt in bin_types %}
+            <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:64px" type="number" min="0" name="cap_{{ r.level.id }}_{{ bt.id }}" value="{{ u.capacity.get(bt.id, '') }}"></td>
+            {% endfor %}
+            <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:72px" inputmode="decimal" name="height_{{ r.level.id }}" value="{{ r.level.height_cm|dec_input }}" title="Distância até o nível de cima (cm). Nunca fica menor que a bin mais alta do nível: a estrutura acompanha a bin.">
+              {% if r.tallest %}<div class="text-muted" style="font-size:.7rem">bin {{ r.tallest|dec }}</div>{% endif %}</td>
+            <td class="text-nowrap">
+              {% for tid, n in u.used.items() %}{% if n %}{% set bt = (bin_types|selectattr('id', 'equalto', tid)|first) %}
+                <span class="badge text-bg-light border mono">{{ n }}× {{ bt.code if bt else tid }}{% if u.borrowed.get(tid) %} <span class="text-info-emphasis" title="de endereços de outros níveis">({{ u.borrowed[tid] }} emprest.)</span>{% endif %}</span>
+              {% endif %}{% else %}<span class="text-muted">—</span>{% endfor %}
+              {% if u.lent %}<div class="text-muted" style="font-size:.72rem"><i class="bi bi-arrow-return-right"></i> {{ u.lent }} bin(s) deste nível estão em outro nível</div>{% endif %}
+            </td>
+            <td>
+              {% if f is none %}
+                <span class="text-muted">{% if not u.has_capacity %}sem capacidade{% else %}tipo sem capacidade{% endif %}</span>
+              {% else %}
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:8px"><div class="progress-bar {{ 'bg-danger' if u.over else ('bg-warning' if f > 0.85 else 'bg-success') }}" style="width: {{ [f * 100, 100]|min }}%"></div></div>
+                  <span class="{{ 'text-danger fw-semibold' if u.over else '' }}">{{ (f * 100)|round|int }}%</span>
+                </div>
+              {% endif %}
+            </td>
+            <td><input class="form-control form-control-sm" name="notes_{{ r.level.id }}" value="{{ r.level.notes }}" maxlength="200"></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" form="del{{ r.level.id }}" title="{{ 'Excluir nível reservado' if not r.locations else 'Remover capacidades' }}"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="{{ bin_types|length + 7 }}" class="text-center text-muted py-4">Nenhum nível encontrado.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if rows %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+      <small class="text-muted">{{ total }} nível(is){% if pages > 1 %} · página {{ page_no }}/{{ pages }}
+        {% for n in range(1, pages + 1) %}<a class="ms-1 {% if n == page_no %}fw-bold{% endif %}" href="{{ url_with(request, page=n) }}">{{ n }}</a>{% endfor %}{% endif %}</small>
+      <button class="btn btn-sm btn-accent"><i class="bi bi-check-lg"></i> Salvar alterações</button>
+    </div>
+    {% endif %}
+  </form>
+  {% for r in rows %}
+  <form id="del{{ r.level.id }}" method="post" action="/levels/{{ r.level.id }}/delete" class="d-none" onsubmit="return confirm('{{ 'Excluir o nível reservado' if not r.locations else 'Remover as capacidades do nível' }} {{ r.code }}?');">{{ hidden_filters() }}</form>
+  {% endfor %}
+</div>
+{% endblock %}

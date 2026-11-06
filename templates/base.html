@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Neokioski{% endblock %} · Neokioski</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root { --nk-accent: #0f766e; }
+    body { background: #f4f6f8; }
+    .navbar-brand { font-weight: 700; letter-spacing: .5px; }
+    .navbar { background: #0f2a2a !important; }
+    .card { border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .table thead th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #5b6770; background: #f8fafb; }
+    .table td { vertical-align: middle; }
+    .nk-line { line-height: 1.45; height: 1.45em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+    .table thead th.sortable a:hover { color: var(--nk-accent) !important; }
+    .table thead th.sorted { color: var(--nk-accent); background: #eef7f6; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 700; }
+    .stat-card .label { color: #6b7780; font-size: .85rem; }
+    .ac-list { z-index: 1050; max-height: 260px; overflow-y: auto; top: 100%; left: 0; }
+    .page-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .page-header h1 { font-size: 1.45rem; margin: 0; }
+    .btn-accent { background: var(--nk-accent); color: #fff; }
+    .btn-accent:hover { background: #115e59; color: #fff; }
+    .preview-table { font-size: .8rem; }
+    .preview-table td, .preview-table th { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    /* ---------- Tabelas: cabeçalho congelado, rolagem horizontal, colunas redimensionáveis ---------- */
+    .nk-scroll { overflow: auto; max-height: calc(100vh - 170px); }
+    .nk-scroll > table { margin-bottom: 0; }
+    .nk-scroll > table > thead > tr > th { position: sticky; top: 0; z-index: 3; background: #f8fafb; box-shadow: inset 0 -1px 0 #dee2e6; }
+    .nk-scroll > table > thead > tr > th.sorted { background: #eef7f6; }
+    .nk-scroll > table > tfoot > tr > th, .nk-scroll > table > tfoot > tr > td { position: sticky; bottom: 0; z-index: 2; background: #f8fafb; box-shadow: inset 0 1px 0 #dee2e6; }
+    table.nk-sized { table-layout: fixed; }
+    table.nk-sized > thead > tr > th, table.nk-sized > tbody > tr > td { overflow: hidden; text-overflow: ellipsis; }
+    .nk-resizer { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; z-index: 4; user-select: none; }
+    .nk-resizer::after { content: ""; position: absolute; top: 25%; bottom: 25%; left: 3px; width: 1px; background: #d0d7dc; }
+    .nk-resizer:hover::after, .nk-resizing .nk-resizer::after { background: var(--nk-accent); width: 2px; }
+    .nk-resizing, .nk-resizing * { cursor: col-resize !important; user-select: none !important; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="nav">
+      {% set p = request.url.path %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> Painel</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if p.startswith('/branches') or p.startswith('/warehouses') or p.startswith('/locations') or p.startswith('/bin-types') or p.startswith('/levels') or p.startswith('/products') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-database"></i> Cadastros</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/branches"><i class="bi bi-building"></i> Filiais</a></li>
+            <li><a class="dropdown-item" href="/warehouses"><i class="bi bi-house-gear"></i> Armazéns</a></li>
+            <li><a class="dropdown-item" href="/locations"><i class="bi bi-grid-3x3-gap"></i> Endereços</a></li>
+            <li><a class="dropdown-item" href="/locations/batch"><i class="bi bi-magic"></i> Gerar endereços em lote</a></li>
+            <li><a class="dropdown-item" href="/bin-types"><i class="bi bi-inboxes"></i> Tipos de Bin</a></li>
+            <li><a class="dropdown-item" href="/levels"><i class="bi bi-layers"></i> Capacidade dos níveis</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/products"><i class="bi bi-tag"></i> Produtos</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/layout') %}active{% endif %}" href="/layout"><i class="bi bi-bricks"></i> Mapa do estoque</a></li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/optimization') %}active{% endif %}" href="/optimization"><i class="bi bi-sliders"></i> Otimização de bins</a></li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/stock') %}active{% endif %}" href="/stock"><i class="bi bi-boxes"></i> Saldos</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle {% if p.startswith('/imports') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-upload"></i> Importações</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/imports"><i class="bi bi-list-ol"></i> Todas as importações</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/imports/branches"><i class="bi bi-building"></i> Filiais</a></li>
+            <li><a class="dropdown-item" href="/imports/warehouses"><i class="bi bi-house-gear"></i> Armazéns</a></li>
+            <li><a class="dropdown-item" href="/imports/bin_types"><i class="bi bi-inboxes"></i> Tipos de bin</a></li>
+            <li><a class="dropdown-item" href="/imports/locations"><i class="bi bi-grid-3x3-gap"></i> Endereços</a></li>
+            <li><a class="dropdown-item" href="/imports/levels"><i class="bi bi-layers"></i> Capacidade dos níveis</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/imports/products"><i class="bi bi-tag"></i> Produtos (CSV/Excel)</a></li>
+            <li><a class="dropdown-item" href="/imports/stock"><i class="bi bi-boxes"></i> Saldos de estoque (CSV/Excel)</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid px-4 pb-5">
+  {% if flash_msg %}
+  <div class="alert alert-{{ flash_level if flash_level in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show" role="alert">
+    {{ flash_msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ---------- Filtro de armazéns pela filial selecionada ----------
+   <select data-filter-by="branch_id"> cujas <option data-branches="1,2"> */
+function nkFilterWarehouses() {
+  document.querySelectorAll('select[data-filter-by]').forEach(sel => {
+    const src = document.getElementById(sel.dataset.filterBy);
+    if (!src) return;
+    const apply = () => {
+      const b = src.value;
+      let selectedVisible = false;
+      sel.querySelectorAll('option[data-branches]').forEach(opt => {
+        const ok = !b || opt.dataset.branches.split(',').includes(b);
+        opt.hidden = !ok; opt.disabled = !ok;
+        if (ok && opt.selected) selectedVisible = true;
+      });
+      if (!selectedVisible && sel.selectedOptions.length && sel.selectedOptions[0].dataset.branches !== undefined) sel.value = '';
+    };
+    src.addEventListener('change', apply);
+    apply();
+  });
+}
+
+/* ---------- Autocomplete genérico ----------
+   <input data-autocomplete="/api/..." data-hidden="id_do_hidden" data-deps="branch_id,warehouse_id" data-value-field="sku"> */
+function nkAutocomplete() {
+  document.querySelectorAll('input[data-autocomplete]').forEach(input => {
+    const url = input.dataset.autocomplete;
+    const hidden = input.dataset.hidden ? document.getElementById(input.dataset.hidden) : null;
+    const wrap = input.parentElement; wrap.style.position = 'relative';
+    const list = document.createElement('div');
+    list.className = 'list-group ac-list position-absolute w-100 shadow';
+    wrap.appendChild(list);
+    let timer = null, seq = 0;
+    async function search() {
+      const my = ++seq;
+      const params = new URLSearchParams({ q: input.value });
+      (input.dataset.deps || '').split(',').filter(Boolean).forEach(d => {
+        const el = document.getElementById(d); if (el && el.value) params.set(d, el.value);
+      });
+      try {
+        const r = await fetch(url + '?' + params.toString());
+        const data = await r.json();
+        if (my !== seq) return;
+        list.innerHTML = '';
+        if (!data.length) { list.innerHTML = '<div class="list-group-item small text-muted py-1">Nenhum resultado</div>'; return; }
+        data.forEach(item => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'list-group-item list-group-item-action py-1 small';
+          b.textContent = item.label + (item.occupied ? '  • ocupado' : '');
+          b.addEventListener('click', () => {
+            input.value = input.dataset.valueField ? item[input.dataset.valueField] : item.label;
+            if (hidden) hidden.value = item.id;
+            list.innerHTML = '';
+            input.classList.remove('is-invalid');
+          });
+          list.appendChild(b);
+        });
+      } catch (e) { list.innerHTML = ''; }
+    }
+    input.addEventListener('input', () => { if (hidden) hidden.value = ''; clearTimeout(timer); timer = setTimeout(search, 200); });
+    input.addEventListener('focus', () => { clearTimeout(timer); timer = setTimeout(search, 50); });
+    input.addEventListener('keydown', e => { if (e.key === 'Escape') list.innerHTML = ''; });
+    document.addEventListener('click', e => { if (!wrap.contains(e.target)) list.innerHTML = ''; });
+  });
+}
+
+/* ---------- Seleção em massa (checkbox "todos") ---------- */
+function nkCheckAll() {
+  document.querySelectorAll('[data-check-all]').forEach(master => {
+    master.addEventListener('change', () => {
+      document.querySelectorAll(master.dataset.checkAll).forEach(cb => cb.checked = master.checked);
+    });
+  });
+}
+/* ---------- Filtros automáticos ----------
+   <form data-autofilter>: selects aplicam ao mudar; campos de texto aplicam
+   ao parar de digitar (600 ms) ou ao pressionar Enter. O foco volta ao campo. */
+function nkAutoFilter() {
+  document.querySelectorAll('form[data-autofilter]').forEach(form => {
+    let timer = null;
+    const submit = (field) => {
+      try { if (field && field.name) sessionStorage.setItem('nk-focus', field.name); } catch (e) {}
+      // Remove parâmetros vazios para deixar a URL limpa
+      [...form.elements].forEach(el => { if (el.name && el.value === '' && el.tagName !== 'BUTTON') el.disabled = true; });
+      form.submit();
+    };
+    form.querySelectorAll('select').forEach(s => s.addEventListener('change', () => submit(s)));
+    form.querySelectorAll('input[type=text], input[type=search], input:not([type])').forEach(i => {
+      i.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => submit(i), 600); });
+    });
+    form.addEventListener('submit', () => {
+      clearTimeout(timer);
+      [...form.elements].forEach(el => { if (el.name && el.value === '' && el.tagName !== 'BUTTON') el.disabled = true; });
+    });
+    try {
+      const name = sessionStorage.getItem('nk-focus');
+      if (name && form.elements[name]) {
+        sessionStorage.removeItem('nk-focus');
+        const el = form.elements[name];
+        el.focus();
+        if (el.setSelectionRange && typeof el.value === 'string') el.setSelectionRange(el.value.length, el.value.length);
+      }
+    } catch (e) {}
+  });
+}
+/* ---------- Editor de bins (linhas tipo × quantidade) ---------- */
+function nkBinEditors() {
+  document.querySelectorAll('[data-bin-editor]').forEach(ed => {
+    const rows = ed.querySelector('.bin-rows'), tpl = ed.querySelector('.bin-template'), empty = ed.querySelector('.bin-empty');
+    if (!rows || !tpl) return;
+    const sync = () => { if (empty) empty.hidden = rows.children.length > 0; };
+    ed.querySelector('.bin-add').addEventListener('click', () => { rows.insertAdjacentHTML('beforeend', tpl.innerHTML); sync(); rows.lastElementChild.querySelector('select').focus(); });
+    rows.addEventListener('click', e => { const b = e.target.closest('.bin-remove'); if (b) { b.closest('.bin-row').remove(); sync(); } });
+    sync();
+  });
+}
+/* ---------- Tabelas: cabeçalho congelado, rolagem horizontal e largura das colunas ----------
+   Toda <table class="table"> fica dentro de um contêiner com rolagem (.nk-scroll). Arraste a borda
+   direita do cabeçalho para mudar a largura (fica salvo neste navegador, por página); duplo clique
+   na borda volta ao automático. Tabelas com data-no-resize não ganham alças. */
+function nkTables() {
+  const storeKey = (t, i) => 'nkcols:' + location.pathname + ':' + i + ':' + t.tHead.rows[0].cells.length;
+  const load = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
+  const save = (k, v) => { try { v ? localStorage.setItem(k, JSON.stringify(v)) : localStorage.removeItem(k); } catch (e) {} };
+  document.querySelectorAll('table.table').forEach((t, i) => {
+    let box = t.parentElement;
+    if (box.classList.contains('table-responsive')) box.classList.add('nk-scroll');
+    else if (!box.classList.contains('nk-scroll')) {
+      box = document.createElement('div'); box.className = 'nk-scroll';
+      t.parentNode.insertBefore(box, t); box.appendChild(t);
+    }
+    if (!t.tHead || !t.tHead.rows.length || t.hasAttribute('data-no-resize')) return;
+    const ths = [...t.tHead.rows[t.tHead.rows.length - 1].cells];
+    if (ths.some(th => th.colSpan > 1)) return;
+    const key = storeKey(t, i);
+    const apply = ws => {
+      t.classList.add('nk-sized');
+      ths.forEach((th, j) => { th.style.width = ws[j] + 'px'; th.style.minWidth = ''; });
+      t.style.width = ws.reduce((a, b) => a + b, 0) + 'px';
+      t.style.minWidth = '';
+    };
+    const saved = load(key);
+    if (saved && saved.length === ths.length) apply(saved);
+    ths.forEach((th, j) => {
+      const h = document.createElement('span'); h.className = 'nk-resizer'; h.title = 'Arraste para ajustar a largura · duplo clique: automático';
+      th.appendChild(h);
+      h.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+      h.addEventListener('dblclick', e => {
+        e.preventDefault(); e.stopPropagation(); save(key, null);
+        t.classList.remove('nk-sized'); t.style.width = ''; ths.forEach(x => x.style.width = '');
+      });
+      h.addEventListener('mousedown', e => {
+        e.preventDefault(); e.stopPropagation();
+        const ws = ths.map(x => x.getBoundingClientRect().width);
+        apply(ws);
+        const x0 = e.clientX, w0 = ws[j];
+        document.body.classList.add('nk-resizing');
+        const move = ev => { ws[j] = Math.max(36, w0 + ev.clientX - x0); apply(ws); };
+        const up = () => {
+          document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+          document.body.classList.remove('nk-resizing'); save(key, ws.map(Math.round));
+        };
+        document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+      });
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', () => { try { document.querySelectorAll('[data-bs-toggle=popover]').forEach(el => bootstrap.Popover.getOrCreateInstance(el)); } catch (_) {} nkFilterWarehouses(); nkAutocomplete(); nkCheckAll(); nkAutoFilter(); nkBinEditors(); nkTables(); });
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

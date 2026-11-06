@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Erro {{ code }}{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 640px">
+  <div class="card-body text-center py-5">
+    <div class="display-4 text-danger mb-2">{{ code }}</div>
+    <p class="lead">{% if code == 404 %}Página não encontrada.{% else %}Ocorreu um erro ao processar a solicitação.{% endif %}</p>
+    {% if detail and code != 404 %}<p class="text-muted small mono">{{ detail }}</p>{% endif %}
+    <a href="/" class="btn btn-accent">Voltar ao painel</a>
+  </div>
+</div>
+{% endblock %}

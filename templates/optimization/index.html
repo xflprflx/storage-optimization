@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% from "_macros.html" import material_select %}
+{% block title %}Otimização de bins{% endblock %}
+
+
+{% macro cfg(c, types) -%}
+{% if c is none %}<span class="text-muted">—</span>
+{% elif not c %}<span class="text-muted">nenhuma bin</span>
+{% else %}{% for tid, n in c|dictsort %}<span class="badge text-bg-light border mono me-1">{{ n }}× {{ types[tid].code if tid in types else '?' }}</span>{% endfor %}{% endif %}
+{%- endmacro %}
+
+{% macro delta(v, unit='', places=0, good_negative=True) -%}
+{% if v is none or v == 0 %}<span class="text-muted">0</span>
+{% else %}<span class="{{ 'text-success' if (v < 0) == good_negative else 'text-danger' }}">{{ '+' if v > 0 else '' }}{{ v|dec(places) }}{{ unit }}</span>{% endif %}
+{%- endmacro %}
+
+{# Bins por nível: próprio nível sem marcação; níveis extras com ↳N<nível> #}
+{% macro placed(pl, own, types) -%}
+{% if pl %}{% for key, cfg in pl.items() %}{% for tid, n in cfg|dictsort %}{% if n %}<span class="badge {{ 'bg-info-subtle text-info-emphasis border-info-subtle' if key != own else 'text-bg-light' }} border mono me-1">{{ n }}× {{ types[tid].code if tid in types else '?' }}{% if key != own %} <i class="bi bi-arrow-return-right"></i>N{{ key[4] }}{% endif %}</span>{% endif %}{% endfor %}{% endfor %}{% endif %}
+{%- endmacro %}
+
+{% macro pct(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}<span class="{{ 'text-danger fw-semibold' if v > 100 else '' }}">{{ v|dec(0) }}%</span>{% endif %}{%- endmacro %}
+
+{% macro sort_th(key, label, cls='') -%}
+{% set active = sort == key %}
+<th class="{{ cls }} {% if active %}sorted{% endif %}"><a class="text-reset text-decoration-none" href="{{ url_with(request, sort=key, dir=('desc' if active and sort_dir == 'asc' else 'asc'), page=1) }}">{{ label }}
+  {% if active %}<i class="bi {{ 'bi-sort-up' if sort_dir == 'asc' else 'bi-sort-down' }}"></i>{% else %}<i class="bi bi-arrow-down-up opacity-25"></i>{% endif %}</a></th>
+{%- endmacro %}
+
+{% macro param_hidden() -%}
+{% for k, v in params.items() %}{% if k == 'types' %}{% for t in v %}<input type="hidden" name="types" value="{{ t }}">{% endfor %}{% else %}<input type="hidden" name="{{ k }}" value="{{ v or '' }}">{% endif %}{% endfor %}
+{% for k, v in filters.items() %}<input type="hidden" name="f_{{ k }}" value="{{ v or '' }}">{% endfor %}
+{%- endmacro %}
+
+{% block content %}
+{% set STATUS_CLS = {'melhoria': 'primary', 'corrigir': 'danger', 'liberar': 'info', 'ok': 'success',
+                     'inviavel': 'warning', 'sem_dados': 'secondary', 'sem_saldo': 'light'} %}
+<div class="page-header">
+  <h1><i class="bi bi-sliders"></i> Otimização de bins</h1>
+  <div class="small text-muted">Escolha o que otimizar e as restrições. Nada é gravado até você aplicar.</div>
+</div>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link active" href="/optimization">Por endereço</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Cega aos endereços (pool de bins)</a></li>
+</ul>
+
+{% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
+
+<div class="row g-3">
+  <form method="get" id="optForm" style="display: contents">
+  <input type="hidden" name="run" value="1">
+  {# ------------------------- Escopo ------------------------- #}
+  <div class="col-xl-3 col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header bg-white"><strong>1. Escopo</strong></div>
+      <div class="card-body">
+        <label class="form-label small mb-0">Filial *</label>
+        <select class="form-select form-select-sm mb-2" name="branch_id" id="branch_id" required>
+          <option value="">Selecione...</option>
+          {% for b in branches %}<option value="{{ b.id }}" {% if filters.branch_id == b.id|string %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
+        </select>
+        <label class="form-label small mb-0">Armazém</label>
+        <select class="form-select form-select-sm mb-2" name="warehouse_id">
+          <option value="">Todos</option>
+          <option value="none" {% if filters.warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          {% for w in warehouses %}<option value="{{ w.id }}" {% if filters.warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
+        </select>
+        <label class="form-label small mb-0">Endereço contém</label>
+        <input class="form-control form-control-sm mono mb-2" name="q" value="{{ filters.q }}" placeholder="Ex.: A-01 (corredor A, estante 01)">
+        <label class="form-label small mb-0">SKU ou produto</label>
+        <input class="form-control form-control-sm mb-2" name="sku" value="{{ filters.sku }}">
+        <label class="form-label small mb-0">Tipo de material</label>
+        {{ material_select(filters.material, cls='form-select form-select-sm mb-2', all_label='Todos') }}
+        <label class="form-label small mb-0">Bins atuais</label>
+        <select class="form-select form-select-sm" name="bin_type_id">
+          <option value="">Todas</option>
+          <option value="any" {% if filters.bin_type_id == 'any' %}selected{% endif %}>Com alguma bin</option>
+          <option value="none" {% if filters.bin_type_id == 'none' %}selected{% endif %}>Sem bin</option>
+          {% for bt in bin_types %}<option value="{{ bt.id }}" {% if filters.bin_type_id == bt.id|string %}selected{% endif %}>Tipo {{ bt.code }}</option>{% endfor %}
+        </select>
+        <input type="hidden" name="occupied" value="{{ filters.occupied }}">
+      </div>
+    </div>
+
+    {# ------------------------- Objetivo ------------------------- #}
+    <div class="card mb-3">
+      <div class="card-header bg-white"><strong>2. O que otimizar</strong></div>
+      <div class="card-body">
+        <div class="mb-2 pb-2 border-bottom">
+          <div class="small fw-semibold mb-1">Quantidade considerada por SKU</div>
+          <div class="btn-group btn-group-sm w-100" role="group">
+            {% for key, label in bases.items() %}
+            <input type="radio" class="btn-check" name="basis" id="basis_{{ key }}" value="{{ key }}" {% if (params.basis or 'stock') == key %}checked{% endif %}>
+            <label class="btn btn-outline-secondary" for="basis_{{ key }}" title="{{ label }}">{{ {'stock': 'Saldo atual', 'min': 'Min level', 'max': 'Max level'}[key] }}</label>
+            {% endfor %}
+          </div>
+          <div class="form-text">Min/Max level vêm do cadastro do produto e valem no endereço padrão dele (inclusive sem saldo lançado);
+            SKU sem o nível cadastrado usa o saldo atual (avisado no resultado).</div>
+        </div>
+        {% for key, label in objectives.items() %}
+        <div class="form-check mb-1">
+          <input class="form-check-input" type="radio" name="objective" id="obj_{{ key }}" value="{{ key }}" {% if params.objective == key %}checked{% endif %}>
+          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+        <div class="form-text">Empates são decididos pelos outros critérios e, por último, pela configuração com menos mudanças.</div>
+      </div>
+    </div>
+
+  {# ------------------------- Restrições ------------------------- #}
+    <div class="card mb-3">
+      <div class="card-header bg-white"><strong>3. Restrições</strong></div>
+      <div class="card-body small">
+        <label class="form-label mb-1">Tipos de bin permitidos <span class="text-muted">(nenhum marcado = todos)</span></label>
+        <div class="border rounded p-2 mb-2" style="max-height: 150px; overflow-y: auto">
+          {% for bt in bin_types %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="types" value="{{ bt.id }}" id="t{{ bt.id }}" {% if bt.id|string in params.types %}checked{% endif %}>
+            <label class="form-check-label" for="t{{ bt.id }}"><span class="mono">{{ bt.code }}</span> <span class="text-muted">{% if bt.width is not none %}{{ bt.height|dec }}×{{ bt.width|dec }}×{{ bt.length|dec }} cm{% endif %}{% if bt.max_weight is not none %} · {{ bt.max_weight|dec }} kg{% endif %}</span></label>
+          </div>
+          {% else %}<span class="text-muted">Nenhum tipo cadastrado. <a href="/bin-types/new">Cadastrar</a></span>{% endfor %}
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label mb-0">Enchimento máx. (%)</label><input class="form-control form-control-sm text-end" name="fill_limit" value="{{ params.fill_limit }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0">Margem s/ quantidade (%)</label><input class="form-control form-control-sm text-end" name="growth" value="{{ params.growth }}" inputmode="decimal"></div>
+        </div>
+        <label class="form-label small mb-0">Área de espera (para trocas)</label>
+        <input class="form-control form-control-sm mb-2" name="staging" value="{{ params.staging }}" maxlength="60" placeholder="ÁREA DE ESPERA" title="Onde deixar itens temporariamente quando o destino ainda está ocupado (ex.: DOCA 1, PULMÃO)">
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="geometry" value="1" id="geo" {% if params.geometry %}checked{% endif %}><label class="form-check-label" for="geo">Considerar encaixe geométrico</label></div>
+        <select class="form-select form-select-sm my-1" name="rotation">
+          <option value="upright" {% if params.rotation != 'any' %}selected{% endif %}>Rotação: só girar no plano (altura sempre para cima)</option>
+          <option value="any" {% if params.rotation == 'any' %}selected{% endif %}>Rotação: qualquer orientação (6)</option>
+        </select>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="weight" value="1" id="wgt" {% if params.weight %}checked{% endif %}><label class="form-check-label" for="wgt">Respeitar peso máximo da bin</label></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="mix" value="1" id="mix" {% if params.mix %}checked{% endif %}><label class="form-check-label" for="mix">Permitir SKUs diferentes na mesma bin</label></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="single_type" value="1" id="single" {% if params.single_type %}checked{% endif %}><label class="form-check-label" for="single">Um único tipo de bin por endereço</label></div>
+        <div class="small text-muted mb-1"><i class="bi bi-shield-check"></i> A capacidade dos níveis é sempre respeitada (<a href="/levels" target="_blank">cadastro</a>; considera as bins dos outros endereços do nível). Tipos sem capacidade cadastrada no nível têm a capacidade estimada pela largura do nível.</div>
+        <input type="hidden" name="levels" value="1">
+        <div class="form-check form-switch ms-3"><input class="form-check-input" type="checkbox" name="other_levels" value="1" id="olvls" {% if params.other_levels %}checked{% endif %}><label class="form-check-label" for="olvls">Pode usar outros níveis da mesma estante com espaço livre</label></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="uniform_levels" value="1" id="unil" {% if params.uniform_levels %}checked{% endif %}><label class="form-check-label" for="unil">Um único tipo de bin por nível <span class="text-muted">(desligado = permite tipos diferentes no mesmo nível)</span></label></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="keep_space" value="1" id="space" {% if params.keep_space %}checked{% endif %}><label class="form-check-label" for="space">Não exceder o espaço atual do endereço <span class="text-muted">(largura/altura das bins atuais; só para endereços cujo nível não tem capacidade cadastrada)</span></label></div>
+        <div class="row g-2 mt-1">
+          <div class="col-4"><label class="form-label mb-0">Máx. bins</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric"></div>
+          <div class="col-4"><label class="form-label mb-0">Larg. máx. (cm)</label><input class="form-control form-control-sm text-end" name="max_width" value="{{ params.max_width }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">Alt. máx. (cm)</label><input class="form-control form-control-sm text-end" name="max_height" value="{{ params.max_height }}" inputmode="decimal"></div>
+        </div>
+        <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" name="clear_empty" value="1" id="clr" {% if params.clear_empty %}checked{% endif %}><label class="form-check-label" for="clr">Sugerir remover bins de endereços sem saldo e sem produto</label></div>
+      </div>
+      <div class="card-footer bg-white">
+        <button class="btn btn-accent w-100"><i class="bi bi-cpu"></i> Analisar</button>
+      </div>
+    </div>
+  </div>
+  </form>
+
+  {# ------------------------- Resultado ------------------------- #}
+  <div class="col-xl-9 col-lg-8">
+    {% if results is none %}
+    <div class="card"><div class="card-body small text-muted">
+      <p class="mb-2"><i class="bi bi-info-circle"></i> <b>Como o cálculo funciona</b></p>
+      <ul class="mb-2">
+        <li><b>Capacidade</b> de uma bin para um SKU = o menor entre: encaixe geométrico (testando as orientações), volume da bin × enchimento máx. ÷ volume da unidade, e peso máx. ÷ peso da unidade.</li>
+        <li>Para cada SKU, testa um tipo de bin ou a combinação de dois tipos (ex.: 3 grandes + 1 pequena) e depois combina os SKUs do endereço.</li>
+        <li>Com <b>SKUs misturados</b>, as unidades dividem as bins por volume e peso (cada unidade precisa caber na bin).</li>
+        <li>A <b>margem</b> reserva espaço para o saldo crescer (ex.: 20% → planeja 120 unidades para 100 em estoque).</li>
+        <li>Com <b>capacidade dos níveis</b>, a sugestão precisa caber no nível do endereço (descontadas as bins dos vizinhos) e nos níveis extras que ele já usa — ou em outros níveis da estante, se permitido. Ao aplicar, as bins são distribuídas entre esses níveis.</li>
+        <li>Sem capacidade cadastrada, o espaço do endereço é o das bins atuais: largura somada lado a lado, altura da maior.</li>
+      </ul>
+      <p class="mb-0">Produtos sem dimensões ficam de fora (status "Faltam dimensões").</p>
+    </div></div>
+    {% else %}
+    {% set s = summary %}
+    <div class="card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong>Resultado — {{ s.addresses|dec }} endereço(s)</strong>
+        <a class="small" href="/layout?branch_id={{ filters.branch_id }}&warehouse_id={{ filters.warehouse_id or 'none' }}" target="_blank"><i class="bi bi-bricks"></i> Ver no mapa</a>
+      </div>
+      <div class="card-body">
+        <div class="row g-2 text-center small mb-2">
+          <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="text-muted">Bins</div><b>{{ s.bins_before|dec }}</b> → <b>{{ s.bins_after|dec }}</b><div>{{ delta(s.bins_after - s.bins_before) }}</div></div></div>
+          <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="text-muted">Volume de bins</div><b>{{ s.volume_before|dec(0) }}</b> → <b>{{ s.volume_after|dec(0) }}</b> L<div>{{ delta(s.volume_after - s.volume_before, ' L') }}</div></div></div>
+          <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="text-muted">Largura de frente</div><b>{{ s.width_before|dec(0) }}</b> → <b>{{ s.width_after|dec(0) }}</b> cm<div>{{ delta(s.width_after - s.width_before, ' cm') }}</div></div></div>
+          <div class="col-6 col-md-3"><div class="border rounded p-2"><div class="text-muted">Enchimento médio</div><b>{{ pct(s.fill_before) }}</b> → <b>{{ pct(s.fill_after) }}</b><div class="text-muted">volume</div></div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+          <a class="badge rounded-pill text-decoration-none {{ 'text-bg-dark' if not status_filter else 'text-bg-light border text-dark' }}" href="{{ url_with(request, status=None, page=1) }}">Todos {{ s.addresses }}</a>
+          {% for key, label in status_labels.items() %}{% if s.by_status.get(key) %}
+          <a class="badge rounded-pill text-decoration-none text-bg-{{ STATUS_CLS[key] }} {% if status_filter == key %}border border-2 border-dark{% endif %}" href="{{ url_with(request, status=key, page=1) }}">{{ label }} {{ s.by_status[key] }}</a>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="/optimization/apply" id="applyForm">
+      {{ param_hidden() }}
+      <div class="card">
+        <div class="card-header bg-white d-flex flex-wrap gap-2 justify-content-between align-items-center">
+          <span class="small text-muted">{{ n_shown|dec }} exibido(s){% if pages > 1 %} · página {{ page_no }}/{{ pages }}{% endif %}</span>
+          <div class="d-flex gap-2">
+            <div class="btn-group btn-group-sm" role="group">
+            <a class="btn btn-outline-primary" href="/optimization/plan?{{ request.url.query }}"><i class="bi bi-list-check"></i> Plano de ação</a>
+            <a class="btn btn-outline-success" href="/optimization/plan.xlsx?{{ request.url.query }}" title="Exportar para Excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+            <a class="btn btn-outline-danger" href="/optimization/plan.pdf?{{ request.url.query }}" title="Exportar para PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+          </div>
+          <button class="btn btn-sm btn-outline-primary" name="scope" value="selected" id="applySel"><i class="bi bi-check2-square"></i> Aplicar selecionadas</button>
+            <button class="btn btn-sm btn-accent" name="scope" value="all" id="applyAll" {% if not n_applicable %}disabled{% endif %}><i class="bi bi-check2-all"></i> Aplicar todas ({{ n_applicable }})</button>
+          </div>
+        </div>
+        <div class="table-responsive" style="max-height: 70vh">
+          <table class="table table-sm table-hover mb-0 small">
+            <thead class="sticky-top"><tr>
+              <th style="width:28px"><input type="checkbox" class="form-check-input" data-check-all=".opt-check"></th>
+              {{ sort_th('address', 'Endereço') }}{{ sort_th('status', 'Situação') }}
+              <th>Bins atuais</th><th>Sugestão</th>
+              {{ sort_th('bins_delta', 'Δ bins', 'text-end') }}{{ sort_th('volume_delta', 'Δ volume', 'text-end') }}{{ sort_th('width_delta', 'Δ largura', 'text-end') }}
+              {{ sort_th('fill_now', 'Ench. atual', 'text-end') }}{{ sort_th('fill_after', 'Ench. novo', 'text-end') }}
+              <th style="min-width:260px">Arranjo das unidades <span class="fw-normal text-muted text-lowercase">(clique para 3D)</span></th>
+            </tr></thead>
+            <tbody>
+            {% for r in results %}
+              <tr>
+                <td><input type="checkbox" class="form-check-input opt-check" name="ids" value="{{ r.id }}" {% if not r.applicable %}disabled{% endif %}></td>
+                <td class="mono text-nowrap"><a href="/locations/{{ r.id }}/edit">{{ r.address }}</a></td>
+                <td><span class="badge text-bg-{{ STATUS_CLS[r.status] }}">{{ r.status_label }}</span>
+                  {% for n in r.notes %}<div class="text-muted" style="font-size:.72rem">{{ n }}</div>{% endfor %}</td>
+                <td class="text-nowrap">{% if r.current_placement and r.current_placement|length > 1 %}{{ placed(r.current_placement, r.own_level, types) }}{% else %}{{ cfg(r.current, types) }}{% endif %}</td>
+                <td class="text-nowrap">{% if r.suggested is not none and r.status != 'ok' %}{% if r.placement and (r.placement|length > 1 or r.own_level not in r.placement) %}{{ placed(r.placement, r.own_level, types) }}{% else %}{{ cfg(r.suggested, types) }}{% endif %}{% elif r.status == 'ok' %}<span class="text-muted">manter</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td class="text-end">{{ delta(r.bins_delta) if r.applicable else '' }}</td>
+                <td class="text-end">{{ delta(r.volume_delta, ' L', 1) if r.applicable else '' }}</td>
+                <td class="text-end">{{ delta(r.width_delta, ' cm') if r.applicable else '' }}</td>
+                <td class="text-end">{{ pct(r.fill_now) }}</td>
+                <td class="text-end">{{ pct(r.fill_after) if r.applicable or r.status == 'ok' else '' }}</td>
+                <td>{% set av = arr_views.get(r.id, {}) %}
+                  {% for side, label in [('before', 'hoje'), ('after', 'depois')] %}{% if av.get(side) is not none %}
+                  <div class="d-flex flex-wrap align-items-start gap-1 mb-1"><span class="text-muted me-1" style="font-size:.7rem;width:38px">{{ label if av.get('after') is not none else 'arranjo' }}</span>
+                    {% for tag, items, pk in av[side][:8] %}
+                      <a {% if pk %}href="{{ pk.url }}" target="_blank"{% endif %} class="text-decoration-none text-reset border rounded px-1 bg-white d-inline-block" style="font-size:.65rem"
+                         title="{{ tag }}: {% for s, q in items %}{{ s }} {{ q|dec }} un. — {{ pk.texts.get(s, '') if pk else '' }}; {% else %}vazia{% endfor %}">
+                        <div class="mono">{{ tag }}{% if pk and pk.overflow %} <i class="bi bi-exclamation-triangle text-danger"></i>{% endif %}</div>
+                        {% if pk and pk.svg %}{{ pk.svg|safe }}{% elif items %}<span class="text-muted">sem dimensões</span>{% else %}<span class="text-muted">vazia</span>{% endif %}
+                      </a>
+                    {% endfor %}{% if av[side]|length > 8 %}<span class="small text-muted">+{{ av[side]|length - 8 }}</span>{% endif %}
+                  </div>{% endif %}{% endfor %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="11" class="text-center text-muted py-4">Nenhum endereço neste filtro.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if pages > 1 %}
+        <div class="card-footer bg-white d-flex gap-1 justify-content-end">
+          {% for n in range(1, pages + 1) %}<a class="btn btn-sm {{ 'btn-dark' if n == page_no else 'btn-outline-secondary' }}" href="{{ url_with(request, page=n) }}">{{ n }}</a>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const f = document.getElementById('applyForm');
+  if (!f) return;
+  document.getElementById('applySel').addEventListener('click', e => {
+    const n = f.querySelectorAll('.opt-check:checked').length;
+    if (!n) { e.preventDefault(); alert('Selecione ao menos um endereço com sugestão.'); return; }
+    if (!confirm(`Substituir as bins de ${n} endereço(s) pela sugestão?`)) e.preventDefault();
+  });
+  document.getElementById('applyAll').addEventListener('click', e => {
+    if (!confirm('Aplicar TODAS as sugestões do escopo analisado (recalculadas com os mesmos parâmetros)?')) e.preventDefault();
+  });
+  // Geometria desligada: rotação não se aplica
+  const geo = document.getElementById('geo'), rot = document.querySelector('select[name=rotation]');
+  const sync = () => { rot.disabled = !geo.checked; }; geo.addEventListener('change', sync); sync();
+})();
+</script>
+{% endblock %}

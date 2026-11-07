@@ -34,11 +34,30 @@ from services.bin_optimizer import BinSpec, Params, ProductUnit, _sku_options, _
 EPS = 1e-9
 OPTIONS_COST = 5  # opções de bins por SKU que o solver compara no objetivo de custo total
 
-SITE_OBJECTIVES = {
+SITE_CRITERIA = {  # critérios do projeto (ordem de prioridade definida pelo usuário)
     "modules": "Menos módulos de estrutura",
     "cost": "Menor custo total (estruturas + bins)",
     "area": "Menos metros de fileira (mais área livre)",
+    "structures_cost": "Menor custo de estruturas",
+    "bins_cost": "Menor custo de bins",
+    "bins": "Menos bins",
+    "levels": "Menos níveis ocupados (mais níveis livres)",
 }
+SITE_OBJECTIVES = SITE_CRITERIA  # o 1º critério é o objetivo
+DEFAULT_TIEBREAK = {"modules": ["area"], "cost": ["modules"], "area": ["modules"], "structures_cost": ["modules"],
+                    "bins_cost": ["modules"], "bins": ["modules"], "levels": ["modules"]}
+BIN_CRITERIA = {"cost", "bins_cost", "bins"}  # critérios que dependem das bins escolhidas para cada SKU
+CRIT_UNITS = {"cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
+              "modules": ("módulos", 1), "bins": ("bins", 1), "levels": ("níveis", 1)}
+
+
+def site_priority(objective: str, custom: Optional[list] = None) -> list[str]:
+    """Ordem completa: objetivo, depois os desempates escolhidos (ou o padrão do objetivo) e, por último, os níveis
+    ocupados (se ainda não estiverem na lista)."""
+    first = objective if objective in SITE_CRITERIA else "modules"
+    rest = [c for c in (custom or []) if c in SITE_CRITERIA and c != first]
+    order = [first] + list(dict.fromkeys(rest or DEFAULT_TIEBREAK[first]))
+    return order + ([] if "levels" in order else ["levels"])
 STRUCT_MODES = {"auto": "Otimizar quantidade", "fixed": "Quantidade fixa", "off": "Não usar"}
 ORIENTATIONS = {"auto": "Automática (a que comporta mais)", "length": "Fileiras ao longo do comprimento",
                 "width": "Fileiras ao longo da largura"}
@@ -99,6 +118,11 @@ class SiteParams:
     side_gap_cm: float = 0.0  # folga entre bins lado a lado
     allowed_types: Optional[set] = None
     time_limit: float = 15.0
+    priority: Optional[list] = None  # desempates (2º, 3º, 4º critério); None = padrão do objetivo
+
+    @property
+    def order(self) -> list[str]:
+        return site_priority(self.objective, self.priority)
 
     def as_params(self) -> Params:
         return Params(objective=self.bin_objective, allowed_types=self.allowed_types, fill_limit=self.fill_limit,
@@ -515,9 +539,9 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         d.bins = dict(opts[0]) if opts else None
         if not d.bins:
             d.status = "nao_cabe"
-        elif prm.objective == "cost" and len(opts) > 1:
-            # custo total: o solver escolhe entre as melhores opções de bins do SKU (a mais barata entre elas),
-            # pesando o custo das bins contra o das estruturas que elas ocupam
+        elif BIN_CRITERIA & set(prm.order) and len(opts) > 1:
+            # critério que depende das bins (custo, nº de bins): o solver escolhe entre as melhores opções de bins do
+            # SKU (inclui a mais barata), pesando-as contra as estruturas que elas ocupam
             choices.append((d, [dict(o) for o in opts[:OPTIONS_COST]]))
     fixed_need: dict[int, int] = {}
     chosen = {id(d) for d, _ in choices}
@@ -644,12 +668,12 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     total_mods = sum(x.values())
     front = sum(w[s.id] * x[s.id] for s in active)
     bin_c = {t: int(round(((types[t].cost if t in types else 0) or 0) * 100)) for t in all_t}
-    cost = sum(cost_c[s.id] * x[s.id] for s in active) + sum(bin_c[t] * need_ex[t] for t in all_t)
+    st_cost = sum(cost_c[s.id] * x[s.id] for s in active)
+    bins_cost = sum(bin_c[t] * need_ex[t] for t in all_t)
     levels_used = sum(z.values()) if z else 0
-    main = {"modules": [("módulos", total_mods), ("metros de fileira", front)],
-            "cost": [("custo", cost), ("módulos", total_mods)],
-            "area": [("metros de fileira", front), ("módulos", total_mods)]}[prm.objective]
-    stages = [("falta de bins", sum(short.values()) if short else 0)] + main + [("níveis usados", levels_used)]
+    exprs = {"modules": total_mods, "area": front, "cost": st_cost + bins_cost, "structures_cost": st_cost,
+             "bins_cost": bins_cost, "bins": sum(need_ex[t] for t in all_t), "levels": levels_used}
+    stages = [("short", sum(short.values()) if short else 0)] + [(c, exprs[c]) for c in prm.order]
 
     solver = cp_model.CpSolver()
     solver.parameters.num_workers = 8
@@ -657,7 +681,10 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     all_optimal, ok = True, False
     sol: dict = {"qty": {}, "z": {}, "seg_mods": [], "picks": []}
     for i, (label, expr) in enumerate(stages):
-        if isinstance(expr, int):
+        if isinstance(expr, int):  # critério que não depende de nenhuma decisão (ex.: bins já definidas)
+            unit, div = CRIT_UNITS.get(label, ("bins", 1))
+            info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, "Falta de bins (guardar toda a demanda)"),
+                                   "value": expr, "display": expr / div, "unit": unit, "optimal": True, "fixed": True})
             continue
         left = deadline - time.monotonic()
         if left <= 0.05:
@@ -674,7 +701,9 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
         ok = True
         val = int(round(solver.ObjectiveValue()))
         all_optimal &= st == cp_model.OPTIMAL
-        info["stages"].append({"label": label, "value": val, "optimal": st == cp_model.OPTIMAL})
+        unit, div = CRIT_UNITS.get(label, ("bins", 1))
+        info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, "Falta de bins (guardar toda a demanda)"),
+                               "value": val, "display": val / div, "unit": unit, "optimal": st == cp_model.OPTIMAL})
         m.Add(expr <= val)
         # guarda a solução desta etapa (a próxima pode estourar o tempo)
         sol = {"qty": {s.id: solver.Value(x[s.id]) for s in active},

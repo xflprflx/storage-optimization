@@ -19,14 +19,47 @@ from routers.common import form_data, redirect, render
 from services.addressing import normalize_code
 from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
-from services.site_planner import ORIENTATIONS, SITE_OBJECTIVES, STRUCT_MODES, floor_svg, struct_colors
-from services.site_service import BUILDING_FIELDS, config_from_form, create_branch, merged, run_project, to_xlsx
+from services.site_planner import ORIENTATIONS, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, floor_svg, struct_colors
+from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, config_from_form, create_branch, merged,
+                                   run_project, to_xlsx)
 
 router = APIRouter(prefix="/optimization/site", tags=["Projeto de filial nova"])
 
 
 def _get(db: Session, pid: int) -> SiteProject | None:
     return db.get(SiteProject, pid)
+
+
+# Último plano exibido de cada projeto: o cadastro da filial e o Excel usam exatamente o plano aprovado na tela
+# (o solver tem tempo limite e pode achar outra solução equivalente numa nova execução). Vale enquanto a
+# configuração do projeto não mudar; numa reinicialização do sistema o plano é recalculado.
+_PLAN_CACHE: dict[int, tuple[str, object]] = {}
+
+
+def _cfg_key(db: Session, cfg: dict) -> str:
+    """Configuração do projeto + "versão" dos cadastros que entram no plano (estruturas, bins, produtos, saldos)."""
+    import json
+
+    from sqlalchemy import func
+
+    from models import BinType, Product, StockItem
+
+    marks = [db.execute(select(func.count(), func.max(M.updated_at))).one()
+             for M in (StructureType, BinType, Product, StockItem)]
+    return json.dumps([cfg, [tuple(map(str, m)) for m in marks]], sort_keys=True, default=str)
+
+
+def _plan_for(db: Session, pr: SiteProject, fresh: bool = False):
+    """(plano, erros, configuração) do projeto: o último exibido, se a configuração for a mesma."""
+    cfg = merged(copy.deepcopy(pr.config))
+    key = _cfg_key(db, cfg)
+    hit = _PLAN_CACHE.get(pr.id)
+    if not fresh and hit and hit[0] == key:
+        return hit[1], [], cfg
+    plan, errors = run_project(db, cfg)
+    if plan is not None and not errors:
+        _PLAN_CACHE[pr.id] = (key, plan)
+    return plan, errors, cfg
 
 
 @router.get("")
@@ -95,7 +128,8 @@ def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
         project=pr, cfg=cfg, structures=structs, bin_types=list(db.scalars(select(BinType).order_by(BinType.code))),
         branches=list(db.scalars(select(Branch).order_by(Branch.code))),
         warehouses=list(db.scalars(select(Warehouse).order_by(Warehouse.code))),
-        BUILDING_FIELDS=BUILDING_FIELDS, ORIENTATIONS=ORIENTATIONS, SITE_OBJECTIVES=SITE_OBJECTIVES,
+        BUILDING_FIELDS=BUILDING_FIELDS, ORIENTATIONS=ORIENTATIONS, SITE_OBJECTIVES=SITE_OBJECTIVES, SITE_CRITERIA=SITE_CRITERIA,
+        DEFAULT_LOCATION_MODES=DEFAULT_LOCATION_MODES,
         STRUCT_MODES=STRUCT_MODES, BASES=BASES, OBJECTIVES=OBJECTIVES,
     )
 
@@ -105,9 +139,9 @@ def show_project(pid: int, request: Request, run: str = "", db: Session = Depend
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    plan, errors, _ = _plan_for(db, pr, fresh=True) if run else (None, [], None)
     cfg = merged(copy.deepcopy(pr.config))
     ctx = _context(db, pr, cfg)
-    plan, errors = (run_project(db, cfg) if run else (None, []))
     types = {t.id: t for t in ctx["bin_types"]}
     return render(request, "site/project.html", **ctx, plan=plan, errors=errors, types=types,
                   svg=floor_svg(plan) if plan else "", colors=struct_colors(plan) if plan else {})
@@ -154,7 +188,7 @@ def export_xlsx(pid: int, db: Session = Depends(get_db)):
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
-    plan, errors = run_project(db, merged(copy.deepcopy(pr.config)))
+    plan, errors, _ = _plan_for(db, pr)
     if errors or plan is None:
         return redirect(f"/optimization/site/{pid}", " ".join(errors) or "Não foi possível gerar o plano.", "danger")
     data = to_xlsx(plan, pr, load_types(db))
@@ -175,17 +209,32 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
         return redirect(back, "Informe código (até 30 caracteres) e nome da filial nova.", "danger")
     if db.scalar(select(Branch.id).where(Branch.code == code)):
         return redirect(back, f"Já existe uma filial com o código {code}.", "danger")
-    plan, errors = run_project(db, merged(copy.deepcopy(pr.config)))
+    plan, errors, cfg = _plan_for(db, pr)
     if errors or plan is None or plan.errors or not plan.modules:
         return redirect(back, "O plano não é válido para gerar o cadastro: " + " ".join(errors + (plan.errors if plan else [])),
                         "danger")
-    link = str(form.get("link_skus") or "").lower() in {"1", "on", "true"}
-    br, stats = create_branch(db, plan, code, name, wh_code, wh_name, link_skus=link)
+    on = lambda k: str(form.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
+    from services.site_service import DEFAULT_LOCATION_MODES
+
+    mode = form.get("default_mode") if form.get("default_mode") in DEFAULT_LOCATION_MODES else "empty"
+    items = cfg.get("items") if cfg["demand"].get("source") == "upload" else None
+    br, stats = create_branch(db, plan, code, name, wh_code, wh_name, link_skus=on("link_skus"), items=items,
+                              create_products=on("create_products"), update_products=on("update_products"),
+                              default_mode=mode, launch_stock=on("launch_stock"))
     db.commit()
-    return redirect(f"/layout?branch_id={br.id}",
-                    f"Filial {br.code} criada: {stats.get('bays', 0)} estantes com estrutura, {stats['levels']} níveis, "
-                    f"{stats['locations']} endereços e "
-                    f"{stats['bins']} bins.")
+    parts = [f"Filial {br.code} criada: {stats['bays']} estantes com estrutura, {stats['levels']} níveis, "
+             f"{stats['locations']} endereços e {stats['bins']} bins."]
+    if stats["products_created"] or stats["products_updated"]:
+        parts.append(f"Produtos: {stats['products_created']} cadastrado(s)"
+                     + (f" ({stats['unplaced']} fora do plano, sem endereço)" if stats["unplaced"] else "")
+                     + f", {stats['products_updated']} atualizado(s).")
+    if stats["assigned"]:
+        parts.append(f"{stats['assigned']} atribuição(ões) produto → endereço"
+                     + (f", {stats['defaults']} endereço(s) padrão definido(s)" if stats["defaults"] else "")
+                     + (f", {stats['stock_units']:g} unidade(s) de saldo lançadas" if stats["stock_units"] else "") + ".")
+    if stats["skus_without_product"]:
+        parts.append(f"{stats['skus_without_product']} SKU(s) sem cadastro de produto ficaram sem atribuição.")
+    return redirect(f"/layout?branch_id={br.id}", " ".join(parts), "warning" if stats["skus_without_product"] else "success")
 
 
 # --------------------------------------------------------------------------- #

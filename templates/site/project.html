@@ -208,13 +208,24 @@
     <div class="card h-100">
       <div class="card-header bg-white"><strong>5. Objetivo</strong></div>
       <div class="card-body">
-        {% for k, v in SITE_OBJECTIVES.items() %}
-        <div class="form-check"><input class="form-check-input" type="radio" name="p_objective" value="{{ k }}" id="obj_{{ k }}" {% if p.objective == k %}checked{% endif %}>
-          <label class="form-check-label" for="obj_{{ k }}">{{ v }}</label></div>
-        {% endfor %}
-        <div class="form-text mb-2">No custo total, o sistema também escolhe as bins de cada SKU (entre as melhores opções), pesando o custo das bins
-          contra o das estruturas que elas ocupam. Custos vêm do cadastro de estruturas e de tipos de bin (sem custo = R$ 0).
-          Prioridade: 1º guardar toda a demanda; 2º o objetivo escolhido; 3º desempate (metros de fileira ou módulos); por último, o menor nº de níveis ocupados.</div>
+        {% set prio = (p.get('priority') or []) + ['', '', ''] %}
+        <div class="small text-muted mb-2"><i class="bi bi-lock"></i> Sempre em 1º lugar: guardar toda a demanda (falta de bins).</div>
+        <div class="row g-2 align-items-center mb-1">
+          <label class="col-4 small mb-0 fw-semibold">Objetivo</label>
+          <div class="col-8"><select class="form-select form-select-sm prio-sel" name="p_objective">
+            {% for k, v in SITE_CRITERIA.items() %}<option value="{{ k }}" {% if p.objective == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+          </select></div>
+          {% for i in range(3) %}
+          <label class="col-4 small mb-0">{{ i + 1 }}º desempate</label>
+          <div class="col-8"><select class="form-select form-select-sm prio-sel" name="p_prio{{ i + 2 }}">
+            <option value="">{% if i == 0 %}— padrão do objetivo —{% else %}— nenhum —{% endif %}</option>
+            {% for k, v in SITE_CRITERIA.items() %}<option value="{{ k }}" {% if prio[i] == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+          </select></div>
+          {% endfor %}
+        </div>
+        <div class="form-text mb-2">Cada critério só desempata entre as soluções empatadas no anterior. Sem desempate escolhido, vale o padrão
+          (módulos ↔ metros de fileira) e, por último, menos níveis ocupados. Quando algum critério depende das bins (custo total, custo de
+          bins, menos bins), o sistema também escolhe as bins de cada SKU entre as melhores opções. Custos vêm dos cadastros (sem custo = R$ 0).</div>
         <label class="form-label small mb-0">Tempo limite do solver (s)</label>
         <input class="form-control form-control-sm text-end mb-3" name="p_time_limit" inputmode="decimal" value="{{ p.time_limit }}" style="max-width:120px">
         <div class="d-flex gap-2 flex-wrap">
@@ -247,10 +258,34 @@
       <div class="col-md-3"><label class="form-label small mb-0">Nome da filial *</label><input class="form-control form-control-sm" name="branch_name" maxlength="150" value="{{ project.name }}" required></div>
       <div class="col-md-2"><label class="form-label small mb-0">Armazém (código)</label><input class="form-control form-control-sm mono text-uppercase" name="wh_code" maxlength="30" placeholder="opcional"></div>
       <div class="col-md-2"><label class="form-label small mb-0">Nome do armazém</label><input class="form-control form-control-sm" name="wh_name" maxlength="150"></div>
-      <div class="col-md-2"><div class="form-check small"><input class="form-check-input" type="checkbox" name="link_skus" value="1" id="lnk" checked>
-        <label class="form-check-label" for="lnk" title="Cria registro de saldo zerado de cada SKU no seu endereço">Vincular SKUs aos endereços</label></div></div>
-      <div class="col-md-1"><button class="btn btn-sm btn-accent w-100">Criar</button></div>
-      <div class="col-12 form-text">Cria a filial com {{ plan.levels_total }} níveis (vão e capacidade de cada um), {{ plan.positions|length }} endereços e as bins de cada endereço. Saldos não são lançados.</div>
+      <div class="col-12"><hr class="my-2"><div class="small fw-semibold"><i class="bi bi-tags"></i> Produtos e endereços</div></div>
+      {% set from_file = d.source == 'upload' %}
+      <div class="col-md-6 small">
+        <div class="form-check"><input class="form-check-input" type="checkbox" name="create_products" value="1" id="cp" checked>
+          <label class="form-check-label" for="cp">Cadastrar os produtos que ainda não existem
+            <span class="text-muted">(nome, material, dimensões, peso{% if from_file %}, min e max level do arquivo{% endif %})</span></label></div>
+        <div class="form-check"><input class="form-check-input" type="checkbox" name="update_products" value="1" id="up" {% if not from_file %}disabled{% endif %}>
+          <label class="form-check-label" for="up">Atualizar os produtos que já existem com os dados do arquivo
+            <span class="text-muted">(só campos preenchidos{% if not from_file %}; disponível com a demanda vinda de arquivo{% endif %})</span></label></div>
+        <div class="form-check"><input class="form-check-input" type="checkbox" name="link_skus" value="1" id="lnk" checked>
+          <label class="form-check-label" for="lnk">Atribuir cada produto ao(s) seu(s) endereço(s) do plano</label></div>
+        <div class="form-check ms-3"><input class="form-check-input" type="checkbox" name="launch_stock" value="1" id="ls" {% if not from_file %}disabled{% endif %}>
+          <label class="form-check-label" for="ls">Lançar o saldo do arquivo nesses endereços
+            <span class="text-muted">(dividido na proporção do plano; desmarcado = saldo zerado){% if not from_file %} — disponível com a demanda vinda de arquivo{% endif %}</span></label></div>
+      </div>
+      <div class="col-md-6 small">
+        <label class="form-label small mb-0">Endereço padrão dos produtos <span class="text-muted">(o 1º endereço do produto na filial nova)</span></label>
+        {% for k, v in DEFAULT_LOCATION_MODES.items() %}
+        <div class="form-check"><input class="form-check-input" type="radio" name="default_mode" value="{{ k }}" id="dm_{{ k }}" {% if k == 'empty' %}checked{% endif %}>
+          <label class="form-check-label" for="dm_{{ k }}">{{ v }}</label></div>
+        {% endfor %}
+        <div class="form-text">O endereço padrão é único por produto (vale para todas as filiais).</div>
+      </div>
+      <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="form-text">Cria a filial com {{ plan.modules|length }} estantes, {{ plan.levels_total }} níveis (vão e capacidade de cada um), {{ plan.positions|length }} endereços com as bins
+          e {{ plan.positions|map(attribute='sku')|unique|list|length }} produtos atribuídos — exatamente o plano mostrado abaixo.</div>
+        <button class="btn btn-sm btn-accent"><i class="bi bi-building-check"></i> Criar filial</button>
+      </div>
     </form>
   </div>
 </div>
@@ -323,7 +358,10 @@
       {% if plan.solver.stages %}
       <div class="card-body small text-muted border-top">
         <b>Solver:</b> {{ plan.solver.status }} em {{ plan.solver.time|dec(1) }} s ·
-        {% for st in plan.solver.stages %}{{ st.label }} = {{ st.value }}{% if not st.optimal %}*{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+        <ol class="mb-0 ps-3 mt-1">
+        {% for st in plan.solver.stages %}<li>{{ st.label }}: <b>{% if st.unit == 'R$' %}R$ {{ st.display|dec(2) }}{% elif st.unit == 'm' %}{{ st.display|dec(1) }} m{% else %}{{ st.display|dec(0) }} {{ st.unit }}{% endif %}</b>
+          {% if st.fixed %}<span class="text-muted">(já definido pelas etapas anteriores)</span>{% elif not st.optimal %}<span title="o tempo acabou nesta etapa">(melhor encontrado)</span>{% else %}<span class="text-success">(ótimo)</span>{% endif %}</li>{% endfor %}
+        </ol>
       </div>
       {% endif %}
     </div>
@@ -371,6 +409,11 @@
 {% block scripts %}
 <script>
 (function () {
+  // prioridade: um critério não pode aparecer duas vezes
+  const ps = [...document.querySelectorAll('.prio-sel')];
+  const dedupe = () => { const seen = new Set(); ps.forEach(s => { [...s.options].forEach(o => o.disabled = !!o.value && seen.has(o.value) && !o.selected);
+    if (s.value && seen.has(s.value)) s.value = ''; if (s.value) seen.add(s.value); }); };
+  ps.forEach(s => s.addEventListener('change', dedupe)); dedupe();
   // habilita só os campos que valem para o modo de cada estrutura
   document.querySelectorAll('.st-row').forEach(row => {
     const sel = row.querySelector('.st-mode');

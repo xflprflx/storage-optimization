@@ -56,7 +56,7 @@ DEFAULT_CONFIG = {
                "factor": "100"},
     "params": {"objective": "modules", "bin_objective": "min_volume", "fill_limit": "85", "rotation": "upright",
                "single_type": "1", "weight": "1", "level_fill": "100", "top_gap_cm": "5", "side_gap_cm": "0",
-               "types": [], "time_limit": "15"},
+               "types": [], "time_limit": "15", "priority": ["", "", ""]},
 }
 
 
@@ -115,6 +115,7 @@ def config_from_form(form: Mapping) -> dict:
     cfg["demand"]["source"] = "upload" if form.get("d_source") == "upload" else "catalog"
     p = cfg["params"]
     p["objective"] = form.get("p_objective") if form.get("p_objective") in SITE_OBJECTIVES else "modules"
+    p["priority"] = [form.get(f"p_prio{i}") or "" for i in (2, 3, 4)]
     p["bin_objective"] = form.get("p_bin_objective") if form.get("p_bin_objective") in OBJECTIVES else "min_volume"
     p["rotation"] = "any" if form.get("p_rotation") == "any" else "upright"
     for k in ("fill_limit", "level_fill", "top_gap_cm", "side_gap_cm", "time_limit"):
@@ -154,6 +155,7 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
     p = cfg["params"]
     prm = SiteParams(
         objective=p.get("objective") if p.get("objective") in SITE_OBJECTIVES else "modules",
+        priority=[c for c in (p.get("priority") or []) if c in SITE_OBJECTIVES] or None,
         bin_objective=p.get("bin_objective") if p.get("bin_objective") in OBJECTIVES else "min_volume",
         fill_limit=(_num(p.get("fill_limit"), "Taxa máxima de enchimento das bins", errors, 85, 5, 100) or 85) / 100,
         rotation="any" if p.get("rotation") == "any" else "upright",
@@ -352,6 +354,7 @@ def to_xlsx(plan: SitePlan, project: SiteProject, types: dict[int, BinSpec]) -> 
         ("Ocupação dos níveis atribuídos (%)", round(plan.fill or 0, 1)),
         ("Níveis: total / com tipo de bin / em uso", f"{plan.levels_total} / {plan.levels_assigned} / {plan.levels_used}"),
         ("Solver", f"{plan.solver.get('status', '')} ({plan.solver.get('time', 0):.1f}s)"),
+        ("Prioridade dos critérios", " > ".join(st["label"] for st in plan.solver.get("stages", []))),
     ]
     for r in rows:
         ws.append(list(r))
@@ -397,16 +400,33 @@ def to_xlsx(plan: SitePlan, project: SiteProject, types: dict[int, BinSpec]) -> 
 # --------------------------------------------------------------------------- #
 # Gerar o cadastro da filial
 # --------------------------------------------------------------------------- #
+DEFAULT_LOCATION_MODES = {
+    "empty": "Só nos produtos sem endereço padrão (novos ou ainda sem endereço)",
+    "all": "Em todos os produtos do plano (passam a ter o endereço padrão na filial nova)",
+    "none": "Não alterar o endereço padrão",
+}
+
+
 def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: str, wh_name: str,
-                  link_skus: bool = True) -> tuple[Branch, dict]:
-    """Cria filial (+ armazém opcional), níveis com vão e capacidade, endereços e as bins de cada endereço.
-    Com `link_skus`, cada SKU fica vinculado ao(s) seu(s) endereço(s) por um registro de saldo ZERADO (o endereço
-    aparece ocupado pelo SKU previsto). Não muda o endereço padrão dos produtos que já têm saldo em outra filial."""
+                  link_skus: bool = True, items: Optional[list] = None, create_products: bool = True,
+                  update_products: bool = False, default_mode: str = "empty",
+                  launch_stock: bool = False) -> tuple[Branch, dict]:
+    """Cria a filial a partir do plano: armazém (opcional), estantes com a estrutura, níveis com vão e capacidade,
+    endereços com as bins e, para os SKUs:
+      - `create_products`: cadastra os produtos que ainda não existem (nome, material, dimensões, peso, min/max level,
+        vindos do arquivo do projeto ou da demanda);
+      - `update_products`: atualiza esses dados nos produtos que já existem (só com valores informados no arquivo);
+      - `link_skus`: atribui cada SKU ao(s) seu(s) endereço(s) por um registro de saldo (zerado ou, com `launch_stock`,
+        o saldo do arquivo dividido entre os endereços do SKU na proporção do plano);
+      - `default_mode`: endereço padrão do produto = 1º endereço dele na filial nova ("empty": só para quem não tem;
+        "all": todos; "none": não altera)."""
     from services.bin_content_service import refresh_contents
     from services.stock_service import refresh_occupancy
 
-    pids = dict(db.execute(select(Product.sku, Product.id)).all()) if link_skus else {}
-    new_ids: list[int] = []
+    by_item = {it["sku"]: it for it in (items or [])}
+    demand = {d.sku: d for d in plan.demands}
+    stats = {"levels": 0, "locations": 0, "bins": 0, "bays": 0, "products_created": 0, "products_updated": 0,
+             "assigned": 0, "defaults": 0, "stock_units": 0.0, "skus_without_product": 0, "unplaced": 0}
     br = Branch(code=code, name=name)
     db.add(br)
     wh = None
@@ -417,11 +437,55 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             db.add(wh)
         br.warehouses.append(wh)
     db.flush()
-    stats = {"levels": 0, "locations": 0, "bins": 0}
+
+    # ---- produtos ----
+    placed = list(dict.fromkeys(p.sku for p in plan.positions))
+    # SKUs do arquivo que ficaram fora do plano (sem dimensões, sem quantidade...) também são cadastrados, sem endereço
+    skus = placed + [s for s in by_item if s not in set(placed)]
+    products = {}
+    for i in range(0, len(skus), 900):
+        for pr in db.scalars(select(Product).where(Product.sku.in_(skus[i:i + 900]))):
+            products[pr.sku] = pr
+    dec = lambda v: Decimal(str(v)) if v is not None else None  # noqa: E731
+    sku_set = set(placed)
+    for sku in skus:
+        it, d = by_item.get(sku, {}), demand.get(sku)
+        vals = {"name": (it.get("name") or (d.name if d else "") or sku)[:255],
+                "material_type": (it.get("material") or (d.material if d else "") or "")[:60],
+                "height": dec(it.get("h") if it.get("h") is not None else (d.unit.h if d else None)),
+                "width": dec(it.get("w") if it.get("w") is not None else (d.unit.w if d else None)),
+                "length": dec(it.get("l") if it.get("l") is not None else (d.unit.l if d else None)),
+                "weight": dec(it.get("wt") if it.get("wt") is not None else (d.unit.weight if d else None)),
+                "min_level": dec(it.get("min")), "max_level": dec(it.get("max"))}
+        pr = products.get(sku)
+        if pr is None:
+            if not create_products:
+                stats["skus_without_product"] += 1
+                continue
+            pr = Product(sku=sku[:60], **vals)
+            db.add(pr)
+            products[sku] = pr
+            stats["products_created"] += 1
+            stats["unplaced"] += int(sku not in sku_set)
+        elif update_products and it:
+            changed = False
+            src = {"name": "name", "material_type": "material", "height": "h", "width": "w", "length": "l",
+                   "weight": "wt", "min_level": "min", "max_level": "max"}
+            for k, v in vals.items():
+                informed = it.get(src[k]) not in (None, "")  # só o que veio preenchido no arquivo
+                if informed and getattr(pr, k) != v:
+                    setattr(pr, k, v)
+                    changed = True
+            stats["products_updated"] += int(changed)
+    db.flush()
+
+    # ---- estantes, níveis, endereços e bins ----
+    new_ids: list[int] = []
+    sku_locs: dict[str, list[tuple[int, int]]] = {}  # sku -> [(endereço, unidades planejadas)]
     for m in plan.modules:
         db.add(BayStructure(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
                             structure_type_id=m.struct.id))
-        stats["bays"] = stats.get("bays", 0) + 1
+        stats["bays"] += 1
         for lv in m.levels:
             sl = ShelfLevel(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
                             level=str(lv.n), height_cm=Decimal(str(m.struct.level_h)),
@@ -438,11 +502,33 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 db.add(loc)
                 db.flush()
                 db.add(LocationBin(location_id=loc.id, bin_type_id=p.type_id, quantity=p.bins))
-                if p.sku in pids:
-                    db.add(StockItem(product_id=pids[p.sku], location_id=loc.id, quantity=Decimal("0")))
+                sku_locs.setdefault(p.sku, []).append((loc.id, p.units))
                 new_ids.append(loc.id)
                 stats["locations"] += 1
                 stats["bins"] += p.bins
+
+    # ---- atribuição dos produtos aos endereços ----
+    if link_skus:
+        for sku, locs in sku_locs.items():
+            pr = products.get(sku)
+            if pr is None:
+                continue
+            qty = [0.0] * len(locs)
+            stock = (by_item.get(sku) or {}).get("stock") if launch_stock else None
+            if stock:
+                total = sum(u for _, u in locs) or 1
+                left = float(stock)
+                for i, (_, u) in enumerate(locs):  # proporcional ao planejado; o resto fica no último endereço
+                    q = left if i == len(locs) - 1 else round(float(stock) * u / total, 4)
+                    q = min(q, left)
+                    qty[i], left = q, left - q
+                stats["stock_units"] += float(stock)
+            for (lid, _), q in zip(locs, qty):
+                db.add(StockItem(product_id=pr.id, location_id=lid, quantity=Decimal(str(q))))
+                stats["assigned"] += 1
+            if default_mode == "all" or (default_mode == "empty" and pr.default_location_id is None):
+                pr.default_location_id = locs[0][0]
+                stats["defaults"] += 1
     db.flush()
     refresh_occupancy(db, new_ids)
     refresh_contents(db, new_ids)

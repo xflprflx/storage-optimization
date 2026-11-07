@@ -84,6 +84,7 @@ class Building:
     cap_align: str = "row"  # cabeceira "row" = encostada na fileira | "edge" = alinhada à borda do trecho
     zones: list = field(default_factory=list)  # [ZoneSpec]; vazio = zona única
     avenue_m: float = 2.0  # largura das avenidas entre zonas
+    obstacles: list = field(default_factory=list)  # [Obstacle] áreas bloqueadas
 
     @property
     def area_m2(self) -> float:
@@ -179,6 +180,34 @@ class Block:
 
 
 @dataclass
+class Lane:
+    """Trecho disponível de uma fileira (entre pontas, corredores transversais e obstáculos)."""
+    row: int
+    seg: int  # trecho original da zona (entre corredores transversais)
+    x0: float
+    x1: float
+    start: Optional[str] = None  # área livre na ponta inicial (None = sem acesso: parede/obstáculo)
+    end: Optional[str] = None
+    full_start: bool = True  # a ponta é a ponta original do trecho (não foi cortada por obstáculo)
+    full_end: bool = True
+
+    @property
+    def length(self) -> float:
+        return self.x1 - self.x0
+
+
+@dataclass
+class Obstacle:
+    """Área bloqueada (escritório, sala, pilar, rampa…): retângulo na planta, em metros a partir do canto
+    (X ao longo do comprimento, Y ao longo da largura)."""
+    name: str
+    x_m: float
+    y_m: float
+    length_m: float  # extensão em X
+    width_m: float  # extensão em Y
+
+
+@dataclass
 class Floor:
     """Uma zona da planta, em coordenadas locais: x ao longo das fileiras, y transversal. `to_global` leva para a
     planta (X ao longo do comprimento do imóvel, Y ao longo da largura)."""
@@ -207,6 +236,7 @@ class Floor:
     cross_lo: float = 0.0
     cross_hi: float = 0.0
     areas: list = field(default_factory=list)  # [(tipo, x, y, w, d, rótulo)] locais: faixas reservadas
+    lanes: list[Lane] = field(default_factory=list)  # trechos disponíveis de cada fileira
 
     @property
     def seg_len(self) -> float:
@@ -214,7 +244,13 @@ class Floor:
 
     @property
     def total_row_m(self) -> float:
-        return len(self.rows) * len(self.segments) * self.seg_len / 100.0
+        return sum(ln.length for ln in self.lanes) / 100.0
+
+    def to_local(self, X: float, Y: float, W: float, D: float) -> tuple[float, float, float, float]:
+        """Inverso de `to_global` (retângulo da planta -> coordenadas da zona)."""
+        if self.rot:
+            return Y - self.oy, X - self.ox, D, W
+        return X - self.ox, Y - self.oy, W, D
 
     def allows(self, sid: int) -> bool:
         return self.struct_ids is None or sid in self.struct_ids
@@ -234,6 +270,7 @@ class Layout:
     zones: list[Floor] = field(default_factory=list)
     areas: list = field(default_factory=list)  # [(tipo, X, Y, W, D, rótulo)] globais: avenidas e faixas reservadas
     notes: list[str] = field(default_factory=list)
+    obstacles: list = field(default_factory=list)  # [Obstacle]
 
     @property
     def mixed(self) -> bool:
@@ -272,9 +309,11 @@ class Layout:
                     out.append(("aisle", *z.to_global(z.x_start, y, z.x_end - z.x_start, a), ""))
             for (_, x1), (x2, _) in zip(z.segments, z.segments[1:]):
                 out.append(("cross", *z.to_global(x1, z.cross_lo, x2 - x1, z.cross_hi - z.cross_lo), ""))
-            for r in z.rows:
-                for x0, x1 in z.segments:
-                    out.append(("lane", *z.to_global(x0, r.y, x1 - x0, r.depth), ""))
+            for ln in z.lanes:
+                r = z.rows[ln.row]
+                out.append(("lane", *z.to_global(ln.x0, r.y, ln.length, r.depth), ""))
+        for ob in self.obstacles:  # por cima de corredores e avenidas
+            out.append(("obstacle", ob.x_m * 100, ob.y_m * 100, ob.length_m * 100, ob.width_m * 100, ob.name))
         return out
 
 
@@ -398,7 +437,34 @@ def build_zone(depth_cm: float, aisle_cm: float, run_len: float, cross_len: floa
     fl.segments = [(x0 + i * (seg + ca), x0 + i * (seg + ca) + seg) for i in range(n)]
     fl.seg_ends = [(run_ends[0] if i == 0 else f"o corredor transversal {i}",
                     run_ends[1] if i == n - 1 else f"o corredor transversal {i + 1}") for i in range(n)]
+    fl.lanes = [Lane(r.index, k, a0, a1, *fl.seg_ends[k]) for r in fl.rows for k, (a0, a1) in enumerate(fl.segments)]
     return fl
+
+
+def apply_obstacles(lay: Layout, obstacles: list, clearance_cm: float = 0.0) -> None:
+    """Corta os trechos de fileira que passam por obstáculos (com a folga das paredes). A ponta cortada fica sem
+    acesso (não recebe cabeceira)."""
+    lay.obstacles = list(obstacles)
+    for ob in obstacles:
+        cut = 0
+        X, Y, L, W = ob.x_m * 100 - clearance_cm, ob.y_m * 100 - clearance_cm, ob.length_m * 100 + 2 * clearance_cm, \
+            ob.width_m * 100 + 2 * clearance_cm
+        for z in lay.zones:
+            ox, oy, ow, od = z.to_local(X, Y, L, W)
+            keep = []
+            for ln in z.lanes:
+                r = z.rows[ln.row]
+                if not (r.y < oy + od - EPS and oy < r.y + r.depth - EPS and ln.x0 < ox + ow - EPS and ox < ln.x1 - EPS):
+                    keep.append(ln)
+                    continue
+                cut += 1
+                if ox - ln.x0 >= 1:  # pedaço antes do obstáculo
+                    keep.append(Lane(ln.row, ln.seg, ln.x0, ox, ln.start, None, ln.full_start, False))
+                if ln.x1 - (ox + ow) >= 1:  # pedaço depois
+                    keep.append(Lane(ln.row, ln.seg, ox + ow, ln.x1, None, ln.end, False, ln.full_end))
+            z.lanes = keep
+        if cut:
+            lay.notes.append(f"Obstáculo {ob.name}: {cut} trecho(s) de fileira encurtado(s) ou removido(s).")
 
 
 def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
@@ -439,6 +505,13 @@ def choose_floor(b: Building, structs: list[StructureSpec]) -> Floor:
 
 
 def build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
+    lay = _build_layout(b, structs)
+    if b.obstacles:
+        apply_obstacles(lay, b.obstacles, b.wall_gap_m * 100.0)
+    return lay
+
+
+def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
     """Planta completa: zona única (orientação automática ou escolhida) ou as zonas definidas pelo usuário,
     em sequência a partir da frente (docas), separadas por avenidas da largura informada."""
     L, W = b.length_m * 100.0, b.width_m * 100.0
@@ -867,8 +940,8 @@ def _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parent
     end_caps = sol.get("caps", [])
 
     # ---- linhas de resumo ----
-    narrow = {s.id: sum(math.floor(z.seg_len / s.width + EPS) * len(z.rows) * len(z.segments)
-                        for z in floor.zones if z.allows(s.id)) if s.width > 0 else 0 for s in active}
+    narrow = {s.id: sum(math.floor(ln.length / s.width + EPS) for z in floor.zones if z.allows(s.id) for ln in z.lanes)
+              if s.width > 0 else 0 for s in active}
     for s in structs:
         line = StructLine(struct=s, qty=qty.get(s.id, 0), floor_max=narrow.get(s.id, 0))
         line.levels_by_type = {t: n for (t, sid), n in z.items() if sid == s.id and n > 0}
@@ -899,10 +972,10 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     types, choices = types or {}, choices or []
     info = {"status": "", "time": 0.0, "stages": []}
     zones = floor.zones
-    # trechos de fileira de todas as zonas: (zona, fileira, trecho) e o comprimento de cada um (mm)
-    segs = [(zi, r.index, k) for zi, zn in enumerate(zones) for r in zn.rows for k in range(len(zn.segments))]
-    slen = {zi: int(math.floor(zn.seg_len * 10 + EPS)) for zi, zn in enumerate(zones)}
-    if not segs or all(v <= 0 for v in slen.values()):
+    # trechos de fileira de todas as zonas (já cortados pelos obstáculos): (zona, trecho) e comprimento (mm)
+    segs = [(zi, li) for zi, zn in enumerate(zones) for li in range(len(zn.lanes))]
+    glen = [int(math.floor(zones[zi].lanes[li].length * 10 + EPS)) for zi, li in segs]
+    if not segs or all(v <= 0 for v in glen):
         fixed = [s for s in active if s.mode == "fixed" and s.qty > 0]
         return {"info": {**info, "status": "inviável"},
                 "error": "A planta não tem fileiras disponíveis." + (" As estruturas com quantidade fixa não cabem."
@@ -916,26 +989,31 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     t0 = time.monotonic()
     m = cp_model.CpModel()
     w = {s.id: max(1, int(round(s.width * 10))) for s in active}
-    per = {(s.id, zi): (slen[zi] // w[s.id] if zones[zi].allows(s.id) else 0) for s in active for zi in slen}
-    n = {(s.id, g): m.NewIntVar(0, per[(s.id, seg[0])], f"n_{s.id}_{g}")
-         for s in active for g, seg in enumerate(segs) if per[(s.id, seg[0])] > 0}
+    per = {(s.id, g): (glen[g] // w[s.id] if zones[segs[g][0]].allows(s.id) else 0) for s in active for g in range(len(segs))}
+    n = {(s.id, g): m.NewIntVar(0, per[(s.id, g)], f"n_{s.id}_{g}") for s in active for g in range(len(segs))
+         if per[(s.id, g)] > 0}
     # cabeceiras: em cada ponta com acesso de cada trecho de cada faixa (fileira simples ou dupla), no máximo uma
     # estrutura girada 90°; cabem lado a lado floor(profundidade da faixa / frente do módulo). Ocupam a
-    # profundidade do módulo no comprimento de todas as fileiras da faixa.
+    # profundidade do módulo no comprimento de todas as fileiras da faixa (todas precisam ter a ponta original,
+    # sem corte de obstáculo).
     dmm = {s.id: max(1, int(round(s.depth * 10))) for s in active}
+    g_of = {(zi, zones[zi].lanes[li].row, zones[zi].lanes[li].seg, e): g for g, (zi, li) in enumerate(segs)
+            for e in (0, 1) if (zones[zi].lanes[li].full_start if e == 0 else zones[zi].lanes[li].full_end)}
     cu, cc = {}, {}  # (zona, faixa, trecho, ponta, estrutura) -> escolhida? / quantidade
-    cmax_of = {}
+    cmax_of, cap_lanes = {}, {}
     for zi, zn in enumerate(zones):
         if not zn.end_caps:
             continue
         for bk in zn.blocks:
             for k, ends in enumerate(zn.seg_ends):
                 for e, area in enumerate(ends):
-                    if not area:
+                    gs = [g_of.get((zi, r, k, e)) for r in bk.rows]
+                    if not area or any(g is None for g in gs):
                         continue
+                    cap_lanes[(zi, bk.id, k, e)] = gs
                     for s in active:
                         cmax = int(math.floor(bk.depth / s.width + EPS)) if s.width > 0 else 0
-                        if cmax <= 0 or dmm[s.id] > slen[zi] or not zn.allows(s.id):
+                        if cmax <= 0 or dmm[s.id] > min(glen[g] for g in gs) or not zn.allows(s.id):
                             continue
                         key = (zi, bk.id, k, e, s.id)
                         cmax_of[key] = cmax
@@ -946,7 +1024,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
                     m.Add(sum(cu[kk] for kk in cu if kk[:4] == (zi, bk.id, k, e)) <= 1)
     x = {}
     for s in active:
-        floor_cap = sum(per[(s.id, seg[0])] for seg in segs) + sum(v for kk, v in cmax_of.items() if kk[4] == s.id)
+        floor_cap = sum(per[(s.id, g)] for g in range(len(segs))) + sum(v for kk, v in cmax_of.items() if kk[4] == s.id)
         hi = floor_cap if s.mode != "auto" or s.max_qty is None else min(floor_cap, s.max_qty)
         x[s.id] = m.NewIntVar(0, max(0, hi), f"x_{s.id}")
         m.Add(x[s.id] == sum(v for (sid, _g), v in n.items() if sid == s.id)
@@ -962,18 +1040,18 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
                         "error": f"Mínimo de {s.code} ({s.min_qty}) maior que o que cabe ({hi})."}
             m.Add(x[s.id] >= s.min_qty)
     used = []
-    for g, (zi, ri, k) in enumerate(segs):
-        bid = zones[zi].rows[ri].block
-        u = m.NewIntVar(0, max(0, slen[zi]), f"u_{g}")
+    for g in range(len(segs)):
+        u = m.NewIntVar(0, max(0, glen[g]), f"u_{g}")
         m.Add(u == sum(w[s.id] * n[(s.id, g)] for s in active if (s.id, g) in n)
-              + sum(dmm[kk[4]] * v for kk, v in cu.items() if kk[:2] == (zi, bid) and kk[2] == k))
+              + sum(dmm[kk[4]] * v for kk, v in cu.items() if g in cap_lanes[kk[:4]]))
         used.append(u)
-    # simetria entre trechos equivalentes (mesma zona, mesma profundidade de faixa e mesmo trecho, logo as mesmas
-    # pontas): os primeiros enchem primeiro. Faixas diferentes (simples × dupla) não se comparam.
+    # simetria entre trechos equivalentes (mesma zona, profundidade de faixa, trecho, comprimento e pontas):
+    # os primeiros enchem primeiro. Faixas diferentes (simples × dupla) e trechos cortados não se comparam.
     classes: dict = {}
-    for g, (zi, ri, k) in enumerate(segs):
-        zn = zones[zi]
-        classes.setdefault((zi, zn.blocks[zn.rows[ri].block].depth if zn.blocks else 0, k), []).append(g)
+    for g, (zi, li) in enumerate(segs):
+        zn, ln = zones[zi], zones[zi].lanes[li]
+        classes.setdefault((zi, zn.blocks[zn.rows[ln.row].block].depth if zn.blocks else 0, ln.seg, glen[g],
+                            ln.start, ln.end, ln.full_start, ln.full_end), []).append(g)
     for gs in classes.values():
         for g1, g2 in zip(gs, gs[1:]):
             m.Add(used[g1] >= used[g2])
@@ -991,7 +1069,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     for s in active:
         for t in all_t:
             if caps.get((t, s.id), 0) > 0:
-                z[(t, s.id)] = m.NewIntVar(0, s.levels * max(1, sum(per[(s.id, seg[0])] for seg in segs)
+                z[(t, s.id)] = m.NewIntVar(0, s.levels * max(1, sum(per[(s.id, g)] for g in range(len(segs)))
                                                                + sum(v for kk, v in cmax_of.items() if kk[4] == s.id)),
                                            f"z_{t}_{s.id}")
         m.Add(sum(v for (t, sid), v in z.items() if sid == s.id) <= s.levels * x[s.id])
@@ -1083,18 +1161,20 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     # cabeceiras: (zona, faixa, trecho, ponta) -> (estrutura, qtd); a da ponta inicial empurra as fileiras do trecho
     cap_at = {kk[:4]: (by_id[kk[4]], q) for kk, q in (end_caps or []) if kk[4] in by_id}
     # módulos das fileiras: em cada trecho, as estruturas em ordem de código
-    row_end: dict[tuple, float] = {}
-    for (zi, row_i, seg_k), mods in seg_mods:
+    row_end: dict[tuple, float] = {}  # (zona, fileira, trecho) -> fim dos módulos no trecho com a ponta final original
+    for (zi, li), mods in seg_mods:
         zn = zones[zi]
-        row = zn.rows[row_i]
-        start = cap_at.get((zi, row.block, seg_k, 0))
-        x = zn.segments[seg_k][0] + (start[0].depth if start else 0.0)
+        ln = zn.lanes[li]
+        row = zn.rows[ln.row]
+        start = cap_at.get((zi, row.block, ln.seg, 0)) if ln.full_start else None
+        x = ln.x0 + (start[0].depth if start else 0.0)
         for sid in sorted(mods, key=lambda i: by_id[i].code):
             for _ in range(mods[sid]):
                 s = by_id[sid]
-                plan.modules.append(ModulePlaced(struct=s, row=row, x0=x, levels=lv_of(s), segment=seg_k, zone=zn))
+                plan.modules.append(ModulePlaced(struct=s, row=row, x0=x, levels=lv_of(s), segment=ln.seg, zone=zn))
                 x += s.width
-        row_end[(zi, row_i, seg_k)] = x
+        if ln.full_end:
+            row_end[(zi, ln.row, ln.seg)] = x
     # cabeceiras: no início do trecho, antes das fileiras; no fim, encostadas na fileira mais longa da faixa
     # ("row") ou alinhadas à borda do trecho ("edge")
     caps_mods = []
@@ -1157,24 +1237,32 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
             units_left = round(d.units * k / total_bins)
             unit_w = d.unit.weight or 0.0
             per_bin_units = units_left / k if k else 0
+            w_bin = math.ceil(per_bin_units - EPS) * unit_w  # peso máximo de uma bin (unidades arredondadas para cima)
+
+            def room(lv) -> int:  # bins que ainda cabem no nível (capacidade e carga máxima)
+                free = lv.cap - lv.used
+                s_ = owner[id(lv)].struct
+                if prm.enforce_weight and s_.max_load and w_bin > 0:
+                    free = min(free, max(0, int((s_.max_load - lv.load) // w_bin)))
+                return free
+
             while k > 0:
-                if si >= len(slots):  # acabaram os níveis do tipo (ex.: limite de carga): usa um nível livre compatível
+                while si < len(slots) and slots[si].used >= slots[si].cap:  # níveis cheios saem da frente
+                    si += 1
+                # 1º nível (a partir do primeiro não cheio) que comporta a bin: um nível barrado só pelo peso continua
+                # disponível para bins mais leves
+                j = next((j for j in range(si, len(slots)) if room(slots[j]) > 0), None)
+                if j is None:  # acabaram os níveis do tipo (ex.: limite de carga): usa um nível livre compatível
                     extra = next((lv for m in plan.modules for lv in sorted(m.levels, key=lambda v: v.n)
                                   if lv.type_id is None and caps.get((t, m.struct.id), 0) > 0), None)
                     if extra is None:
                         break
                     extra.type_id, extra.cap = t, caps[(t, owner[id(extra)].struct.id)]
                     slots.append(extra)
-                lv = slots[si]
-                free = lv.cap - lv.used
-                s = owner[id(lv)].struct
-                if prm.enforce_weight and s.max_load and unit_w:
-                    w_bin = per_bin_units * unit_w
-                    by_w = int((s.max_load - lv.load) // w_bin) if w_bin > 0 else free
-                    free = min(free, max(0, by_w))
-                if free <= 0:
-                    si += 1
                     continue
+                lv = slots[j]
+                free = room(lv)
+                s = owner[id(lv)].struct
                 take = min(free, k)
                 units = round(per_bin_units * take) if k > take else units_left
                 mod = owner[id(lv)]
@@ -1204,7 +1292,7 @@ PALETTE = ["#2f7ed8", "#e8743b", "#19a979", "#ed4a7b", "#945ecf", "#13a4b4", "#c
 
 SHAPE_STYLE = {  # tipo -> (preenchimento, contorno, tracejado)
     "reserved": ("#fff3cd", "#e0c068", ""), "avenue": ("#e3ecf7", "#b9cbe3", ""), "aisle": ("#eef2f4", "none", ""),
-    "cross": ("#eef2f4", "none", ""), "lane": ("none", "#c9d1d6", "3 2"),
+    "cross": ("#eef2f4", "none", ""), "lane": ("none", "#c9d1d6", "3 2"), "obstacle": ("#2b2f33", "#111111", ""),
 }
 
 
@@ -1255,6 +1343,10 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999", ""))
         out.append(f'<rect x="{X * sc:.1f}" y="{Y * sc:.1f}" width="{w * sc:.1f}" height="{d * sc:.1f}" fill="{fill}" '
                    f'stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
+        if label and kind == "obstacle":
+            cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
+            out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '
+                       f'fill="#ffffff">{label}</text>')
         if label and kind in ("reserved", "avenue"):
             label = area_label(plan, label)
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc

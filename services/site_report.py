@@ -368,10 +368,10 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999999", ""))
         dw.add(Rect(X * sc, Yp(Y, d), w * sc, d * sc, fillColor=hexc(fill), strokeColor=hexc(stroke),
                     strokeWidth=0.3 if kind == "lane" else 0.5, strokeDashArray=[2, 2] if dash else None))
-        if label and kind in ("reserved", "avenue") and min(w, d) * sc >= 6:
-            txt = area_label(plan, label)
-            st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor("#8A6D1C" if kind == "reserved" else "#3B5B8C"),
-                        textAnchor="middle")
+        if label and kind in ("reserved", "avenue", "obstacle") and min(w, d) * sc >= 6:
+            txt = area_label(plan, label) if kind != "obstacle" else label
+            st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor(
+                {"reserved": "#8A6D1C", "avenue": "#3B5B8C"}.get(kind, "#FFFFFF")), textAnchor="middle")
             if d > w:  # faixa vertical: texto girado
                 from reportlab.graphics.shapes import Group
 
@@ -403,7 +403,7 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
             f"fileiras ao longo do {'comprimento' if fl.along == 'length' else 'largura'}")
     dw.add(String(0, 2, f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · {desc} · "
-                        "amarelo = docas/áreas reservadas · azul = avenidas · tracejado = cabeceiras",
+                        "amarelo = docas/áreas reservadas · azul = avenidas · preto = obstáculos · tracejado = cabeceiras",
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
     return dw
 

@@ -12,6 +12,7 @@ completadas pelo cadastro de produtos quando o SKU existe nele.
 """
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from pathlib import Path
 from typing import Optional
@@ -76,11 +77,29 @@ BUILDING_KEYS = {
     "cross_aisle_m": ["larguradostransversais", "larguradostransversaism", "larguratransversal"],
     "orientation": ["orientacao", "orientacaodasfileiras"],
     "end_caps": ["cabeceiras", "usarcabeceiras", "modulosdecabeceira", "cabeceirasnaspontas", "cabeceirassimnao"],
+    "cap_align": ["posicaodacabeceira", "posicaodacabeceiraencostadaborda", "alinhamentodacabeceira", "cabeceiraposicao"],
+}
+ZONE_COLS = {
+    "name": ["nome", "zona", "nomedazona"],
+    "length": ["comprimento", "comprimentom", "tamanho", "extensao"],
+    "orientation": ["orientacao", "orientacaodasfileiras", "sentido", "direcao"],
+    "aisle": ["corredor", "corredorm", "larguradocorredor", "larguradocorredorm", "larguracorredor"],
+    "cross": ["transversais", "corredorestransversais", "qtdtransversais"],
+    "structures": ["estruturas", "estruturaspermitidas", "codigosdasestruturas"],
+}
+OBSTACLE_COLS = {
+    "name": ["nome", "descricao", "area", "obstaculo"],
+    "x": ["x", "xm", "posicaox", "inicioxm", "distanciadafrente"],
+    "y": ["y", "ym", "posicaoy", "inicioym", "distancialateral"],
+    "length": ["comprimento", "comprimentoemx", "comprimentoemxm", "comprimentom", "extensaox"],
+    "width": ["largura", "larguraemy", "larguraemym", "larguram", "extensaoy"],
 }
 MODE_WORDS = {"auto": ["otimizar", "otimizarquantidade", "auto", "automatico", "sim"],
               "fixed": ["fixa", "fixo", "quantidadefixa", "fixed"], "off": ["naousar", "nao", "off", "desligado"]}
 SHEETS = {"building": ["imovel", "predio", "galpao"], "structures": ["estruturas", "estrutura"],
-          "bins": ["bins", "tiposdebin", "tipos de bin"], "skus": ["skus", "sku", "produtos", "demanda", "itens"]}
+          "bins": ["bins", "tiposdebin", "tipos de bin"], "skus": ["skus", "sku", "produtos", "demanda", "itens"],
+          "zones": ["zonas", "zona", "zonasdaplanta"],
+          "obstacles": ["obstaculos", "obstaculo", "areasbloqueadas", "bloqueios", "areas bloqueadas"]}
 
 
 def _map(headers: list[str], spec: dict) -> dict[str, Optional[int]]:
@@ -121,8 +140,10 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
 
 
 BUILDING_COLS = {"field": ["campo", "parametro", "item", "descricao"], "value": ["valor", "value", "medida"]}
-SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS}
-KIND_LABELS = {"building": "Imóvel", "structures": "Estruturas", "bins": "Bins", "skus": "SKUs"}
+SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS,
+         "zones": ZONE_COLS, "obstacles": OBSTACLE_COLS}
+KIND_LABELS = {"building": "Imóvel", "structures": "Estruturas", "bins": "Bins", "skus": "SKUs", "zones": "Zonas",
+               "obstacles": "Obstáculos"}
 FIELD_LABELS = {
     "building": {"field": "Campo (nome do parâmetro)", "value": "Valor"},
     "structures": {"code": "Código", "name": "Nome", "kind": "Tipo", "width": "Frente (cm)", "depth": "Profundidade (cm)",
@@ -135,8 +156,13 @@ FIELD_LABELS = {
     "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
              "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
              "max": "Max level"},
+    "zones": {"name": "Nome", "length": "Comprimento (m)", "orientation": "Orientação das fileiras",
+              "aisle": "Corredor (m)", "cross": "Corredores transversais", "structures": "Estruturas permitidas (códigos)"},
+    "obstacles": {"name": "Nome", "x": "X (m)", "y": "Y (m)", "length": "Comprimento em X (m)",
+                  "width": "Largura em Y (m)"},
 }
-REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"]}
+REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"],
+            "zones": ["orientation"], "obstacles": ["x", "y", "length", "width"]}
 
 
 def read_sheets(path: Path, limit: Optional[int] = None) -> dict[str, list[list[str]]]:
@@ -267,6 +293,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 cfg["building"][key] = ("length" if "compr" in v else "width" if "larg" in v else "auto")
             elif key == "end_caps":
                 cfg["building"][key] = "" if normalize_header(val) in {"nao", "n", "0", "false", "naousar"} else "1"
+            elif key == "cap_align":
+                cfg["building"][key] = "edge" if any(w in normalize_header(val) for w in ("borda", "edge", "alinh")) else "row"
             else:
                 try:
                     parse_decimal(val)
@@ -322,6 +350,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         else:
             created = updated = 0
             by_code = {s.code: s for s in db.scalars(select(StructureType))}
+            in_sheet: set[str] = set()
             mode_of = {normalize_header(w): m for m, ws in MODE_WORDS.items() for w in ws}
             for i, row in enumerate(rows, start=2):
                 code = normalize_code(_cell(row, cm["code"]))
@@ -356,7 +385,67 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 fmt = lambda x: str(int(x)) if x is not None else ""  # noqa: E731
                 cfg["structures"][str(st.id)] = {"mode": mode, "qty": fmt(v["qty"]) if mode == "fixed" else "",
                                                  "min_qty": fmt(v["min_qty"]), "max_qty": fmt(v["max_qty"])}
-            msgs.append(f"Estruturas: {created} cadastrada(s), {updated} atualizada(s).")
+                in_sheet.add(str(st.id))
+            # a aba lista as estruturas do projeto: as que não estão nela ficam fora ("Não usar")
+            off = [sid for sid, sc in cfg["structures"].items() if sid not in in_sheet and sc.get("mode") != "off"]
+            for sid in off:
+                cfg["structures"][sid] = {"mode": "off", "qty": "", "min_qty": "", "max_qty": ""}
+            for st in by_code.values():
+                if st.id and str(st.id) not in cfg["structures"]:
+                    cfg["structures"][str(st.id)] = {"mode": "off", "qty": "", "min_qty": "", "max_qty": ""}
+            msgs.append(f"Estruturas: {created} cadastrada(s), {updated} atualizada(s)"
+                        + (f", {len(off)} fora da planilha marcada(s) como \"Não usar\"." if off else "."))
+
+    # ---- Zonas (depois das estruturas: as estruturas permitidas são códigos) ----
+    if "zones" in sheets:
+        hdr, *rows = sheets["zones"] if sheets["zones"] else [[]]
+        cm = cms["zones"]
+        code_id = {s.code: s.id for s in db.scalars(select(StructureType))}
+        zones, bad = [], []
+        for i, row in enumerate(rows, start=2):
+            ori_txt = normalize_header(_cell(row, cm["orientation"]))
+            if not ori_txt and not _cell(row, cm["name"]):
+                continue
+            ori = "across" if any(w in ori_txt for w in ("perp", "larg", "across", "transv", "vertical")) else "along"
+            e: list[str] = []
+            ln, al, cr = (_dec(row, cm[k], k, e, i) for k in ("length", "aisle", "cross"))
+            if e:
+                errs.extend(f"Zonas {x}" for x in e)
+                continue
+            codes = [normalize_code(c) for c in re.split(r"[,;/ ]+", _cell(row, cm["structures"])) if c.strip()]
+            unknown = [c for c in codes if c not in code_id]
+            if unknown:
+                bad.append(f"linha {i}: estrutura(s) {', '.join(unknown)} não cadastrada(s)")
+            fmt = lambda v: (f"{v:g}".replace(".", ",") if v is not None else "")  # noqa: E731
+            zones.append({"name": (_cell(row, cm["name"]) or f"Zona {len(zones) + 1}")[:40], "length_m": fmt(ln),
+                          "orientation": ori, "aisle_m": fmt(al), "cross_aisles": str(int(cr)) if cr else "",
+                          "structures": [str(code_id[c]) for c in codes if c in code_id]})
+        if bad:
+            errs.append("Zonas: " + "; ".join(bad) + ".")
+        if len(zones) == 1:
+            errs.append("Zonas: informe ao menos duas zonas (uma só equivale a não usar zonas); a zona foi ignorada.")
+            zones = []
+        cfg["building"]["zones"] = zones
+        msgs.append(f"Zonas: {len(zones)} zona(s) definida(s)." if zones else "Zonas: nenhuma (planta de zona única).")
+
+    # ---- Obstáculos ----
+    if "obstacles" in sheets:
+        hdr, *rows = sheets["obstacles"] if sheets["obstacles"] else [[]]
+        cm = cms["obstacles"]
+        obs = []
+        for i, row in enumerate(rows, start=2):
+            e: list[str] = []
+            vals = {k: _dec(row, cm[k], k, e, i) for k in ("x", "y", "length", "width")}
+            if all(v is None for v in vals.values()):
+                continue
+            if e or any(v is None for v in vals.values()) or not vals["length"] or not vals["width"]:
+                errs.append(f"Obstáculos linha {i}: informe X, Y, comprimento e largura válidos.")
+                continue
+            fmt = lambda v: f"{v:g}".replace(".", ",")  # noqa: E731
+            obs.append({"name": (_cell(row, cm["name"]) or f"Obstáculo {len(obs) + 1}")[:40], "x_m": fmt(vals["x"]),
+                        "y_m": fmt(vals["y"]), "length_m": fmt(vals["length"]), "width_m": fmt(vals["width"])})
+        cfg["building"]["obstacles"] = obs
+        msgs.append(f"Obstáculos: {len(obs)} área(s) bloqueada(s).")
 
     # ---- SKUs ----
     if "skus" in sheets:
@@ -440,6 +529,12 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
         "SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. "
         "Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades.",
         "Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior).",
+        "Zonas (opcional, ao menos duas): faixas ao longo do comprimento a partir da frente (docas), na ordem das linhas. "
+        "Comprimento vazio = o que sobrar; Orientação = 'ao longo do comprimento' ou 'perpendicular'; Corredor vazio = o do "
+        "imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Entre zonas fica uma avenida "
+        "(largura na aba Imóvel). Aba vazia = sem zonas.",
+        "Obstáculos (opcional): áreas bloqueadas (escritório, pilar, sala…) em metros a partir do canto superior "
+        "esquerdo da planta: X ao longo do comprimento, Y ao longo da largura. As fileiras que passariam por elas são cortadas.",
     ]:
         ws.append([line])
     ws["A1"].font = Font(bold=True, size=13)
@@ -450,8 +545,22 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
     sheet(wb.create_sheet("Imóvel"), ["Campo", "Valor"],
           [(label, b.get(k, "")) for k, label, _, _ in BUILDING_FIELDS]
           + [("Orientação das fileiras", orient.get(b.get("orientation") or "auto", "automática")),
-             ("Cabeceiras (sim/não)", "sim" if b.get("end_caps") else "não")],
+             ("Cabeceiras (sim/não)", "sim" if b.get("end_caps") else "não"),
+             ("Posição da cabeceira (encostada/borda)", "borda" if b.get("cap_align") == "edge" else "encostada")],
           {1: 50, 2: 16})
+    id_code = {str(s.id): s.code for s in db.scalars(select(StructureType))}
+    ori_lbl = {"along": "ao longo do comprimento", "across": "perpendicular (ao longo da largura)"}
+    sheet(wb.create_sheet("Zonas"),
+          ["Nome", "Comprimento (m)", "Orientação das fileiras", "Corredor (m)", "Corredores transversais",
+           "Estruturas permitidas (códigos)"],
+          [(z.get("name"), z.get("length_m") or None, ori_lbl.get(z.get("orientation"), "ao longo do comprimento"),
+            z.get("aisle_m") or None, z.get("cross_aisles") or None,
+            ", ".join(id_code.get(x, "") for x in z.get("structures") or [] if x in id_code) or None)
+           for z in b.get("zones") or []], {1: 22, 3: 36, 6: 34})
+    sheet(wb.create_sheet("Obstáculos"),
+          ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
+          [(o.get("name"), o.get("x_m"), o.get("y_m"), o.get("length_m"), o.get("width_m"))
+           for o in b.get("obstacles") or []], {1: 24})
     mode_lbl = {"auto": "Otimizar", "fixed": "Fixa", "off": "Não usar"}
     rows = []
     for st in db.scalars(select(StructureType).order_by(StructureType.code)):

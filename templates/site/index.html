@@ -24,16 +24,7 @@
           <div class="form-text mt-0 mb-2">Imóvel, estruturas, bins e SKUs (saldo, min e max). Depois de criar, você confere o mapeamento das colunas.</div>
           <button class="btn btn-accent w-100"><i class="bi bi-plus-lg"></i> Criar projeto</button>
         </form>
-        <hr>
-        <div class="small fw-semibold mb-1"><i class="bi bi-stars"></i> Começar por um exemplo</div>
-        <div class="small text-muted mb-2">Planilha seed com um galpão de 48 × 30 m, 4 estruturas, 5 caixas bin com custo e ~400 SKUs. Use como modelo para os seus dados.</div>
-        <div class="d-flex gap-2">
-          <a class="btn btn-sm btn-outline-secondary flex-fill" href="/optimization/site/seed.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Baixar planilha</a>
-          <form method="post" action="/optimization/site/new" class="flex-fill" onsubmit="return confirm('Criar um projeto de exemplo? Ao importar, as estruturas e bins da planilha são cadastradas.');">
-            <input type="hidden" name="sample" value="1"><input type="hidden" name="name" value="Exemplo — filial nova">
-            <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-magic"></i> Criar projeto de exemplo</button>
-          </form>
-        </div>
+        <div class="small text-muted mt-2"><i class="bi bi-stars"></i> Ou comece por um dos <a href="#exemplos">projetos de exemplo</a> abaixo.</div>
         {% if not n_structs %}
         <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle"></i> Nenhuma estrutura de armazenagem cadastrada.
           <a href="/structures/new">Cadastre as estantes/porta-paletes</a> que podem ser usadas antes de otimizar.</div>
@@ -79,6 +70,37 @@
         </table>
       </div>
     </div>
+  </div>
+</div>
+<div class="card mt-3" id="exemplos">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="bi bi-stars"></i> Projetos de exemplo</strong>
+    <span class="small text-muted">Escolha um cenário para ver a planta disponível, baixar a planilha ou criar um projeto com ele.</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+    {% for ex in examples %}
+      <div class="col-xl-3 col-lg-4 col-md-6">
+        <div class="card h-100 border">
+          <div class="card-body pb-2">
+            <div class="fw-semibold">{{ ex.title }}</div>
+            <div class="mb-2">{% for t in ex.tags %}<span class="badge text-bg-light border me-1">{{ t }}</span>{% endfor %}</div>
+            <div class="border rounded p-1 bg-white mb-2" title="Planta antes de otimizar: zonas, avenidas, obstáculos e fileiras disponíveis">{{ ex.svg|safe }}</div>
+            <div class="small text-muted">{{ ex.description }}</div>
+          </div>
+          <div class="card-footer bg-white d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary flex-fill" href="/optimization/site/examples/{{ ex.slug }}.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Planilha</a>
+            <form method="post" action="/optimization/site/new" class="flex-fill" onsubmit="return confirm('Criar um projeto com o exemplo “{{ ex.title }}”? Ao importar, as estruturas e bins da planilha são cadastradas.');">
+              <input type="hidden" name="sample" value="{{ ex.slug }}">
+              <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-magic"></i> Criar projeto</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    <div class="small text-muted mt-2">A prévia mostra a planta antes de otimizar (fileiras disponíveis tracejadas). Ao criar o projeto, você confere o mapeamento das colunas,
+      ajusta o que quiser e clica em <b>Salvar e otimizar</b> para ver o plano com as estruturas, bins e endereços.</div>
   </div>
 </div>
 {% endblock %}

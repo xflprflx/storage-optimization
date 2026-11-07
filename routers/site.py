@@ -27,6 +27,17 @@ from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, conf
 router = APIRouter(prefix="/optimization/site", tags=["Projeto de filial nova"])
 
 
+def _attachment(filename: str) -> str:
+    """Content-Disposition seguro: nome ASCII (sem acentos) + o nome original codificado (RFC 5987).
+    O cabeçalho HTTP só aceita latin-1; nomes de projeto com acento ou travessão quebravam o download."""
+    import unicodedata
+    from urllib.parse import quote
+
+    ascii_name = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode()
+    ascii_name = "".join(c if c.isalnum() or c in "-_." else "_" for c in ascii_name).strip("_") or "arquivo"
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"
+
+
 def _get(db: Session, pid: int) -> SiteProject | None:
     return db.get(SiteProject, pid)
 
@@ -67,10 +78,23 @@ def _plan_for(db: Session, pr: SiteProject, fresh: bool = False):
 def list_projects(request: Request, db: Session = Depends(get_db)):
     projects = list(db.scalars(select(SiteProject).order_by(SiteProject.updated_at.desc(), SiteProject.id.desc())))
     n_structs = len(list(db.scalars(select(StructureType.id))))
-    return render(request, "site/index.html", projects=projects, n_structs=n_structs)
+    from services.site_examples import EXAMPLES, preview_svg
+
+    examples = [{**{k: e[k] for k in ("slug", "title", "description", "tags")}, "svg": preview_svg(e["slug"])}
+                for e in EXAMPLES]
+    return render(request, "site/index.html", projects=projects, n_structs=n_structs, examples=examples)
 
 
-SEED_FILE = Path(__file__).resolve().parent.parent / "samples" / "seed_filial_nova.xlsx"
+def _example_file(slug: str) -> Path | None:
+    """Planilha do exemplo (gerada na hora se ainda não existir). None = exemplo desconhecido."""
+    from services.site_examples import BY_SLUG, path_of, write_workbook
+
+    if slug not in BY_SLUG:
+        return None
+    path = path_of(slug)
+    if not path.exists():
+        write_workbook(BY_SLUG[slug], path)
+    return path
 
 
 def _new_project(db: Session, name: str) -> SiteProject:
@@ -93,13 +117,14 @@ async def create_project(request: Request, db: Session = Depends(get_db)):
     upload = form.get("file")
     has_file = upload is not None and getattr(upload, "filename", "")
     if form.get("sample"):
-        if not SEED_FILE.exists():
-            return redirect("/optimization/site", "Planilha de exemplo não encontrada (rode scripts/generate_site_seed.py).",
-                            "danger")
-        pr = _new_project(db, name or "Exemplo — filial nova")
+        from services.site_examples import BY_SLUG, DEFAULT
+
+        slug = form.get("sample") if form.get("sample") in BY_SLUG else DEFAULT
+        src = _example_file(slug)
+        pr = _new_project(db, name or f"Exemplo — {BY_SLUG[slug]['title']}")
         token = f"{uuid.uuid4().hex}.xlsx"
-        shutil.copyfile(SEED_FILE, UPLOAD_DIR / token)
-        return _mapping_page(request, pr, token, SEED_FILE.name)
+        shutil.copyfile(src, UPLOAD_DIR / token)
+        return _mapping_page(request, pr, token, src.name)
     token = None
     if has_file:
         try:
@@ -112,13 +137,21 @@ async def create_project(request: Request, db: Session = Depends(get_db)):
     return redirect(f"/optimization/site/{pr.id}", "Projeto criado. Informe as dimensões do imóvel e escolha as estruturas.")
 
 
+@router.get("/examples/{slug}.xlsx")
+def download_example(slug: str):
+    path = _example_file(slug)
+    if path is None:
+        return redirect("/optimization/site", "Exemplo não encontrado.", "danger")
+    return Response(path.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f'attachment; filename="exemplo_{slug}.xlsx"'})
+
+
 @router.get("/seed.xlsx")
 def download_seed():
-    if not SEED_FILE.exists():
-        return redirect("/optimization/site", "Planilha de exemplo não encontrada (rode scripts/generate_site_seed.py).",
-                        "danger")
-    return Response(SEED_FILE.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": 'attachment; filename="seed_filial_nova.xlsx"'})
+    """Compatibilidade: planilha do exemplo padrão."""
+    from services.site_examples import DEFAULT
+
+    return download_example(DEFAULT)
 
 
 def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
@@ -206,14 +239,13 @@ def _report_response(request: Request, pid: int, fmt: str, db: Session):
     rep, err = _report(db, pr)
     if err:
         return redirect(f"/optimization/site/{pid}", err, "danger")
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in pr.name)[:60] or "projeto"
-    name = f"plano_filial_{safe}_{rep.created:%Y%m%d_%H%M}"
+    name = f"plano_filial_{pr.name[:60]}_{rep.created:%Y%m%d_%H%M}"
     if fmt == "xlsx":
         return Response(report_xlsx(rep), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        headers={"Content-Disposition": f'attachment; filename="{name}.xlsx"'})
+                        headers={"Content-Disposition": _attachment(f"{name}.xlsx")})
     if fmt == "pdf":
         return Response(report_pdf(rep), media_type="application/pdf",
-                        headers={"Content-Disposition": f'attachment; filename="{name}.pdf"'})
+                        headers={"Content-Disposition": _attachment(f"{name}.pdf")})
     return render(request, "site/plan.html", project=pr, rep=rep, plan=rep.plan, svg=floor_svg(rep.plan),
                   colors=struct_colors(rep.plan))
 

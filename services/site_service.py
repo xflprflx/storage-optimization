@@ -36,6 +36,7 @@ from services.site_planner import (
     SiteParams,
     SitePlan,
     StructureSpec,
+    Obstacle,
     ZoneSpec,
     plan_site,
 )
@@ -54,7 +55,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
 )
 DEFAULT_CONFIG = {
     "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row",
-                                                          "zones": []},
+                                                          "zones": [], "obstacles": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
                "factor": "100"},
@@ -117,6 +118,13 @@ def config_from_form(form: Mapping) -> dict:
                       "cross_aisles": str(form.get(f"z_cross_{zi}") or "").strip(),
                       "structures": [x for x in sts if str(x).isdigit()]})
     cfg["building"]["zones"] = zones
+    obs = []
+    for oi in (form.getlist("o_idx") if hasattr(form, "getlist") else []):
+        row = {k: str(form.get(f"o_{k}_{oi}") or "").strip() for k in ("name", "x_m", "y_m", "length_m", "width_m")}
+        if any(row[k] for k in ("x_m", "y_m", "length_m", "width_m")):
+            row["name"] = row["name"][:40]
+            obs.append(row)
+    cfg["building"]["obstacles"] = obs
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -168,6 +176,20 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                                 else "along", aisle_m=al, cross_aisles=int(cr or 0),
                                 structures={int(x) for x in zc.get("structures") or [] if str(x).isdigit()} or None,
                                 name=name))
+    for i, oc in enumerate(bc.get("obstacles") or [], start=1):
+        name = oc.get("name") or f"Obstáculo {i}"
+        vals_o = {k: _num(oc.get(k), f"{name}: {lab}", errors, None, lo=0, required=True)
+                  for k, lab in (("x_m", "X"), ("y_m", "Y"), ("length_m", "comprimento"), ("width_m", "largura"))}
+        if any(v is None for v in vals_o.values()):
+            continue
+        if vals_o["length_m"] <= 0 or vals_o["width_m"] <= 0:
+            errors.append(f"{name}: comprimento e largura devem ser maiores que zero.")
+            continue
+        if b.length_m and b.width_m and (vals_o["x_m"] + vals_o["length_m"] > b.length_m + 1e-6
+                                         or vals_o["y_m"] + vals_o["width_m"] > b.width_m + 1e-6):
+            errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+            continue
+        b.obstacles.append(Obstacle(name, **vals_o))
     if len(b.zones) == 1:
         errors.append("Com zonas, informe ao menos duas (uma zona só é o mesmo que não usar zonas).")
     if b.zones and b.avenue_m <= 0:

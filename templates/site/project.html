@@ -33,7 +33,7 @@
       <div class="col-lg-7">
         <form method="post" action="/optimization/site/{{ project.id }}/upload" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-lg-end">
           <a class="btn btn-sm btn-outline-secondary" href="/optimization/site/{{ project.id }}/template.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Baixar modelo (com os dados atuais)</a>
-          <a class="btn btn-sm btn-outline-secondary" href="/optimization/site/seed.xlsx" title="Planilha de exemplo preenchida"><i class="bi bi-stars"></i> Exemplo</a>
+          <a class="btn btn-sm btn-outline-secondary" href="/optimization/site#exemplos" title="Planilhas de exemplo preenchidas"><i class="bi bi-stars"></i> Exemplos</a>
           <input class="form-control form-control-sm" style="max-width:260px" type="file" name="file" accept=".xlsx,.xlsm,.csv,.txt" required>
           <button class="btn btn-sm btn-primary"><i class="bi bi-upload"></i> Importar</button>
         </form>
@@ -166,6 +166,28 @@
         </div>
         <div class="form-text" id="zonesHint">{% if not zones %}Nenhuma zona: planta de zona única.{% endif %} Comprimento vazio = o que sobrar (pode haver mais de uma; dividem a sobra).
           Corredor vazio = a largura dos corredores do imóvel (ex.: 3 m numa zona de porta-paletes e 1,2 m na de estantes). Estruturas: Ctrl+clique para várias; nenhuma = todas.</div>
+        <hr class="my-3">
+        {% set obstacles = b.get('obstacles') or [] %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+          <strong class="small">Áreas bloqueadas (obstáculos)</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="addObstacle"><i class="bi bi-plus-lg"></i> Adicionar área bloqueada</button>
+        </div>
+        <div class="small text-muted mb-2">Escritório, sala, pilar, rampa, mezanino… As fileiras que passariam por ela são cortadas (com o afastamento das paredes).
+          Posição em metros a partir do canto superior esquerdo da planta: X ao longo do comprimento (a partir da frente/docas), Y ao longo da largura.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="obsTable" data-no-resize>
+            <thead class="small"><tr><th>Nome</th><th style="width:120px">X (m)</th><th style="width:120px">Y (m)</th><th style="width:140px">Comprimento em X (m)</th><th style="width:140px">Largura em Y (m)</th><th style="width:40px"></th></tr></thead>
+            <tbody>
+            {% for o in obstacles %}{% set oi = loop.index0 %}
+              <tr>
+                <td><input type="hidden" name="o_idx" value="{{ oi }}"><input class="form-control form-control-sm" name="o_name_{{ oi }}" value="{{ o.name }}" maxlength="40" placeholder="Escritório"></td>
+                {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}_{{ oi }}" inputmode="decimal" value="{{ o[k] }}"></td>{% endfor %}
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -178,6 +200,13 @@
       <td><input class="form-control form-control-sm text-end" name="z_cross___i__" inputmode="numeric" placeholder="0"></td>
       <td><select class="form-select form-select-sm" name="z_st___i__" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}">{{ st.code }}</option>{% endfor %}</select></td>
       <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+  </template>
+  <template id="obsTpl">
+    <tr>
+      <td><input type="hidden" name="o_idx" value="__i__"><input class="form-control form-control-sm" name="o_name___i__" maxlength="40" placeholder="Escritório"></td>
+      {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}___i__" inputmode="decimal"></td>{% endfor %}
+      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
     </tr>
   </template>
 
@@ -479,6 +508,10 @@
     zt.querySelectorAll('tr').forEach((tr, i) => { const nm = tr.querySelector('input[name^="z_name_"]'); if (nm && !nm.value) nm.placeholder = 'Zona ' + (i + 1); });
   });
   zt?.addEventListener('click', e => { const b = e.target.closest('.zone-del'); if (b) b.closest('tr').remove(); });
+  const ot = document.querySelector('#obsTable tbody'), otpl = document.getElementById('obsTpl');
+  let on = ot ? ot.querySelectorAll('tr').length : 0;
+  document.getElementById('addObstacle')?.addEventListener('click', () => ot.insertAdjacentHTML('beforeend', otpl.innerHTML.replaceAll('__i__', on++)));
+  ot?.addEventListener('click', e => { const b = e.target.closest('.zone-del'); if (b) b.closest('tr').remove(); });
   // prioridade: um critério não pode aparecer duas vezes
   const ps = [...document.querySelectorAll('.prio-sel')];
   const dedupe = () => { const seen = new Set(); ps.forEach(s => { [...s.options].forEach(o => o.disabled = !!o.value && seen.has(o.value) && !o.selected);

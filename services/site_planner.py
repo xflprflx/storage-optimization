@@ -80,6 +80,7 @@ class Building:
     cross_aisles: int = 0
     cross_aisle_m: float = 2.0
     orientation: str = "auto"
+    end_caps: bool = True  # módulos de cabeceira (girados 90°) nas pontas das fileiras, aproveitando a sobra
 
     @property
     def area_m2(self) -> float:
@@ -161,6 +162,16 @@ class Row:
     depth: float
     aisle: int  # índice do corredor que a fileira atende
     side: str  # "L" (antes do corredor) ou "R" (depois)
+    block: int = 0  # bloco de fileiras: fileira simples na parede ou as duas de uma fileira dupla (costas com costas)
+
+
+@dataclass
+class Block:
+    """Faixa de fileiras contíguas (simples = 1 fileira; dupla = 2 costas com costas) — onde cabem as cabeceiras."""
+    id: int
+    y: float
+    depth: float  # profundidade total da faixa (cm)
+    rows: list = field(default_factory=list)  # índices das fileiras
 
 
 @dataclass
@@ -172,6 +183,10 @@ class Floor:
     rows: list[Row] = field(default_factory=list)
     aisles: list[tuple[float, float]] = field(default_factory=list)  # (y, largura)
     segments: list[tuple[float, float]] = field(default_factory=list)  # trechos (x0, x1) ao longo da fileira
+    blocks: list[Block] = field(default_factory=list)
+    # pontas de cada trecho: [(nome da área livre no início ou None, idem no fim)] — None = sem acesso (parede)
+    seg_ends: list[tuple] = field(default_factory=list)
+    end_caps: bool = True
     x_start: float = 0.0
     x_end: float = 0.0
     notes: list[str] = field(default_factory=list)
@@ -227,7 +242,7 @@ def _cross_layout(cross: float, d: float, a: float) -> Optional[list[str]]:
 def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
     run = (b.length_m if along == "length" else b.width_m) * 100.0
     cross = (b.width_m if along == "length" else b.length_m) * 100.0
-    fl = Floor(along=along, run_cm=run, cross_cm=cross, depth=depth_cm)
+    fl = Floor(along=along, run_cm=run, cross_cm=cross, depth=depth_cm, end_caps=b.end_caps)
     gap, a = b.wall_gap_m * 100.0, b.aisle_m * 100.0
     seq = _cross_layout(cross - 2 * gap, depth_cm, a) if depth_cm > 0 else None
     if not seq:
@@ -250,14 +265,19 @@ def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
                 fl.rows.append(Row(len(fl.rows), y, depth_cm, aisle_idx, "R"))
             else:
                 pending_l.append((y,))
+            fl.blocks.append(Block(len(fl.blocks), y, depth_cm))
             y += depth_cm
         else:  # D: frente para o corredor anterior, fundo para o próximo
             fl.rows.append(Row(len(fl.rows), y, depth_cm, aisle_idx, "R"))
             pending_l.append((y + depth_cm,))
+            fl.blocks.append(Block(len(fl.blocks), y, 2 * depth_cm))
             y += 2 * depth_cm
     fl.rows.sort(key=lambda r: r.y)
     for i, r in enumerate(fl.rows):
         r.index = i
+        blk = next(bk for bk in fl.blocks if bk.y - EPS <= r.y < bk.y + bk.depth - EPS)
+        r.block = blk.id
+        blk.rows.append(i)
     x0 = gap + b.front_reserved_m * 100.0
     x1 = run - gap - b.back_reserved_m * 100.0
     n = max(0, int(b.cross_aisles)) + 1
@@ -269,6 +289,12 @@ def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
         fl.rows = []
         return fl
     fl.segments = [(x0 + i * (seg + ca), x0 + i * (seg + ca) + seg) for i in range(n)]
+    # pontas com acesso (cabeceira de frente para uma área livre): docas/frente e fundo se a faixa tiver ao menos a
+    # largura de um corredor; corredores transversais sempre
+    front = "a faixa da frente (docas)" if b.front_reserved_m * 100 >= a - EPS else None
+    back = "a faixa do fundo" if b.back_reserved_m * 100 >= a - EPS else None
+    fl.seg_ends = [(front if i == 0 else f"o corredor transversal {i}", back if i == n - 1 else f"o corredor transversal {i + 1}")
+                   for i in range(n)]
     return fl
 
 
@@ -340,6 +366,26 @@ class ModulePlaced:
     aisle: str = ""
     bay: str = ""
     levels: list[LevelPlaced] = field(default_factory=list)
+    rotated: bool = False  # cabeceira: girado 90°, atravessa a faixa da fileira (simples ou dupla) na ponta
+    y0: Optional[float] = None  # cabeceira: posição transversal do canto
+    faces: str = ""  # cabeceira: área livre para onde a frente do módulo está voltada
+    segment: int = 0
+
+    @property
+    def gx(self) -> float:
+        return self.x0
+
+    @property
+    def gy(self) -> float:
+        return self.y0 if self.rotated else self.row.y
+
+    @property
+    def gw(self) -> float:  # extensão ao longo da fileira
+        return self.struct.depth if self.rotated else self.struct.width
+
+    @property
+    def gd(self) -> float:  # extensão transversal
+        return self.struct.width if self.rotated else self.row.depth
 
 
 @dataclass
@@ -440,7 +486,15 @@ class SitePlan:
 
     @property
     def front_m(self) -> float:
-        return sum(s.front_m for s in self.structs)
+        """Metros de fileira ocupados (cabeceiras ocupam a profundidade delas em cada fileira da faixa)."""
+        if not self.modules:
+            return sum(s.front_m for s in self.structs)
+        return sum(m.gw * (len(self.floor.blocks[m.row.block].rows) if m.rotated and self.floor.blocks else 1)
+                   for m in self.modules) / 100.0
+
+    @property
+    def end_caps(self) -> int:
+        return sum(1 for m in self.modules if m.rotated)
 
     @property
     def bins_needed(self) -> int:
@@ -552,9 +606,57 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
             fixed_need[t] = fixed_need.get(t, 0) + n
 
     # ---- quantidade de estruturas (e, no custo total, as bins de cada SKU) ----
-    sol = _solve(floor, active, fixed_need, caps, prm, types, choices)
-    for (d, opts), k in zip(choices, sol.get("picks") or []):
-        d.bins = opts[k]
+    # Peso: o solver usa a capacidade efetiva de cada nível (bins que cabem sem passar da carga máxima, pelo peso
+    # médio das bins do tipo). Se mesmo assim a alocação (que confere o peso bin a bin) deixar bins de fora, refaz
+    # pelo peso da bin mais pesada do tipo.
+    base_bins = {id(d): d.bins for d in demands}
+    for attempt, stat in enumerate(("mean", "max") if prm.enforce_weight else ("none",)):
+        if attempt:
+            plan.modules, plan.structs, plan.notes = [], [], [n for n in plan.notes if "carga" not in n]
+            for d in demands:
+                d.bins, d.placed_bins = base_bins[id(d)], 0
+                if d.status == "falta":
+                    d.status, d.note = "ok", ""
+        solve_caps = _weight_caps(caps, demands, choices, active, stat)
+        sol = _solve(floor, active, fixed_need, solve_caps, prm, types, choices)
+        for (d, opts), k in zip(choices, sol.get("picks") or []):
+            d.bins = opts[k]
+        _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parents)
+        if not plan.shortage or sol.get("error") or stat != "mean":
+            break
+    if plan.shortage:
+        plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
+                          "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
+    return plan
+
+
+def _weight_caps(caps: dict, demands: list, choices: list, active: list, stat: str) -> dict:
+    """Capacidade por nível limitada pela carga máxima da estrutura (peso por bin: média ou máximo do tipo)."""
+    if stat == "none":
+        return caps
+    wts: dict[int, list] = {}
+    opts_of = {id(d): opts for d, opts in choices}
+    for d in demands:
+        if not d.unit.weight:
+            continue
+        for cfg in opts_of.get(id(d)) or ([d.bins] if d.bins else []):
+            nb = sum(cfg.values()) or 1
+            for t in cfg:
+                wts.setdefault(t, []).append(d.units / nb * d.unit.weight)
+    by_id = {s.id: s for s in active}
+    out = dict(caps)
+    for (t, sid), c in caps.items():
+        s = by_id.get(sid)
+        if not c or not s or not s.max_load or not wts.get(t):
+            continue
+        wb = max(wts[t]) if stat == "max" else sum(wts[t]) / len(wts[t])
+        if wb > 0:
+            out[(t, sid)] = max(0, min(c, int(math.floor(s.max_load / wb + EPS))))
+    return out
+
+
+def _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parents) -> None:
+    """Resumo por estrutura, posicionamento/endereçamento e resumo por tipo de bin a partir da solução."""
     need: dict[int, int] = {}
     for d in demands:
         for t, n in (d.bins or {}).items():
@@ -565,6 +667,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     qty = sol.get("qty", {})
     z = sol.get("z", {})
     seg_mods = sol.get("seg_mods", [])
+    end_caps = sol.get("caps", [])
 
     # ---- linhas de resumo ----
     narrow = {s.id: math.floor(floor.seg_len / s.width + EPS) * len(floor.rows) * len(floor.segments)
@@ -575,7 +678,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         plan.structs.append(line)
 
     # ---- posicionamento e endereçamento ----
-    _place(plan, floor, active, seg_mods, z, caps, types, demands, prm)
+    _place(plan, floor, active, seg_mods, z, caps, types, demands, prm, end_caps)
 
     by_t = {t: TypeLine(spec=types[t]) for t in sorted(set(need) | {t for (t, _), n in z.items() if n > 0},
                                                          key=lambda k: types[k].code)}
@@ -590,10 +693,6 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
             line.parent_cost = pspec.cost
     plan.types = list(by_t.values())
     plan.demands = demands
-    if plan.shortage:
-        plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
-                          "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
-    return plan
 
 
 def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps: dict, prm: SiteParams,
@@ -620,12 +719,34 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     w = {s.id: max(1, int(round(s.width * 10))) for s in active}
     per_seg = {s.id: seg_len // w[s.id] for s in active}
     n = {(s.id, g): m.NewIntVar(0, per_seg[s.id], f"n_{s.id}_{g}") for s in active for g in range(len(segs))}
+    # cabeceiras: em cada ponta com acesso de cada trecho de cada faixa (fileira simples ou dupla), no máximo uma
+    # estrutura girada 90°; cabem lado a lado floor(profundidade da faixa / frente do módulo). Ocupam a
+    # profundidade do módulo no comprimento de todas as fileiras da faixa.
+    dmm = {s.id: max(1, int(round(s.depth * 10))) for s in active}
+    cu, cc = {}, {}  # (faixa, trecho, ponta, estrutura) -> escolhida? / quantidade
+    if floor.end_caps:
+        for bk in floor.blocks:
+            for k, ends in enumerate(floor.seg_ends):
+                for e, area in enumerate(ends):
+                    if not area:
+                        continue
+                    for s in active:
+                        cmax = int(math.floor(bk.depth / s.width + EPS)) if s.width > 0 else 0
+                        if cmax <= 0 or dmm[s.id] > seg_len:
+                            continue
+                        key = (bk.id, k, e, s.id)
+                        cu[key] = m.NewBoolVar(f"cu_{bk.id}_{k}_{e}_{s.id}")
+                        cc[key] = m.NewIntVar(0, cmax, f"cc_{bk.id}_{k}_{e}_{s.id}")
+                        m.Add(cc[key] <= cmax * cu[key])
+                        m.Add(cc[key] >= cu[key])
+                    m.Add(sum(cu[kk] for kk in cu if kk[:3] == (bk.id, k, e)) <= 1)
     x = {}
     for s in active:
-        floor_cap = per_seg[s.id] * len(segs)
+        floor_cap = per_seg[s.id] * len(segs) + sum(int(math.floor(floor.blocks[kk[0]].depth / s.width + EPS))
+                                                     for kk in cc if kk[3] == s.id)
         hi = floor_cap if s.mode != "auto" or s.max_qty is None else min(floor_cap, s.max_qty)
         x[s.id] = m.NewIntVar(0, max(0, hi), f"x_{s.id}")
-        m.Add(x[s.id] == sum(n[(s.id, g)] for g in range(len(segs))))
+        m.Add(x[s.id] == sum(n[(s.id, g)] for g in range(len(segs))) + sum(v for kk, v in cc.items() if kk[3] == s.id))
         if s.mode == "fixed":
             if s.qty > floor_cap:
                 return {"info": {**info, "status": "inviável"},
@@ -637,12 +758,21 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
                         "error": f"Mínimo de {s.code} ({s.min_qty}) maior que o que cabe ({hi})."}
             m.Add(x[s.id] >= s.min_qty)
     used = []
-    for g in range(len(segs)):
+    for g, (ri, k) in enumerate(segs):
+        bid = floor.rows[ri].block
         u = m.NewIntVar(0, seg_len, f"u_{g}")
-        m.Add(u == sum(w[s.id] * n[(s.id, g)] for s in active))
+        m.Add(u == sum(w[s.id] * n[(s.id, g)] for s in active)
+              + sum(dmm[kk[3]] * v for kk, v in cu.items() if kk[0] == bid and kk[1] == k))
         used.append(u)
-    for g in range(len(segs) - 1):  # simetria: os primeiros trechos enchem primeiro
-        m.Add(used[g] >= used[g + 1])
+    # simetria entre trechos equivalentes (mesma profundidade de faixa e mesmo trecho, logo as mesmas pontas): os
+    # primeiros enchem primeiro. Trechos de faixas diferentes (simples × dupla) não se comparam: a dupla pode ter
+    # cabeceira e a simples não.
+    classes: dict = {}
+    for g, (ri, k) in enumerate(segs):
+        classes.setdefault((floor.blocks[floor.rows[ri].block].depth if floor.blocks else 0, k), []).append(g)
+    for gs in classes.values():
+        for g1, g2 in zip(gs, gs[1:]):
+            m.Add(used[g1] >= used[g2])
     # opções de bins por SKU (custo total): y[i][k] = 1 se o SKU i usa a opção k
     y = []
     for i, (_d, opts) in enumerate(choices):
@@ -666,7 +796,7 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
 
     cost_c = {s.id: int(round((s.cost or 0) * 100)) for s in active}
     total_mods = sum(x.values())
-    front = sum(w[s.id] * x[s.id] for s in active)
+    front = sum(used)  # comprimento de fileira ocupado (mm), cabeceiras inclusive
     bin_c = {t: int(round(((types[t].cost if t in types else 0) or 0) * 100)) for t in all_t}
     st_cost = sum(cost_c[s.id] * x[s.id] for s in active)
     bins_cost = sum(bin_c[t] * need_ex[t] for t in all_t)
@@ -679,7 +809,7 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     solver.parameters.num_workers = 8
     deadline = t0 + prm.time_limit
     all_optimal, ok = True, False
-    sol: dict = {"qty": {}, "z": {}, "seg_mods": [], "picks": []}
+    sol: dict = {"qty": {}, "z": {}, "seg_mods": [], "picks": [], "caps": []}
     for i, (label, expr) in enumerate(stages):
         if isinstance(expr, int):  # critério que não depende de nenhuma decisão (ex.: bins já definidas)
             unit, div = CRIT_UNITS.get(label, ("bins", 1))
@@ -709,12 +839,17 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
         sol = {"qty": {s.id: solver.Value(x[s.id]) for s in active},
                "z": {k: solver.Value(v) for k, v in z.items()},
                "seg_mods": [{s.id: solver.Value(n[(s.id, g)]) for s in active} for g in range(len(segs))],
-               "picks": [next(k for k, v in enumerate(vs) if solver.Value(v)) for vs in y]}
+               "picks": [next(k for k, v in enumerate(vs) if solver.Value(v)) for vs in y],
+               "caps": [(kk, solver.Value(v)) for kk, v in cc.items() if solver.Value(v)]}
         m.ClearHints()
         for k, v in n.items():
             m.AddHint(v, sol["seg_mods"][k[1]][k[0]])
         for k, v in z.items():
             m.AddHint(v, sol["z"][k])
+        cap_val = dict(sol["caps"])
+        for kk, v in cc.items():
+            m.AddHint(v, cap_val.get(kk, 0))
+            m.AddHint(cu[kk], 1 if cap_val.get(kk, 0) else 0)
         for vs, k in zip(y, sol["picks"]):
             for j, v in enumerate(vs):
                 m.AddHint(v, 1 if j == k else 0)
@@ -724,30 +859,53 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     return {"info": info, **sol}
 
 
+def _bay_key(m) -> tuple:
+    """Ordem das estantes no corredor: numeradas primeiro (01, 02…), depois as cabeceiras (C01…)."""
+    b = m.bay or ""
+    return (m.aisle, b[:1].isalpha(), int("".join(ch for ch in b if ch.isdigit()) or 0))
+
+
 def _place(plan: SitePlan, floor: Floor, active: list[StructureSpec], seg_mods: list, z: dict, caps: dict,
-           types: dict[int, BinSpec], demands: list[Demand], prm: SiteParams) -> None:
+           types: dict[int, BinSpec], demands: list[Demand], prm: SiteParams, end_caps: Optional[list] = None) -> None:
     from services.addressing import build_address
 
     by_id = {s.id: s for s in active}
+    lv_of = lambda s: [LevelPlaced(n=i + 1) for i in range(s.levels)]  # noqa: E731
+    # cabeceiras: (faixa, trecho, ponta, estrutura) -> qtd; a da ponta inicial empurra as fileiras do trecho
+    cap_at = {(kk[0], kk[1], kk[2]): (by_id[kk[3]], q) for kk, q in (end_caps or []) if kk[3] in by_id}
+    caps_mods = []
+    for (bid, k, e), (s, q) in sorted(cap_at.items()):
+        bk = floor.blocks[bid]
+        x0 = floor.segments[k][0] if e == 0 else floor.segments[k][1] - s.depth
+        row = floor.rows[bk.rows[0]]
+        for i in range(q):
+            caps_mods.append(ModulePlaced(struct=s, row=row, x0=x0, levels=lv_of(s), rotated=True,
+                                          y0=bk.y + i * s.width, faces=floor.seg_ends[k][e], segment=k))
     # módulos na planta: em cada trecho, as estruturas em ordem de código
     for (row_i, seg_k), mods in seg_mods:
         row = floor.rows[row_i]
-        x = floor.segments[seg_k][0]
+        start = cap_at.get((row.block, seg_k, 0))
+        x = floor.segments[seg_k][0] + (start[0].depth if start else 0.0)
         for sid in sorted(mods, key=lambda i: by_id[i].code):
             for _ in range(mods[sid]):
                 s = by_id[sid]
-                plan.modules.append(ModulePlaced(struct=s, row=row, x0=x,
-                                                 levels=[LevelPlaced(n=i + 1) for i in range(s.levels)]))
+                plan.modules.append(ModulePlaced(struct=s, row=row, x0=x, levels=lv_of(s), segment=seg_k))
                 x += s.width
     # endereço: corredor (letra) e estante (ímpar de um lado, par do outro, na ordem ao longo do corredor)
-    aisles_used = sorted({m.row.aisle for m in plan.modules})
+    aisles_used = sorted({m.row.aisle for m in plan.modules + caps_mods})
     aisle_code = {a: _letters(i) for i, a in enumerate(aisles_used)}
     for a in aisles_used:
         for side, start in (("L", 1), ("R", 2)):
             mods = sorted([m for m in plan.modules if m.row.aisle == a and m.row.side == side], key=lambda m: m.x0)
             for i, m in enumerate(mods):
                 m.aisle, m.bay = aisle_code[a], f"{start + 2 * i:02d}"
-    plan.modules.sort(key=lambda m: (m.aisle, int(m.bay or 0)))
+    # cabeceiras: no corredor da 1ª fileira da faixa, estantes C01, C02… (ao longo da fileira, depois na transversal)
+    for a in aisles_used:
+        mods = sorted([m for m in caps_mods if m.row.aisle == a], key=lambda m: (m.x0, m.y0))
+        for i, m in enumerate(mods):
+            m.aisle, m.bay = aisle_code[a], f"C{i + 1:02d}"
+    plan.modules += caps_mods
+    plan.modules.sort(key=_bay_key)
 
     # tipos nos níveis: por estrutura, os níveis mais baixos recebem as bins mais altas/pesadas
     for s in active:
@@ -766,7 +924,7 @@ def _place(plan: SitePlan, floor: Floor, active: list[StructureSpec], seg_mods: 
     owner = {id(lv): m for m in plan.modules for lv in m.levels}
     for t in sorted({t for d in demands for t in (d.bins or {})}, key=lambda k: types[k].code):
         slots = sorted([lv for m in plan.modules for lv in m.levels if lv.type_id == t],
-                       key=lambda lv: (lv.n, owner[id(lv)].aisle, int(owner[id(lv)].bay or 0)))
+                       key=lambda lv: (lv.n, _bay_key(owner[id(lv)])))
         order = sorted([d for d in demands if (d.bins or {}).get(t)], key=lambda d: (d.material, d.sku))
         si = 0
         for d in order:
@@ -775,7 +933,14 @@ def _place(plan: SitePlan, floor: Floor, active: list[StructureSpec], seg_mods: 
             units_left = round(d.units * k / total_bins)
             unit_w = d.unit.weight or 0.0
             per_bin_units = units_left / k if k else 0
-            while k > 0 and si < len(slots):
+            while k > 0:
+                if si >= len(slots):  # acabaram os níveis do tipo (ex.: limite de carga): usa um nível livre compatível
+                    extra = next((lv for m in plan.modules for lv in sorted(m.levels, key=lambda v: v.n)
+                                  if lv.type_id is None and caps.get((t, m.struct.id), 0) > 0), None)
+                    if extra is None:
+                        break
+                    extra.type_id, extra.cap = t, caps[(t, owner[id(extra)].struct.id)]
+                    slots.append(extra)
                 lv = slots[si]
                 free = lv.cap - lv.used
                 s = owner[id(lv)].struct
@@ -837,6 +1002,10 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     for i, (y, a) in enumerate(fl.aisles):
         out.append(f'<rect x="{fl.x_start * sc:.1f}" y="{y * sc:.1f}" width="{(fl.x_end - fl.x_start) * sc:.1f}" '
                    f'height="{a * sc:.1f}" fill="#eef2f4"/>')
+    gap_ = b.wall_gap_m * 100
+    for (_, x1), (x2, _) in zip(fl.segments, fl.segments[1:]):  # corredores transversais
+        out.append(f'<rect x="{x1 * sc:.1f}" y="{gap_ * sc:.1f}" width="{(x2 - x1) * sc:.1f}" '
+                   f'height="{(fl.cross_cm - 2 * gap_) * sc:.1f}" fill="#eef2f4"/>')
     aisle_label = {}
     for m in plan.modules:
         aisle_label.setdefault(m.row.aisle, m.aisle)
@@ -853,12 +1022,16 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
         cap = sum(lv.cap for lv in m.levels) or 1
         op = 0.35 + 0.65 * min(1.0, used / cap)
         title = f"{m.aisle}-{m.bay} · {m.struct.code} · {used}/{cap} bins"
-        out.append(f'<rect x="{m.x0 * sc:.1f}" y="{m.row.y * sc:.1f}" width="{m.struct.width * sc:.1f}" '
-                   f'height="{m.row.depth * sc:.1f}" fill="{color[m.struct.id]}" fill-opacity="{op:.2f}" '
-                   f'stroke="#fff" stroke-width="0.6"><title>{title}</title></rect>')
+        if m.rotated:
+            title += f" · cabeceira girada 90°, de frente para {m.faces}"
+        out.append(f'<rect x="{m.gx * sc:.1f}" y="{m.gy * sc:.1f}" width="{m.gw * sc:.1f}" '
+                   f'height="{m.gd * sc:.1f}" fill="{color[m.struct.id]}" fill-opacity="{op:.2f}" '
+                   + ('stroke="#1f2d33" stroke-width="1" stroke-dasharray="2 1"' if m.rotated else 'stroke="#fff" stroke-width="0.6"')
+                   + f'><title>{title}</title></rect>')
     out.append(f'<text x="0" y="{H + 15:.1f}" font-size="11" fill="#5b6770">{b.length_m:g} m × {b.width_m:g} m · '
                f'fileiras ao longo do {"comprimento" if fl.along == "length" else "largura"} · '
-               f'{len(fl.rows)} fileira(s), {len(fl.aisles)} corredor(es)</text>')
+               f'{len(fl.rows)} fileira(s), {len(fl.aisles)} corredor(es)'
+               + (f' · {plan.end_caps} cabeceira(s) (contorno tracejado)' if plan.end_caps else '') + '</text>')
     out.append("</svg>")
     return "".join(out)
 

@@ -104,6 +104,8 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         ("Corredores", f"{_fmt(b.aisle_m, 2)} m · afastamento das paredes {_fmt(b.wall_gap_m, 2)} m"),
         ("Faixas reservadas", f"frente {_fmt(b.front_reserved_m, 2)} m · fundo {_fmt(b.back_reserved_m, 2)} m"),
         ("Corredores transversais", f"{b.cross_aisles} × {_fmt(b.cross_aisle_m, 2)} m"),
+        ("Cabeceiras", ("permitidas nas pontas com acesso" if b.end_caps else "não usar")
+         + (f" · {plan.end_caps} módulo(s) girado(s)" if plan.end_caps else "")),
         ("Fileiras", f"{len(fl.rows)} fileira(s) ao longo do {'comprimento' if fl.along == 'length' else 'largura'}"
                      f" ({ORIENTATIONS.get(b.orientation, b.orientation)}) · {len(fl.aisles)} corredor(es) · "
                      f"profundidade {_fmt(fl.depth, 0)} cm"),
@@ -132,7 +134,8 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         ("Módulos de estrutura", _fmt(plan.total_modules), ", ".join(f"{s.qty}× {s.struct.code}" for s in plan.structs if s.qty)),
         ("Bins", _fmt(plan.bins_needed), ", ".join(f"{t.needed}× {t.spec.code}" for t in plan.types if t.needed)),
         ("Custo total", _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"),
-        ("Endereços", _fmt(len(plan.positions)), f"{_fmt(plan.levels_total)} níveis em {len(plan.modules)} estantes"),
+        ("Endereços", _fmt(len(plan.positions)), f"{_fmt(plan.levels_total)} níveis em {len(plan.modules)} estantes"
+         + (f" ({plan.end_caps} cabeceiras)" if plan.end_caps else "")),
         ("Ocupação dos níveis", (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
          f"{plan.levels_used} de {plan.levels_total} níveis em uso"),
         ("Uso das fileiras", (_fmt(plan.row_use, 1) + "%") if plan.row_use is not None else "—",
@@ -162,8 +165,10 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     side_lbl = {"L": "esquerdo", "R": "direito"}
     for m in plan.modules:
         rep.modules.append({"bay": f"{m.aisle}-{m.bay}", "aisle": m.aisle, "struct": m.struct.code,
-                            "row": m.row.index + 1, "side": side_lbl.get(m.row.side, m.row.side),
-                            "x": m.x0 / 100.0, "y": m.row.y / 100.0, "w": m.struct.width, "d": m.struct.depth,
+                            "row": m.row.index + 1,
+                            "side": f"cabeceira (girada 90°, de frente para {m.faces})" if m.rotated
+                            else side_lbl.get(m.row.side, m.row.side),
+                            "x": m.gx / 100.0, "y": m.gy / 100.0, "w": m.struct.width, "d": m.struct.depth,
                             "levels": m.struct.levels, "level_h": m.struct.level_h,
                             "config": ", ".join(f"N{lv.n}: {lv.cap}× {code(lv.type_id)}" if lv.type_id is not None
                                                 else f"N{lv.n}: livre" for lv in m.levels)})
@@ -197,6 +202,15 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         f"Etiquetas de {len(plan.positions)} endereço(s) e de {len(plan.modules)} estante(s)", _fmt(len(plan.positions)))
     along = "comprimento" if fl.along == "length" else "largura"
     for m in plan.modules:
+        if m.rotated:
+            blk = fl.blocks[m.row.block] if fl.blocks else None
+            kind = "dupla" if blk and len(blk.rows) > 1 else "simples"
+            add(2, f"Corredor {m.aisle}", "Montar", f"Cabeceira {m.aisle}-{m.bay}",
+                f"{m.struct.code} GIRADA 90° na ponta da fileira {kind} (fileiras "
+                f"{', '.join(str(r + 1) for r in (blk.rows if blk else [m.row.index]))}), de frente para {m.faces}: "
+                f"a {_fmt(m.gx / 100, 2)} m da parede da frente e {_fmt(m.gy / 100, 2)} m da parede lateral; "
+                f"{m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
+            continue
         add(2, f"Corredor {m.aisle}", "Montar", f"Estante {m.aisle}-{m.bay}",
             f"{m.struct.code} na fileira {m.row.index + 1} (lado {side_lbl.get(m.row.side, '')} do corredor {m.aisle}): "
             f"a {_fmt(m.x0 / 100, 2)} m da parede da frente (ao longo do {along}) e {_fmt(m.row.y / 100, 2)} m da "
@@ -342,9 +356,13 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
         for x0, x1 in fl.segments:
             dw.add(Rect(x0 * sc, Y(r.y, r.depth), (x1 - x0) * sc, r.depth * sc, fillColor=None,
                         strokeColor=colors.HexColor("#C9D1D6"), strokeWidth=0.3, strokeDashArray=[2, 2]))
+    for (_, x1), (x2, _) in zip(fl.segments, fl.segments[1:]):  # corredores transversais
+        dw.add(Rect(x1 * sc, Y(gap, fl.cross_cm - 2 * gap), (x2 - x1) * sc, (fl.cross_cm - 2 * gap) * sc,
+                    fillColor=colors.HexColor("#EEF2F4"), strokeColor=None))
     for m in plan.modules:
-        dw.add(Rect(m.x0 * sc, Y(m.row.y, m.row.depth), m.struct.width * sc, m.row.depth * sc,
-                    fillColor=color.get(m.struct.id, colors.grey), strokeColor=colors.white, strokeWidth=0.3))
+        dw.add(Rect(m.gx * sc, Y(m.gy, m.gd), m.gw * sc, m.gd * sc, fillColor=color.get(m.struct.id, colors.grey),
+                    strokeColor=colors.HexColor("#1F2D33") if m.rotated else colors.white,
+                    strokeWidth=0.6 if m.rotated else 0.3, strokeDashArray=[1.5, 1] if m.rotated else None))
     labels = {}
     for m in plan.modules:
         labels.setdefault(m.row.aisle, m.aisle)

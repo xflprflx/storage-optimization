@@ -75,6 +75,7 @@ BUILDING_KEYS = {
     "cross_aisles": ["corredorestransversais", "corredorestransversaisqtd", "transversais"],
     "cross_aisle_m": ["larguradostransversais", "larguradostransversaism", "larguratransversal"],
     "orientation": ["orientacao", "orientacaodasfileiras"],
+    "end_caps": ["cabeceiras", "usarcabeceiras", "modulosdecabeceira", "cabeceirasnaspontas", "cabeceirassimnao"],
 }
 MODE_WORDS = {"auto": ["otimizar", "otimizarquantidade", "auto", "automatico", "sim"],
               "fixed": ["fixa", "fixo", "quantidadefixa", "fixed"], "off": ["naousar", "nao", "off", "desligado"]}
@@ -264,6 +265,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             if key == "orientation":
                 v = normalize_header(val)
                 cfg["building"][key] = ("length" if "compr" in v else "width" if "larg" in v else "auto")
+            elif key == "end_caps":
+                cfg["building"][key] = "" if normalize_header(val) in {"nao", "n", "0", "false", "naousar"} else "1"
             else:
                 try:
                     parse_decimal(val)
@@ -446,7 +449,8 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
     orient = {"auto": "automática", "length": "comprimento", "width": "largura"}
     sheet(wb.create_sheet("Imóvel"), ["Campo", "Valor"],
           [(label, b.get(k, "")) for k, label, _, _ in BUILDING_FIELDS]
-          + [("Orientação das fileiras", orient.get(b.get("orientation") or "auto", "automática"))],
+          + [("Orientação das fileiras", orient.get(b.get("orientation") or "auto", "automática")),
+             ("Cabeceiras (sim/não)", "sim" if b.get("end_caps") else "não")],
           {1: 50, 2: 16})
     mode_lbl = {"auto": "Otimizar", "fixed": "Fixa", "off": "Não usar"}
     rows = []

@@ -49,7 +49,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("cross_aisle_m", "Largura dos transversais (m)", "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto"},
+    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1"},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
                "factor": "100"},
@@ -99,6 +99,7 @@ def config_from_form(form: Mapping) -> dict:
     for k, *_ in BUILDING_FIELDS:
         cfg["building"][k] = str(form.get(f"b_{k}") or "").strip()
     cfg["building"]["orientation"] = form.get("b_orientation") if form.get("b_orientation") in ORIENTATIONS else "auto"
+    cfg["building"]["end_caps"] = on("b_end_caps")
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -138,7 +139,8 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  clear_height_m=vals["clear_height_m"] or 0, aisle_m=vals["aisle_m"] or 0,
                  wall_gap_m=vals["wall_gap_m"] or 0, front_reserved_m=vals["front_reserved_m"] or 0,
                  back_reserved_m=vals["back_reserved_m"] or 0, cross_aisles=int(vals["cross_aisles"] or 0),
-                 cross_aisle_m=vals["cross_aisle_m"] or 0, orientation=bc.get("orientation") or "auto")
+                 cross_aisle_m=vals["cross_aisle_m"] or 0, orientation=bc.get("orientation") or "auto",
+                 end_caps=bool(bc.get("end_caps")))
     modes = {}
     for sid, sc in cfg["structures"].items():
         mode = sc.get("mode") if sc.get("mode") in STRUCT_MODES else "off"

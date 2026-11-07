@@ -29,6 +29,7 @@ BUILDING = [
     ("Corredores transversais (qtd.)", 1),
     ("Largura dos transversais (m)", 2),
     ("Orientação das fileiras", "automática"),
+    ("Cabeceiras (sim/não)", "sim"),
 ]
 # código, nome, tipo, frente, profundidade, altura, níveis, vão, carga/nível, custo, modo, qtd fixa, mín, máx
 STRUCTURES = [

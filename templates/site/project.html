@@ -82,6 +82,10 @@
               <label class="form-check-label" for="b_end_caps">Cabeceiras: módulos girados 90° nas pontas das fileiras</label></div>
             <div class="form-text mt-0">Aproveitam a sobra no fim de cada trecho de fileira (menor que um módulo), atravessando a fileira dupla
               (costas com costas), de frente para o corredor transversal ou para uma faixa reservada com pelo menos a largura de um corredor.</div>
+            <label class="form-label small mb-0 mt-1">Posição da cabeceira na ponta final do trecho</label>
+            <select class="form-select form-select-sm" name="b_cap_align">
+              {% for k, v in CAP_ALIGN.items() %}<option value="{{ k }}" {% if (b.get('cap_align') or 'row') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select>
           </div>
         </div>
         <div class="form-text">Pé-direito útil = altura livre (abaixo de vigas, sprinklers, iluminação). As estruturas são dispostas em fileiras
@@ -127,6 +131,55 @@
       </div>
     </div>
   </div>
+
+  {# ------------------------- Zonas ------------------------- #}
+  {% set zones = b.get('zones') or [] %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <strong>Zonas e circulação <span class="fw-normal text-muted small">(opcional)</span></strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="addZone"><i class="bi bi-plus-lg"></i> Adicionar zona</button>
+      </div>
+      <div class="card-body pb-2">
+        <div class="small text-muted mb-2">Divida o comprimento do imóvel em faixas, a partir da frente (docas), cada uma com a sua orientação de fileiras.
+          Entre zonas fica uma <b>avenida</b> (largura no card do imóvel), que liga os corredores. Exemplo: num imóvel estreito, em vez de um corredor
+          que termina na parede do fundo (o colaborador vai e volta), uma zona no fundo com fileiras <b>perpendiculares</b> de frente para a avenida
+          abre a circulação. Sem zonas, todas as fileiras seguem a orientação do imóvel. Com zonas, a orientação do imóvel é ignorada.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="zonesTable" data-no-resize>
+            <thead class="small"><tr><th style="width:150px">Nome</th><th style="width:120px">Comprimento (m)</th><th style="width:260px">Orientação das fileiras</th>
+              <th style="width:120px">Corredor (m)</th><th style="width:110px">Transversais</th><th>Estruturas permitidas</th><th style="width:40px"></th></tr></thead>
+            <tbody>
+            {% for z in zones %}{% set zi = loop.index0 %}
+              <tr class="zone-row">
+                <td><input type="hidden" name="z_idx" value="{{ zi }}"><input class="form-control form-control-sm" name="z_name_{{ zi }}" value="{{ z.name }}" placeholder="Zona {{ zi + 1 }}" maxlength="40"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_len_{{ zi }}" inputmode="decimal" value="{{ z.length_m }}" placeholder="restante"></td>
+                <td><select class="form-select form-select-sm" name="z_ori_{{ zi }}">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}" {% if z.orientation == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></td>
+                <td><input class="form-control form-control-sm text-end" name="z_aisle_{{ zi }}" inputmode="decimal" value="{{ z.aisle_m }}" placeholder="padrão"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_cross_{{ zi }}" inputmode="numeric" value="{{ z.cross_aisles }}" placeholder="0"></td>
+                <td><select class="form-select form-select-sm" name="z_st_{{ zi }}" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}" {% if st.id|string in (z.structures or []) %}selected{% endif %}>{{ st.code }}</option>{% endfor %}</select></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="form-text" id="zonesHint">{% if not zones %}Nenhuma zona: planta de zona única.{% endif %} Comprimento vazio = o que sobrar (pode haver mais de uma; dividem a sobra).
+          Corredor vazio = a largura dos corredores do imóvel (ex.: 3 m numa zona de porta-paletes e 1,2 m na de estantes). Estruturas: Ctrl+clique para várias; nenhuma = todas.</div>
+      </div>
+    </div>
+  </div>
+  <template id="zoneTpl">
+    <tr class="zone-row">
+      <td><input type="hidden" name="z_idx" value="__i__"><input class="form-control form-control-sm" name="z_name___i__" placeholder="Zona" maxlength="40"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_len___i__" inputmode="decimal" placeholder="restante"></td>
+      <td><select class="form-select form-select-sm" name="z_ori___i__">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></td>
+      <td><input class="form-control form-control-sm text-end" name="z_aisle___i__" inputmode="decimal" placeholder="padrão"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_cross___i__" inputmode="numeric" placeholder="0"></td>
+      <td><select class="form-select form-select-sm" name="z_st___i__" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}">{{ st.code }}</option>{% endfor %}</select></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+  </template>
 
   {# ------------------------- Demanda ------------------------- #}
   <div class="col-xl-4 col-lg-6">
@@ -417,6 +470,15 @@
 {% block scripts %}
 <script>
 (function () {
+  // zonas: adicionar/remover linhas (índices únicos por linha)
+  const zt = document.querySelector('#zonesTable tbody'), tpl = document.getElementById('zoneTpl');
+  let zn = zt ? zt.querySelectorAll('tr').length : 0;
+  document.getElementById('addZone')?.addEventListener('click', () => {
+    if (!zt.querySelector('tr')) { zt.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', zn++)); }  // a 1ª zona vem com a 2ª
+    zt.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', zn++));
+    zt.querySelectorAll('tr').forEach((tr, i) => { const nm = tr.querySelector('input[name^="z_name_"]'); if (nm && !nm.value) nm.placeholder = 'Zona ' + (i + 1); });
+  });
+  zt?.addEventListener('click', e => { const b = e.target.closest('.zone-del'); if (b) b.closest('tr').remove(); });
   // prioridade: um critério não pode aparecer duas vezes
   const ps = [...document.querySelectorAll('.prio-sel')];
   const dedupe = () => { const seen = new Set(); ps.forEach(s => { [...s.options].forEach(o => o.disabled = !!o.value && seen.has(o.value) && !o.selected);

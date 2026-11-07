@@ -106,9 +106,14 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         ("Corredores transversais", f"{b.cross_aisles} × {_fmt(b.cross_aisle_m, 2)} m"),
         ("Cabeceiras", ("permitidas nas pontas com acesso" if b.end_caps else "não usar")
          + (f" · {plan.end_caps} módulo(s) girado(s)" if plan.end_caps else "")),
-        ("Fileiras", f"{len(fl.rows)} fileira(s) ao longo do {'comprimento' if fl.along == 'length' else 'largura'}"
-                     f" ({ORIENTATIONS.get(b.orientation, b.orientation)}) · {len(fl.aisles)} corredor(es) · "
-                     f"profundidade {_fmt(fl.depth, 0)} cm"),
+        ("Fileiras", (f"{len(fl.rows)} fileira(s) ao longo do {'comprimento' if fl.along == 'length' else 'largura'}"
+                      f" ({ORIENTATIONS.get(b.orientation, b.orientation)}) · " if not fl.mixed else
+                      f"{len(fl.rows)} fileira(s) em {len(fl.zones)} zonas · ")
+         + f"{fl.real_aisles} corredor(es) · profundidade {_fmt(fl.depth, 0)} cm"),
+    ] + ([("Zonas", " · ".join(
+        f"{z.name}: {_fmt(z.cross_cm / 100 if z.rot else z.run_cm / 100, 2)} m, fileiras ao longo da "
+        f"{'largura' if z.rot else 'comprimento'}, {len(z.rows)} fileira(s), corredor {_fmt(z.aisle_cm / 100, 2)} m"
+        for z in fl.zones) + f" · avenidas de {_fmt(b.avenue_m, 2)} m")] if fl.mixed else []) + [
         ("Demanda", f"{src} · base {d.get('basis', '')} · fator {d.get('factor', '100')}% · crescimento "
                     f"{d.get('growth', '0')}%"),
         ("SKUs", f"{len(plan.demands)} SKU(s) · {sum(1 for x in plan.demands if x.status == 'ok')} alocado(s)"),
@@ -163,12 +168,21 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
 
     # ---- montagem / níveis / endereços ----
     side_lbl = {"L": "esquerdo", "R": "direito"}
+
+    def side_of(m) -> str:
+        if m.rotated:
+            return f"cabeceira (girada 90°, de frente para {m.faces})"
+        zn = m.zone
+        if zn is not None and zn.aisles[m.row.aisle][1] <= 0:  # fileira de frente para a avenida/faixa
+            return f"de frente para {zn.edge_names.get(m.row.aisle, 'a área livre')}"
+        return side_lbl.get(m.row.side, m.row.side)
+
     for m in plan.modules:
+        X, Y, _, _ = m.grect
         rep.modules.append({"bay": f"{m.aisle}-{m.bay}", "aisle": m.aisle, "struct": m.struct.code,
-                            "row": m.row.index + 1,
-                            "side": f"cabeceira (girada 90°, de frente para {m.faces})" if m.rotated
-                            else side_lbl.get(m.row.side, m.row.side),
-                            "x": m.gx / 100.0, "y": m.gy / 100.0, "w": m.struct.width, "d": m.struct.depth,
+                            "zone": m.zone.name if m.zone is not None else "",
+                            "row": m.row.index + 1, "side": side_of(m),
+                            "x": X / 100.0, "y": Y / 100.0, "w": m.struct.width, "d": m.struct.depth,
                             "levels": m.struct.levels, "level_h": m.struct.level_h,
                             "config": ", ".join(f"N{lv.n}: {lv.cap}× {code(lv.type_id)}" if lv.type_id is not None
                                                 else f"N{lv.n}: livre" for lv in m.levels)})
@@ -200,21 +214,24 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
             + (f" · {_money(pc['total'])}" if pc["total"] is not None else ""), _fmt(pc["qty"]))
     add(1, "Etiquetas", "Providenciar", "Endereços",
         f"Etiquetas de {len(plan.positions)} endereço(s) e de {len(plan.modules)} estante(s)", _fmt(len(plan.positions)))
-    along = "comprimento" if fl.along == "length" else "largura"
     for m in plan.modules:
+        X, Y, _, _ = m.grect
+        where = f"X = {_fmt(X / 100, 2)} m, Y = {_fmt(Y / 100, 2)} m"
+        zone = f"{m.zone.name}, " if fl.mixed and m.zone is not None else ""
         if m.rotated:
-            blk = fl.blocks[m.row.block] if fl.blocks else None
+            blk = m.zone.blocks[m.row.block] if m.zone is not None and m.zone.blocks else None
             kind = "dupla" if blk and len(blk.rows) > 1 else "simples"
             add(2, f"Corredor {m.aisle}", "Montar", f"Cabeceira {m.aisle}-{m.bay}",
-                f"{m.struct.code} GIRADA 90° na ponta da fileira {kind} (fileiras "
+                f"{m.struct.code} GIRADA 90° na ponta da fileira {kind} ({zone}fileiras "
                 f"{', '.join(str(r + 1) for r in (blk.rows if blk else [m.row.index]))}), de frente para {m.faces}: "
-                f"a {_fmt(m.gx / 100, 2)} m da parede da frente e {_fmt(m.gy / 100, 2)} m da parede lateral; "
-                f"{m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
+                f"{where}; {m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
             continue
+        s_txt = side_of(m)
+        face = s_txt if s_txt.startswith("de frente") else f"lado {s_txt} do corredor {m.aisle}"
         add(2, f"Corredor {m.aisle}", "Montar", f"Estante {m.aisle}-{m.bay}",
-            f"{m.struct.code} na fileira {m.row.index + 1} (lado {side_lbl.get(m.row.side, '')} do corredor {m.aisle}): "
-            f"a {_fmt(m.x0 / 100, 2)} m da parede da frente (ao longo do {along}) e {_fmt(m.row.y / 100, 2)} m da "
-            f"parede lateral; {m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
+            f"{m.struct.code} na fileira {m.row.index + 1} ({zone}{face}"
+            f"{'; fileira ao longo da largura' if m.zone is not None and m.zone.rot else ''}): {where}; "
+            f"{m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
     for m in plan.modules:
         used = [lv for lv in m.levels if lv.positions]
         add(3, f"Corredor {m.aisle}", "Configurar", f"Estante {m.aisle}-{m.bay}",
@@ -305,10 +322,11 @@ def to_xlsx(rep: SiteReport) -> bytes:
     ws.auto_filter.ref = f"A1:H{len(rep.steps) + 1}"
 
     ws = wb.create_sheet("Montagem")
-    table(ws, ["Estante", "Corredor", "Estrutura", "Fileira", "Lado do corredor", "X: da parede da frente (m)",
-               "Y: da parede lateral (m)", "Frente (cm)", "Profundidade (cm)", "Níveis", "Vão (cm)", "Níveis × bins"],
-          [(r["bay"], r["aisle"], r["struct"], r["row"], r["side"], round(r["x"], 2), round(r["y"], 2), r["w"], r["d"],
-            r["levels"], r["level_h"], r["config"]) for r in rep.modules], {12: 70})
+    table(ws, ["Estante", "Corredor", "Zona", "Estrutura", "Fileira", "Posição em relação ao corredor",
+               "X: ao longo do comprimento (m)", "Y: ao longo da largura (m)", "Frente (cm)", "Profundidade (cm)",
+               "Níveis", "Vão (cm)", "Níveis × bins"],
+          [(r["bay"], r["aisle"], r["zone"], r["struct"], r["row"], r["side"], round(r["x"], 2), round(r["y"], 2),
+            r["w"], r["d"], r["levels"], r["level_h"], r["config"]) for r in rep.modules], {6: 40, 13: 70})
     ws = wb.create_sheet("Níveis")
     table(ws, ["Estante", "Nível", "Estrutura", "Tipo de bin", "Capacidade (bins)", "Em uso", "Endereços",
                "Carga (kg)", "Carga máx. (kg)"],
@@ -335,43 +353,57 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
     from reportlab.graphics.shapes import Drawing, Rect, String
     from reportlab.lib import colors
 
+    from services.site_planner import SHAPE_STYLE, aisle_labels, area_label
+
     fl, b = plan.floor, plan.building
-    if not fl.run_cm or not fl.cross_cm:
+    if not fl.length_cm or not fl.width_cm or not fl.zones:
         return None
-    sc = min(max_w / fl.run_cm, (max_h - 14) / fl.cross_cm)
-    W, H = fl.run_cm * sc, fl.cross_cm * sc
+    sc = min(max_w / fl.length_cm, (max_h - 14) / fl.width_cm)
+    W, H = fl.length_cm * sc, fl.width_cm * sc
     dw = Drawing(W + 2, H + 16)
-    Y = lambda y, h: 14 + H - (y + h) * sc  # noqa: E731  (eixo y para baixo, como na tela)
+    Yp = lambda y, h: 14 + H - (y + h) * sc  # noqa: E731  (eixo y para baixo, como na tela)
+    hexc = lambda c: None if c in (None, "none") else colors.HexColor(c)  # noqa: E731
     dw.add(Rect(0, 14, W, H, fillColor=colors.HexColor("#FBFCFD"), strokeColor=colors.HexColor("#1F2D33"), strokeWidth=1.2))
-    gap = b.wall_gap_m * 100
-    for x, w in ((gap, b.front_reserved_m * 100), (fl.run_cm - gap - b.back_reserved_m * 100, b.back_reserved_m * 100)):
-        if w > 0:
-            dw.add(Rect(x * sc, Y(gap, fl.cross_cm - 2 * gap), w * sc, (fl.cross_cm - 2 * gap) * sc,
-                        fillColor=colors.HexColor("#FFF3CD"), strokeColor=colors.HexColor("#E0C068"), strokeWidth=0.5))
-    for y, a in fl.aisles:
-        dw.add(Rect(fl.x_start * sc, Y(y, a), (fl.x_end - fl.x_start) * sc, a * sc, fillColor=colors.HexColor("#EEF2F4"),
-                    strokeColor=None))
+    for kind, X, Y, w, d, label in fl.shapes():
+        fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999999", ""))
+        dw.add(Rect(X * sc, Yp(Y, d), w * sc, d * sc, fillColor=hexc(fill), strokeColor=hexc(stroke),
+                    strokeWidth=0.3 if kind == "lane" else 0.5, strokeDashArray=[2, 2] if dash else None))
+        if label and kind in ("reserved", "avenue") and min(w, d) * sc >= 6:
+            txt = area_label(plan, label)
+            st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor("#8A6D1C" if kind == "reserved" else "#3B5B8C"),
+                        textAnchor="middle")
+            if d > w:  # faixa vertical: texto girado
+                from reportlab.graphics.shapes import Group
+
+                g = Group(st)
+                g.translate((X + w / 2) * sc + 2, Yp(Y, d) + d * sc / 2)
+                g.rotate(90)
+                dw.add(g)
+            else:
+                st.x, st.y = (X + w / 2) * sc, Yp(Y, d) + d * sc / 2 - 2
+                dw.add(st)
     color = {k: colors.HexColor(v) for k, v in struct_colors(plan).items()}
-    for r in fl.rows:
-        for x0, x1 in fl.segments:
-            dw.add(Rect(x0 * sc, Y(r.y, r.depth), (x1 - x0) * sc, r.depth * sc, fillColor=None,
-                        strokeColor=colors.HexColor("#C9D1D6"), strokeWidth=0.3, strokeDashArray=[2, 2]))
-    for (_, x1), (x2, _) in zip(fl.segments, fl.segments[1:]):  # corredores transversais
-        dw.add(Rect(x1 * sc, Y(gap, fl.cross_cm - 2 * gap), (x2 - x1) * sc, (fl.cross_cm - 2 * gap) * sc,
-                    fillColor=colors.HexColor("#EEF2F4"), strokeColor=None))
     for m in plan.modules:
-        dw.add(Rect(m.gx * sc, Y(m.gy, m.gd), m.gw * sc, m.gd * sc, fillColor=color.get(m.struct.id, colors.grey),
+        X, Y, w, d = m.grect
+        dw.add(Rect(X * sc, Yp(Y, d), w * sc, d * sc, fillColor=color.get(m.struct.id, colors.grey),
                     strokeColor=colors.HexColor("#1F2D33") if m.rotated else colors.white,
                     strokeWidth=0.6 if m.rotated else 0.3, strokeDashArray=[1.5, 1] if m.rotated else None))
-    labels = {}
-    for m in plan.modules:
-        labels.setdefault(m.row.aisle, m.aisle)
-    for i, (y, a) in enumerate(fl.aisles):
-        if i in labels and a * sc >= 5:
-            dw.add(String(fl.x_start * sc + 3, Y(y, a) + a * sc / 2 - 2.5, f"Corredor {labels[i]}", fontSize=6,
-                          fillColor=colors.HexColor("#5B6770")))
-    dw.add(String(0, 2, f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m · fileiras ao longo do "
-                        f"{'comprimento' if fl.along == 'length' else 'largura'} · faixa amarela = docas/áreas reservadas",
+    for txt, X, Y, vertical in aisle_labels(plan):
+        st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor("#5B6770"))
+        if vertical:
+            from reportlab.graphics.shapes import Group
+
+            g = Group(st)
+            g.translate(X * sc, 14 + H - Y * sc)
+            g.rotate(-90)
+            dw.add(g)
+        else:
+            st.x, st.y = X * sc, 14 + H - Y * sc - 2
+            dw.add(st)
+    desc = (f"{len(fl.zones)} zonas" if fl.mixed else
+            f"fileiras ao longo do {'comprimento' if fl.along == 'length' else 'largura'}")
+    dw.add(String(0, 2, f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · {desc} · "
+                        "amarelo = docas/áreas reservadas · azul = avenidas · tracejado = cabeceiras",
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
     return dw
 
@@ -480,8 +512,7 @@ def to_pdf(rep: SiteReport) -> bytes:
         md.append([r["bay"], r["struct"], str(r["row"]), r["side"], _fmt(r["x"], 2), _fmt(r["y"], 2),
                    f"{r['levels']} × {_fmt(r['level_h'])} cm", P(r["config"])])
     story.append(table(md, [18 * mm, 24 * mm, 13 * mm, 15 * mm, 15 * mm, 15 * mm, 22 * mm, width - 122 * mm]))
-    story.append(Paragraph("X = distância da parede da frente (docas), ao longo das fileiras; Y = distância da parede "
-                           "lateral. Medidas do canto do módulo.", small))
+    story.append(Paragraph("X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo).", small))
     story.append(PageBreak())
     story.append(Paragraph("Endereços", h2))
     ad = [["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Peso (kg)"]]

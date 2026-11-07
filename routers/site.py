@@ -19,7 +19,8 @@ from routers.common import form_data, redirect, render
 from services.addressing import normalize_code
 from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
-from services.site_planner import ORIENTATIONS, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, floor_svg, struct_colors
+from services.site_planner import (CAP_ALIGN, ORIENTATIONS, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, ZONE_ORIENTATIONS,
+                                   floor_svg, struct_colors)
 from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, config_from_form, create_branch, merged,
                                    run_project)
 
@@ -129,6 +130,7 @@ def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
         branches=list(db.scalars(select(Branch).order_by(Branch.code))),
         warehouses=list(db.scalars(select(Warehouse).order_by(Warehouse.code))),
         BUILDING_FIELDS=BUILDING_FIELDS, ORIENTATIONS=ORIENTATIONS, SITE_OBJECTIVES=SITE_OBJECTIVES, SITE_CRITERIA=SITE_CRITERIA,
+        ZONE_ORIENTATIONS=ZONE_ORIENTATIONS, CAP_ALIGN=CAP_ALIGN,
         DEFAULT_LOCATION_MODES=DEFAULT_LOCATION_MODES,
         STRUCT_MODES=STRUCT_MODES, BASES=BASES, OBJECTIVES=OBJECTIVES,
     )

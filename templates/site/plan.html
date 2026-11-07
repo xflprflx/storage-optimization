@@ -116,7 +116,7 @@
 
 <div class="card mb-3 page-break">
   <div class="card-header bg-white"><strong><i class="bi bi-bookshelf"></i> Montagem das estantes ({{ rep.modules|length }})</strong>
-    <span class="small text-muted">— X = distância da parede da frente (docas), ao longo das fileiras; Y = distância da parede lateral (canto do módulo)</span></div>
+    <span class="small text-muted">— X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo)</span></div>
   <div class="table-responsive nk-scroll"><table class="table table-sm table-hover mb-0 small" data-no-resize>
     <thead class="sticky-top bg-white"><tr><th>Estante</th><th>Estrutura</th><th class="text-end">Fileira</th><th>Lado</th><th class="text-end">X (m)</th><th class="text-end">Y (m)</th><th class="text-end">Níveis × vão</th><th>Níveis × bins</th></tr></thead>
     <tbody>{% for r in rep.modules %}<tr><td class="mono fw-semibold">{{ r.bay }}</td><td class="mono">{{ r.struct }}</td><td class="text-end">{{ r.row }}</td><td>{{ r.side }}</td>

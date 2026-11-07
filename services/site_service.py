@@ -26,14 +26,17 @@ from services.file_reader import parse_decimal
 from services.material_service import material_condition
 from services.optimization_service import load_types
 from services.site_planner import (
+    CAP_ALIGN,
     ORIENTATIONS,
     SITE_OBJECTIVES,
+    ZONE_ORIENTATIONS,
     STRUCT_MODES,
     Building,
     Demand,
     SiteParams,
     SitePlan,
     StructureSpec,
+    ZoneSpec,
     plan_site,
 )
 
@@ -47,9 +50,11 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("back_reserved_m", "Faixa reservada no fundo (m)", "0", 0),
     ("cross_aisles", "Corredores transversais (qtd.)", "0", 0),
     ("cross_aisle_m", "Largura dos transversais (m)", "2", 0),
+    ("avenue_m", "Largura das avenidas entre zonas (m)", "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1"},
+    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row",
+                                                          "zones": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
                "factor": "100"},
@@ -100,6 +105,18 @@ def config_from_form(form: Mapping) -> dict:
         cfg["building"][k] = str(form.get(f"b_{k}") or "").strip()
     cfg["building"]["orientation"] = form.get("b_orientation") if form.get("b_orientation") in ORIENTATIONS else "auto"
     cfg["building"]["end_caps"] = on("b_end_caps")
+    cfg["building"]["cap_align"] = form.get("b_cap_align") if form.get("b_cap_align") in CAP_ALIGN else "row"
+    zones = []
+    for zi in (form.getlist("z_idx") if hasattr(form, "getlist") else []):
+        ori = form.get(f"z_ori_{zi}")
+        sts = form.getlist(f"z_st_{zi}") if hasattr(form, "getlist") else []
+        zones.append({"name": str(form.get(f"z_name_{zi}") or "").strip()[:40],
+                      "length_m": str(form.get(f"z_len_{zi}") or "").strip(),
+                      "orientation": ori if ori in ZONE_ORIENTATIONS else "along",
+                      "aisle_m": str(form.get(f"z_aisle_{zi}") or "").strip(),
+                      "cross_aisles": str(form.get(f"z_cross_{zi}") or "").strip(),
+                      "structures": [x for x in sts if str(x).isdigit()]})
+    cfg["building"]["zones"] = zones
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -140,7 +157,21 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  wall_gap_m=vals["wall_gap_m"] or 0, front_reserved_m=vals["front_reserved_m"] or 0,
                  back_reserved_m=vals["back_reserved_m"] or 0, cross_aisles=int(vals["cross_aisles"] or 0),
                  cross_aisle_m=vals["cross_aisle_m"] or 0, orientation=bc.get("orientation") or "auto",
-                 end_caps=bool(bc.get("end_caps")))
+                 end_caps=bool(bc.get("end_caps")), avenue_m=vals["avenue_m"] or 0,
+                 cap_align=bc.get("cap_align") if bc.get("cap_align") in CAP_ALIGN else "row")
+    for i, zc in enumerate(bc.get("zones") or [], start=1):
+        name = zc.get("name") or f"Zona {i}"
+        ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)
+        al = _num(zc.get("aisle_m"), f"{name}: largura do corredor", errors, None, lo=0.5)
+        cr = _num(zc.get("cross_aisles"), f"{name}: corredores transversais", errors, 0, lo=0)
+        b.zones.append(ZoneSpec(length_m=ln, orientation=zc.get("orientation") if zc.get("orientation") in ZONE_ORIENTATIONS
+                                else "along", aisle_m=al, cross_aisles=int(cr or 0),
+                                structures={int(x) for x in zc.get("structures") or [] if str(x).isdigit()} or None,
+                                name=name))
+    if len(b.zones) == 1:
+        errors.append("Com zonas, informe ao menos duas (uma zona só é o mesmo que não usar zonas).")
+    if b.zones and b.avenue_m <= 0:
+        errors.append("Com zonas, a largura das avenidas entre elas deve ser maior que zero.")
     modes = {}
     for sid, sc in cfg["structures"].items():
         mode = sc.get("mode") if sc.get("mode") in STRUCT_MODES else "off"

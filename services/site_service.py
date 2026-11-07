@@ -116,6 +116,9 @@ def config_from_form(form: Mapping) -> dict:
                       "orientation": ori if ori in ZONE_ORIENTATIONS else "along",
                       "aisle_m": str(form.get(f"z_aisle_{zi}") or "").strip(),
                       "cross_aisles": str(form.get(f"z_cross_{zi}") or "").strip(),
+                      "x_m": str(form.get(f"z_x_{zi}") or "").strip(),
+                      "y_m": str(form.get(f"z_y_{zi}") or "").strip(),
+                      "width_m": str(form.get(f"z_wid_{zi}") or "").strip(),
                       "structures": [x for x in sts if str(x).isdigit()]})
     cfg["building"]["zones"] = zones
     obs = []
@@ -172,10 +175,15 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
         ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)
         al = _num(zc.get("aisle_m"), f"{name}: largura do corredor", errors, None, lo=0.5)
         cr = _num(zc.get("cross_aisles"), f"{name}: corredores transversais", errors, 0, lo=0)
+        zx = _num(zc.get("x_m"), f"{name}: X", errors, None, lo=0)
+        zy = _num(zc.get("y_m"), f"{name}: Y", errors, None, lo=0)
+        zw = _num(zc.get("width_m"), f"{name}: largura em Y", errors, None, lo=0.5)
+        if (zx is None) != (zy is None):
+            errors.append(f"{name}: informe X e Y juntos (ou deixe os dois vazios para empilhar a zona).")
         b.zones.append(ZoneSpec(length_m=ln, orientation=zc.get("orientation") if zc.get("orientation") in ZONE_ORIENTATIONS
                                 else "along", aisle_m=al, cross_aisles=int(cr or 0),
                                 structures={int(x) for x in zc.get("structures") or [] if str(x).isdigit()} or None,
-                                name=name))
+                                name=name, x_m=zx, y_m=zy, width_m=zw))
     for i, oc in enumerate(bc.get("obstacles") or [], start=1):
         name = oc.get("name") or f"Obstáculo {i}"
         vals_o = {k: _num(oc.get(k), f"{name}: {lab}", errors, None, lo=0, required=True)
@@ -190,10 +198,33 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
             errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
             continue
         b.obstacles.append(Obstacle(name, **vals_o))
-    if len(b.zones) == 1:
-        errors.append("Com zonas, informe ao menos duas (uma zona só é o mesmo que não usar zonas).")
-    if b.zones and b.avenue_m <= 0:
-        errors.append("Com zonas, a largura das avenidas entre elas deve ser maior que zero.")
+    positioned = [z for z in b.zones if z.positioned]
+    if positioned:  # zonas em qualquer lugar do imóvel
+        if len(positioned) != len(b.zones):
+            errors.append("Zonas posicionadas: informe X e Y em todas as zonas (ou em nenhuma, para empilhá-las a partir "
+                          "da frente com avenidas).")
+        else:
+            from services.site_planner import _overlap, zone_rects
+
+            for z in b.zones:
+                if not z.length_m:
+                    errors.append(f"{z.name}: zona posicionada precisa do comprimento em X.")
+                elif b.length_m and b.width_m and (z.x_m >= b.length_m or z.y_m >= b.width_m
+                                                   or z.x_m + z.length_m > b.length_m + 1e-6
+                                                   or (z.width_m and z.y_m + z.width_m > b.width_m + 1e-6)):
+                    errors.append(f"{z.name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+            if not errors and b.length_m and b.width_m:
+                rects = zone_rects(b)
+                for i in range(len(rects)):
+                    for j in range(i + 1, len(rects)):
+                        if _overlap(rects[i], rects[j]):
+                            errors.append(f"As zonas {b.zones[i].name} e {b.zones[j].name} se sobrepõem.")
+    else:
+        if len(b.zones) == 1:
+            errors.append("Com zonas empilhadas, informe ao menos duas (uma zona só é o mesmo que não usar zonas); "
+                          "para uma zona só, informe X e Y.")
+        if b.zones and b.avenue_m <= 0:
+            errors.append("Com zonas, a largura das avenidas entre elas deve ser maior que zero.")
     modes = {}
     for sid, sc in cfg["structures"].items():
         mode = sc.get("mode") if sc.get("mode") in STRUCT_MODES else "off"

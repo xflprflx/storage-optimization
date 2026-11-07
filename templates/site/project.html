@@ -56,11 +56,11 @@
 </div>
 
 <form method="post" id="siteForm" autocomplete="off">
-<div class="row g-3">
+<div class="row g-3" data-stepper id="siteStepper" {% if plan %}data-start="last"{% endif %}>
   {# ------------------------- Imóvel ------------------------- #}
-  <div class="col-xl-4 col-lg-6">
+  <div class="col-12 nk-step" data-step-title="Imóvel">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong>1. Imóvel</strong></div>
+      <div class="card-header bg-white"><strong>Imóvel</strong></div>
       <div class="card-body">
         <label class="form-label small mb-0">Nome do projeto</label>
         <input class="form-control form-control-sm mb-2" name="name" maxlength="150" value="{{ project.name }}">
@@ -94,11 +94,98 @@
     </div>
   </div>
 
+  {# ------------------------- Zonas ------------------------- #}
+  {% set zones = b.get('zones') or [] %}
+  <div class="col-12 nk-step" data-step-title="Zonas e circulação">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <strong>Zonas e circulação <span class="fw-normal text-muted small">(opcional)</span></strong>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="addZone"><i class="bi bi-plus-lg"></i> Adicionar zona</button>
+      </div>
+      <div class="card-body pb-2">
+        <div class="small text-muted mb-2">Zonas são áreas com orientação de fileiras, corredor e estruturas próprios. Há duas formas de usá-las:
+          <b>posicionadas</b> — informe X e Y (o canto da zona, em metros a partir do canto superior esquerdo da planta), o comprimento em X e a largura em Y:
+          a zona fica em qualquer lugar do imóvel, como um obstáculo, e o espaço entre as zonas é a circulação (uma fileira pode ficar de frente para a borda
+          da zona quando, do lado de fora, há ao menos um corredor livre); ou <b>empilhadas</b> — deixe X e Y vazios em todas: faixas ao longo do comprimento a
+          partir da frente (docas), separadas por <b>avenidas</b> (largura no card do imóvel). Exemplo: num imóvel estreito, em vez de um corredor que termina na
+          parede do fundo, uma zona com fileiras <b>perpendiculares</b> de frente para a circulação abre o caminho. Com zonas, a orientação do imóvel é ignorada.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="zonesTable" data-no-resize>
+            <thead class="small"><tr><th style="width:140px">Nome</th><th style="width:80px" title="Canto da zona: distância da parede esquerda da planta (ao longo do comprimento)">X (m)</th>
+              <th style="width:80px" title="Canto da zona: distância da parede de cima da planta (ao longo da largura)">Y (m)</th><th style="width:105px">Comprim. em X (m)</th><th style="width:100px">Largura em Y (m)</th>
+              <th style="width:230px">Orientação das fileiras</th><th style="width:95px">Corredor (m)</th><th style="width:90px">Transversais</th><th>Estruturas</th><th style="width:40px"></th></tr></thead>
+            <tbody>
+            {% for z in zones %}{% set zi = loop.index0 %}
+              <tr class="zone-row">
+                <td><input type="hidden" name="z_idx" value="{{ zi }}"><input class="form-control form-control-sm" name="z_name_{{ zi }}" value="{{ z.name }}" placeholder="Zona {{ zi + 1 }}" maxlength="40"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_x_{{ zi }}" inputmode="decimal" value="{{ z.x_m }}" placeholder="—"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_y_{{ zi }}" inputmode="decimal" value="{{ z.y_m }}" placeholder="—"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_len_{{ zi }}" inputmode="decimal" value="{{ z.length_m }}" placeholder="restante"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_wid_{{ zi }}" inputmode="decimal" value="{{ z.width_m }}" placeholder="até a parede"></td>
+                <td><select class="form-select form-select-sm" name="z_ori_{{ zi }}">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}" {% if z.orientation == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></td>
+                <td><input class="form-control form-control-sm text-end" name="z_aisle_{{ zi }}" inputmode="decimal" value="{{ z.aisle_m }}" placeholder="padrão"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_cross_{{ zi }}" inputmode="numeric" value="{{ z.cross_aisles }}" placeholder="0"></td>
+                <td><select class="form-select form-select-sm" name="z_st_{{ zi }}" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}" {% if st.id|string in (z.structures or []) %}selected{% endif %}>{{ st.code }}</option>{% endfor %}</select></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="form-text" id="zonesHint">{% if not zones %}Nenhuma zona: planta de zona única.{% endif %} Empilhadas: comprimento vazio = o que sobrar (pode haver mais de uma; dividem a sobra). Posicionadas: largura vazia = até a parede oposta.
+          Corredor vazio = a largura dos corredores do imóvel (ex.: 3 m numa zona de porta-paletes e 1,2 m na de estantes). Estruturas: Ctrl+clique para várias; nenhuma = todas.</div>
+        <hr class="my-3">
+        {% set obstacles = b.get('obstacles') or [] %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+          <strong class="small">Áreas bloqueadas (obstáculos)</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="addObstacle"><i class="bi bi-plus-lg"></i> Adicionar área bloqueada</button>
+        </div>
+        <div class="small text-muted mb-2">Escritório, sala, pilar, rampa, mezanino… As fileiras que passariam por ela são cortadas (com o afastamento das paredes).
+          Posição em metros a partir do canto superior esquerdo da planta: X ao longo do comprimento (a partir da frente/docas), Y ao longo da largura.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="obsTable" data-no-resize>
+            <thead class="small"><tr><th>Nome</th><th style="width:120px">X (m)</th><th style="width:120px">Y (m)</th><th style="width:140px">Comprimento em X (m)</th><th style="width:140px">Largura em Y (m)</th><th style="width:40px"></th></tr></thead>
+            <tbody>
+            {% for o in obstacles %}{% set oi = loop.index0 %}
+              <tr>
+                <td><input type="hidden" name="o_idx" value="{{ oi }}"><input class="form-control form-control-sm" name="o_name_{{ oi }}" value="{{ o.name }}" maxlength="40" placeholder="Escritório"></td>
+                {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}_{{ oi }}" inputmode="decimal" value="{{ o[k] }}"></td>{% endfor %}
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <template id="zoneTpl">
+    <tr class="zone-row">
+      <td><input type="hidden" name="z_idx" value="__i__"><input class="form-control form-control-sm" name="z_name___i__" placeholder="Zona" maxlength="40"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_x___i__" inputmode="decimal" placeholder="—"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_y___i__" inputmode="decimal" placeholder="—"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_len___i__" inputmode="decimal" placeholder="restante"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_wid___i__" inputmode="decimal" placeholder="até a parede"></td>
+      <td><select class="form-select form-select-sm" name="z_ori___i__">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></td>
+      <td><input class="form-control form-control-sm text-end" name="z_aisle___i__" inputmode="decimal" placeholder="padrão"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_cross___i__" inputmode="numeric" placeholder="0"></td>
+      <td><select class="form-select form-select-sm" name="z_st___i__" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}">{{ st.code }}</option>{% endfor %}</select></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+  </template>
+  <template id="obsTpl">
+    <tr>
+      <td><input type="hidden" name="o_idx" value="__i__"><input class="form-control form-control-sm" name="o_name___i__" maxlength="40" placeholder="Escritório"></td>
+      {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}___i__" inputmode="decimal"></td>{% endfor %}
+      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+  </template>
+
   {# ------------------------- Estruturas ------------------------- #}
-  <div class="col-xl-8 col-lg-6">
+  <div class="col-12 nk-step" data-step-title="Estruturas">
     <div class="card h-100">
       <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <strong>2. Estruturas de armazenagem</strong>
+        <strong>Estruturas de armazenagem</strong>
         <a class="btn btn-sm btn-outline-secondary" href="/structures/new?back=/optimization/site/{{ project.id }}"><i class="bi bi-plus-lg"></i> Nova estrutura</a>
       </div>
       <div class="table-responsive">
@@ -132,88 +219,10 @@
     </div>
   </div>
 
-  {# ------------------------- Zonas ------------------------- #}
-  {% set zones = b.get('zones') or [] %}
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <strong>Zonas e circulação <span class="fw-normal text-muted small">(opcional)</span></strong>
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="addZone"><i class="bi bi-plus-lg"></i> Adicionar zona</button>
-      </div>
-      <div class="card-body pb-2">
-        <div class="small text-muted mb-2">Divida o comprimento do imóvel em faixas, a partir da frente (docas), cada uma com a sua orientação de fileiras.
-          Entre zonas fica uma <b>avenida</b> (largura no card do imóvel), que liga os corredores. Exemplo: num imóvel estreito, em vez de um corredor
-          que termina na parede do fundo (o colaborador vai e volta), uma zona no fundo com fileiras <b>perpendiculares</b> de frente para a avenida
-          abre a circulação. Sem zonas, todas as fileiras seguem a orientação do imóvel. Com zonas, a orientação do imóvel é ignorada.</div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0" id="zonesTable" data-no-resize>
-            <thead class="small"><tr><th style="width:150px">Nome</th><th style="width:120px">Comprimento (m)</th><th style="width:260px">Orientação das fileiras</th>
-              <th style="width:120px">Corredor (m)</th><th style="width:110px">Transversais</th><th>Estruturas permitidas</th><th style="width:40px"></th></tr></thead>
-            <tbody>
-            {% for z in zones %}{% set zi = loop.index0 %}
-              <tr class="zone-row">
-                <td><input type="hidden" name="z_idx" value="{{ zi }}"><input class="form-control form-control-sm" name="z_name_{{ zi }}" value="{{ z.name }}" placeholder="Zona {{ zi + 1 }}" maxlength="40"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_len_{{ zi }}" inputmode="decimal" value="{{ z.length_m }}" placeholder="restante"></td>
-                <td><select class="form-select form-select-sm" name="z_ori_{{ zi }}">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}" {% if z.orientation == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></td>
-                <td><input class="form-control form-control-sm text-end" name="z_aisle_{{ zi }}" inputmode="decimal" value="{{ z.aisle_m }}" placeholder="padrão"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_cross_{{ zi }}" inputmode="numeric" value="{{ z.cross_aisles }}" placeholder="0"></td>
-                <td><select class="form-select form-select-sm" name="z_st_{{ zi }}" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}" {% if st.id|string in (z.structures or []) %}selected{% endif %}>{{ st.code }}</option>{% endfor %}</select></td>
-                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        <div class="form-text" id="zonesHint">{% if not zones %}Nenhuma zona: planta de zona única.{% endif %} Comprimento vazio = o que sobrar (pode haver mais de uma; dividem a sobra).
-          Corredor vazio = a largura dos corredores do imóvel (ex.: 3 m numa zona de porta-paletes e 1,2 m na de estantes). Estruturas: Ctrl+clique para várias; nenhuma = todas.</div>
-        <hr class="my-3">
-        {% set obstacles = b.get('obstacles') or [] %}
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
-          <strong class="small">Áreas bloqueadas (obstáculos)</strong>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="addObstacle"><i class="bi bi-plus-lg"></i> Adicionar área bloqueada</button>
-        </div>
-        <div class="small text-muted mb-2">Escritório, sala, pilar, rampa, mezanino… As fileiras que passariam por ela são cortadas (com o afastamento das paredes).
-          Posição em metros a partir do canto superior esquerdo da planta: X ao longo do comprimento (a partir da frente/docas), Y ao longo da largura.</div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle mb-0" id="obsTable" data-no-resize>
-            <thead class="small"><tr><th>Nome</th><th style="width:120px">X (m)</th><th style="width:120px">Y (m)</th><th style="width:140px">Comprimento em X (m)</th><th style="width:140px">Largura em Y (m)</th><th style="width:40px"></th></tr></thead>
-            <tbody>
-            {% for o in obstacles %}{% set oi = loop.index0 %}
-              <tr>
-                <td><input type="hidden" name="o_idx" value="{{ oi }}"><input class="form-control form-control-sm" name="o_name_{{ oi }}" value="{{ o.name }}" maxlength="40" placeholder="Escritório"></td>
-                {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}_{{ oi }}" inputmode="decimal" value="{{ o[k] }}"></td>{% endfor %}
-                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  <template id="zoneTpl">
-    <tr class="zone-row">
-      <td><input type="hidden" name="z_idx" value="__i__"><input class="form-control form-control-sm" name="z_name___i__" placeholder="Zona" maxlength="40"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_len___i__" inputmode="decimal" placeholder="restante"></td>
-      <td><select class="form-select form-select-sm" name="z_ori___i__">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></td>
-      <td><input class="form-control form-control-sm text-end" name="z_aisle___i__" inputmode="decimal" placeholder="padrão"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_cross___i__" inputmode="numeric" placeholder="0"></td>
-      <td><select class="form-select form-select-sm" name="z_st___i__" multiple size="2" title="Nenhuma marcada = todas">{% for st in structures %}<option value="{{ st.id }}">{{ st.code }}</option>{% endfor %}</select></td>
-      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover zona"><i class="bi bi-x-lg"></i></button></td>
-    </tr>
-  </template>
-  <template id="obsTpl">
-    <tr>
-      <td><input type="hidden" name="o_idx" value="__i__"><input class="form-control form-control-sm" name="o_name___i__" maxlength="40" placeholder="Escritório"></td>
-      {% for k in ('x_m', 'y_m', 'length_m', 'width_m') %}<td><input class="form-control form-control-sm text-end" name="o_{{ k }}___i__" inputmode="decimal"></td>{% endfor %}
-      <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
-    </tr>
-  </template>
-
   {# ------------------------- Demanda ------------------------- #}
-  <div class="col-xl-4 col-lg-6">
+  <div class="col-12 nk-step" data-step-title="Demanda">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong>3. Demanda (o que será guardado)</strong></div>
+      <div class="card-header bg-white"><strong>Demanda (o que será guardado)</strong></div>
       <div class="card-body">
         <label class="form-label small mb-0">Fonte dos SKUs e quantidades</label>
         <select class="form-select form-select-sm mb-2" name="d_source" id="d_source">
@@ -253,9 +262,9 @@
   </div>
 
   {# ------------------------- Bins e regras ------------------------- #}
-  <div class="col-xl-4 col-lg-6">
+  <div class="col-12 nk-step" data-step-title="Bins e regras">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong>4. Bins e regras</strong></div>
+      <div class="card-header bg-white"><strong>Bins e regras</strong></div>
       <div class="card-body">
         <label class="form-label small mb-0">Tipos de bin permitidos <span class="text-muted">(nenhum marcado = todos)</span></label>
         <div class="border rounded p-2 mb-2" style="max-height:130px;overflow:auto">
@@ -292,9 +301,9 @@
   </div>
 
   {# ------------------------- Objetivo ------------------------- #}
-  <div class="col-xl-4 col-lg-12">
+  <div class="col-12 nk-step" data-step-title="Objetivo">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong>5. Objetivo</strong></div>
+      <div class="card-header bg-white"><strong>Objetivo</strong></div>
       <div class="card-body">
         {% set prio = (p.get('priority') or []) + ['', '', ''] %}
         <div class="small text-muted mb-2"><i class="bi bi-lock"></i> Sempre em 1º lugar: guardar toda a demanda (falta de bins).</div>

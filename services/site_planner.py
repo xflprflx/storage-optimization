@@ -324,13 +324,22 @@ CAP_ALIGN = {"row": "Encostada na fileira (a sobra fica do lado da área livre)"
 
 @dataclass
 class ZoneSpec:
-    """Zona definida pelo usuário: uma faixa do imóvel ao longo do comprimento, a partir da frente (docas)."""
-    length_m: Optional[float] = None  # None/0 = o comprimento que sobrar
+    """Zona definida pelo usuário. Sem X/Y: faixa do imóvel ao longo do comprimento, empilhada a partir da frente
+    (docas) e separada das outras por avenidas. Com X/Y: retângulo em qualquer lugar do imóvel (como um obstáculo),
+    e o espaço entre as zonas é a circulação."""
+    length_m: Optional[float] = None  # extensão em X; sem X/Y, None/0 = o comprimento que sobrar
     orientation: str = "along"  # "along" | "across"
     aisle_m: Optional[float] = None  # largura dos corredores da zona (None = a do imóvel)
     cross_aisles: int = 0
     structures: Optional[set] = None  # estruturas permitidas (None = todas)
     name: str = ""
+    x_m: Optional[float] = None  # canto da zona na planta (m); None = zona empilhada
+    y_m: Optional[float] = None
+    width_m: Optional[float] = None  # extensão em Y (None = até a parede oposta)
+
+    @property
+    def positioned(self) -> bool:
+        return self.x_m is not None and self.y_m is not None
 
 
 def _letters(i: int) -> str:
@@ -504,6 +513,78 @@ def choose_floor(b: Building, structs: list[StructureSpec]) -> Floor:
     return best
 
 
+def zone_rects(b: Building) -> list[tuple[float, float, float, float]]:
+    """Retângulos (X, Y, extensão X, extensão Y em cm) das zonas posicionadas, limitados ao interior do imóvel
+    (descontado o afastamento das paredes)."""
+    L, W, gap = b.length_m * 100.0, b.width_m * 100.0, b.wall_gap_m * 100.0
+    out = []
+    for z in b.zones:
+        x0, y0 = max(gap, (z.x_m or 0) * 100.0), max(gap, (z.y_m or 0) * 100.0)
+        x1 = min(L - gap, (z.x_m or 0) * 100.0 + (z.length_m or 0) * 100.0) if z.length_m else L - gap
+        y1 = min(W - gap, (z.y_m or 0) * 100.0 + z.width_m * 100.0) if z.width_m else W - gap
+        out.append((x0, y0, max(0.0, x1 - x0), max(0.0, y1 - y0)))
+    return out
+
+
+def _overlap(a: tuple, b_: tuple) -> bool:
+    return a[0] < b_[0] + b_[2] - EPS and b_[0] < a[0] + a[2] - EPS and a[1] < b_[1] + b_[3] - EPS and b_[1] < a[1] + a[3] - EPS
+
+
+def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -> Layout:
+    """Zonas em qualquer lugar do imóvel (X/Y). Uma borda da zona é "aberta" (as fileiras podem ficar de frente para
+    ela, e as pontas recebem cabeceira) quando, do lado de fora, há uma faixa livre de pelo menos um corredor dentro
+    do imóvel, sem outra zona nem obstáculo."""
+    L, W = b.length_m * 100.0, b.width_m * 100.0
+    gap, front, back = (v * 100.0 for v in (b.wall_gap_m, b.front_reserved_m, b.back_reserved_m))
+    if front > 0:
+        lay.areas.append(("reserved", gap, gap, front, W - 2 * gap, "Docas / expedição"))
+    if back > 0:
+        lay.areas.append(("reserved", L - gap - back, gap, back, W - 2 * gap, "Área reservada"))
+    rects = zone_rects(b)
+    blocks = [(o.x_m * 100, o.y_m * 100, o.length_m * 100, o.width_m * 100) for o in b.obstacles]
+
+    def side(i: int, which: str, a: float) -> Optional[str]:
+        x, y, lx, wy = rects[i]
+        strip = {"left": (x - a, y, a, wy), "right": (x + lx, y, a, wy),
+                 "top": (x, y - a, lx, a), "bottom": (x, y + wy, lx, a)}[which]
+        sx, sy, sw, sd = strip
+        if sx < gap - EPS or sy < gap - EPS or sx + sw > L - gap + EPS or sy + sd > W - gap + EPS:
+            return None  # parede
+        if any(_overlap(strip, r) for j, r in enumerate(rects) if j != i) or any(_overlap(strip, o) for o in blocks):
+            return None
+        if front > 0 and sx < gap + front - EPS:
+            return "a faixa da frente (docas)"
+        if back > 0 and sx + sw > L - gap - back + EPS:
+            return "a faixa do fundo"
+        return "a circulação"
+
+    for i, (z, (x, y, lx, wy)) in enumerate(zip(b.zones, rects)):
+        allowed = [s for s in structs if not z.structures or s.id in z.structures]
+        depth = max((s.depth for s in allowed), default=0.0)
+        a = (z.aisle_m or b.aisle_m) * 100.0
+        if z.orientation == "across":  # fileiras ao longo de Y; transversal = X
+            fl = build_zone(depth, a, wy, lx, open_cross=(side(i, "left", a), side(i, "right", a)),
+                            run_ends=(side(i, "top", a), side(i, "bottom", a)), cross_aisles=z.cross_aisles,
+                            cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps, along="width")
+            fl.rot = True
+        else:
+            fl = build_zone(depth, a, lx, wy, open_cross=(side(i, "top", a), side(i, "bottom", a)),
+                            run_ends=(side(i, "left", a), side(i, "right", a)), cross_aisles=z.cross_aisles,
+                            cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps, along="length")
+        fl.ox, fl.oy, fl.index, fl.name = x, y, i, z.name or f"Zona {i + 1}"
+        fl.struct_ids = {s.id for s in allowed}
+        for r in fl.rows:
+            r.zone = i
+        if not allowed:
+            fl.notes.append("nenhuma estrutura ativa permitida")
+        if len({s.depth for s in allowed}) > 1:
+            fl.notes.append(f"profundidades diferentes: fileiras dimensionadas pela maior ({depth:g} cm)")
+        lay.notes += [f"{fl.name}: {n}" for n in fl.notes]
+        lay.areas.append(("zone", x, y, lx, wy, fl.name))
+        lay.zones.append(fl)
+    return lay
+
+
 def build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
     lay = _build_layout(b, structs)
     if b.obstacles:
@@ -521,6 +602,8 @@ def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
         lay.zones = [fl]
         lay.notes = list(fl.notes)
         return lay
+    if any(z.positioned for z in b.zones):
+        return _positioned_layout(b, structs, lay)
     gap, front, back, av = (v * 100.0 for v in (b.wall_gap_m, b.front_reserved_m, b.back_reserved_m, b.avenue_m))
     zs = b.zones
     avail = L - 2 * gap - front - back - av * (len(zs) - 1)
@@ -1293,6 +1376,7 @@ PALETTE = ["#2f7ed8", "#e8743b", "#19a979", "#ed4a7b", "#945ecf", "#13a4b4", "#c
 SHAPE_STYLE = {  # tipo -> (preenchimento, contorno, tracejado)
     "reserved": ("#fff3cd", "#e0c068", ""), "avenue": ("#e3ecf7", "#b9cbe3", ""), "aisle": ("#eef2f4", "none", ""),
     "cross": ("#eef2f4", "none", ""), "lane": ("none", "#c9d1d6", "3 2"), "obstacle": ("#2b2f33", "#111111", ""),
+    "zone": ("none", "#6f8fb8", "6 3"),
 }
 
 
@@ -1306,6 +1390,12 @@ def aisle_labels(plan: SitePlan) -> list[tuple]:
         zn = plan.floor.zones[zi]
         y, wdt = zn.aisles[ai]
         if wdt <= 0:
+            if "circulação" not in (zn.edge_names.get(ai) or ""):
+                continue  # avenida/docas: o código vai no rótulo da área
+            # borda da zona de frente para a circulação: o rótulo fica do lado de fora
+            yy = y - zn.aisle_cm / 2 if y <= zn.cross_lo + EPS else y + zn.aisle_cm / 2
+            X, Y, _, _ = zn.to_global(zn.x_start + 20, yy, 0, 0)
+            out.append((f"Corredor {code}", X, Y, zn.rot))
             continue
         X, Y, _, _ = zn.to_global(zn.x_start + 20, y + wdt / 2, 0, 0)
         out.append((f"Corredor {code}", X, Y, zn.rot))
@@ -1343,6 +1433,14 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999", ""))
         out.append(f'<rect x="{X * sc:.1f}" y="{Y * sc:.1f}" width="{w * sc:.1f}" height="{d * sc:.1f}" fill="{fill}" '
                    f'stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
+        if label and kind == "zone":
+            if w * sc < 60:  # zona estreita: nome na vertical, dentro da zona
+                tx, ty = (X + w / 2) * sc, (Y + 12) * sc
+                out.append(f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="9" fill="#4a6a94" '
+                           f'transform="rotate(90 {tx:.1f} {ty:.1f})">{label}</text>')
+            else:  # acima da zona; encostada no topo do imóvel: logo abaixo da borda
+                ty = Y * sc - 3 if Y * sc > 14 else Y * sc + 11
+                out.append(f'<text x="{(X + 15) * sc:.1f}" y="{ty:.1f}" font-size="10" fill="#4a6a94">{label}</text>')
         if label and kind == "obstacle":
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
             out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '

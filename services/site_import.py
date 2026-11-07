@@ -86,6 +86,9 @@ ZONE_COLS = {
     "aisle": ["corredor", "corredorm", "larguradocorredor", "larguradocorredorm", "larguracorredor"],
     "cross": ["transversais", "corredorestransversais", "qtdtransversais"],
     "structures": ["estruturas", "estruturaspermitidas", "codigosdasestruturas"],
+    "x": ["x", "xm", "posicaox"],
+    "y": ["y", "ym", "posicaoy"],
+    "width": ["largura", "larguraemy", "larguraemym", "larguram", "larguradazona"],
 }
 OBSTACLE_COLS = {
     "name": ["nome", "descricao", "area", "obstaculo"],
@@ -156,8 +159,9 @@ FIELD_LABELS = {
     "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
              "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
              "max": "Max level"},
-    "zones": {"name": "Nome", "length": "Comprimento (m)", "orientation": "Orientação das fileiras",
-              "aisle": "Corredor (m)", "cross": "Corredores transversais", "structures": "Estruturas permitidas (códigos)"},
+    "zones": {"name": "Nome", "length": "Comprimento em X (m)", "orientation": "Orientação das fileiras",
+              "aisle": "Corredor (m)", "cross": "Corredores transversais", "structures": "Estruturas permitidas (códigos)",
+              "x": "X (m)", "y": "Y (m)", "width": "Largura em Y (m)"},
     "obstacles": {"name": "Nome", "x": "X (m)", "y": "Y (m)", "length": "Comprimento em X (m)",
                   "width": "Largura em Y (m)"},
 }
@@ -408,7 +412,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 continue
             ori = "across" if any(w in ori_txt for w in ("perp", "larg", "across", "transv", "vertical")) else "along"
             e: list[str] = []
-            ln, al, cr = (_dec(row, cm[k], k, e, i) for k in ("length", "aisle", "cross"))
+            ln, al, cr, zx, zy, zw = (_dec(row, cm[k], k, e, i) for k in ("length", "aisle", "cross", "x", "y", "width"))
             if e:
                 errs.extend(f"Zonas {x}" for x in e)
                 continue
@@ -419,11 +423,12 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             fmt = lambda v: (f"{v:g}".replace(".", ",") if v is not None else "")  # noqa: E731
             zones.append({"name": (_cell(row, cm["name"]) or f"Zona {len(zones) + 1}")[:40], "length_m": fmt(ln),
                           "orientation": ori, "aisle_m": fmt(al), "cross_aisles": str(int(cr)) if cr else "",
+                          "x_m": fmt(zx), "y_m": fmt(zy), "width_m": fmt(zw),
                           "structures": [str(code_id[c]) for c in codes if c in code_id]})
         if bad:
             errs.append("Zonas: " + "; ".join(bad) + ".")
-        if len(zones) == 1:
-            errs.append("Zonas: informe ao menos duas zonas (uma só equivale a não usar zonas); a zona foi ignorada.")
+        if len(zones) == 1 and not (zones[0]["x_m"] and zones[0]["y_m"]):
+            errs.append("Zonas: com zonas empilhadas (sem X/Y), informe ao menos duas; a zona foi ignorada.")
             zones = []
         cfg["building"]["zones"] = zones
         msgs.append(f"Zonas: {len(zones)} zona(s) definida(s)." if zones else "Zonas: nenhuma (planta de zona única).")
@@ -529,10 +534,11 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
         "SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. "
         "Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades.",
         "Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior).",
-        "Zonas (opcional, ao menos duas): faixas ao longo do comprimento a partir da frente (docas), na ordem das linhas. "
-        "Comprimento vazio = o que sobrar; Orientação = 'ao longo do comprimento' ou 'perpendicular'; Corredor vazio = o do "
-        "imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Entre zonas fica uma avenida "
-        "(largura na aba Imóvel). Aba vazia = sem zonas.",
+        "Zonas (opcional): com X e Y, cada zona é um retângulo em qualquer lugar do imóvel (X, Y, comprimento em X e "
+        "largura em Y; largura vazia = até a parede) e o espaço entre elas é a circulação. Sem X e Y, as zonas (ao menos "
+        "duas) são faixas empilhadas a partir da frente, na ordem das linhas, separadas por avenidas (largura na aba "
+        "Imóvel); comprimento vazio = o que sobrar. Orientação = 'ao longo do comprimento' ou 'perpendicular'; Corredor "
+        "vazio = o do imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Aba vazia = sem zonas.",
         "Obstáculos (opcional): áreas bloqueadas (escritório, pilar, sala…) em metros a partir do canto superior "
         "esquerdo da planta: X ao longo do comprimento, Y ao longo da largura. As fileiras que passariam por elas são cortadas.",
     ]:
@@ -551,12 +557,13 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
     id_code = {str(s.id): s.code for s in db.scalars(select(StructureType))}
     ori_lbl = {"along": "ao longo do comprimento", "across": "perpendicular (ao longo da largura)"}
     sheet(wb.create_sheet("Zonas"),
-          ["Nome", "Comprimento (m)", "Orientação das fileiras", "Corredor (m)", "Corredores transversais",
-           "Estruturas permitidas (códigos)"],
-          [(z.get("name"), z.get("length_m") or None, ori_lbl.get(z.get("orientation"), "ao longo do comprimento"),
+          ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)", "Orientação das fileiras",
+           "Corredor (m)", "Corredores transversais", "Estruturas permitidas (códigos)"],
+          [(z.get("name"), z.get("x_m") or None, z.get("y_m") or None, z.get("length_m") or None,
+            z.get("width_m") or None, ori_lbl.get(z.get("orientation"), "ao longo do comprimento"),
             z.get("aisle_m") or None, z.get("cross_aisles") or None,
             ", ".join(id_code.get(x, "") for x in z.get("structures") or [] if x in id_code) or None)
-           for z in b.get("zones") or []], {1: 22, 3: 36, 6: 34})
+           for z in b.get("zones") or []], {1: 22, 6: 36, 9: 34})
     sheet(wb.create_sheet("Obstáculos"),
           ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
           [(o.get("name"), o.get("x_m"), o.get("y_m"), o.get("length_m"), o.get("width_m"))

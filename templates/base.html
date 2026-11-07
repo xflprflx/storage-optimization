@@ -39,6 +39,20 @@
     .nk-resizer::after { content: ""; position: absolute; top: 25%; bottom: 25%; left: 3px; width: 1px; background: #d0d7dc; }
     .nk-resizer:hover::after, .nk-resizing .nk-resizer::after { background: var(--nk-accent); width: 2px; }
     .nk-resizing, .nk-resizing * { cursor: col-resize !important; user-select: none !important; }
+    /* Passo a passo (stepper): ver o script no fim da página */
+    .nk-step-hidden { display: none !important; }
+    .nk-stepper-nav { display: flex; flex-wrap: wrap; gap: .35rem .5rem; margin-bottom: .75rem; }
+    .row > .nk-stepper-nav { width: 100%; margin-bottom: 0; }
+    .nk-stepper-item { display: inline-flex; align-items: center; gap: .4rem; border: 1px solid #d7dee3; background: #fff;
+      border-radius: 999px; padding: .2rem .8rem .2rem .25rem; font-size: .82rem; color: #5b6770; cursor: pointer; }
+    .nk-stepper-item:hover { border-color: #9fb3bd; }
+    .nk-stepper-num { width: 1.45rem; height: 1.45rem; border-radius: 50%; display: inline-flex; align-items: center;
+      justify-content: center; background: #e9edf0; font-weight: 600; font-size: .72rem; }
+    .nk-stepper-item.active { border-color: var(--nk-accent); color: #1f2d33; font-weight: 600; }
+    .nk-stepper-item.active .nk-stepper-num { background: var(--nk-accent); color: #fff; }
+    .nk-stepper-item.done .nk-stepper-num { background: #d1f0e6; color: #0f766e; }
+    .nk-step-footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: 1rem;
+      padding-top: .75rem; border-top: 1px dashed #e1e6ea; }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -267,6 +281,68 @@ function nkTables() {
   });
 }
 document.addEventListener('DOMContentLoaded', () => { try { document.querySelectorAll('[data-bs-toggle=popover]').forEach(el => bootstrap.Popover.getOrCreateInstance(el)); } catch (_) {} nkFilterWarehouses(); nkAutocomplete(); nkCheckAll(); nkAutoFilter(); nkBinEditors(); nkTables(); });
+</script>
+<script>
+/* Passo a passo (stepper). Uso: um contêiner com data-stepper (id opcional, para lembrar a etapa na sessão) e,
+   dentro dele, as etapas com class="nk-step" data-step-title="…". Opcional: data-start="last" (abre na última
+   etapa), data-step-footer num elemento da etapa (onde ficam os botões Anterior/Próximo; padrão: fim da etapa),
+   data-stepper-nav (onde fica a barra de etapas; padrão: início do contêiner). Campos obrigatórios em etapas
+   escondidas: ao enviar o formulário, a etapa do campo inválido é aberta. */
+(function () {
+  document.querySelectorAll('[data-stepper]').forEach(root => {
+    const steps = [...root.querySelectorAll('.nk-step')].filter(s => s.closest('[data-stepper]') === root);
+    if (steps.length < 2) return;
+    const key = 'nk-step:' + location.pathname + ':' + (root.id || '');
+    const nav = document.createElement('div');
+    nav.className = 'nk-stepper-nav';
+    let cur = 0;
+    const show = (i, scroll) => {
+      cur = Math.max(0, Math.min(steps.length - 1, i));
+      steps.forEach((s, j) => s.classList.toggle('nk-step-hidden', j !== cur));
+      [...nav.children].forEach((b, j) => { b.classList.toggle('active', j === cur); b.classList.toggle('done', j < cur); });
+      try { sessionStorage.setItem(key, String(cur)); } catch (e) { /* armazenamento indisponível */ }
+      if (scroll) nav.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+    steps.forEach((s, i) => {
+      const title = s.dataset.stepTitle || ('Etapa ' + (i + 1));
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'nk-stepper-item';
+      b.innerHTML = '<span class="nk-stepper-num">' + (i + 1) + '</span><span></span>';
+      b.lastChild.textContent = title;
+      b.addEventListener('click', () => show(i));
+      nav.appendChild(b);
+      if (s.hasAttribute('data-no-footer')) return;
+      const f = document.createElement('div');
+      f.className = 'nk-step-footer';
+      const prev = document.createElement('button');
+      prev.type = 'button'; prev.className = 'btn btn-sm btn-outline-secondary';
+      prev.innerHTML = '<i class="bi bi-arrow-left"></i> Anterior';
+      prev.addEventListener('click', () => show(i - 1, true));
+      f.appendChild(i > 0 ? prev : document.createElement('span'));
+      if (i < steps.length - 1) {
+        const next = document.createElement('button');
+        next.type = 'button'; next.className = 'btn btn-sm btn-primary';
+        next.innerHTML = '<span></span> <i class="bi bi-arrow-right"></i>';
+        next.firstChild.textContent = 'Próximo: ' + (steps[i + 1].dataset.stepTitle || '');
+        next.addEventListener('click', () => show(i + 1, true));
+        f.appendChild(next);
+      }
+      (s.querySelector('[data-step-footer]') || s).appendChild(f);
+    });
+    const host = root.querySelector('[data-stepper-nav]');
+    if (host) host.appendChild(nav); else root.insertBefore(nav, root.firstChild);
+    // campo obrigatório numa etapa escondida: abre a etapa antes de o navegador tentar focá-lo
+    root.addEventListener('invalid', e => {
+      const i = steps.indexOf(e.target.closest('.nk-step'));
+      if (i >= 0 && i !== cur) show(i);
+    }, true);
+    let start = 0;
+    if (root.dataset.start === 'last') start = steps.length - 1;
+    else { try { const v = sessionStorage.getItem(key); if (v !== null) start = parseInt(v, 10) || 0; } catch (e) { /* idem */ } }
+    show(start);
+  });
+})();
 </script>
 {% block scripts %}{% endblock %}
 </body>

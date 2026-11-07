@@ -70,9 +70,10 @@
   <div class="col-xl-3 col-lg-4">
   <form method="get" id="optForm">
   <input type="hidden" name="run" value="1">
-    <div class="card mb-3">
-      <div class="card-header bg-white"><strong>1. Escopo</strong></div>
-      <div class="card-body">
+  <div data-stepper id="optStepper" {% if results is not none %}data-start="last"{% endif %}>
+    <div class="card mb-3 nk-step" data-step-title="Escopo">
+      <div class="card-header bg-white"><strong>Escopo</strong></div>
+      <div class="card-body" data-step-footer>
         <label class="form-label small mb-0">Filial *</label>
         <select class="form-select form-select-sm mb-2" name="branch_id" id="branch_id" required>
           <option value="">Selecione...</option>
@@ -113,9 +114,9 @@
       </div>
     </div>
 
-    <div class="card mb-3">
-      <div class="card-header bg-white"><strong>2. O que otimizar</strong></div>
-      <div class="card-body">
+    <div class="card mb-3 nk-step" data-step-title="O que otimizar">
+      <div class="card-header bg-white"><strong>O que otimizar</strong></div>
+      <div class="card-body" data-step-footer>
         <div class="small fw-semibold mb-1">Bins</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           {% for key, label in bins_modes.items() %}
@@ -187,8 +188,8 @@
       </div>
     </div>
 
-    <div class="card mb-3">
-      <div class="card-header bg-white"><strong>3. Restrições</strong></div>
+    <div class="card mb-3 nk-step" data-step-title="Restrições">
+      <div class="card-header bg-white"><strong>Restrições</strong></div>
       <div class="card-body small">
         <label class="form-label mb-1">Tipos de bin permitidos <span class="text-muted">(nenhum marcado = todos)</span></label>
         <div class="border rounded p-2 mb-2" style="max-height: 150px; overflow-y: auto">
@@ -236,10 +237,11 @@
         {{ switch('keep_space', 'Não exceder o espaço atual do endereço', '(nível sem capacidade cadastrada)') }}
         {% endif %}
       </div>
-      <div class="card-footer bg-white">
+      <div class="card-footer bg-white" data-step-footer>
         <button class="btn btn-accent w-100"><i class="bi bi-cpu"></i> Analisar</button>
       </div>
     </div>
+  </div>
   </form>
   </div>
 

@@ -368,6 +368,9 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999999", ""))
         dw.add(Rect(X * sc, Yp(Y, d), w * sc, d * sc, fillColor=hexc(fill), strokeColor=hexc(stroke),
                     strokeWidth=0.3 if kind == "lane" else 0.5, strokeDashArray=[2, 2] if dash else None))
+        if label and kind == "zone":
+            dw.add(String((X + 15) * sc, Yp(Y, 0) + 1.5, label, fontSize=5.5, fillColor=colors.HexColor("#4A6A94")))
+            continue
         if label and kind in ("reserved", "avenue", "obstacle") and min(w, d) * sc >= 6:
             txt = area_label(plan, label) if kind != "obstacle" else label
             st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor(

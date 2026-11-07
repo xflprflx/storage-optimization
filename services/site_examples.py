@@ -103,20 +103,23 @@ EXAMPLES = [
     {
         "slug": "perimetro-escritorio",
         "title": "Fileiras nas paredes + escritório no canto",
-        "description": "Imóvel de 24 × 26 m sem faixa de docas: fileiras perpendiculares encostadas nas paredes da "
-                       "esquerda e da direita, fileiras horizontais no meio ligadas por avenidas, e um escritório no "
-                       "canto superior direito que encurta as fileiras e corta a fileira da parede direita.",
-        "tags": ["24 × 26 m", "3 zonas", "obstáculo", "~350 SKUs"],
+        "description": "Imóvel de 24 × 26 m com zonas posicionadas por X/Y: fileiras perpendiculares encostadas nas "
+                       "paredes da esquerda e da direita (esta abaixo do escritório), fileiras horizontais no meio (mais "
+                       "curtas no alto), uma fileira curta perpendicular junto ao escritório e circulação entre as zonas.",
+        "tags": ["24 × 26 m", "5 zonas X/Y", "obstáculo", "~350 SKUs"],
         "building": {"length_m": 24, "width_m": 26, "clear_height_m": 6, "aisle_m": 1.5, "wall_gap_m": 0.1,
                      "front_reserved_m": 0, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
-        "zones": [("Parede esquerda", 0.6, "perpendicular", None, None, "EST-100-60"),
-                  ("Central", None, "ao longo do comprimento", None, None, ""),
-                  ("Parede direita", 0.6, "perpendicular", None, None, "EST-100-60")],
-        "obstacles": [("Escritório", 19.8, 0, 4.2, 8.5)],
-        "structures": {"EST-100-60": ("Otimizar", None, None, None), "EST-100-40": ("Otimizar", None, None, None)},
+        "zones": [("Parede esquerda", 0.1, 0.1, 0.6, 25.8, "perpendicular", None, None, "EST-100-40"),
+                  ("Central alto", 2.2, 0.1, 14.0, 7.3, "ao longo do comprimento", None, None, "EST-100-60"),
+                  ("Junto ao escritório", 19.1, 0.1, 0.6, 7.3, "perpendicular", None, None, "EST-100-40"),
+                  ("Central", 2.2, 9.0, 18.6, 16.9, "ao longo do comprimento", None, None, "EST-100-60"),
+                  ("Parede direita", 23.3, 9.0, 0.6, 16.9, "perpendicular", None, None, "EST-100-40")],
+        "obstacles": [("Escritório", 19.8, 0, 4.2, 7.4)],
+        # paredes com a estante leve (mínimo de 45 módulos: preenche as fileiras de parede); centro com a média
+        "structures": {"EST-100-60": ("Otimizar", None, None, None), "EST-100-40": ("Otimizar", None, 45, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7", "BIN-8"],
-        "skus": lambda rng: _skus(rng, SMALL, (16, 24), SIZES, scale=5, prefix="PE"),
+        "skus": lambda rng: _skus(rng, SMALL, (16, 24), SIZES, scale=4.5, prefix="PE"),
     },
     {
         "slug": "imovel-estreito",
@@ -128,8 +131,8 @@ EXAMPLES = [
         "building": {"length_m": 14, "width_m": 3.2, "clear_height_m": 4.5, "aisle_m": 1.2, "wall_gap_m": 0.1,
                      "front_reserved_m": 1.5, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
-        "zones": [("Picking", None, "ao longo do comprimento", None, None, ""),
-                  ("Fundo", 1.4, "perpendicular", None, None, "")],
+        "zones": [("Picking", None, None, None, None, "ao longo do comprimento", None, None, ""),
+                  ("Fundo", None, None, 1.4, None, "perpendicular", None, None, "")],
         "obstacles": [],
         "structures": {"EST-100-40": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7"],
@@ -145,8 +148,8 @@ EXAMPLES = [
         "building": {"length_m": 60, "width_m": 36, "clear_height_m": 9, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 10, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
-        "zones": [("Porta-paletes", 28, "ao longo do comprimento", 3.2, None, "PP-270-110"),
-                  ("Picking", None, "ao longo do comprimento", None, 1, "EST-100-60, EST-120-60")],
+        "zones": [("Porta-paletes", None, None, 28, None, "ao longo do comprimento", 3.2, None, "PP-270-110"),
+                  ("Picking", None, None, None, None, "ao longo do comprimento", None, 1, "EST-100-60, EST-120-60")],
         "obstacles": [],
         "structures": {"PP-270-110": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None),
                        "EST-120-60": ("Otimizar", None, None, None)},
@@ -212,9 +215,10 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
     rows += [("Orientação das fileiras", bd["orientation"]), ("Cabeceiras (sim/não)", bd["end_caps"]),
              ("Posição da cabeceira (encostada/borda)", bd["cap_align"])]
     sheet(wb.create_sheet("Imóvel"), ["Campo", "Valor"], rows, {1: 50, 2: 22})
-    sheet(wb.create_sheet("Zonas"), ["Nome", "Comprimento (m)", "Orientação das fileiras", "Corredor (m)",
-                                     "Corredores transversais", "Estruturas permitidas (códigos)"],
-          ex["zones"], {1: 22, 3: 30, 6: 34})
+    sheet(wb.create_sheet("Zonas"), ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)",
+                                     "Orientação das fileiras", "Corredor (m)", "Corredores transversais",
+                                     "Estruturas permitidas (códigos)"],
+          ex["zones"], {1: 22, 6: 30, 9: 34})
     sheet(wb.create_sheet("Obstáculos"), ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
           ex["obstacles"], {1: 24})
     sheet(wb.create_sheet("Estruturas"),
@@ -250,9 +254,10 @@ def building_of(ex: dict):
             continue
         name, _kind, w, d, h, lv, vh, load, cost = STRUCTURES[code]
         structs.append(StructureSpec(ids[code], code, name, w, d, h, lv, vh, load, cost))
-    for name, ln, ori, aisle, cross, codes in ex["zones"]:
+    for name, x, y, ln, wd, ori, aisle, cross, codes in ex["zones"]:
         sids = {ids[c.strip()] for c in (codes or "").split(",") if c.strip()} or None
-        b.zones.append(ZoneSpec(ln, "across" if ori.startswith("perp") else "along", aisle, int(cross or 0), sids, name))
+        b.zones.append(ZoneSpec(ln, "across" if ori.startswith("perp") else "along", aisle, int(cross or 0), sids, name,
+                                x_m=x, y_m=y, width_m=wd))
     b.obstacles = [Obstacle(*o) for o in ex["obstacles"]]
     return b, structs
 

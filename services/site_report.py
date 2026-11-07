@@ -348,19 +348,21 @@ def to_xlsx(rep: SiteReport) -> bytes:
 # --------------------------------------------------------------------------- #
 # PDF
 # --------------------------------------------------------------------------- #
-def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
-    """Planta vista de cima (reportlab), na mesma escala do SVG da tela."""
-    from reportlab.graphics.shapes import Drawing, Rect, String
+def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summary"):
+    """Planta vista de cima (reportlab), na mesma escala do SVG da tela. `dims`: none | summary | full (cotas)."""
+    from reportlab.graphics.shapes import Drawing, Group, Line, Rect, String
     from reportlab.lib import colors
 
-    from services.site_planner import SHAPE_STYLE, aisle_labels, area_label
+    from services.site_planner import SHAPE_STYLE, _m, aisle_labels, area_label, dim_chains
 
     fl, b = plan.floor, plan.building
     if not fl.length_cm or not fl.width_cm or not fl.zones:
         return None
-    sc = min(max_w / fl.length_cm, (max_h - 14) / fl.width_cm)
+    full = dims == "full"
+    M = 26 if full else 0  # margem das cotas (em cima e à esquerda)
+    sc = min((max_w - M) / fl.length_cm, (max_h - 14 - M) / fl.width_cm)
     W, H = fl.length_cm * sc, fl.width_cm * sc
-    dw = Drawing(W + 2, H + 16)
+    dw = Drawing(W + 2 + M, H + 16 + M)
     Yp = lambda y, h: 14 + H - (y + h) * sc  # noqa: E731  (eixo y para baixo, como na tela)
     hexc = lambda c: None if c in (None, "none") else colors.HexColor(c)  # noqa: E731
     dw.add(Rect(0, 14, W, H, fillColor=colors.HexColor("#FBFCFD"), strokeColor=colors.HexColor("#1F2D33"), strokeWidth=1.2))
@@ -405,13 +407,47 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float):
             dw.add(st)
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
             f"fileiras ao longo do {'comprimento' if fl.along == 'length' else 'largura'}")
-    dw.add(String(0, 2, f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · {desc} · "
+    size = f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · " if dims != "none" else ""
+    dw.add(String(0, 2, f"{size}{desc} · "
                         "amarelo = docas/áreas reservadas · azul = avenidas · preto = obstáculos · tracejado = cabeceiras",
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
+    if full:
+        ink = colors.HexColor("#5B6770")
+        top = 14 + H  # borda de cima do imóvel no desenho
+        xs, ys = dim_chains(fl, 16 / sc, 16 / sc)
+        for _, X, Y, w, d, _ in (k for k in fl.shapes() if k[0] == "obstacle"):  # zonas: as cotas encadeadas bastam
+            if w * sc >= 30 and d * sc >= 14:
+                dw.add(String(X * sc + 2, Yp(Y, d) + 2, f"{_m(w)} × {_m(d)} m", fontSize=5,
+                              fillColor=colors.HexColor("#DFE5EA")))
+        for y_off, pts, total in ((20, [0, fl.length_cm], True), (8, xs, False)):
+            y = top + y_off
+            dw.add(Line(0, y, W, y, strokeColor=ink, strokeWidth=0.4))
+            for p in pts:
+                dw.add(Line(p * sc, y - 2, p * sc, y + 2, strokeColor=ink, strokeWidth=0.4))
+            segs = [(0, fl.length_cm, f"{_m(fl.length_cm)} m (comprimento)")] if total else \
+                [(a, c, _m(c - a)) for a, c in zip(pts, pts[1:])]
+            for a, c, t in segs:
+                dw.add(String((a + c) / 2 * sc, y + 1.5, t, fontSize=6 if total else 5, textAnchor="middle", fillColor=ink))
+        for x_off, pts, total in ((20, [0, fl.width_cm], True), (8, ys, False)):
+            x = -x_off
+            dw.add(Line(x, 14, x, top, strokeColor=ink, strokeWidth=0.4))
+            for p in pts:
+                dw.add(Line(x - 2, top - p * sc, x + 2, top - p * sc, strokeColor=ink, strokeWidth=0.4))
+            segs = [(0, fl.width_cm, f"{_m(fl.width_cm)} m (largura)")] if total else \
+                [(a, c, _m(c - a)) for a, c in zip(pts, pts[1:])]
+            for a, c, t in segs:
+                g = Group(String(0, 0, t, fontSize=6 if total else 5, textAnchor="middle", fillColor=ink))
+                g.translate(x - 1.5, top - (a + c) / 2 * sc)
+                g.rotate(90)
+                dw.add(g)
+        # desloca tudo para dar lugar às cotas à esquerda
+        allg = Group(*dw.contents)
+        allg.translate(M, 0)
+        dw.contents = [allg]
     return dw
 
 
-def to_pdf(rep: SiteReport) -> bytes:
+def to_pdf(rep: SiteReport, dims: str = "summary") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -480,7 +516,7 @@ def to_pdf(rep: SiteReport) -> bytes:
     # planta + compras
     story.append(PageBreak())
     story.append(Paragraph("Planta (vista de cima)", h2))
-    fd = _floor_drawing(rep.plan, width, 105 * mm) if rep.plan else None
+    fd = _floor_drawing(rep.plan, width, 105 * mm, dims) if rep.plan else None
     if fd is not None:
         story.append(fd)
         leg = " · ".join(f"{s.struct.code} ({s.qty})" for s in rep.plan.structs if s.qty)

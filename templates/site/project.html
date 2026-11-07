@@ -355,7 +355,7 @@
             title="Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-funnel"></i> Sugerir redução da demanda</button>
     <a class="btn btn-primary" href="/optimization/site/{{ project.id }}/plan"><i class="bi bi-list-check"></i> Plano detalhado</a>
     <a class="btn btn-outline-success" href="/optimization/site/{{ project.id }}/plan.xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>
-    <a class="btn btn-outline-danger" href="/optimization/site/{{ project.id }}/plan.pdf"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    <a class="btn btn-outline-danger" href="/optimization/site/{{ project.id }}/plan.pdf" data-dims-link><i class="bi bi-file-earmark-pdf"></i> PDF</a>
     {% if plan.modules and not plan.errors %}
     <button class="btn btn-accent" type="button" data-bs-toggle="collapse" data-bs-target="#createBranch"><i class="bi bi-building-check"></i> Gerar cadastro da filial</button>
     {% endif %}
@@ -421,7 +421,7 @@
 </div>
 
 <div class="card mb-3">
-  <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong>
+  <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong> <span data-dims-control></span>
     <span class="small">{% for s in plan.structs if s.qty %}<span class="me-3"><span class="d-inline-block rounded-1 align-middle" style="width:12px;height:12px;background:{{ colors[s.struct.id] }}"></span> {{ s.struct.code }} ({{ s.qty }})</span>{% endfor %}
       <span class="text-muted">· cor mais forte = mais ocupado · tracejado = espaço de fileira livre</span></span></div>
   <div class="card-body">{{ svg|safe }}</div>

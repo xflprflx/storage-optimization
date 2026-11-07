@@ -1423,38 +1423,85 @@ def area_label(plan: SitePlan, label: str) -> str:
     return label + (f" · corredor {', '.join(codes)}" if codes else "")
 
 
+DIM_MODES = {"none": "Ocultar medidas", "summary": "Resumo (C × L)", "full": "Medidas ao longo da planta"}
+DIM_KINDS = ("zone", "obstacle", "reserved", "avenue", "aisle", "cross")  # áreas que entram nas cotas encadeadas
+
+
+def dim_mode(v) -> str:
+    return v if v in DIM_MODES else "summary"
+
+
+def _chain(points, total: float, min_gap: float) -> list[float]:
+    """Pontos de cota de 0 a `total` (cm), sem trechos menores que `min_gap` (o rótulo não caberia)."""
+    pts = sorted({round(min(max(p, 0.0), total), 1) for p in points})
+    out = [0.0]
+    for p in pts:
+        if p - out[-1] >= min_gap and total - p >= min_gap:
+            out.append(p)
+    out.append(float(total))
+    return out
+
+
+def dim_chains(fl, min_gap_x: float, min_gap_y: float) -> tuple[list[float], list[float]]:
+    """Cotas encadeadas da planta (cm): bordas de zonas, obstáculos, faixas, avenidas e corredores, ao longo do
+    comprimento (X) e da largura (Y)."""
+    xs, ys = [], []
+    for kind, X, Y, w, d, _ in fl.shapes():
+        if kind in DIM_KINDS and w > 0 and d > 0:
+            xs += [X, X + w]
+            ys += [Y, Y + d]
+    return _chain(xs, fl.length_cm, min_gap_x), _chain(ys, fl.width_cm, min_gap_y)
+
+
+def _m(cm: float) -> str:
+    return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
 def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
+    """Planta vista de cima. As medidas vêm em camadas (classes `nk-dim-s` = resumo, `nk-dim-f` = completas) que a
+    tela mostra conforme a escolha do usuário (`data-dims` no SVG; ver base.html); `data-vb-base`/`data-vb-full`
+    são as áreas de desenho sem e com as cotas em volta."""
     fl, b = plan.floor, plan.building
     if not fl.length_cm or not fl.width_cm or not fl.zones:
         return ""
     sc = width_px / fl.length_cm
     W, H = fl.length_cm * sc, fl.width_cm * sc
     color = {s.struct.id: PALETTE[i % len(PALETTE)] for i, s in enumerate(plan.structs)}
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 {W + 4:.1f} {H + 22:.1f}" class="w-100" '
-           f'style="max-height:70vh" font-family="sans-serif">',
+    vb_base = f"-2 -2 {W + 4:.1f} {H + 22:.1f}"
+    vb_full = f"-40 -40 {W + 44:.1f} {H + 60:.1f}"
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb_base}" data-vb-base="{vb_base}" data-vb-full="{vb_full}" '
+           f'data-dims="summary" class="w-100 nk-floor" style="max-height:70vh" font-family="sans-serif">',
            f'<rect x="0" y="0" width="{W:.1f}" height="{H:.1f}" fill="#fbfcfd" stroke="#1f2d33" stroke-width="2"/>']
+    full = []  # camada de medidas completas (desenhada por cima)
     for kind, X, Y, w, d, label in fl.shapes():
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999", ""))
         out.append(f'<rect x="{X * sc:.1f}" y="{Y * sc:.1f}" width="{w * sc:.1f}" height="{d * sc:.1f}" fill="{fill}" '
                    f'stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
+        size = f"{_m(w)} × {_m(d)} m"
         if label and kind == "zone":
             if w * sc < 60:  # zona estreita: nome na vertical, dentro da zona
                 tx, ty = (X + w / 2) * sc, (Y + 12) * sc
                 out.append(f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="9" fill="#4a6a94" '
-                           f'transform="rotate(90 {tx:.1f} {ty:.1f})">{label}</text>')
+                           f'transform="rotate(90 {tx:.1f} {ty:.1f})">{label}'
+                           f'<tspan class="nk-dim-f"> · {size}</tspan></text>')
             else:  # acima da zona; encostada no topo do imóvel: logo abaixo da borda
                 ty = Y * sc - 3 if Y * sc > 14 else Y * sc + 11
-                out.append(f'<text x="{(X + 15) * sc:.1f}" y="{ty:.1f}" font-size="10" fill="#4a6a94">{label}</text>')
+                out.append(f'<text x="{(X + 15) * sc:.1f}" y="{ty:.1f}" font-size="10" fill="#4a6a94">{label}'
+                           f'<tspan class="nk-dim-f"> · {size} · X {_m(X)} · Y {_m(Y)}</tspan></text>')
         if label and kind == "obstacle":
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
             out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '
                        f'fill="#ffffff">{label}</text>')
+            if d * sc >= 30:
+                full.append(f'<text class="nk-dim-f" x="{cx:.1f}" y="{cy + 12:.1f}" font-size="9" text-anchor="middle" '
+                            f'dominant-baseline="middle" fill="#dfe5ea">{size}</text>')
         if label and kind in ("reserved", "avenue"):
             label = area_label(plan, label)
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
             rot = f' transform="rotate(-90 {cx:.1f} {cy:.1f})"' if d > w else ""
             out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '
-                       f'fill="{"#8a6d1c" if kind == "reserved" else "#3b5b8c"}"{rot}>{label}</text>')
+                       f'fill="{"#8a6d1c" if kind == "reserved" else "#3b5b8c"}"{rot}>{label}'
+                       f'<tspan class="nk-dim-f"> · {_m(min(w, d))} m</tspan></text>')
     for txt, X, Y, vertical in aisle_labels(plan):
         rot = f' transform="rotate(90 {X * sc:.1f} {Y * sc:.1f})"' if vertical else ""
         out.append(f'<text x="{X * sc:.1f}" y="{Y * sc:.1f}" font-size="11" fill="#5b6770" font-weight="bold" '
@@ -1473,10 +1520,42 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
                    f'fill="{color[m.struct.id]}" fill-opacity="{op:.2f}" '
                    + ('stroke="#1f2d33" stroke-width="1" stroke-dasharray="2 1"' if m.rotated else 'stroke="#fff" stroke-width="0.6"')
                    + f'><title>{title}</title></rect>')
+    out += full
+    # cotas: total (externa) e encadeada (interna), em cima (X) e à esquerda (Y)
+    xs, ys = dim_chains(fl, 30 / sc, 30 / sc)
+    g = ['<g class="nk-dim-f" stroke="#5b6770" stroke-width="0.8" font-size="9" fill="#1f2d33">']
+
+    def hchain(pts, y, label_total=None):
+        g.append(f'<line x1="0" y1="{y}" x2="{W:.1f}" y2="{y}"/>')
+        for p in pts:
+            g.append(f'<line x1="{p * sc:.1f}" y1="{y - 3}" x2="{p * sc:.1f}" y2="{y + 3}"/>')
+        if label_total:
+            g.append(f'<text x="{W / 2:.1f}" y="{y - 3}" text-anchor="middle" stroke="none" font-weight="bold">{label_total}</text>')
+            return
+        for a, c in zip(pts, pts[1:]):
+            g.append(f'<text x="{(a + c) / 2 * sc:.1f}" y="{y - 3}" text-anchor="middle" stroke="none">{_m(c - a)}</text>')
+
+    def vchain(pts, x, label_total=None):
+        g.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{H:.1f}"/>')
+        for p in pts:
+            g.append(f'<line x1="{x - 3}" y1="{p * sc:.1f}" x2="{x + 3}" y2="{p * sc:.1f}"/>')
+        items = [((0, pts[-1]), label_total)] if label_total else [((a, c), _m(c - a)) for a, c in zip(pts, pts[1:])]
+        for (a, c), t in items:
+            cy = (a + c) / 2 * sc
+            g.append(f'<text x="{x - 3}" y="{cy:.1f}" text-anchor="middle" stroke="none" transform="rotate(-90 {x - 3} {cy:.1f})"'
+                     + (' font-weight="bold"' if label_total else "") + f'>{t}</text>')
+
+    hchain([0, fl.length_cm], -28, f"{_m(fl.length_cm)} m (comprimento)")
+    hchain(xs, -10)
+    vchain([0, fl.width_cm], -28, f"{_m(fl.width_cm)} m (largura)")
+    vchain(ys, -10)
+    g.append("</g>")
+    out += g
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
             f'fileiras ao longo do {"comprimento" if fl.along == "length" else "largura"}')
-    out.append(f'<text x="0" y="{H + 15:.1f}" font-size="11" fill="#5b6770">{b.length_m:g} m × {b.width_m:g} m '
-               f'(comprimento na horizontal) · {desc} · {len(fl.rows)} fileira(s), {fl.real_aisles} corredor(es)'
+    out.append(f'<text x="0" y="{H + 15:.1f}" font-size="11" fill="#5b6770"><tspan class="nk-dim-s" font-weight="bold" '
+               f'fill="#1f2d33">{b.length_m:g} × {b.width_m:g} m · </tspan>{desc} · {len(fl.rows)} fileira(s), '
+               f'{fl.real_aisles} corredor(es)'
                + (f' · {plan.end_caps} cabeceira(s) (contorno tracejado)' if plan.end_caps else '') + '</text>')
     out.append("</svg>")
     return "".join(out)

@@ -20,7 +20,7 @@ from services.addressing import normalize_code
 from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
 from services.site_planner import (CAP_ALIGN, ORIENTATIONS, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, ZONE_ORIENTATIONS,
-                                   floor_svg, struct_colors)
+                                   floor_svg, struct_colors, dim_mode)
 from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, config_from_form, create_branch, merged,
                                    run_project)
 
@@ -314,7 +314,7 @@ def _report_response(request: Request, pid: int, fmt: str, db: Session):
         return Response(report_xlsx(rep), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         headers={"Content-Disposition": _attachment(f"{name}.xlsx")})
     if fmt == "pdf":
-        return Response(report_pdf(rep), media_type="application/pdf",
+        return Response(report_pdf(rep, dim_mode(request.query_params.get("dims"))), media_type="application/pdf",
                         headers={"Content-Disposition": _attachment(f"{name}.pdf")})
     return render(request, "site/plan.html", project=pr, rep=rep, plan=rep.plan, svg=floor_svg(rep.plan),
                   colors=struct_colors(rep.plan))

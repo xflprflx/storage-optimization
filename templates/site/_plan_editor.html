@@ -129,8 +129,12 @@
     if (!st) { body.innerHTML = '<div class="small text-muted py-3 text-center">Informe comprimento e largura do imóvel para ver a planta.</div>'; return; }
     const { L, W } = st, m = Math.max(L, W) * 0.07;
     const fs = Math.max(L, W) / 55;  // tamanho de fonte em metros
+    const dims = window.nkDims ? window.nkDims.get() : 'summary';  // none | summary | full
+    const full = dims === 'full';
     const arrow = 'nkArr-' + (host.dataset.planMode || 'x');  // id único por planta (duas plantas na página)
-    const svg = el('svg', { viewBox: `${-m * 1.4} ${-m * 1.4} ${L + m * 2} ${W + m * 2.2}`, class: 'nk-plan-svg' }, body);
+    const vb = full ? `${-m * 1.9} ${-m * 1.9} ${L + m * 2.4} ${W + m * 2.6}`
+      : dims === 'summary' ? `${-m * 0.3} ${-m * 0.9} ${L + m * 0.6} ${W + m * 1.2}` : `${-m * 0.3} ${-m * 0.3} ${L + m * 0.6} ${W + m * 0.6}`;
+    const svg = el('svg', { viewBox: vb, class: 'nk-plan-svg' }, body);
     const tool = edit ? (host.querySelector('[name=nk-tool]:checked')?.value || 'select') : 'view';
     svg.classList.add('tool-' + tool);
     // imóvel e cotas
@@ -144,11 +148,19 @@
     const defs = el('defs', {}, svg);
     const mk = el('marker', { id: arrow, viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#5b6770' }, mk);
-    dim(0, -m * 0.6, L, -m * 0.6, `${fmt(L, 2)} m (comprimento, X)`, false);
-    dim(-m * 0.6, 0, -m * 0.6, W, `${fmt(W, 2)} m (largura, Y)`, true);
+    if (full) {
+      dim(0, -m * 1.3, L, -m * 1.3, `${fmt(L, 2)} m (comprimento, X)`, false);
+      dim(-m * 1.3, 0, -m * 1.3, W, `${fmt(W, 2)} m (largura, Y)`, true);
+    } else if (dims === 'summary') {
+      text(svg, 0, -m * 0.3, `${fmt(L, 2)} × ${fmt(W, 2)} m`, { 'font-size': fs * 1.2, 'font-weight': 'bold', fill: '#1f2d33' });
+    }
+    const brk = { x: [], y: [] };  // pontos das cotas encadeadas (modo completo)
+    const addBrk = (x, y, w, h) => { if (w > 0 && h > 0) { brk.x.push(x, x + w); brk.y.push(y, y + h); } };
     // faixas reservadas e avenidas
     const strip = (x, w, label, fill, stroke) => {
       if (w <= 0) return;
+      addBrk(x, st.gap, w, W - 2 * st.gap);
+      if (dims === 'none') label = label.replace(/ · .*$/, '');
       el('rect', { x, y: st.gap, width: w, height: W - 2 * st.gap, fill, stroke, 'stroke-width': fs * 0.05 }, svg);
       const cx = x + w / 2, cy = W / 2;
       text(svg, cx, cy, label, { 'font-size': fs * 0.9, 'text-anchor': 'middle', fill: '#5b6770', transform: `rotate(-90 ${cx} ${cy})` });
@@ -161,12 +173,14 @@
       const sty = { aisle: ['#eef2f4', 'none'], cross: ['#eef2f4', 'none'], lane: ['#e8f0fe', '#9ab7e6'] };
       server.shapes.forEach(([k, x, y, w, d]) => {
         if (!sty[k]) return;
+        if (k !== 'lane') addBrk(x / 100, y / 100, w / 100, d / 100);
         el('rect', { x: x / 100, y: y / 100, width: w / 100, height: d / 100, fill: sty[k][0], stroke: sty[k][1], 'stroke-width': fs * 0.04 }, svg);
       });
     }
     // zonas e obstáculos
     const shape = (o, kind) => {
       const isZone = kind === 'zone';
+      addBrk(o.X, o.Y, o.Lx, o.Wy);
       const g = el('g', {}, svg);
       const r = el('rect', { x: o.X, y: o.Y, width: Math.max(0, o.Lx), height: Math.max(0, o.Wy), class: edit ? 'shape' : '',
         fill: isZone ? 'rgba(47,126,216,.08)' : '#2b2f33', stroke: isZone ? '#2f6db5' : '#111',
@@ -176,10 +190,10 @@
       const tAttrs = { 'font-size': fs * 0.85, fill: isZone ? '#24548c' : '#fff' };
       if (big) {
         text(g, o.X + fs * 0.4, o.Y + fs * 1.1, lbl, tAttrs);
-        text(g, o.X + fs * 0.4, o.Y + fs * 2.1, `${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} · Y ${fmt(o.Y)}`, { ...tAttrs, 'font-size': fs * 0.7 });
+        if (full) text(g, o.X + fs * 0.4, o.Y + fs * 2.1, `${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} · Y ${fmt(o.Y)}`, { ...tAttrs, 'font-size': fs * 0.7 });
       } else {
         const cx = o.X + o.Lx / 2, cy = o.Y + o.Wy / 2, vert = o.Wy > o.Lx;
-        text(g, cx, cy, `${lbl} (${fmt(o.Lx)} × ${fmt(o.Wy)})`, { ...tAttrs, 'font-size': fs * 0.7, 'text-anchor': 'middle',
+        text(g, cx, cy, full ? `${lbl} (${fmt(o.Lx)} × ${fmt(o.Wy)})` : lbl, { ...tAttrs, 'font-size': fs * 0.7, 'text-anchor': 'middle',
           'dominant-baseline': 'middle', transform: vert ? `rotate(-90 ${cx} ${cy})` : '' });
       }
       if (edit) {
@@ -194,6 +208,7 @@
     };
     st.zones.forEach(z => shape(z, 'zone'));
     st.obstacles.forEach(o => shape(o, 'obstacle'));
+    if (full) chains(svg, st, brk, m, fs);
     // notas
     const parts = [];
     if (server && server.error) parts.push(server.error);
@@ -206,6 +221,26 @@
       if (tool === 'zone' || tool === 'obstacle') startDraw(ev, svg, st, tool);
       else if (!ev.target.classList.contains('shape') && !ev.target.classList.contains('handle')) startDraw(ev, svg, st, tool);
     });
+  }
+  // cotas encadeadas: bordas de zonas, obstáculos, faixas, avenidas e corredores, em cima (X) e à esquerda (Y)
+  function chain(pts, total, minGap) {
+    const out = [0];
+    [...new Set(pts.map(p => Math.round(Math.min(Math.max(p, 0), total) * 100) / 100))].sort((a, b) => a - b)
+      .forEach(p => { if (p - out[out.length - 1] >= minGap && total - p >= minGap) out.push(p); });
+    out.push(total);
+    return out;
+  }
+  function chains(svg, st, brk, m, fs) {
+    const g = el('g', { stroke: '#5b6770', 'stroke-width': fs * 0.06 }, svg), t = fs * 0.35, minGap = fs * 2.6;
+    const tA = { 'font-size': fs * 0.75, 'text-anchor': 'middle', fill: '#1f2d33', stroke: 'none' };
+    const xs = chain(brk.x, st.L, minGap), y = -m * 0.45;
+    el('line', { x1: 0, y1: y, x2: st.L, y2: y }, g);
+    xs.forEach(p => el('line', { x1: p, y1: y - t, x2: p, y2: y + t }, g));
+    xs.slice(1).forEach((p, i) => text(g, (p + xs[i]) / 2, y - t, fmt(p - xs[i], 2), tA));
+    const ys = chain(brk.y, st.W, minGap), x = -m * 0.45;
+    el('line', { x1: x, y1: 0, x2: x, y2: st.W }, g);
+    ys.forEach(p => el('line', { x1: x - t, y1: p, x2: x + t, y2: p }, g));
+    ys.slice(1).forEach((p, i) => { const cy = (p + ys[i]) / 2; text(g, x - t, cy, fmt(p - ys[i], 2), { ...tA, transform: `rotate(-90 ${x - t} ${cy})` }); });
   }
   function point(svg, ev) {
     const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
@@ -273,6 +308,7 @@
     h.innerHTML = `
       <div class="d-flex flex-wrap align-items-center gap-3 small mb-2">
         <div class="form-check form-switch mb-0"><input class="form-check-input nk-show" type="checkbox"><label class="form-check-label">Mostrar planta</label></div>
+        <span data-dims-control class="nk-dims-wrap"></span>
         <div class="form-check form-switch mb-0 nk-rows-wrap"><input class="form-check-input nk-rows" type="checkbox"><label class="form-check-label" title="Calcula as fileiras e corredores com o mesmo motor da otimização (sem salvar)">Mostrar fileiras</label></div>
         ${edit ? `<div class="btn-group btn-group-sm nk-tools" role="group">
           <input type="radio" class="btn-check" name="nk-tool" value="select" id="nkt-sel" checked><label class="btn btn-outline-secondary" for="nkt-sel"><i class="bi bi-cursor"></i> Selecionar/mover</label>
@@ -288,6 +324,7 @@
       show.checked = on; rows.checked = ls.get('nk-plan-rows') === '1';
       body.style.display = on ? '' : 'none';
       h.querySelector('.nk-rows-wrap').style.display = on ? '' : 'none';
+      h.querySelector('.nk-dims-wrap').style.setProperty('display', on ? '' : 'none', 'important');
       h.querySelectorAll('.nk-tools, .nk-help').forEach(e => { e.style.display = on ? '' : 'none'; });
       h.querySelector('.nk-plan-note').style.display = on ? '' : 'none';
     };
@@ -310,6 +347,8 @@
   document.querySelectorAll('#zonesTable, #obsTable').forEach(t => t.addEventListener('focusin', e => {
     const tr = e.target.closest('tbody tr'); if (tr && tr !== sel) { select(tr); renderAll(); }
   }));
+  if (window.nkDims) window.nkDims.apply();  // monta os seletores de medidas recém-criados
+  document.addEventListener('nk-dims', renderAll);
   renderAll();
   refreshServer();
 })();

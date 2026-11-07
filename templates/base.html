@@ -56,6 +56,10 @@
     .nk-stepper-item.done .nk-stepper-num { background: #d1f0e6; color: #0f766e; }
     .nk-step-footer { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-top: 1rem;
       padding-top: .75rem; border-top: 1px dashed #e1e6ea; }
+    /* medidas nas plantas: resumo (nk-dim-s) e completas (nk-dim-f), conforme a escolha do usuário */
+    svg.nk-floor[data-dims="none"] .nk-dim-s, svg.nk-floor[data-dims="none"] .nk-dim-f,
+    svg.nk-floor[data-dims="summary"] .nk-dim-f { display: none; }
+    .nk-dims-ctl .btn { --bs-btn-padding-y: .1rem; --bs-btn-padding-x: .45rem; --bs-btn-font-size: .78rem; }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -347,6 +351,45 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
     else { try { const v = sessionStorage.getItem(key); if (v !== null) start = parseInt(v, 10) || 0; } catch (e) { /* idem */ } }
     show(start);
   });
+})();
+</script>
+<script>
+/* Medidas nas plantas: "Ocultar", "Resumo (C × L)" ou "Ao longo da planta". A escolha vale para todas as plantas
+   (SVG com class nk-floor, desenho do projeto) e para o PDF (links com data-dims-link) e fica salva no navegador.
+   Seletor: qualquer elemento com data-dims-control. */
+(function () {
+  const KEY = 'nk-plan-dims', MODES = [['none', 'Ocultar', 'bi-eye-slash'], ['summary', 'Resumo', 'bi-aspect-ratio'], ['full', 'Completas', 'bi-rulers']];
+  const get = () => { let v = null; try { v = localStorage.getItem(KEY); } catch (e) { /* sem armazenamento */ } return ['none', 'summary', 'full'].includes(v) ? v : 'summary'; };
+  let n = 0;
+  function mount(el) {
+    if (el.dataset.dimsMounted) return;
+    el.dataset.dimsMounted = '1';
+    const id = 'nkdims' + (++n);
+    el.classList.add('nk-dims-ctl', 'd-inline-flex', 'align-items-center', 'gap-1', 'small');
+    el.innerHTML = '<span class="text-muted"><i class="bi bi-rulers"></i> Medidas:</span><div class="btn-group btn-group-sm" role="group">' +
+      MODES.map(([v, t, ic]) => `<input type="radio" class="btn-check" name="${id}" id="${id}-${v}" value="${v}" autocomplete="off">` +
+        `<label class="btn btn-outline-secondary" for="${id}-${v}" title="${v === 'none' ? 'Sem medidas' : v === 'summary' ? 'Só o tamanho do imóvel (ex.: 40 × 25 m)' : 'Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores'}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>';
+    el.querySelectorAll('input').forEach(i => i.addEventListener('change', () => set(i.value)));
+  }
+  function apply() {
+    const v = get();
+    document.querySelectorAll('[data-dims-control]').forEach(el => { mount(el); const i = el.querySelector(`input[value="${v}"]`); if (i) i.checked = true; });
+    document.querySelectorAll('svg.nk-floor').forEach(s => {
+      s.dataset.dims = v;
+      const vb = v === 'full' ? s.dataset.vbFull : s.dataset.vbBase;
+      if (vb) s.setAttribute('viewBox', vb);
+    });
+    document.querySelectorAll('a[data-dims-link]').forEach(a => {
+      const u = new URL(a.getAttribute('href'), location.href); u.searchParams.set('dims', v); a.setAttribute('href', u.pathname + u.search);
+    });
+  }
+  function set(v) {
+    try { localStorage.setItem(KEY, v); } catch (e) { /* sem armazenamento */ }
+    apply();
+    document.dispatchEvent(new CustomEvent('nk-dims', { detail: v }));
+  }
+  window.nkDims = { get, set, apply, mount };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply();
 })();
 </script>
 {% block scripts %}{% endblock %}

@@ -348,17 +348,19 @@ def to_xlsx(rep: SiteReport) -> bytes:
 # --------------------------------------------------------------------------- #
 # PDF
 # --------------------------------------------------------------------------- #
-def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summary"):
-    """Planta vista de cima (reportlab), na mesma escala do SVG da tela. `dims`: none | summary | full (cotas)."""
+def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summary", pos: str = "out"):
+    """Planta vista de cima (reportlab), na mesma escala do SVG da tela. `dims`: none | summary | full (cotas);
+    `pos`: cotas completas por fora da planta (out) ou por dentro, em cada zona e obstáculo (in)."""
     from reportlab.graphics.shapes import Drawing, Group, Line, Rect, String
     from reportlab.lib import colors
 
-    from services.site_planner import SHAPE_STYLE, _m, aisle_labels, area_label, dim_chains
+    from services.site_planner import SHAPE_STYLE, _m, aisle_labels, area_label, dim_chains, inner_dims
 
     fl, b = plan.floor, plan.building
     if not fl.length_cm or not fl.width_cm or not fl.zones:
         return None
-    full = dims == "full"
+    inside = dims == "full" and pos == "in"
+    full = dims == "full" and not inside
     M = 26 if full else 0  # margem das cotas (em cima e à esquerda)
     sc = min((max_w - M) / fl.length_cm, (max_h - 14 - M) / fl.width_cm)
     W, H = fl.length_cm * sc, fl.width_cm * sc
@@ -411,6 +413,24 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
     dw.add(String(0, 2, f"{size}{desc} · "
                         "amarelo = docas/áreas reservadas · azul = avenidas · preto = obstáculos · tracejado = cabeceiras",
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
+    if inside:
+        blue = colors.HexColor("#24548C")
+        for x1, y1, x2, y2, label, vertical, kind in inner_dims(fl, 6 / sc, 14 / sc):
+            X1, Y1, X2, Y2 = x1 * sc, 14 + H - y1 * sc, x2 * sc, 14 + H - y2 * sc
+            ob = kind == "obstacle"  # sobre fundo escuro: linha e texto claros, sem fundo
+            ink = colors.HexColor("#DFE5EA") if ob else blue
+            dw.add(Line(X1, Y1, X2, Y2, strokeColor=ink, strokeWidth=0.4))
+            for X, Y in ((X1, Y1), (X2, Y2)):
+                dw.add(Line(X - 1.5 if vertical else X, Y if vertical else Y - 1.5,
+                            X + 1.5 if vertical else X, Y if vertical else Y + 1.5, strokeColor=ink, strokeWidth=0.4))
+            cx, cy = (X1 + X2) / 2, (Y1 + Y2) / 2
+            st = String(0, 0, label, fontSize=5, textAnchor="middle", fillColor=colors.white if ob else blue)
+            g = Group(st) if ob else Group(Rect(-len(label) * 1.4 - 1, -1, len(label) * 2.8 + 2, 5.5,
+                                                fillColor=colors.white, strokeColor=None), st)
+            g.translate(cx - 1.5 if vertical else cx, cy if vertical else cy + 1.2)
+            if vertical:
+                g.rotate(90)
+            dw.add(g)
     if full:
         ink = colors.HexColor("#5B6770")
         top = 14 + H  # borda de cima do imóvel no desenho
@@ -447,7 +467,7 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
     return dw
 
 
-def to_pdf(rep: SiteReport, dims: str = "summary") -> bytes:
+def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -516,7 +536,7 @@ def to_pdf(rep: SiteReport, dims: str = "summary") -> bytes:
     # planta + compras
     story.append(PageBreak())
     story.append(Paragraph("Planta (vista de cima)", h2))
-    fd = _floor_drawing(rep.plan, width, 105 * mm, dims) if rep.plan else None
+    fd = _floor_drawing(rep.plan, width, 105 * mm, dims, pos) if rep.plan else None
     if fd is not None:
         story.append(fd)
         leg = " · ".join(f"{s.struct.code} ({s.qty})" for s in rep.plan.structs if s.qty)

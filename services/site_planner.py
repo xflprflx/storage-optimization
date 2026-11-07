@@ -1453,6 +1453,30 @@ def dim_chains(fl, min_gap_x: float, min_gap_y: float) -> tuple[list[float], lis
     return _chain(xs, fl.length_cm, min_gap_x), _chain(ys, fl.width_cm, min_gap_y)
 
 
+DIM_POSITIONS = {"out": "Por fora da planta", "in": "Por dentro (em cada zona e obstáculo)"}
+
+
+def dim_pos(v) -> str:
+    return v if v in DIM_POSITIONS else "out"
+
+
+def inner_dims(fl, off: float, min_len: float) -> list[tuple]:
+    """Cotas por dentro da planta (cm): comprimento e largura de cada zona e obstáculo, rente à borda de baixo e à da
+    direita (o nome fica no canto de cima). [(x1, y1, x2, y2, rótulo, vertical?, "zone" | "obstacle")]; lados menores que
+    `min_len` ficam sem cota. (Na tela de edição, a forma selecionada ganha também a distância até a vizinha.)"""
+    out = []
+    for kind, X, Y, w, d, _ in fl.shapes():
+        if kind not in ("zone", "obstacle") or w <= 0 or d <= 0:
+            continue
+        if w >= min_len:
+            y = Y + d - min(off, d / 2)
+            out.append((X, y, X + w, y, _m(w), False, kind))
+        if d >= min_len:
+            x = X + w - min(off, w / 2)
+            out.append((x, Y, x, Y + d, _m(d), True, kind))
+    return out
+
+
 def _m(cm: float) -> str:
     return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", ",")
 
@@ -1470,7 +1494,7 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     vb_base = f"-2 -2 {W + 4:.1f} {H + 22:.1f}"
     vb_full = f"-40 -40 {W + 44:.1f} {H + 60:.1f}"
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb_base}" data-vb-base="{vb_base}" data-vb-full="{vb_full}" '
-           f'data-dims="summary" class="w-100 nk-floor" style="max-height:70vh" font-family="sans-serif">',
+           f'data-dims="summary" data-dims-pos="out" class="w-100 nk-floor" style="max-height:70vh" font-family="sans-serif">',
            f'<rect x="0" y="0" width="{W:.1f}" height="{H:.1f}" fill="#fbfcfd" stroke="#1f2d33" stroke-width="2"/>']
     full = []  # camada de medidas completas (desenhada por cima)
     for kind, X, Y, w, d, label in fl.shapes():
@@ -1483,17 +1507,17 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
                 tx, ty = (X + w / 2) * sc, (Y + 12) * sc
                 out.append(f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="9" fill="#4a6a94" '
                            f'transform="rotate(90 {tx:.1f} {ty:.1f})">{label}'
-                           f'<tspan class="nk-dim-f"> · {size}</tspan></text>')
+                           f'<tspan class="nk-dim-fo"> · {size}</tspan></text>')
             else:  # acima da zona; encostada no topo do imóvel: logo abaixo da borda
                 ty = Y * sc - 3 if Y * sc > 14 else Y * sc + 11
                 out.append(f'<text x="{(X + 15) * sc:.1f}" y="{ty:.1f}" font-size="10" fill="#4a6a94">{label}'
-                           f'<tspan class="nk-dim-f"> · {size} · X {_m(X)} · Y {_m(Y)}</tspan></text>')
+                           f'<tspan class="nk-dim-fo"> · {size} · X {_m(X)} · Y {_m(Y)}</tspan></text>')
         if label and kind == "obstacle":
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
             out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '
                        f'fill="#ffffff">{label}</text>')
             if d * sc >= 30:
-                full.append(f'<text class="nk-dim-f" x="{cx:.1f}" y="{cy + 12:.1f}" font-size="9" text-anchor="middle" '
+                full.append(f'<text class="nk-dim-fo" x="{cx:.1f}" y="{cy + 12:.1f}" font-size="9" text-anchor="middle" '
                             f'dominant-baseline="middle" fill="#dfe5ea">{size}</text>')
         if label and kind in ("reserved", "avenue"):
             label = area_label(plan, label)
@@ -1523,7 +1547,7 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     out += full
     # cotas: total (externa) e encadeada (interna), em cima (X) e à esquerda (Y)
     xs, ys = dim_chains(fl, 30 / sc, 30 / sc)
-    g = ['<g class="nk-dim-f" stroke="#5b6770" stroke-width="0.8" font-size="9" fill="#1f2d33">']
+    g = ['<g class="nk-dim-fo" stroke="#5b6770" stroke-width="0.8" font-size="9" fill="#1f2d33">']
 
     def hchain(pts, y, label_total=None):
         g.append(f'<line x1="0" y1="{y}" x2="{W:.1f}" y2="{y}"/>')
@@ -1549,6 +1573,23 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     hchain(xs, -10)
     vchain([0, fl.width_cm], -28, f"{_m(fl.width_cm)} m (largura)")
     vchain(ys, -10)
+    g.append("</g>")
+    out += g
+    # cotas por dentro: tamanho de cada zona/obstáculo e distância às paredes
+    g = ['<g class="nk-dim-fi" stroke="#24548c" stroke-width="0.7" font-size="9" fill="#24548c">']
+    for x1, y1, x2, y2, label, vertical, kind in inner_dims(fl, 10 / sc, 24 / sc):
+        X1, Y1, X2, Y2 = x1 * sc, y1 * sc, x2 * sc, y2 * sc
+        ob = kind == "obstacle"  # sobre fundo escuro: linha e texto claros
+        ink = ' stroke="#dfe5ea"' if ob else ""
+        g.append(f'<line x1="{X1:.1f}" y1="{Y1:.1f}" x2="{X2:.1f}" y2="{Y2:.1f}"{ink}/>')
+        for X, Y in ((X1, Y1), (X2, Y2)):
+            g.append(f'<line x1="{X - 3 if vertical else X:.1f}" y1="{Y if vertical else Y - 3:.1f}" '
+                     f'x2="{X + 3 if vertical else X:.1f}" y2="{Y if vertical else Y + 3:.1f}"{ink}/>')
+        cx, cy = (X1 + X2) / 2, (Y1 + Y2) / 2
+        rot = f' transform="rotate(-90 {cx - 3:.1f} {cy:.1f})"' if vertical else ""
+        style = 'fill="#ffffff"' if ob else 'stroke="#fff" stroke-width="2" paint-order="stroke"'
+        g.append(f'<text x="{cx - 3 if vertical else cx:.1f}" y="{cy if vertical else cy - 3:.1f}" text-anchor="middle" '
+                 f'{style}{rot}>{label}</text>')
     g.append("</g>")
     out += g
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else

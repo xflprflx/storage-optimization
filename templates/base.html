@@ -59,6 +59,8 @@
     /* medidas nas plantas: resumo (nk-dim-s) e completas (nk-dim-f), conforme a escolha do usuário */
     svg.nk-floor[data-dims="none"] .nk-dim-s, svg.nk-floor[data-dims="none"] .nk-dim-f,
     svg.nk-floor[data-dims="summary"] .nk-dim-f { display: none; }
+    svg.nk-floor:not([data-dims="full"]) :is(.nk-dim-fo, .nk-dim-fi),
+    svg.nk-floor[data-dims-pos="in"] .nk-dim-fo, svg.nk-floor[data-dims-pos="out"] .nk-dim-fi { display: none; }
     .nk-dims-ctl .btn { --bs-btn-padding-y: .1rem; --bs-btn-padding-x: .45rem; --bs-btn-font-size: .78rem; }
   </style>
   {% block head %}{% endblock %}
@@ -359,7 +361,9 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
    Seletor: qualquer elemento com data-dims-control. */
 (function () {
   const KEY = 'nk-plan-dims', MODES = [['none', 'Ocultar', 'bi-eye-slash'], ['summary', 'Resumo', 'bi-aspect-ratio'], ['full', 'Completas', 'bi-rulers']];
-  const get = () => { let v = null; try { v = localStorage.getItem(KEY); } catch (e) { /* sem armazenamento */ } return ['none', 'summary', 'full'].includes(v) ? v : 'summary'; };
+  const read = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const get = () => { const v = read(KEY); return ['none', 'summary', 'full'].includes(v) ? v : 'summary'; };
+  const getPos = () => read(KEY + '-pos') === 'in' ? 'in' : 'out';  // cotas completas: por fora da planta ou por dentro
   let n = 0;
   function mount(el) {
     if (el.dataset.dimsMounted) return;
@@ -368,19 +372,31 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
     el.classList.add('nk-dims-ctl', 'd-inline-flex', 'align-items-center', 'gap-1', 'small');
     el.innerHTML = '<span class="text-muted"><i class="bi bi-rulers"></i> Medidas:</span><div class="btn-group btn-group-sm" role="group">' +
       MODES.map(([v, t, ic]) => `<input type="radio" class="btn-check" name="${id}" id="${id}-${v}" value="${v}" autocomplete="off">` +
-        `<label class="btn btn-outline-secondary" for="${id}-${v}" title="${v === 'none' ? 'Sem medidas' : v === 'summary' ? 'Só o tamanho do imóvel (ex.: 40 × 25 m)' : 'Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores'}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>';
-    el.querySelectorAll('input').forEach(i => i.addEventListener('change', () => set(i.value)));
+        `<label class="btn btn-outline-secondary" for="${id}-${v}" title="${v === 'none' ? 'Sem medidas' : v === 'summary' ? 'Só o tamanho do imóvel (ex.: 40 × 25 m)' : 'Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores'}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>' +
+      '<div class="btn-group btn-group-sm nk-dims-pos" role="group">' +
+      [['out', 'Por fora', 'bi-arrows-angle-expand', 'Cotas encadeadas em volta da planta (bordas de cima e da esquerda)'],
+       ['in', 'Por dentro', 'bi-arrows-angle-contract', 'Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)']]
+        .map(([v, t, ic, tt]) => `<input type="radio" class="btn-check" name="${id}p" id="${id}p-${v}" value="${v}" autocomplete="off">` +
+          `<label class="btn btn-outline-secondary" for="${id}p-${v}" title="${tt}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>';
+    el.querySelectorAll(`input[name="${id}"]`).forEach(i => i.addEventListener('change', () => set(i.value)));
+    el.querySelectorAll(`input[name="${id}p"]`).forEach(i => i.addEventListener('change', () => setPos(i.value)));
   }
   function apply() {
     const v = get();
-    document.querySelectorAll('[data-dims-control]').forEach(el => { mount(el); const i = el.querySelector(`input[value="${v}"]`); if (i) i.checked = true; });
+    const pos = getPos();
+    document.querySelectorAll('[data-dims-control]').forEach(el => {
+      mount(el);
+      const i = el.querySelector(`.btn-group:not(.nk-dims-pos) input[value="${v}"]`); if (i) i.checked = true;
+      el.querySelectorAll('.nk-dims-pos input').forEach(r => { r.checked = r.value === pos; r.disabled = v !== 'full'; });
+      el.querySelector('.nk-dims-pos').style.display = v === 'full' ? '' : 'none';
+    });
     document.querySelectorAll('svg.nk-floor').forEach(s => {
-      s.dataset.dims = v;
-      const vb = v === 'full' ? s.dataset.vbFull : s.dataset.vbBase;
+      s.dataset.dims = v; s.dataset.dimsPos = pos;
+      const vb = v === 'full' && pos === 'out' ? s.dataset.vbFull : s.dataset.vbBase;
       if (vb) s.setAttribute('viewBox', vb);
     });
     document.querySelectorAll('a[data-dims-link]').forEach(a => {
-      const u = new URL(a.getAttribute('href'), location.href); u.searchParams.set('dims', v); a.setAttribute('href', u.pathname + u.search);
+      const u = new URL(a.getAttribute('href'), location.href); u.searchParams.set('dims', v); u.searchParams.set('pos', pos); a.setAttribute('href', u.pathname + u.search);
     });
   }
   function set(v) {
@@ -388,7 +404,12 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
     apply();
     document.dispatchEvent(new CustomEvent('nk-dims', { detail: v }));
   }
-  window.nkDims = { get, set, apply, mount };
+  function setPos(v) {
+    try { localStorage.setItem(KEY + '-pos', v); } catch (e) { /* sem armazenamento */ }
+    apply();
+    document.dispatchEvent(new CustomEvent('nk-dims', { detail: get() }));
+  }
+  window.nkDims = { get, getPos, set, setPos, apply, mount };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply); else apply();
 })();
 </script>

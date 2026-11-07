@@ -130,10 +130,11 @@
     const { L, W } = st, m = Math.max(L, W) * 0.07;
     const fs = Math.max(L, W) / 55;  // tamanho de fonte em metros
     const dims = window.nkDims ? window.nkDims.get() : 'summary';  // none | summary | full
-    const full = dims === 'full';
+    const inside = dims === 'full' && window.nkDims && window.nkDims.getPos() === 'in';  // cotas por dentro
+    const full = dims === 'full' && !inside;  // cotas por fora
     const arrow = 'nkArr-' + (host.dataset.planMode || 'x');  // id único por planta (duas plantas na página)
     const vb = full ? `${-m * 1.9} ${-m * 1.9} ${L + m * 2.4} ${W + m * 2.6}`
-      : dims === 'summary' ? `${-m * 0.3} ${-m * 0.9} ${L + m * 0.6} ${W + m * 1.2}` : `${-m * 0.3} ${-m * 0.3} ${L + m * 0.6} ${W + m * 0.6}`;
+      : dims === 'summary' || inside ? `${-m * 0.3} ${-m * 0.9} ${L + m * 0.6} ${W + m * 1.2}` : `${-m * 0.3} ${-m * 0.3} ${L + m * 0.6} ${W + m * 0.6}`;
     const svg = el('svg', { viewBox: vb, class: 'nk-plan-svg' }, body);
     const tool = edit ? (host.querySelector('[name=nk-tool]:checked')?.value || 'select') : 'view';
     svg.classList.add('tool-' + tool);
@@ -151,7 +152,7 @@
     if (full) {
       dim(0, -m * 1.3, L, -m * 1.3, `${fmt(L, 2)} m (comprimento, X)`, false);
       dim(-m * 1.3, 0, -m * 1.3, W, `${fmt(W, 2)} m (largura, Y)`, true);
-    } else if (dims === 'summary') {
+    } else if (dims === 'summary' || inside) {
       text(svg, 0, -m * 0.3, `${fmt(L, 2)} × ${fmt(W, 2)} m`, { 'font-size': fs * 1.2, 'font-weight': 'bold', fill: '#1f2d33' });
     }
     const brk = { x: [], y: [] };  // pontos das cotas encadeadas (modo completo)
@@ -209,6 +210,8 @@
     st.zones.forEach(z => shape(z, 'zone'));
     st.obstacles.forEach(o => shape(o, 'obstacle'));
     if (full) chains(svg, st, brk, m, fs);
+    svg._fs = fs; svg._inner = null;
+    if (inside) drawInner(svg, st, fs);
     // notas
     const parts = [];
     if (server && server.error) parts.push(server.error);
@@ -242,6 +245,43 @@
     ys.forEach(p => el('line', { x1: x - t, y1: p, x2: x + t, y2: p }, g));
     ys.slice(1).forEach((p, i) => { const cy = (p + ys[i]) / 2; text(g, x - t, cy, fmt(p - ys[i], 2), { ...tA, transform: `rotate(-90 ${x - t} ${cy})` }); });
   }
+  // cotas por dentro: comprimento e largura de cada zona/obstáculo (rente às bordas de baixo e da direita) e, para a
+  // forma selecionada ou em desenho/arraste, a distância até a vizinha mais próxima (ou a parede) nos quatro lados
+  function drawInner(svg, st, fs, extra) {
+    if (svg._inner) svg._inner.remove();
+    const g = svg._inner = el('g', { stroke: '#24548c', 'stroke-width': fs * 0.06, style: 'pointer-events:none' }, svg);
+    const off = fs * 0.7, minLen = fs * 2, t = fs * 0.3;
+    const tA = { 'font-size': fs * 0.72, 'text-anchor': 'middle', fill: '#24548c', stroke: '#fff', 'stroke-width': fs * 0.18, 'paint-order': 'stroke' };
+    const line = (x1, y1, x2, y2, label, vertical, gap, dark) => {  // dark: sobre obstáculo (fundo escuro)
+      const ink = gap ? '#c2410c' : dark ? '#dfe5ea' : '#24548c';
+      el('line', { x1, y1, x2, y2, 'stroke-dasharray': gap ? `${fs * 0.3} ${fs * 0.2}` : '', stroke: ink }, g);
+      [[x1, y1], [x2, y2]].forEach(([x, y]) => el('line', { ...(vertical ? { x1: x - t, y1: y, x2: x + t, y2: y } : { x1: x, y1: y - t, x2: x, y2: y + t }), stroke: ink }, g));
+      const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+      text(g, vertical ? cx - t : cx, vertical ? cy : cy - t, label,
+        { ...tA, fill: dark ? '#fff' : ink, ...(dark ? { stroke: 'none' } : {}), transform: vertical ? `rotate(-90 ${cx - t} ${cy})` : '' });
+    };
+    const rects = [...st.zones, ...st.obstacles.map(o => ({ ...o, obstacle: true }))].filter(o => o.Lx > 0 && o.Wy > 0);
+    const all = rects.concat(extra ? [extra] : []);
+    all.forEach(o => {
+      const { X, Y, Lx: w, Wy: d } = o, dark = !!o.obstacle;
+      if (w >= minLen) { const y = Y + d - Math.min(off, d / 2); line(X, y, X + w, y, fmt(w, 2), false, false, dark); }
+      if (d >= minLen) { const x = X + w - Math.min(off, w / 2); line(x, Y, x, Y + d, fmt(d, 2), true, false, dark); }
+    });
+    const focus = extra || rects.find(o => o.tr && o.tr === sel);
+    if (!focus) return;
+    const { X, Y, Lx: w, Wy: d } = focus, my = Y + d / 2, mx = X + w / 2, eps = 1e-6;
+    const others = rects.filter(o => o !== focus && o.tr !== focus.tr);
+    const inY = o => o.Y <= my + eps && o.Y + o.Wy >= my - eps, inX = o => o.X <= mx + eps && o.X + o.Lx >= mx - eps;
+    // bordas vizinhas: as duas bordas de cada forma cruzada pela linha (vale também a zona que contém a forma)
+    const xe = others.filter(inY).flatMap(o => [o.X, o.X + o.Lx]), ye = others.filter(inX).flatMap(o => [o.Y, o.Y + o.Wy]);
+    const left = Math.max(0, ...xe.filter(v => v <= X + eps)), right = Math.min(st.L, ...xe.filter(v => v >= X + w - eps));
+    const top = Math.max(0, ...ye.filter(v => v <= Y + eps)), bottom = Math.min(st.W, ...ye.filter(v => v >= Y + d - eps));
+    const gap = 0.05;
+    if (X - left > gap) line(left, my, X, my, fmt(X - left, 2), false, true);
+    if (right - (X + w) > gap) line(X + w, my, right, my, fmt(right - X - w, 2), false, true);
+    if (Y - top > gap) line(mx, top, mx, Y, fmt(Y - top, 2), true, true);
+    if (bottom - (Y + d) > gap) line(mx, Y + d, mx, bottom, fmt(bottom - Y - d, 2), true, true);
+  }
   function point(svg, ev) {
     const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
     return p.matrixTransform(svg.getScreenCTM().inverse());
@@ -257,12 +297,13 @@
       const x = clamp(Math.min(p0.x, p.x), st.L), y = clamp(Math.min(p0.y, p.y), st.W);
       tmp.setAttribute('x', x); tmp.setAttribute('y', y);
       tmp.setAttribute('width', clamp(Math.max(p0.x, p.x), st.L) - x); tmp.setAttribute('height', clamp(Math.max(p0.y, p.y), st.W) - y);
+      if (svg._inner) drawInner(svg, st, svg._fs, { X: x, Y: y, Lx: +tmp.getAttribute('width'), Wy: +tmp.getAttribute('height'), obstacle: tool === 'obstacle' });
     };
     const up = () => {
       svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up);
       const r = { x: snap(+tmp.getAttribute('x')), y: snap(+tmp.getAttribute('y')), len: snap(+tmp.getAttribute('width')), wid: snap(+tmp.getAttribute('height')) };
       tmp.remove();
-      if (r.len < 0.3 || r.wid < 0.3) return;
+      if (r.len < 0.3 || r.wid < 0.3) { renderAll(); return; }
       if (tool === 'zone' && st.zones.length && !st.positioned) toPositioned(st);
       const tr = addRow(tool, r);
       select(tr); renderAll(); scheduleServer();
@@ -291,6 +332,7 @@
       }
       rect.setAttribute('x', cur.X); rect.setAttribute('y', cur.Y); rect.setAttribute('width', cur.L); rect.setAttribute('height', cur.W);
       if (handle) { const hs = +handle.getAttribute('width'); handle.setAttribute('x', cur.X + cur.L - hs / 2); handle.setAttribute('y', cur.Y + cur.W - hs / 2); }
+      if (svg._inner) { const s2 = state(); if (s2) drawInner(svg, s2, svg._fs); }
     };
     const up = () => {
       svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up);

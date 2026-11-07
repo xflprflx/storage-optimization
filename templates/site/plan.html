@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Plano de implantação — {{ project.name }}{% endblock %}
+{% block head %}
+<style>
+  .kpi-card .v { font-size: 1.35rem; font-weight: 700; }
+  .ph-1 { background: #f4f6f8; } .ph-2 { background: #e8f0fe; } .ph-3 { background: #fff4e5; } .ph-4 { background: #e7f5ec; } .ph-5 { background: #fdecea; }
+  .grp-row td { background: #eef3f5 !important; font-weight: 600; font-size: .8rem; }
+  .step-done td { text-decoration: line-through; opacity: .55; }
+  .nk-scroll { max-height: 520px; overflow: auto; }
+  @media print {
+    nav.navbar, .no-print, .btn { display: none !important; }
+    body { background: #fff; } .card { box-shadow: none; border: 1px solid #ddd; }
+    .nk-scroll { max-height: none !important; overflow: visible !important; }
+    .page-break { page-break-before: always; }
+    .collapse:not(.show) { display: block !important; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-list-check"></i> {{ rep.title }}</h1>
+    <div class="small text-muted">Gerado em {{ rep.created.strftime('%d/%m/%Y %H:%M') }} · {{ rep.steps|length }} passo(s) em {{ rep.steps_by_phase()|length }} fase(s) · mesmo plano aprovado na tela do projeto</div>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+    <a href="/optimization/site/{{ project.id }}/plan.xlsx" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="/optimization/site/{{ project.id }}/plan.pdf" class="btn btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  </div>
+</div>
+
+{% for w in rep.warnings %}<div class="alert alert-warning py-2 small"><i class="bi bi-info-circle"></i> {{ w }}</div>{% endfor %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
+    <div class="fw-semibold mb-1">Imóvel e demanda</div>
+    <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in rep.scope %}<tr><td class="text-muted" style="width:30%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
+  </div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
+    <div class="fw-semibold mb-1">Regras e critérios</div>
+    <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in rep.params %}<tr><td class="text-muted" style="width:30%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
+  </div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  {% for k, v, c in rep.kpis %}
+  <div class="col-xl-2 col-md-4 col-6"><div class="card kpi-card h-100"><div class="card-body py-2">
+    <div class="small text-muted">{{ k }}</div><div class="v">{{ v }}</div><div class="small text-muted">{{ c }}</div>
+  </div></div></div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong>
+        <span class="small">{% for s in plan.structs if s.qty %}<span class="me-3"><span class="d-inline-block rounded-1 align-middle" style="width:12px;height:12px;background:{{ colors[s.struct.id] }}"></span> {{ s.struct.code }} ({{ s.qty }})</span>{% endfor %}</span></div>
+      <div class="card-body">{{ svg|safe }}</div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong><i class="bi bi-cart"></i> Lista de compras</strong></div>
+      <div class="table-responsive"><table class="table table-sm mb-0 small align-middle" data-no-resize>
+        <thead><tr><th>Item</th><th>Código</th><th class="text-end">Qtd.</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+        {% for pc in rep.purchases %}
+          <tr><td>{{ pc.kind }}<div class="text-muted" style="font-size:.72rem">{{ pc.note }}</div></td>
+            <td class="mono">{{ pc.code }}{% if pc.name %}<div class="text-muted" style="font-size:.72rem">{{ pc.name }}</div>{% endif %}</td>
+            <td class="text-end fw-semibold">{{ pc.qty|dec }}</td>
+            <td class="text-end">{{ ('R$ ' ~ pc.unit|dec(2)) if pc.unit is not none else '—' }}</td>
+            <td class="text-end">{{ ('R$ ' ~ pc.total|dec(2)) if pc.total is not none else '—' }}</td></tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr class="fw-semibold"><td colspan="4">Total</td><td class="text-end">{{ ('R$ ' ~ rep.purchase_total|dec(2)) if rep.purchase_total is not none else '—' }}</td></tr></tfoot>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3 page-break">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="bi bi-check2-square"></i> Passo a passo</strong>
+    <div class="d-flex gap-2 align-items-center no-print small">
+      <span class="text-muted"><span id="doneCount">0</span>/{{ rep.steps|length }} feito(s)</span>
+      <input class="form-control form-control-sm" style="max-width:220px" type="search" placeholder="Filtrar passos" id="stepFilter">
+      <button class="btn btn-sm btn-outline-secondary" type="button" id="clearDone">Desmarcar tudo</button>
+    </div>
+  </div>
+  <div class="card-body py-2 small text-muted">Marque os passos concluídos (fica salvo neste navegador). As fases seguem a ordem de implantação:
+    {% for label, steps in rep.steps_by_phase() %}<span class="badge ph-{{ steps[0].phase }} text-dark border me-1">{{ label }} ({{ steps|length }})</span>{% endfor %}</div>
+  <div class="nk-scroll">
+    <table class="table table-sm table-hover mb-0 small align-middle" id="steps" data-no-resize>
+      <thead class="sticky-top bg-white"><tr><th style="width:40px"></th><th style="width:50px">Nº</th><th>Ação</th><th>Onde</th><th>Descrição</th><th class="text-end">Qtd.</th></tr></thead>
+      <tbody>
+      {% for label, steps in rep.steps_by_phase() %}
+        <tr class="grp-row"><td colspan="6">{{ label }}</td></tr>
+        {% set grp = namespace(v='') %}
+        {% for s in steps %}
+          {% if s.group != grp.v and s.phase in (2, 3, 4) %}{% set grp.v = s.group %}<tr class="grp-row"><td></td><td colspan="5" class="fw-normal text-muted">{{ s.group }}</td></tr>{% endif %}
+          <tr class="step" data-n="{{ s.n }}">
+            <td><input class="form-check-input step-chk" type="checkbox" data-n="{{ s.n }}"></td>
+            <td class="text-muted">{{ s.n }}</td>
+            <td><span class="badge ph-{{ s.phase }} text-dark border">{{ s.action }}</span></td>
+            <td class="mono text-nowrap">{{ s.where }}</td>
+            <td>{{ s.detail }}</td>
+            <td class="text-end text-nowrap">{{ s.qty }}</td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card mb-3 page-break">
+  <div class="card-header bg-white"><strong><i class="bi bi-bookshelf"></i> Montagem das estantes ({{ rep.modules|length }})</strong>
+    <span class="small text-muted">— X = distância da parede da frente (docas), ao longo das fileiras; Y = distância da parede lateral (canto do módulo)</span></div>
+  <div class="table-responsive nk-scroll"><table class="table table-sm table-hover mb-0 small" data-no-resize>
+    <thead class="sticky-top bg-white"><tr><th>Estante</th><th>Estrutura</th><th class="text-end">Fileira</th><th>Lado</th><th class="text-end">X (m)</th><th class="text-end">Y (m)</th><th class="text-end">Níveis × vão</th><th>Níveis × bins</th></tr></thead>
+    <tbody>{% for r in rep.modules %}<tr><td class="mono fw-semibold">{{ r.bay }}</td><td class="mono">{{ r.struct }}</td><td class="text-end">{{ r.row }}</td><td>{{ r.side }}</td>
+      <td class="text-end">{{ r.x|dec(2) }}</td><td class="text-end">{{ r.y|dec(2) }}</td><td class="text-end text-nowrap">{{ r.levels }} × {{ r.level_h|dec }} cm</td><td class="mono" style="font-size:.75rem">{{ r.config }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header bg-white d-flex justify-content-between"><strong><i class="bi bi-geo-alt"></i> Endereços ({{ rep.addresses|length }})</strong>
+        <input class="form-control form-control-sm no-print" style="max-width:220px" type="search" placeholder="Filtrar endereço/SKU" id="addrFilter"></div>
+      <div class="table-responsive nk-scroll"><table class="table table-sm table-hover mb-0 small" id="addrTable" data-no-resize>
+        <thead class="sticky-top bg-white"><tr><th>Endereço</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unid.</th><th class="text-end">Peso</th></tr></thead>
+        <tbody>{% for r in rep.addresses %}<tr><td class="mono">{{ r.address }}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.bins }}</td><td class="mono">{{ r.sku }}</td><td>{{ r.name }}</td><td class="text-end">{{ r.units|dec }}</td><td class="text-end">{{ r.weight|dec(1) }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong><i class="bi bi-layers"></i> Níveis ({{ rep.levels|length }})</strong></div>
+      <div class="table-responsive nk-scroll"><table class="table table-sm mb-0 small" data-no-resize>
+        <thead class="sticky-top bg-white"><tr><th>Nível</th><th>Tipo</th><th class="text-end">Cap.</th><th class="text-end">Uso</th><th class="text-end">Carga</th></tr></thead>
+        <tbody>{% for r in rep.levels %}<tr class="{{ 'text-muted' if r.type == 'livre' else '' }}"><td class="mono">{{ r.bay }}-{{ r.level }}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.cap }}</td>
+          <td class="text-end">{{ r.used }}{% if r.cap %} <span class="text-muted">({{ (r.used / r.cap * 100)|round|int }}%)</span>{% endif %}</td>
+          <td class="text-end">{{ r.load|dec(1) }}{% if r.max_load %} <span class="text-muted">/ {{ r.max_load|dec }} kg</span>{% endif %}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const key = 'nk_site_plan_{{ project.id }}';
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { done = {}; }
+  const save = () => { try { localStorage.setItem(key, JSON.stringify(done)); } catch (e) {} };
+  const count = document.getElementById('doneCount');
+  const paint = () => {
+    let n = 0;
+    document.querySelectorAll('.step-chk').forEach(c => { c.checked = !!done[c.dataset.n]; c.closest('tr').classList.toggle('step-done', c.checked); if (c.checked) n++; });
+    count.textContent = n;
+  };
+  document.getElementById('steps').addEventListener('change', e => {
+    if (!e.target.classList.contains('step-chk')) return;
+    if (e.target.checked) done[e.target.dataset.n] = 1; else delete done[e.target.dataset.n];
+    save(); paint();
+  });
+  document.getElementById('clearDone').addEventListener('click', () => { if (confirm('Desmarcar todos os passos?')) { done = {}; save(); paint(); } });
+  paint();
+  const filt = (input, rows) => input && input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll(rows).forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+  });
+  filt(document.getElementById('stepFilter'), '#steps tr.step');
+  // com filtro: esconde os cabeçalhos de grupo/fase sem nenhum passo visível
+  const sf = document.getElementById('stepFilter');
+  sf && sf.addEventListener('input', () => {
+    const rows = [...document.querySelectorAll('#steps tbody tr')];
+    rows.forEach((tr, i) => {
+      if (!tr.classList.contains('grp-row')) return;
+      let any = false;
+      for (let j = i + 1; j < rows.length; j++) {
+        const r = rows[j];
+        if (r.classList.contains('grp-row')) { if (tr.querySelector('td[colspan="6"]') && !r.querySelector('td[colspan="6"]')) continue; break; }
+        if (r.style.display !== 'none') { any = true; break; }
+      }
+      tr.style.display = any || !sf.value.trim() ? '' : 'none';
+    });
+  });
+  filt(document.getElementById('addrFilter'), '#addrTable tbody tr');
+})();
+</script>
+{% endblock %}

@@ -798,10 +798,10 @@ def _place(plan: SitePlan, floor: Floor, active: list[StructureSpec], seg_mods: 
                 d.placed_bins += take
                 k -= take
                 units_left -= units
-        for d in order:
-            if d.placed_bins < d.total_bins and d.status == "ok":
-                d.status = "falta"
-                d.note = f"{d.total_bins - d.placed_bins} de {d.total_bins} bin(s) sem lugar."
+    for d in demands:  # depois de todos os tipos (um SKU pode usar mais de um tipo de bin)
+        if d.bins and d.placed_bins < d.total_bins and d.status == "ok":
+            d.status = "falta"
+            d.note = f"{d.total_bins - d.placed_bins} de {d.total_bins} bin(s) sem lugar."
     for d in demands:
         if d.status == "ok" and d.total_bins and len({p.address for p in plan.positions if p.sku == d.sku}) > 1:
             d.note = "Dividido em mais de uma posição."

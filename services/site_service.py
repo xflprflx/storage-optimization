@@ -16,7 +16,6 @@ from models import (
     LocationBin,
     Product,
     ShelfLevel,
-    SiteProject,
     StockItem,
     StorageLocation,
     StructureType,
@@ -309,92 +308,6 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
     plan = plan_site(b, structs, types, demands, prm, parents_of(db, types))
     plan.notes = notes + plan.notes
     return plan, []
-
-
-# --------------------------------------------------------------------------- #
-# Exportação
-# --------------------------------------------------------------------------- #
-def to_xlsx(plan: SitePlan, project: SiteProject, types: dict[int, BinSpec]) -> bytes:
-    from io import BytesIO
-
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill
-    from openpyxl.utils import get_column_letter
-
-    wb = Workbook()
-    head = (Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="0F2A2A"))
-
-    def table(ws, cols, rows):
-        ws.append(cols)
-        for c in ws[ws.max_row]:
-            c.font, c.fill = head
-        for r in rows:
-            ws.append(list(r))
-        for col in ws.columns:
-            w = max((len(str(c.value)) for c in col if c.value is not None), default=8) + 2
-            ws.column_dimensions[get_column_letter(col[0].column)].width = max(8, min(50, w))
-        ws.freeze_panes = "A2"
-
-    b = plan.building
-    ws = wb.active
-    ws.title = "Resumo"
-    ws.append([f"Projeto de filial: {project.name}"])
-    ws["A1"].font = Font(bold=True, size=14)
-    rows = [
-        ("Imóvel (m)", f"{b.length_m:g} × {b.width_m:g} × {b.clear_height_m:g} (pé-direito)"),
-        ("Área total (m²)", round(b.area_m2, 1)),
-        ("Fileiras / corredores", f"{len(plan.floor.rows)} / {len(plan.floor.aisles)}"),
-        ("Módulos de estrutura", plan.total_modules),
-        ("Custo das estruturas (R$)", round(plan.structures_cost, 2) if plan.structures_cost is not None else "—"),
-        ("Custo das bins (R$)", round(plan.bins_cost, 2) if plan.bins_cost is not None else "—"),
-        ("Custo total (R$)", round(plan.total_cost, 2) if plan.total_cost is not None else "—"),
-        ("Área ocupada pelas estruturas (m²)", round(plan.footprint_m2, 1)),
-        ("Uso das fileiras (%)", round(plan.row_use or 0, 1)),
-        ("Bins necessárias / alocadas", f"{plan.bins_needed} / {plan.bins_placed}"),
-        ("Ocupação dos níveis atribuídos (%)", round(plan.fill or 0, 1)),
-        ("Níveis: total / com tipo de bin / em uso", f"{plan.levels_total} / {plan.levels_assigned} / {plan.levels_used}"),
-        ("Solver", f"{plan.solver.get('status', '')} ({plan.solver.get('time', 0):.1f}s)"),
-        ("Prioridade dos critérios", " > ".join(st["label"] for st in plan.solver.get("stages", []))),
-    ]
-    for r in rows:
-        ws.append(list(r))
-    ws.column_dimensions["A"].width = 42
-    ws.column_dimensions["B"].width = 40
-    if plan.notes:
-        ws.append([])
-        ws.append(["Observações"])
-        for n in plan.notes:
-            ws.append([n])
-
-    table(wb.create_sheet("Estruturas"),
-          ["Código", "Nome", "Quantidade", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão (cm)",
-           "Custo unit. (R$)", "Custo total (R$)", "Metros de fileira", "Área (m²)", "Máx. que cabe na planta"],
-          [(s.struct.code, s.struct.name, s.qty, s.struct.width, s.struct.depth, s.struct.height, s.struct.levels,
-            s.struct.level_h, s.struct.cost, s.cost, round(s.front_m, 2), round(s.footprint_m2, 2), s.floor_max)
-           for s in plan.structs if s.qty or s.struct.mode != "off"])
-    table(wb.create_sheet("Bins"),
-          ["Tipo", "Necessárias", "Alocadas", "Falta", "Capacidade nos níveis", "Ocupação (%)", "Bin pai",
-           "Bins pai a comprar", "Custo unit. (R$)", "Custo total (R$)"],
-          [(t.spec.code, t.needed, t.placed, t.shortage, t.capacity, round(t.fill or 0, 1), t.parent_code,
-            t.parents or "", t.unit_cost, round(t.cost, 2) if t.cost is not None else None) for t in plan.types])
-    table(wb.create_sheet("Endereços"),
-          ["Endereço", "Corredor", "Estante", "Nível", "Posição", "Estrutura", "Tipo de bin", "Bins", "SKU",
-           "Produto", "Unidades", "Peso (kg)"],
-          [(p.address, p.aisle, p.bay, p.level, p.position, p.struct_code,
-            types[p.type_id].code if p.type_id in types else "?", p.bins, p.sku, p.name, p.units, round(p.weight, 2))
-           for p in plan.positions])
-    table(wb.create_sheet("SKUs"),
-          ["SKU", "Produto", "Material", "Quantidade", "Bins", "Situação", "Observação"],
-          [(d.sku, d.name, d.material, d.units,
-            ", ".join(f"{n}× {types[t].code}" for t, n in (d.bins or {}).items()), d.status_label, d.note)
-           for d in plan.demands])
-    table(wb.create_sheet("Níveis"),
-          ["Corredor", "Estante", "Estrutura", "Nível", "Tipo de bin", "Capacidade", "Em uso", "Carga (kg)"],
-          [(m.aisle, m.bay, m.struct.code, lv.n, types[lv.type_id].code if lv.type_id in types else "livre", lv.cap,
-            lv.used, round(lv.load, 1)) for m in plan.modules for lv in m.levels])
-    buf = BytesIO()
-    wb.save(buf)
-    return buf.getvalue()
 
 
 # --------------------------------------------------------------------------- #

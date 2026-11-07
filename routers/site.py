@@ -21,7 +21,7 @@ from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
 from services.site_planner import ORIENTATIONS, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, floor_svg, struct_colors
 from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, config_from_form, create_branch, merged,
-                                   run_project, to_xlsx)
+                                   run_project)
 
 router = APIRouter(prefix="/optimization/site", tags=["Projeto de filial nova"])
 
@@ -183,18 +183,52 @@ def delete_project(pid: int, db: Session = Depends(get_db)):
     return redirect("/optimization/site", "Projeto excluído.")
 
 
-@router.get("/{pid}/plan.xlsx")
-def export_xlsx(pid: int, db: Session = Depends(get_db)):
+def _report(db: Session, pr: SiteProject):
+    """Plano detalhado (o mesmo plano aprovado na tela). Retorna (relatório, erro)."""
+    from services.site_report import build_report
+
+    plan, errors, cfg = _plan_for(db, pr)
+    if errors or plan is None:
+        return None, " ".join(errors) or "Não foi possível gerar o plano."
+    names = {bt.id: bt.name for bt in db.scalars(select(BinType))}
+    return build_report(plan, pr.name, cfg, load_types(db), names), None
+
+
+def _report_response(request: Request, pid: int, fmt: str, db: Session):
+    from services.site_report import to_pdf as report_pdf
+    from services.site_report import to_xlsx as report_xlsx
+
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
-    plan, errors, _ = _plan_for(db, pr)
-    if errors or plan is None:
-        return redirect(f"/optimization/site/{pid}", " ".join(errors) or "Não foi possível gerar o plano.", "danger")
-    data = to_xlsx(plan, pr, load_types(db))
+    rep, err = _report(db, pr)
+    if err:
+        return redirect(f"/optimization/site/{pid}", err, "danger")
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in pr.name)[:60] or "projeto"
-    return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    headers={"Content-Disposition": f'attachment; filename="filial_{safe}.xlsx"'})
+    name = f"plano_filial_{safe}_{rep.created:%Y%m%d_%H%M}"
+    if fmt == "xlsx":
+        return Response(report_xlsx(rep), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.xlsx"'})
+    if fmt == "pdf":
+        return Response(report_pdf(rep), media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{name}.pdf"'})
+    return render(request, "site/plan.html", project=pr, rep=rep, plan=rep.plan, svg=floor_svg(rep.plan),
+                  colors=struct_colors(rep.plan))
+
+
+@router.get("/{pid}/plan")
+def plan_page(pid: int, request: Request, db: Session = Depends(get_db)):
+    return _report_response(request, pid, "html", db)
+
+
+@router.get("/{pid}/plan.xlsx")
+def export_xlsx(pid: int, request: Request, db: Session = Depends(get_db)):
+    return _report_response(request, pid, "xlsx", db)
+
+
+@router.get("/{pid}/plan.pdf")
+def export_pdf(pid: int, request: Request, db: Session = Depends(get_db)):
+    return _report_response(request, pid, "pdf", db)
 
 
 @router.post("/{pid}/create-branch")

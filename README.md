@@ -4,20 +4,32 @@ Sistema web local para gestão física de depósitos, mapa visual do estoque e o
 
 ## 🚀 Como rodar
 
-**Requisitos**: Python 3.10 ou superior.
+**Requisitos**: qualquer **Python 3.11 ou superior** (testado em 3.11, 3.12, 3.13 e 3.14). Não é preciso uma versão específica.
 
-**Windows**
+**Windows**: dê dois cliques em `start.bat` (ou rode no terminal):
 ```bash
-python -m pip install -r requirements.txt
 start.bat
 ```
 
-**Linux/macOS**
+**Linux/macOS**:
+```bash
+./start.sh
+```
+
+*Acesse `http://127.0.0.1:8000`. O banco `neokioski.db` será criado automaticamente.*
+
+O script faz o resto sozinho:
+- **Sem `.venv`**: cria o ambiente virtual com o Python mais novo instalado que seja 3.11 ou superior. No Windows procura `py -3` e depois `python`/`python3` do PATH; no Linux/macOS, `python3.X`, `python3` e `python`.
+- **`.venv` feita com Python anterior ao 3.11**: recria o ambiente.
+- **`requirements.txt` alterado desde a última instalação**: atualiza as dependências. Nas outras vezes inicia direto.
+- **Para escolher o Python**: `set NK_PYTHON=C:\caminho\python.exe` (Windows) ou `NK_PYTHON=/caminho/python3.13 ./start.sh`.
+- **Para mudar a porta**: `NK_PORT=8080`.
+
+Também funciona sem os scripts, dentro de qualquer ambiente com Python 3.11+:
 ```bash
 python -m pip install -r requirements.txt
 python -m uvicorn main:app --port 8000
 ```
-*Acesse `http://127.0.0.1:8000`. O banco `neokioski.db` será criado automaticamente.*
 
 ---
 

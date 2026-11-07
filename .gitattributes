@@ -1,0 +1,3 @@
+# Scripts de inicialização: o cmd do Windows precisa de CRLF; o bash, de LF
+*.bat text eol=crlf
+*.sh  text eol=lf

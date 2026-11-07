@@ -6,6 +6,12 @@ Execução:  uvicorn main:app --host 127.0.0.1 --port 8000
 """
 from __future__ import annotations
 
+import sys
+
+if sys.version_info < (3, 11):  # pragma: no cover - checagem para quem roda sem o start.bat/start.sh
+    raise SystemExit(f"Neokioski requer Python 3.11 ou superior (este é o {sys.version.split()[0]}). "
+                     "Use start.bat (Windows) ou start.sh (Linux/macOS), que escolhem um Python compatível.")
+
 import logging
 from contextlib import asynccontextmanager
 

@@ -146,6 +146,7 @@ class Demand:
     status: str = "ok"
     note: str = ""
     placed_bins: int = 0
+    cap: Optional[int] = None  # limite de unidades definido pelo usuário (sugestão de redução da demanda)
 
     @property
     def status_label(self) -> str:
@@ -929,6 +930,9 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     choices: list[tuple[Demand, list[dict]]] = []
     for d in demands:
         d.units = _units(d.unit.qty, prm.growth)
+        if d.cap is not None and d.units > d.cap:
+            d.units = max(0, int(d.cap))
+            d.note = f"Limitado a {d.cap} un. (redução da demanda)."
         if d.units <= 0:
             d.status = "sem_qtd"
             continue

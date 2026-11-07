@@ -191,11 +191,81 @@ def save_project(pid: int, form: FormData = Depends(form_data), db: Session = De
     cfg = config_from_form(form)
     cfg["items"] = list((pr.config or {}).get("items") or [])  # SKUs do arquivo não vêm no formulário
     cfg["import_mapping"] = dict((pr.config or {}).get("import_mapping") or {})
+    old_caps = ((pr.config or {}).get("demand") or {}).get("caps") or {}
+    if old_caps and form.get("clear_caps") != "1":  # limites por SKU não vêm no formulário
+        cfg["demand"]["caps"] = dict(old_caps)
     pr.config = cfg
     db.commit()
     if form.get("action") == "run":
         return redirect(f"/optimization/site/{pid}?run=1#resultado")
     return redirect(f"/optimization/site/{pid}", "Projeto salvo.")
+
+
+@router.post("/{pid}/layout.json")
+def layout_json(pid: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Planta (zonas, corredores e fileiras disponíveis) calculada a partir do formulário, sem salvar: usada pelo
+    desenho da planta nas etapas do projeto."""
+    from fastapi.responses import JSONResponse
+
+    from services.site_planner import build_layout
+    from services.site_service import parse_config, structure_specs
+
+    if not _get(db, pid):
+        return JSONResponse({"error": "Projeto não encontrado."}, status_code=404)
+    cfg = config_from_form(form)
+    b, modes, _prm, errors = parse_config(cfg)
+    if not b.length_m or not b.width_m:
+        return JSONResponse({"error": "Informe comprimento e largura do imóvel.", "shapes": []})
+    active = [s for s in structure_specs(db, modes) if s.mode != "off" and s.height <= b.clear_height_m * 100 + 1e-6]
+    lay = build_layout(b, active)
+    rnd = lambda v: round(v, 1)  # noqa: E731
+    return JSONResponse({"errors": errors, "notes": lay.notes, "rows": len(lay.rows), "aisles": lay.real_aisles,
+                         "row_m": round(lay.total_row_m, 1), "shapes": [[k, rnd(x), rnd(y), rnd(w), rnd(d), lb]
+                                                                         for k, x, y, w, d, lb in lay.shapes()]})
+
+
+@router.post("/{pid}/demand-suggestion")
+def demand_suggestion(pid: int, request: Request, db: Session = Depends(get_db)):
+    """Sugestão de redução da demanda: fator que cabe, limites por SKU e maiores consumidores."""
+    from services.site_service import suggest_reduction
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    res = suggest_reduction(db, merged(copy.deepcopy(pr.config)))
+    if res.get("error"):
+        return redirect(f"/optimization/site/{pid}", res["error"], "danger")
+    return render(request, "site/suggest.html", project=pr, res=res)
+
+
+@router.post("/{pid}/demand-apply")
+def demand_apply(pid: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    cfg = merged(copy.deepcopy(pr.config))
+    action = form.get("action")
+    if action == "factor":
+        val = str(form.get("factor") or "").strip()
+        cfg["demand"]["factor"] = val
+        msg = f"Fator da demanda ajustado para {val}%."
+    elif action == "caps":
+        skus = form.getlist("cap_sku") if hasattr(form, "getlist") else []
+        units = form.getlist("cap_units") if hasattr(form, "getlist") else []
+        caps = dict(cfg["demand"].get("caps") or {})
+        for s_, u in zip(skus, units):
+            if str(u).strip().isdigit():
+                caps[s_] = int(u)
+        cfg["demand"]["caps"] = caps
+        msg = f"Limite de quantidade aplicado a {len(skus)} SKU(s) (total com limite: {len(caps)})."
+    elif action == "clear":
+        cfg["demand"].pop("caps", None)
+        msg = "Limites por SKU removidos."
+    else:
+        return redirect(f"/optimization/site/{pid}", "Ação inválida.", "danger")
+    pr.config = cfg
+    db.commit()
+    return redirect(f"/optimization/site/{pid}?run=1", msg)
 
 
 @router.post("/{pid}/duplicate")

@@ -391,9 +391,70 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
         demands, notes = load_uploaded_demand(db, cfg["items"], cfg["demand"])
     else:
         demands, notes = load_demand(db, cfg["demand"])
+    caps = cfg["demand"].get("caps") or {}
+    for d in demands:  # limites por SKU (sugestão de redução da demanda)
+        if d.sku in caps:
+            d.cap = int(caps[d.sku])
+    if caps:
+        notes.append(f"{sum(1 for d in demands if d.cap is not None)} SKU(s) com limite de quantidade (redução da demanda).")
     plan = plan_site(b, structs, types, demands, prm, parents_of(db, types))
     plan.notes = notes + plan.notes
     return plan, []
+
+
+def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0) -> dict:
+    """Quanto da demanda cabe com as estruturas e o imóvel atuais.
+    - fator: busca binária do maior fator de demanda (relativo ao atual) sem falta de espaço;
+    - por SKU: no plano atual, quanto coube de cada SKU que ficou sem lugar (limite sugerido);
+    - maiores consumidores: SKUs que mais ocupam volume de bins (candidatos a revisão)."""
+    import copy
+    import math
+
+    base, errors = run_project(db, cfg)
+    if errors or base is None:
+        return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
+    f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
+    out = {"factor": f0, "shortage": base.shortage, "bins_needed": base.bins_needed, "plan": base, "fit_factor": None,
+           "cuts": [], "top": [], "limits": []}
+    # maiores consumidores (volume das bins de cada SKU)
+    vol = {t.spec.id: (t.spec.volume_cm3 or 0) / 1000.0 for t in base.types}
+    total = sum(n * vol.get(t, 0) for d in base.demands for t, n in (d.bins or {}).items()) or 1
+    top = sorted(((sum(n * vol.get(t, 0) for t, n in (d.bins or {}).items()), d) for d in base.demands if d.bins),
+                 key=lambda x: -x[0])[:15]
+    out["top"] = [{"sku": d.sku, "name": d.name, "units": d.units, "bins": d.total_bins, "volume_l": v,
+                   "share": v / total * 100} for v, d in top]
+    for s in base.structs:  # estruturas que limitam (quantidade fixa ou máximo atingido)
+        st = s.struct
+        if st.mode == "fixed" or (st.mode == "auto" and st.max_qty is not None and s.qty >= st.max_qty):
+            out["limits"].append(f"{st.code}: {'quantidade fixa' if st.mode == 'fixed' else 'máximo'} de "
+                                 f"{st.qty if st.mode == 'fixed' else st.max_qty} módulo(s) atingido")
+        elif s.floor_max and s.qty >= s.floor_max:
+            out["limits"].append(f"{st.code}: a planta comporta no máximo {s.floor_max} módulo(s)")
+    if not base.shortage:
+        return out
+    # cortes por SKU: o que coube de cada SKU sem lugar
+    placed = {}
+    for p in base.positions:
+        placed[p.sku] = placed.get(p.sku, 0) + p.units
+    for d in base.demands:
+        if d.status == "falta":
+            out["cuts"].append({"sku": d.sku, "name": d.name, "units": d.units, "fits": placed.get(d.sku, 0),
+                                "missing_bins": d.total_bins - d.placed_bins})
+    # fator que cabe (relativo ao atual)
+    lo, hi = 0.0, 1.0
+    for _ in range(steps):
+        mid = (lo + hi) / 2
+        c2 = copy.deepcopy(cfg)
+        c2["demand"]["factor"] = f"{f0 * mid:.4f}"
+        c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15),
+                                             per_run_s))
+        plan, errs = run_project(db, c2)
+        if plan is not None and not errs and not plan.errors and plan.shortage == 0:
+            lo = mid
+        else:
+            hi = mid
+    out["fit_factor"] = math.floor(f0 * lo * 10) / 10 if lo > 0 else None
+    return out
 
 
 # --------------------------------------------------------------------------- #

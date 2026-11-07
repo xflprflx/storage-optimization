@@ -1,0 +1,316 @@
+{# Desenho da planta com medidas (etapas Imóvel e Zonas e circulação) e edição de zonas/obstáculos com o mouse.
+   Lê e escreve diretamente os campos do formulário do projeto (#siteForm); as fileiras e corredores vêm do servidor
+   (layout.json, mesmo motor da otimização) quando "Mostrar fileiras" está marcado. #}
+<style>
+  .nk-plan-svg { width: 100%; height: auto; max-height: 520px; background: #fff; border: 1px solid #e1e6ea; border-radius: .35rem;
+    touch-action: none; user-select: none; }
+  .nk-plan-svg.tool-zone, .nk-plan-svg.tool-obstacle { cursor: crosshair; }
+  .nk-plan-svg .shape { cursor: move; }
+  .nk-plan-svg .handle { cursor: nwse-resize; }
+  .nk-plan-svg text { font-family: system-ui, sans-serif; pointer-events: none; }
+  #zonesTable tr.table-active td, #obsTable tr.table-active td { background: #fff3cd !important; }
+</style>
+<script>
+(function () {
+  const form = document.getElementById('siteForm');
+  if (!form) return;
+  const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+               set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sem armazenamento */ } } };
+  const num = v => {
+    v = (v == null ? '' : String(v)).trim();
+    if (!v) return null;
+    if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
+  const fmt = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
+  const snap = v => Math.round(v * 10) / 10;
+  const val = name => num(form.querySelector(`[name="${name}"]`)?.value);
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // ------------------------------------------------------------------ estado (a partir do formulário)
+  function rowsOf(kind) {
+    const tb = document.querySelector(kind === 'zone' ? '#zonesTable tbody' : '#obsTable tbody');
+    return tb ? [...tb.querySelectorAll('tr')] : [];
+  }
+  function field(tr, key) {
+    const map = { zone: { name: 'z_name_', x: 'z_x_', y: 'z_y_', len: 'z_len_', wid: 'z_wid_', ori: 'z_ori_' },
+                  obstacle: { name: 'o_name_', x: 'o_x_m_', y: 'o_y_m_', len: 'o_length_m_', wid: 'o_width_m_' } };
+    const kind = tr.closest('#zonesTable') ? 'zone' : 'obstacle';
+    return tr.querySelector(`[name^="${map[kind][key]}"]`);
+  }
+  function state() {
+    const L = val('b_length_m'), W = val('b_width_m');
+    if (!L || !W) return null;
+    const gap = val('b_wall_gap_m') || 0, front = val('b_front_reserved_m') || 0, back = val('b_back_reserved_m') || 0;
+    const av = val('b_avenue_m') || 0;
+    const zones = rowsOf('zone').map((tr, i) => ({
+      tr, i, name: field(tr, 'name')?.value || `Zona ${i + 1}`, x: num(field(tr, 'x')?.value), y: num(field(tr, 'y')?.value),
+      len: num(field(tr, 'len')?.value), wid: num(field(tr, 'wid')?.value), ori: field(tr, 'ori')?.value || 'along' }));
+    const positioned = zones.some(z => z.x != null && z.y != null);
+    const avenues = [];
+    if (positioned) {
+      zones.forEach(z => { z.X = z.x ?? gap; z.Y = z.y ?? gap; z.Lx = z.len ?? Math.max(0, L - gap - z.X); z.Wy = z.wid ?? Math.max(0, W - gap - z.Y); });
+    } else if (zones.length) {  // empilhadas a partir da frente, com avenidas
+      const avail = L - 2 * gap - front - back - av * (zones.length - 1);
+      const fixed = zones.reduce((s, z) => s + (z.len || 0), 0), free = zones.filter(z => !z.len).length;
+      const rem = Math.max(0, avail - fixed);
+      let X = gap + front;
+      zones.forEach((z, i) => {
+        z.X = X; z.Y = gap; z.Lx = z.len || (free ? rem / free : 0); z.Wy = W - 2 * gap; z.stacked = true;
+        X += z.Lx;
+        if (i < zones.length - 1) { avenues.push({ X, w: av, n: i + 1 }); X += av; }
+      });
+    }
+    const obstacles = rowsOf('obstacle').map((tr, i) => ({
+      tr, i, name: field(tr, 'name')?.value || `Obstáculo ${i + 1}`, X: num(field(tr, 'x')?.value),
+      Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
+      .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
+    return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles };
+  }
+
+  // ------------------------------------------------------------------ escrita nas tabelas
+  function setField(tr, key, v) {
+    const el = field(tr, key);
+    if (el) { el.value = v == null ? '' : fmt(v); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+  function nextIndex(kind) {
+    const name = kind === 'zone' ? 'z_idx' : 'o_idx';
+    return Math.max(-1, ...[...form.querySelectorAll(`[name="${name}"]`)].map(i => parseInt(i.value, 10) || 0)) + 1;
+  }
+  function addRow(kind, r) {
+    const tb = document.querySelector(kind === 'zone' ? '#zonesTable tbody' : '#obsTable tbody');
+    const tpl = document.getElementById(kind === 'zone' ? 'zoneTpl' : 'obsTpl');
+    tb.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', nextIndex(kind)));
+    const tr = tb.lastElementChild;
+    const n = rowsOf(kind).length;
+    field(tr, 'name').value = kind === 'zone' ? `Zona ${n}` : `Obstáculo ${n}`;
+    ['x', 'y', 'len', 'wid'].forEach(k => setField(tr, k, r[k]));
+    return tr;
+  }
+  function toPositioned(st) {  // zonas empilhadas viram posicionadas (com as posições calculadas)
+    st.zones.forEach(z => { setField(z.tr, 'x', z.X); setField(z.tr, 'y', z.Y); setField(z.tr, 'len', z.Lx); setField(z.tr, 'wid', z.Wy); });
+  }
+  function select(tr) {
+    document.querySelectorAll('#zonesTable tr.table-active, #obsTable tr.table-active').forEach(r => r.classList.remove('table-active'));
+    if (tr) tr.classList.add('table-active');
+    sel = tr;
+  }
+
+  // ------------------------------------------------------------------ fileiras (servidor)
+  let server = null, serverKey = '', timer = null;
+  const pid = form.dataset.projectId;
+  function refreshServer() {
+    if (ls.get('nk-plan-rows') !== '1' || !pid) { server = null; renderAll(); return; }
+    const fd = new FormData(form);
+    const key = new URLSearchParams(fd).toString();
+    if (key === serverKey) return;
+    serverKey = key;
+    fetch(`/optimization/site/${pid}/layout.json`, { method: 'POST', body: fd })
+      .then(r => r.json()).then(j => { server = j; renderAll(); }).catch(() => { server = { error: 'Falha ao calcular as fileiras.' }; renderAll(); });
+  }
+  const scheduleServer = () => { clearTimeout(timer); timer = setTimeout(refreshServer, 500); };
+
+  // ------------------------------------------------------------------ desenho
+  let sel = null, dragHost = null;  // dragHost: planta em edição pelo mouse (não é redesenhada durante o arraste)
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function text(parent, x, y, t, attrs) { const e = el('text', { x, y, ...attrs }, parent); e.textContent = t; return e; }
+  function render(host) {
+    const edit = host.dataset.planMode === 'edit';
+    const body = host.querySelector('.nk-plan-body'), note = host.querySelector('.nk-plan-note');
+    body.innerHTML = ''; note.textContent = '';
+    const st = state();
+    if (!st) { body.innerHTML = '<div class="small text-muted py-3 text-center">Informe comprimento e largura do imóvel para ver a planta.</div>'; return; }
+    const { L, W } = st, m = Math.max(L, W) * 0.07;
+    const fs = Math.max(L, W) / 55;  // tamanho de fonte em metros
+    const arrow = 'nkArr-' + (host.dataset.planMode || 'x');  // id único por planta (duas plantas na página)
+    const svg = el('svg', { viewBox: `${-m * 1.4} ${-m * 1.4} ${L + m * 2} ${W + m * 2.2}`, class: 'nk-plan-svg' }, body);
+    const tool = edit ? (host.querySelector('[name=nk-tool]:checked')?.value || 'select') : 'view';
+    svg.classList.add('tool-' + tool);
+    // imóvel e cotas
+    el('rect', { x: 0, y: 0, width: L, height: W, fill: '#fbfcfd', stroke: '#1f2d33', 'stroke-width': fs * 0.25 }, svg);
+    const dim = (x1, y1, x2, y2, label, vertical) => {
+      el('line', { x1, y1, x2, y2, stroke: '#5b6770', 'stroke-width': fs * 0.08, 'marker-start': `url(#${arrow})`, 'marker-end': `url(#${arrow})` }, svg);
+      const tx = (x1 + x2) / 2, ty = (y1 + y2) / 2;
+      text(svg, vertical ? tx - fs * 0.4 : tx, vertical ? ty : ty - fs * 0.4, label, { 'font-size': fs * 1.1, 'text-anchor': 'middle', fill: '#1f2d33',
+        transform: vertical ? `rotate(-90 ${tx - fs * 0.4} ${ty})` : '' });
+    };
+    const defs = el('defs', {}, svg);
+    const mk = el('marker', { id: arrow, viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#5b6770' }, mk);
+    dim(0, -m * 0.6, L, -m * 0.6, `${fmt(L, 2)} m (comprimento, X)`, false);
+    dim(-m * 0.6, 0, -m * 0.6, W, `${fmt(W, 2)} m (largura, Y)`, true);
+    // faixas reservadas e avenidas
+    const strip = (x, w, label, fill, stroke) => {
+      if (w <= 0) return;
+      el('rect', { x, y: st.gap, width: w, height: W - 2 * st.gap, fill, stroke, 'stroke-width': fs * 0.05 }, svg);
+      const cx = x + w / 2, cy = W / 2;
+      text(svg, cx, cy, label, { 'font-size': fs * 0.9, 'text-anchor': 'middle', fill: '#5b6770', transform: `rotate(-90 ${cx} ${cy})` });
+    };
+    strip(st.gap, st.front, `Docas · ${fmt(st.front, 2)} m`, '#fff3cd', '#e0c068');
+    strip(L - st.gap - st.back, st.back, `Reservada · ${fmt(st.back, 2)} m`, '#fff3cd', '#e0c068');
+    st.avenues.forEach(a => strip(a.X, a.w, `Avenida ${a.n} · ${fmt(a.w, 2)} m`, '#e3ecf7', '#b9cbe3'));
+    // fileiras e corredores (servidor)
+    if (server && server.shapes) {
+      const sty = { aisle: ['#eef2f4', 'none'], cross: ['#eef2f4', 'none'], lane: ['#e8f0fe', '#9ab7e6'] };
+      server.shapes.forEach(([k, x, y, w, d]) => {
+        if (!sty[k]) return;
+        el('rect', { x: x / 100, y: y / 100, width: w / 100, height: d / 100, fill: sty[k][0], stroke: sty[k][1], 'stroke-width': fs * 0.04 }, svg);
+      });
+    }
+    // zonas e obstáculos
+    const shape = (o, kind) => {
+      const isZone = kind === 'zone';
+      const g = el('g', {}, svg);
+      const r = el('rect', { x: o.X, y: o.Y, width: Math.max(0, o.Lx), height: Math.max(0, o.Wy), class: edit ? 'shape' : '',
+        fill: isZone ? 'rgba(47,126,216,.08)' : '#2b2f33', stroke: isZone ? '#2f6db5' : '#111',
+        'stroke-width': fs * (sel === o.tr ? 0.25 : 0.12), 'stroke-dasharray': isZone ? `${fs * 0.6} ${fs * 0.3}` : '' }, g);
+      const lbl = isZone ? `${o.name} · ${o.ori === 'across' ? '↕' : '↔'}` : o.name;
+      const big = o.Lx > fs * 8 && o.Wy > fs * 3;
+      const tAttrs = { 'font-size': fs * 0.85, fill: isZone ? '#24548c' : '#fff' };
+      if (big) {
+        text(g, o.X + fs * 0.4, o.Y + fs * 1.1, lbl, tAttrs);
+        text(g, o.X + fs * 0.4, o.Y + fs * 2.1, `${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} · Y ${fmt(o.Y)}`, { ...tAttrs, 'font-size': fs * 0.7 });
+      } else {
+        const cx = o.X + o.Lx / 2, cy = o.Y + o.Wy / 2, vert = o.Wy > o.Lx;
+        text(g, cx, cy, `${lbl} (${fmt(o.Lx)} × ${fmt(o.Wy)})`, { ...tAttrs, 'font-size': fs * 0.7, 'text-anchor': 'middle',
+          'dominant-baseline': 'middle', transform: vert ? `rotate(-90 ${cx} ${cy})` : '' });
+      }
+      if (edit) {
+        let h = null;
+        if (sel === o.tr) {
+          h = el('rect', { x: o.X + o.Lx - fs * 0.5, y: o.Y + o.Wy - fs * 0.5, width: fs, height: fs, fill: '#fff', stroke: '#2f6db5',
+            'stroke-width': fs * 0.12, class: 'handle' }, g);
+          h.addEventListener('pointerdown', ev => startMove(ev, host, svg, o, kind, 'resize', r, h));
+        }
+        r.addEventListener('pointerdown', ev => startMove(ev, host, svg, o, kind, 'move', r, h));
+      }
+    };
+    st.zones.forEach(z => shape(z, 'zone'));
+    st.obstacles.forEach(o => shape(o, 'obstacle'));
+    // notas
+    const parts = [];
+    if (server && server.error) parts.push(server.error);
+    else if (server && server.shapes) parts.push(`${server.rows} fileira(s), ${server.aisles} corredor(es), ${fmt(server.row_m)} m de fileira disponíveis.`);
+    if (server && server.errors && server.errors.length) parts.push(...server.errors.filter(e => /zona|Zona|sobrep|fora/.test(e)));
+    if (server && server.notes && server.notes.length) parts.push(...server.notes);
+    note.textContent = parts.join(' · ');
+    if (edit) svg.addEventListener('pointerdown', ev => {
+      // desenhar: em qualquer lugar (inclusive por cima de outras formas); selecionar: clique no fundo tira a seleção
+      if (tool === 'zone' || tool === 'obstacle') startDraw(ev, svg, st, tool);
+      else if (!ev.target.classList.contains('shape') && !ev.target.classList.contains('handle')) startDraw(ev, svg, st, tool);
+    });
+  }
+  function point(svg, ev) {
+    const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+    return p.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function startDraw(ev, svg, st, tool) {
+    if (tool !== 'zone' && tool !== 'obstacle') { select(null); renderAll(); return; }
+    const p0 = point(svg, ev);
+    const tmp = el('rect', { x: p0.x, y: p0.y, width: 0, height: 0, fill: 'rgba(47,126,216,.15)', stroke: '#2f6db5', 'stroke-width': Math.max(st.L, st.W) / 300 }, svg);
+    svg.setPointerCapture(ev.pointerId);
+    const clamp = (v, max) => Math.min(Math.max(v, 0), max);
+    const move = e => {
+      const p = point(svg, e);
+      const x = clamp(Math.min(p0.x, p.x), st.L), y = clamp(Math.min(p0.y, p.y), st.W);
+      tmp.setAttribute('x', x); tmp.setAttribute('y', y);
+      tmp.setAttribute('width', clamp(Math.max(p0.x, p.x), st.L) - x); tmp.setAttribute('height', clamp(Math.max(p0.y, p.y), st.W) - y);
+    };
+    const up = () => {
+      svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up);
+      const r = { x: snap(+tmp.getAttribute('x')), y: snap(+tmp.getAttribute('y')), len: snap(+tmp.getAttribute('width')), wid: snap(+tmp.getAttribute('height')) };
+      tmp.remove();
+      if (r.len < 0.3 || r.wid < 0.3) return;
+      if (tool === 'zone' && st.zones.length && !st.positioned) toPositioned(st);
+      const tr = addRow(tool, r);
+      select(tr); renderAll(); scheduleServer();
+    };
+    svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up);
+  }
+  function startMove(ev, host, svg, o, kind, mode, rect, handle) {
+    if (host.querySelector('[name=nk-tool]:checked')?.value !== 'select') return;  // desenhando: o clique vai para a planta
+    ev.stopPropagation();
+    dragHost = host;  // a partir daqui, esta planta só atualiza o retângulo arrastado
+    const st = state();
+    if (kind === 'zone' && o.stacked) toPositioned(st);  // mexer numa zona empilhada: todas viram posicionadas
+    select(o.tr);
+    rect.setAttribute('stroke-width', parseFloat(rect.getAttribute('stroke-width')) * 2);
+    const p0 = point(svg, ev), X0 = o.X, Y0 = o.Y, L0 = o.Lx, W0 = o.Wy;
+    let cur = { X: X0, Y: Y0, L: L0, W: W0 };
+    svg.setPointerCapture(ev.pointerId);
+    const move = e => {
+      const p = point(svg, e), dx = p.x - p0.x, dy = p.y - p0.y;
+      if (mode === 'move') {
+        cur.X = snap(Math.min(Math.max(X0 + dx, 0), st.L - L0)); cur.Y = snap(Math.min(Math.max(Y0 + dy, 0), st.W - W0));
+        setField(o.tr, 'x', cur.X); setField(o.tr, 'y', cur.Y);
+      } else {
+        cur.L = snap(Math.max(0.3, Math.min(L0 + dx, st.L - X0))); cur.W = snap(Math.max(0.3, Math.min(W0 + dy, st.W - Y0)));
+        setField(o.tr, 'len', cur.L); setField(o.tr, 'wid', cur.W);
+      }
+      rect.setAttribute('x', cur.X); rect.setAttribute('y', cur.Y); rect.setAttribute('width', cur.L); rect.setAttribute('height', cur.W);
+      if (handle) { const hs = +handle.getAttribute('width'); handle.setAttribute('x', cur.X + cur.L - hs / 2); handle.setAttribute('y', cur.Y + cur.W - hs / 2); }
+    };
+    const up = () => {
+      svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up);
+      dragHost = null; renderAll(); scheduleServer();
+      field(o.tr, 'name')?.scrollIntoView({ block: 'nearest' });
+    };
+    svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up);
+  }
+
+  // ------------------------------------------------------------------ montagem das áreas de desenho
+  const hosts = [...document.querySelectorAll('.nk-plan')];
+  function renderAll() { hosts.forEach(h => { if (h !== dragHost && h.querySelector('.nk-plan-body').style.display !== 'none') render(h); }); }
+  hosts.forEach(h => {
+    const edit = h.dataset.planMode === 'edit';
+    h.innerHTML = `
+      <div class="d-flex flex-wrap align-items-center gap-3 small mb-2">
+        <div class="form-check form-switch mb-0"><input class="form-check-input nk-show" type="checkbox"><label class="form-check-label">Mostrar planta</label></div>
+        <div class="form-check form-switch mb-0 nk-rows-wrap"><input class="form-check-input nk-rows" type="checkbox"><label class="form-check-label" title="Calcula as fileiras e corredores com o mesmo motor da otimização (sem salvar)">Mostrar fileiras</label></div>
+        ${edit ? `<div class="btn-group btn-group-sm nk-tools" role="group">
+          <input type="radio" class="btn-check" name="nk-tool" value="select" id="nkt-sel" checked><label class="btn btn-outline-secondary" for="nkt-sel"><i class="bi bi-cursor"></i> Selecionar/mover</label>
+          <input type="radio" class="btn-check" name="nk-tool" value="zone" id="nkt-zone"><label class="btn btn-outline-primary" for="nkt-zone"><i class="bi bi-bounding-box"></i> Desenhar zona</label>
+          <input type="radio" class="btn-check" name="nk-tool" value="obstacle" id="nkt-obs"><label class="btn btn-outline-dark" for="nkt-obs"><i class="bi bi-square-fill"></i> Desenhar obstáculo</label>
+        </div><span class="text-muted nk-help">Arraste para desenhar · arraste a forma para mover · canto para redimensionar · Delete apaga a selecionada · medidas de 10 em 10 cm</span>` : ''}
+      </div>
+      <div class="nk-plan-body"></div>
+      <div class="nk-plan-note small text-muted mt-1"></div>`;
+    const show = h.querySelector('.nk-show'), rows = h.querySelector('.nk-rows'), body = h.querySelector('.nk-plan-body');
+    const apply = () => {
+      const on = ls.get('nk-plan-show') !== '0';
+      show.checked = on; rows.checked = ls.get('nk-plan-rows') === '1';
+      body.style.display = on ? '' : 'none';
+      h.querySelector('.nk-rows-wrap').style.display = on ? '' : 'none';
+      h.querySelectorAll('.nk-tools, .nk-help').forEach(e => { e.style.display = on ? '' : 'none'; });
+      h.querySelector('.nk-plan-note').style.display = on ? '' : 'none';
+    };
+    show.addEventListener('change', () => { ls.set('nk-plan-show', show.checked ? '1' : '0'); hosts.forEach(x => x._apply()); renderAll(); });
+    rows.addEventListener('change', () => { ls.set('nk-plan-rows', rows.checked ? '1' : '0'); serverKey = ''; hosts.forEach(x => x._apply()); refreshServer(); });
+    h.querySelectorAll('[name=nk-tool]').forEach(r => r.addEventListener('change', renderAll));
+    h._apply = apply;
+    apply();
+  });
+  form.addEventListener('input', () => { renderAll(); scheduleServer(); });
+  form.addEventListener('change', () => { renderAll(); scheduleServer(); });
+  ['#zonesTable tbody', '#obsTable tbody'].forEach(s => {
+    const tb = document.querySelector(s);
+    if (tb) new MutationObserver(() => { renderAll(); scheduleServer(); }).observe(tb, { childList: true });
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Delete' || !sel || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    sel.remove(); sel = null; renderAll(); scheduleServer();
+  });
+  document.querySelectorAll('#zonesTable, #obsTable').forEach(t => t.addEventListener('focusin', e => {
+    const tr = e.target.closest('tbody tr'); if (tr && tr !== sel) { select(tr); renderAll(); }
+  }));
+  renderAll();
+  refreshServer();
+})();
+</script>

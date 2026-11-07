@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Redução da demanda — {{ project.name }}{% endblock %}
+{% block content %}
+{% set plan = res.plan %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-funnel"></i> Sugestão de redução da demanda</h1>
+    <div class="small text-muted">{{ project.name }} · demanda atual: fator {{ res.factor|dec(1) }}% · {{ res.bins_needed|dec }} bins necessárias</div>
+  </div>
+  <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+</div>
+
+{% if not res.shortage %}
+<div class="alert alert-success"><i class="bi bi-check-circle"></i> A demanda atual <b>já cabe</b> com as estruturas e o imóvel definidos — não é preciso reduzir.
+  Abaixo, os SKUs que mais ocupam espaço, caso queira liberar área ou estruturas.</div>
+{% else %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Com a configuração atual, <b>{{ res.shortage|dec }} bin(s)</b> ficam sem lugar.
+  Escolha uma das formas de reduzir a demanda (ou volte e aumente estruturas/imóvel).
+  {% if res.limits %}<div class="small mt-1">O que está limitando: {{ res.limits|join('; ') }}.</div>{% endif %}</div>
+{% endif %}
+
+<div class="row g-3">
+  {% if res.shortage %}
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>1. Reduzir tudo por igual</strong></div>
+      <div class="card-body">
+        {% if res.fit_factor %}
+        <div class="small text-muted">Maior fator de demanda que cabe sem falta de espaço (busca com o próprio otimizador):</div>
+        <div class="display-6 fw-semibold my-2">{{ res.fit_factor|dec(1) }}%</div>
+        <div class="small text-muted mb-3">em vez de {{ res.factor|dec(1) }}% — todos os SKUs reduzidos na mesma proporção.</div>
+        <form method="post" action="/optimization/site/{{ project.id }}/demand-apply">
+          <input type="hidden" name="action" value="factor"><input type="hidden" name="factor" value="{{ res.fit_factor|dec_input }}">
+          <button class="btn btn-accent w-100"><i class="bi bi-check-lg"></i> Aplicar fator {{ res.fit_factor|dec(1) }}% e otimizar</button>
+        </form>
+        {% else %}
+        <div class="small text-muted">Nem uma fração pequena da demanda cabe: confira as estruturas (ativas, fixas/máximas) e o imóvel.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header bg-white"><strong>2. Limitar só os SKUs que ficaram sem lugar</strong></div>
+      <form method="post" action="/optimization/site/{{ project.id }}/demand-apply">
+        <input type="hidden" name="action" value="caps">
+        <div class="table-responsive" style="max-height:360px">
+          <table class="table table-sm mb-0 small align-middle" data-no-resize>
+            <thead class="sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th class="text-end">Pedido</th><th class="text-end">Coube</th><th class="text-end" style="width:120px">Limite (un.)</th></tr></thead>
+            <tbody>
+            {% for c in res.cuts %}
+              <tr><td class="mono">{{ c.sku }}<input type="hidden" name="cap_sku" value="{{ c.sku }}"></td><td>{{ c.name }}</td>
+                <td class="text-end">{{ c.units|dec }}</td><td class="text-end">{{ c.fits|dec }}</td>
+                <td><input class="form-control form-control-sm text-end" name="cap_units" inputmode="numeric" value="{{ c.fits }}"></td></tr>
+            {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Nenhum SKU individual ficou sem lugar.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-body small text-muted">O limite fica salvo no projeto (etapa Demanda mostra quantos SKUs têm limite e permite removê-los).
+          Os demais SKUs mantêm a quantidade.</div>
+        {% if res.cuts %}<div class="card-footer bg-white"><button class="btn btn-outline-primary"><i class="bi bi-check-lg"></i> Aplicar limites e otimizar</button></div>{% endif %}
+      </form>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white"><strong>{{ '3. ' if res.shortage }}SKUs que mais ocupam espaço</strong> <span class="small text-muted">— volume das bins de cada SKU no plano atual</span></div>
+      <div class="table-responsive"><table class="table table-sm mb-0 small" data-no-resize>
+        <thead><tr><th>SKU</th><th>Produto</th><th class="text-end">Quantidade</th><th class="text-end">Bins</th><th class="text-end">Volume (L)</th><th style="width:30%">Participação</th></tr></thead>
+        <tbody>{% for t in res.top %}<tr><td class="mono">{{ t.sku }}</td><td>{{ t.name }}</td><td class="text-end">{{ t.units|dec }}</td><td class="text-end">{{ t.bins|dec }}</td>
+          <td class="text-end">{{ t.volume_l|dec(0) }}</td>
+          <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px"><div class="progress-bar" style="width:{{ [t.share * 3, 100]|min }}%"></div></div><span>{{ t.share|dec(1) }}%</span></div></td></tr>{% endfor %}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -33,6 +33,7 @@
       <div class="col-lg-7">
         <form method="post" action="/optimization/site/{{ project.id }}/upload" enctype="multipart/form-data" class="d-flex gap-2 flex-wrap justify-content-lg-end">
           <a class="btn btn-sm btn-outline-secondary" href="/optimization/site/{{ project.id }}/template.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Baixar modelo (com os dados atuais)</a>
+          <a class="btn btn-sm btn-outline-secondary" href="/optimization/site/seed.xlsx" title="Planilha de exemplo preenchida"><i class="bi bi-stars"></i> Exemplo</a>
           <input class="form-control form-control-sm" style="max-width:260px" type="file" name="file" accept=".xlsx,.xlsm,.csv,.txt" required>
           <button class="btn btn-sm btn-primary"><i class="bi bi-upload"></i> Importar</button>
         </form>
@@ -211,7 +212,9 @@
         <div class="form-check"><input class="form-check-input" type="radio" name="p_objective" value="{{ k }}" id="obj_{{ k }}" {% if p.objective == k %}checked{% endif %}>
           <label class="form-check-label" for="obj_{{ k }}">{{ v }}</label></div>
         {% endfor %}
-        <div class="form-text mb-2">Prioridade: 1º guardar toda a demanda; 2º o objetivo escolhido; 3º desempate (metros de fileira ou módulos); por último, o menor nº de níveis ocupados.</div>
+        <div class="form-text mb-2">No custo total, o sistema também escolhe as bins de cada SKU (entre as melhores opções), pesando o custo das bins
+          contra o das estruturas que elas ocupam. Custos vêm do cadastro de estruturas e de tipos de bin (sem custo = R$ 0).
+          Prioridade: 1º guardar toda a demanda; 2º o objetivo escolhido; 3º desempate (metros de fileira ou módulos); por último, o menor nº de níveis ocupados.</div>
         <label class="form-label small mb-0">Tempo limite do solver (s)</label>
         <input class="form-control form-control-sm text-end mb-3" name="p_time_limit" inputmode="decimal" value="{{ p.time_limit }}" style="max-width:120px">
         <div class="d-flex gap-2 flex-wrap">
@@ -258,7 +261,7 @@
 <div class="row g-3 mb-3">
   {% set kpis = [
     ('Módulos de estrutura', plan.total_modules, plan.structs|selectattr('qty')|map(attribute='struct.code')|join(', ')),
-    ('Custo das estruturas', money(plan.total_cost), 'sem custo cadastrado' if plan.total_cost is none else ''),
+    ('Custo total', money(plan.total_cost), 'estruturas ' ~ money(plan.structures_cost)|striptags ~ ' + bins ' ~ money(plan.bins_cost)|striptags),
     ('Bins', plan.bins_placed ~ ' / ' ~ plan.bins_needed, 'alocadas / necessárias'),
     ('Ocupação dos níveis', pct(plan.fill), plan.levels_used ~ ' de ' ~ plan.levels_total ~ ' níveis em uso'),
     ('Uso das fileiras', pct(plan.row_use), plan.front_m|dec(1) ~ ' de ' ~ plan.floor.total_row_m|dec(1) ~ ' m'),
@@ -307,13 +310,14 @@
     <div class="card h-100">
       <div class="card-header bg-white"><strong>Bins — quantidades</strong></div>
       <div class="table-responsive"><table class="table table-sm mb-0">
-        <thead class="small"><tr><th>Tipo</th><th class="text-end">Necessárias</th><th class="text-end">Capacidade</th><th class="text-end">Ocupação</th><th class="text-end">Falta</th></tr></thead>
+        <thead class="small"><tr><th>Tipo</th><th class="text-end">Necessárias</th><th class="text-end">Capacidade</th><th class="text-end">Ocupação</th><th class="text-end">Falta</th><th class="text-end">Custo</th></tr></thead>
         <tbody>
         {% for t in plan.types %}
           <tr><td class="mono">{{ t.spec.code }}{% if t.parent_code %} <span class="small text-muted" title="Compartimento: comprar {{ t.parents }} bin(s) {{ t.parent_code }}">({{ t.parents }}× {{ t.parent_code }})</span>{% endif %}</td>
             <td class="text-end">{{ t.needed }}</td><td class="text-end">{{ t.capacity }}</td><td class="text-end">{{ pct(t.fill) }}</td>
-            <td class="text-end {{ 'text-danger fw-semibold' if t.shortage else 'text-muted' }}">{{ t.shortage }}</td></tr>
-        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Nenhuma bin.</td></tr>{% endfor %}
+            <td class="text-end {{ 'text-danger fw-semibold' if t.shortage else 'text-muted' }}">{{ t.shortage }}</td>
+            <td class="text-end" title="{% if t.unit_cost is not none %}R$ {{ t.unit_cost|dec(2) }} por bin{% endif %}">{{ money(t.cost) }}</td></tr>
+        {% else %}<tr><td colspan="6" class="text-muted text-center py-3">Nenhuma bin.</td></tr>{% endfor %}
         </tbody>
       </table></div>
       {% if plan.solver.stages %}

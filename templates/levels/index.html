@@ -71,6 +71,32 @@
           <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm('Aplicar a todos os níveis que atendem às condições?')">Aplicar</button></div>
         </form>
       </div>
+      <div class="col-12 order-last">
+        <form method="post" action="/levels/structure" class="row g-2 align-items-end border-top pt-2">
+          {{ hidden_filters() }}
+          <div class="col-12 small fw-semibold"><i class="bi bi-bookshelf"></i> Aplicar estrutura de armazenagem às estantes
+            <span class="text-muted fw-normal">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo
+            (<a href="/structures">cadastro de estruturas</a>)</span></div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="s_aisle" placeholder="Corredor" value="{{ aisle }}"></div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="s_bay" placeholder="Estante" value="{{ bay }}"></div>
+          <div class="col-8 col-md-3">
+            <select class="form-select form-select-sm" name="structure_type_id" required>
+              <option value="">— estrutura —</option>
+              {% for st in structures %}<option value="{{ st.id }}">{{ st.code }} — {{ st.levels }} níveis × {{ st.level_height|dec }} cm, frente {{ st.width|dec }} × prof. {{ st.depth|dec }}</option>{% endfor %}
+              <option value="remove">— remover a estrutura das estantes —</option>
+            </select>
+          </div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm text-end" name="top_gap" inputmode="decimal" value="5" title="Folga acima da bin (cm) para tirá-la do nível"></div>
+          <div class="col-auto small d-flex flex-wrap gap-3">
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="set_heights" value="1" id="sh" checked><label class="form-check-label" for="sh">vão dos níveis</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="set_caps" value="1" id="sc" checked><label class="form-check-label" for="sc">capacidades</label></div>
+            <div class="form-check" title="Tipos que não cabem na estrutura têm a capacidade removida"><input class="form-check-input" type="checkbox" name="replace_caps" value="1" id="rc" checked><label class="form-check-label" for="rc">substituir as existentes</label></div>
+            <div class="form-check" title="Cria os níveis 1..N que a estante ainda não tem (como níveis reservados)"><input class="form-check-input" type="checkbox" name="create_levels" value="1" id="cl"><label class="form-check-label" for="cl">criar níveis que faltam</label></div>
+          </div>
+          <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm('Aplicar a estrutura às estantes que atendem às condições?')">Aplicar estrutura</button></div>
+          {% if not structures %}<div class="col-12 small text-muted">Nenhuma estrutura cadastrada. <a href="/structures/new">Cadastrar</a></div>{% endif %}
+        </form>
+      </div>
       <div class="col-lg-5">
         <form method="post" action="/levels/reserved" class="row g-2 align-items-end">
           {{ hidden_filters() }}
@@ -89,7 +115,7 @@
     <div class="table-responsive" style="max-height: 68vh">
       <table class="table table-sm table-hover mb-0 small align-middle">
         <thead class="sticky-top"><tr>
-          <th>Nível</th><th class="text-end">Endereços</th>
+          <th>Nível</th><th title="Estrutura de armazenagem da estante">Estrutura</th><th class="text-end">Endereços</th>
           {% for bt in bin_types %}<th class="text-center" title="{{ bt.name }}">Cabem<br><span class="mono">{{ bt.code }}</span></th>{% endfor %}
           <th class="text-center" title="Distância entre este nível e o de cima (cm)">Vão<br>(cm)</th>
           <th>Bins no nível</th><th style="width:170px">Uso</th><th>Observação</th><th></th>
@@ -100,6 +126,7 @@
           <tr class="{% if u.over %}table-danger{% endif %}">
             <td class="mono fw-semibold text-nowrap">{{ r.code }}
               {% if not r.locations %}<span class="badge text-bg-secondary ms-1" title="Nível sem endereços: só recebe bins de outros níveis">reservado</span>{% endif %}</td>
+            <td>{% if r.struct %}<span class="badge bg-primary-subtle text-primary-emphasis border mono" title="{{ r.struct.name }} — frente {{ r.struct.width|dec }} cm, prof. {{ r.struct.depth|dec }} cm, {{ r.struct.levels }} níveis × {{ r.struct.level_height|dec }} cm">{{ r.struct.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
             <td class="text-end">{% if r.locations %}<a href="/locations?branch_id={{ branch_id }}&warehouse_id={{ warehouse_id }}&q={{ r.code|urlencode }}">{{ r.locations }}</a>{% else %}0{% endif %}</td>
             {% for bt in bin_types %}
             <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:64px" type="number" min="0" name="cap_{{ r.level.id }}_{{ bt.id }}" value="{{ u.capacity.get(bt.id, '') }}"></td>
@@ -128,7 +155,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="{{ bin_types|length + 7 }}" class="text-center text-muted py-4">Nenhum nível encontrado.</td></tr>
+          <tr><td colspan="{{ bin_types|length + 8 }}" class="text-center text-muted py-4">Nenhum nível encontrado.</td></tr>
         {% endfor %}
         </tbody>
       </table>

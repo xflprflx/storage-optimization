@@ -21,7 +21,7 @@
         {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}
         {{ th(request, sort, 'height', 'Alt. (cm)', 'text-end') }}{{ th(request, sort, 'width', 'Larg. (cm)', 'text-end') }}
         {{ th(request, sort, 'length', 'Comp. (cm)', 'text-end') }}
-        {{ th(request, sort, 'max_weight', 'Cap. peso (kg)', 'text-end') }}{{ th(request, sort, 'volume', 'Cap. volume (L)', 'text-end') }}
+        {{ th(request, sort, 'max_weight', 'Cap. peso (kg)', 'text-end') }}{{ th(request, sort, 'volume', 'Cap. volume (L)', 'text-end') }}{{ th(request, sort, 'cost', 'Custo (R$)', 'text-end') }}
         {{ th(request, sort, 'locations', 'Endereços', 'text-end') }}{{ th(request, sort, 'bins', 'Bins em uso', 'text-end') }}
         <th class="text-end" style="width:110px">Ações</th>
       </tr></thead>
@@ -36,6 +36,7 @@
           <td class="text-end">{{ b.length|dec }}</td>
           <td class="text-end">{{ b.max_weight|dec }}</td>
           <td class="text-end">{{ b.volume|dec(2) if b.volume is not none else '' }}{% if b.max_volume is none and b.volume is not none %} <i class="bi bi-calculator text-muted" title="Calculado pelas dimensões"></i>{% endif %}</td>
+          <td class="text-end">{{ b.cost|dec(2) if b.cost is not none else '' }}</td>
           <td class="text-end"><a href="/locations?bin_type_id={{ b.id }}">{{ u[0] }}</a></td>
           <td class="text-end">{{ u[1] }}</td>
           <td class="text-end text-nowrap">
@@ -44,7 +45,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="10" class="text-center text-muted py-4">Nenhum tipo de bin cadastrado.</td></tr>
+        <tr><td colspan="11" class="text-center text-muted py-4">Nenhum tipo de bin cadastrado.</td></tr>
       {% endfor %}
       </tbody>
     </table>

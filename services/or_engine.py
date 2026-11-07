@@ -108,6 +108,7 @@ def _pool_metrics(res, types: dict[int, BinSpec]) -> dict:
     used = list(used)
     return {"short": sum(p.shortage for p in res.plans), "bins": len(used),
             "volume": round(sum((types[b.type_id].volume_cm3 or 0) for b in used) / 1000.0, 1),
+            "cost": round(sum((types[b.type_id].cost or 0) for b in used), 2),
             "width": round(sum((types[b.type_id].fw or 0) for b in used), 1),
             "changes": 0 if res.unlimited else round(sum(p.moved_units for p in res.plans), 1)}
 
@@ -141,6 +142,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     pool = [b for b in bins if b.location_id not in reserved_locations and not b.locked]
     vol = {t: (s.volume_cm3 or 0.0) for t, s in types.items()}
     wid = {t: (s.fw or 0.0) for t, s in types.items()}
+    cst = {t: (s.cost or 0.0) for t, s in types.items()}
     caps = {d.sku: {t: (capacity(d.unit, types[t], base_prm) if prm.allowed_types is None or t in prm.allowed_types else 0)
                     for t in types} for d in demands}
     needs = {d.sku: (int(math.ceil(d.qty * (1 + prm.growth) - 1e-9)) if d.qty > 0 else 0) for d in demands}
@@ -209,6 +211,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
             keep = {g for g in lst if g[0] in here or orig.get((d.sku, g))} | (used_g.get(d.sku) or set())
             c_ = caps[d.sku]
             rankings = [sorted(lst, key=lambda g: (vol[g[1]] / c_[g[1]], g)),  # volume por unidade
+                        sorted(lst, key=lambda g: (cst[g[1]] / c_[g[1]], g)),  # custo por unidade
                         sorted(lst, key=lambda g: (wid[g[1]] / c_[g[1]], g)),  # largura por unidade
                         sorted(lst, key=lambda g: (-c_[g[1]] * len(groups[g]), g)),  # mais capacidade (menos bins)
                         sorted(lst, key=lambda g: (-(len(groups[g]) * c_[g[1]] >= needs[d.sku]), vol[g[1]] * math.ceil(needs[d.sku] / c_[g[1]]), g))]
@@ -300,6 +303,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
         "bins": sum(nb.values()),
         "volume": sum(int(round(vol[g[1]] / 100.0)) * nb[g] for g in nb),  # decilitros
         "width": sum(int(round(wid[g[1]] * 10)) * nb[g] for g in nb),  # milímetros
+        "cost": sum(int(round(cst[g[1]] * 100)) * nb[g] for g in nb),  # centavos
         "changes": -sum(kept.values()) if kept else 0,  # máximo de unidades que ficam onde estão
     }
 
@@ -503,15 +507,16 @@ def _addr_metrics(results) -> dict:
     from services.bin_optimizer import changes_between
 
     out = {"short": sum(1 for r in results if r.status == "inviavel"), "bins": 0, "volume": 0.0, "width": 0.0,
-           "changes": 0}
+           "changes": 0, "cost": 0.0}
     for r in results:
         m = r.suggested_metrics if r.applicable else r.current_metrics
         out["bins"] += m.bins
         out["volume"] += m.volume_l
         out["width"] += m.width_cm
+        out["cost"] += m.cost
         if r.applicable:
             out["changes"] += changes_between(r.suggested or {}, r.current or {})
-    out["volume"], out["width"] = round(out["volume"], 1), round(out["width"], 1)
+    out["volume"], out["width"], out["cost"] = round(out["volume"], 1), round(out["width"], 1), round(out["cost"], 2)
     return out
 
 
@@ -659,6 +664,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
              "bins": total(lambda o: o[1].bins),
              "volume": total(lambda o: int(round(o[1].volume_l * 10))),
              "width": total(lambda o: int(round(o[1].width_cm * 10))),
+             "cost": total(lambda o: int(round(o[1].cost * 100))),
              "changes": total(lambda o: o[2])}
     own_extra = [v for (aid, l, t), v in pvar.items()
                  if l != next((a.own_level for a, _, _ in entries if a.id == aid), None)]

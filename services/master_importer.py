@@ -48,6 +48,7 @@ BIN_TYPE_FIELDS = {
     "length": ("Comprimento (cm)", False, ("comprimento", "comprimentocm", "length", "profundidade", "comp")),
     "max_weight": ("Peso máximo (kg)", False, ("pesomax", "pesomaxkg", "pesomaximo", "pesomaximokg", "maxweight", "capacidadekg", "peso")),
     "max_volume": ("Volume (L)", False, ("volume", "volumel", "volumelitros", "maxvolume", "litros")),
+    "cost": ("Custo por bin (R$)", False, ("custo", "custor", "custobin", "custoporbin", "preco", "preço", "valor", "cost")),
     "parent": ("Bin pai", False, ("binpai", "pai", "parent", "tipopai", "bininteira")),
     "div_w": ("Divisões na largura", False, ("divisoesnalargura", "divisoeslargura", "colunas", "nalargura", "divlargura", "divisoesl")),
     "div_l": ("Divisões no comprimento", False, ("divisoesnocomprimento", "divisoescomprimento", "fileiras", "nocomprimento", "divcomprimento", "divisoesc")),
@@ -275,6 +276,7 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
         if len(code) > 30:
             raise ValueError("Código com mais de 30 caracteres")
         vals = {k: _dec(row, mapping, k, labels[k], allow_zero=False) for k in ("height", "width", "length", "max_weight", "max_volume")}
+        vals["cost"] = _dec(row, mapping, "cost", labels["cost"])
         ax_txt = get_cell(row, mapping.get("split_axis")).strip().lower()
         axis = "length" if ax_txt.startswith(("comp", "prof", "len", "c")) else "width"
         frac, msg = parse_grid(get_cell(row, mapping.get("div_w")), get_cell(row, mapping.get("div_l")),

@@ -9,7 +9,8 @@
     <a href="/structures/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Nova estrutura</a>
   </div>
 </div>
-<div class="small text-muted mb-3">Módulos (estantes, porta-paletes…) candidatos no projeto de filial nova. Medidas em cm; o vão útil é a altura livre de cada nível.</div>
+<div class="small text-muted mb-3">Módulos (estantes, porta-paletes…) usados no projeto de filial nova e nas estantes dos depósitos existentes
+  (<a href="/levels">Capacidade dos níveis → Aplicar estrutura</a>: define o vão e calcula a capacidade de cada nível). Medidas em cm; o vão útil é a altura livre de cada nível.</div>
 <div class="card">
   <div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
@@ -25,7 +26,7 @@
         {{ th(request, sort, 'width', 'Frente', 'text-end') }}{{ th(request, sort, 'depth', 'Prof.', 'text-end') }}
         {{ th(request, sort, 'height', 'Altura', 'text-end') }}{{ th(request, sort, 'levels', 'Níveis', 'text-end') }}
         {{ th(request, sort, 'level_height', 'Vão', 'text-end') }}<th class="text-end">Carga/nível (kg)</th>
-        {{ th(request, sort, 'cost', 'Custo (R$)', 'text-end') }}
+        {{ th(request, sort, 'cost', 'Custo (R$)', 'text-end') }}<th class="text-end" title="Estantes de depósitos existentes com esta estrutura">Em uso</th>
         <th class="text-end" style="width:110px">Ações</th>
       </tr></thead>
       <tbody>
@@ -41,13 +42,14 @@
           <td class="text-end">{{ s.level_height|dec }}</td>
           <td class="text-end">{{ s.max_load|dec }}</td>
           <td class="text-end">{{ s.cost|dec(2) if s.cost is not none else '' }}</td>
+          <td class="text-end">{{ usage.get(s.id, 0) or '' }}{% if usage.get(s.id) %} estante(s){% endif %}</td>
           <td class="text-end text-nowrap">
             <a class="btn btn-sm btn-outline-primary" href="/structures/{{ s.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
             {{ delete_button('/structures/' ~ s.id ~ '/delete', '', 'Excluir a estrutura ' ~ s.code ~ '?') }}
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="11" class="text-center text-muted py-4">Nenhuma estrutura cadastrada.</td></tr>
+        <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma estrutura cadastrada.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -280,7 +280,7 @@
           <tbody>
           {% for c in ['short'] + sv.order %}{% if c in sv.final %}
             {% set h, f = sv.heuristic[c], sv.final[c] %}
-            {% set pl = 0 if c in ('short', 'bins', 'changes') else 1 %}
+            {% set pl = 0 if c in ('short', 'bins', 'changes') else (2 if c == 'cost' else 1) %}
             <tr><td>{{ crit_labels.get(c, c) }}</td><td class="text-end">{{ h|dec(pl) }}</td>
               <td class="text-end {{ 'text-success fw-semibold' if f < h else ('text-danger' if f > h else '') }}">{{ f|dec(pl) }}</td>
               <td>{% if c in opt %}{% if opt[c] %}<span class="text-success" title="valor ótimo comprovado nesta etapa"><i class="bi bi-check2-circle"></i> ótimo</span>{% else %}<span class="text-muted" title="o tempo acabou nesta etapa">melhor encontrado</span>{% endif %}{% elif sv.status in ('optimal', 'feasible') %}<span class="text-muted">sem tempo</span>{% endif %}</td></tr>

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from models import (
+    BayStructure,
     BinType,
     Branch,
     LevelCapacity,
@@ -342,7 +343,9 @@ def to_xlsx(plan: SitePlan, project: SiteProject, types: dict[int, BinSpec]) -> 
         ("Área total (m²)", round(b.area_m2, 1)),
         ("Fileiras / corredores", f"{len(plan.floor.rows)} / {len(plan.floor.aisles)}"),
         ("Módulos de estrutura", plan.total_modules),
-        ("Custo das estruturas (R$)", round(plan.total_cost, 2) if plan.total_cost is not None else "—"),
+        ("Custo das estruturas (R$)", round(plan.structures_cost, 2) if plan.structures_cost is not None else "—"),
+        ("Custo das bins (R$)", round(plan.bins_cost, 2) if plan.bins_cost is not None else "—"),
+        ("Custo total (R$)", round(plan.total_cost, 2) if plan.total_cost is not None else "—"),
         ("Área ocupada pelas estruturas (m²)", round(plan.footprint_m2, 1)),
         ("Uso das fileiras (%)", round(plan.row_use or 0, 1)),
         ("Bins necessárias / alocadas", f"{plan.bins_needed} / {plan.bins_placed}"),
@@ -368,9 +371,9 @@ def to_xlsx(plan: SitePlan, project: SiteProject, types: dict[int, BinSpec]) -> 
            for s in plan.structs if s.qty or s.struct.mode != "off"])
     table(wb.create_sheet("Bins"),
           ["Tipo", "Necessárias", "Alocadas", "Falta", "Capacidade nos níveis", "Ocupação (%)", "Bin pai",
-           "Bins pai a comprar"],
+           "Bins pai a comprar", "Custo unit. (R$)", "Custo total (R$)"],
           [(t.spec.code, t.needed, t.placed, t.shortage, t.capacity, round(t.fill or 0, 1), t.parent_code,
-            t.parents or "") for t in plan.types])
+            t.parents or "", t.unit_cost, round(t.cost, 2) if t.cost is not None else None) for t in plan.types])
     table(wb.create_sheet("Endereços"),
           ["Endereço", "Corredor", "Estante", "Nível", "Posição", "Estrutura", "Tipo de bin", "Bins", "SKU",
            "Produto", "Unidades", "Peso (kg)"],
@@ -416,6 +419,9 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
     db.flush()
     stats = {"levels": 0, "locations": 0, "bins": 0}
     for m in plan.modules:
+        db.add(BayStructure(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
+                            structure_type_id=m.struct.id))
+        stats["bays"] = stats.get("bays", 0) + 1
         for lv in m.levels:
             sl = ShelfLevel(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
                             level=str(lv.n), height_cm=Decimal(str(m.struct.level_h)),

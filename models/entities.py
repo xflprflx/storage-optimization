@@ -186,6 +186,8 @@ class BinType(TimestampMixin, Base):
     max_weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # capacidade de peso (kg)
     # Capacidade de volume (litros). Se vazio, usa altura × largura × comprimento (cm) / 1000.
     max_volume: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    # Custo de compra de uma bin (R$). Compartimento sem custo próprio: rateio do custo da bin pai.
+    cost: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     # Fração de uma bin inteira (compartimento): a bin pai é dividida numa grade de div_w colunas (na largura,
     # lado a lado) × div_l fileiras (no comprimento, da frente para o fundo); cada compartimento é uma célula.
     # Ex.: "1/2 P" = 2×1; 6 compartimentos = 2×3. As dimensões podem vir da bin pai (dims_auto) ou ser informadas.
@@ -480,3 +482,34 @@ class SiteProject(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+
+class BayStructure(TimestampMixin, Base):
+    """Estrutura de armazenagem de uma estante (Corredor + Estante) de um depósito existente: a estante é um
+    módulo daquele tipo (frente, profundidade, nº de níveis e vão). Usada para preencher a capacidade e o vão
+    dos níveis, desenhar o mapa e projetar filiais novas."""
+
+    __tablename__ = "bay_structures"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, index=True)
+    warehouse_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    aisle: Mapped[str] = mapped_column(String(20), nullable=False)
+    bay: Mapped[str] = mapped_column(String(20), nullable=False)
+    structure_type_id: Mapped[int] = mapped_column(
+        ForeignKey("structure_types.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+
+    structure_type: Mapped[StructureType] = relationship()
+
+
+Index(
+    "uq_bay_structure_physical",
+    BayStructure.branch_id,
+    func.coalesce(BayStructure.warehouse_id, 0),
+    BayStructure.aisle,
+    BayStructure.bay,
+    unique=True,
+)

@@ -24,9 +24,18 @@ def load_types(db: Session) -> dict[int, BinSpec]:
 
     return {
         bt.id: BinSpec(bt.id, bt.code, _f(bt.height), _f(bt.width), _f(bt.length), _f(bt.volume), _f(bt.max_weight),
-                       front_w=footprint_width(bt))
+                       front_w=footprint_width(bt), cost=bin_cost(bt))
         for bt in db.scalars(select(BinType))
     }
+
+
+def bin_cost(bt: BinType) -> Optional[float]:
+    """Custo de uma bin do tipo; compartimento sem custo próprio = custo da bin pai ÷ compartimentos por pai."""
+    if bt.cost is not None:
+        return float(bt.cost)
+    if bt.is_fraction and bt.parent is not None and bt.parent.cost is not None:
+        return float(bt.parent.cost) / bt.per_parent
+    return None
 
 
 def derive_caps(caps: dict[int, int], types: dict[int, BinSpec]) -> tuple[dict[int, int], set]:

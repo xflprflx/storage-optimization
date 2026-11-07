@@ -197,6 +197,13 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
     sl_key = {sl.id: (sl.aisle, sl.bay, sl.level) for sl in shelf_levels}
     levels_info: dict[tuple, dict] = {}
 
+    # ---- Estruturas de armazenagem das estantes ----
+    from services.structure_service import bay_structures
+
+    bay_st = {k: {"code": st.code, "name": st.name, "width": float(st.width), "depth": float(st.depth),
+                  "height": float(st.height), "levels": st.levels, "level_h": float(st.level_height)}
+              for k, st in bay_structures(db, branch_id, warehouse_id).items() if not aisle or k[0] == aisle}
+
     def linfo(key: tuple) -> dict:
         return levels_info.setdefault(key, {"sl_id": None, "notes": "", "caps": {}, "used": {}, "extra": [],
                                             "height": None})
@@ -342,6 +349,9 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
         if caps and not unknown:
             fraction = sum(n / caps[t] for t, n in used.items() if n)
         widths = [caps[t] * bt_info[t]["fw"] for t in caps if t in bt_info and bt_info[t]["fw"]]
+        st = bay_st.get(key[:2])
+        if st:  # a frente útil do módulo é a largura do nível
+            widths = [st["width"]]
         heights = [bt_info[t]["h"] for t in caps if t in bt_info and bt_info[t]["h"]]
         if fraction is not None and fraction > 1.0 + 1e-9:
             stats["levels_over"] += 1
@@ -357,13 +367,16 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
                 "caps": {str(t): m for t, m in caps.items()}, "used": {str(t): n for t, n in used.items() if n},
                 "fraction": None if fraction is None else round(fraction, 4), "unknown": unknown,
                 "usable_w": max(widths) if widths else None, "usable_h": max(heights) if heights else None,
-                "height": li["height"], "tall": tall, "extra": li["extra"]}
+                "height": li["height"] if li["height"] is not None else (st["level_h"] if st else None),
+                "tall": tall, "extra": li["extra"]}
 
     def to_json(node: dict, path: tuple = ()) -> dict:
         out = {"code": node["code"], "depth": node["depth"]}
         path = path + (node["code"],)
         if node["depth"] == 2:
             out["lvl"] = level_json(path, bool(node.get("reserved")))
+        if node["depth"] == 1 and path[:2] in bay_st:
+            out["struct"] = bay_st[path[:2]]
         if "leaf" in node:
             out["leaf"] = leaf_json(node["leaf"])
         kids = sorted(node["children"].values(), key=lambda n: natural_key(n["code"]))

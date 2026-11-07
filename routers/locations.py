@@ -79,7 +79,11 @@ def _lookups(db: Session) -> dict:
     for b, w in links:
         wh_branches.setdefault(w, []).append(b)
     bin_types = list(db.scalars(select(BinType).order_by(BinType.code)))
-    return {"branches": branches, "warehouses": warehouses, "wh_branches": wh_branches, "bin_types": bin_types}
+    from models import StructureType
+
+    structures = list(db.scalars(select(StructureType).order_by(StructureType.code)))
+    return {"branches": branches, "warehouses": warehouses, "wh_branches": wh_branches, "bin_types": bin_types,
+            "structures": structures}
 
 
 def _affected_levels(db: Session, loc, bin_items) -> set:
@@ -475,6 +479,7 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
         "branch_id": f_int(form, "branch_id"),
         "warehouse_id": f_int(form, "warehouse_id"),
         "replace_unoccupied": f_bool(form, "replace_unoccupied"),
+        "structure_type_id": f_int(form, "structure_type_id"),
     }
     rules_raw: dict[str, dict] = {}
     rules: dict[str, LevelRule] = {}
@@ -517,6 +522,18 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
             req = BatchRequest(data["branch_id"], data["warehouse_id"], rules, data["replace_unoccupied"], exceptions,
                                bin_items)
             result = run_batch(db, req, execute=(action == "execute"))
+            if action == "execute" and data["structure_type_id"] and result.new_paths:
+                # estantes geradas recebem a estrutura: vão dos níveis e capacidade de cada tipo de bin
+                from models import StructureType
+                from services.structure_service import apply_structure
+
+                st = db.get(StructureType, data["structure_type_id"])
+                bays = sorted({(data["branch_id"], data["warehouse_id"], seg[0], seg[1])
+                               for seg, _ in result.new_paths if len(seg) >= 2})
+                if st is not None and bays:
+                    apply_structure(db, bays, st, create_levels=False)
+                    result.structure_note = f"Estrutura {st.code} aplicada a {len(bays)} estante(s)."
+                db.commit()
             if action == "execute" and bin_items:
                 spill_overflow(db, None)
                 fit_structure(db)

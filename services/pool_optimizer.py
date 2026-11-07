@@ -27,6 +27,7 @@ POOL_OBJECTIVES = {
     "min_volume": "Menos volume de bins (menos ar)",
     "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
     "min_moves": "Mínimo de movimentações (mantém o que já está nas bins)",
+    "min_cost": "Menor custo de bins (R$)",
 }
 
 
@@ -438,6 +439,8 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                     main = n * vol[t]
                 elif prm.objective == "min_width":
                     main = n * wid[t]
+                elif prm.objective == "min_cost":
+                    main = n * (types[t].cost or 0.0) if t in types else n
                 elif prm.objective == "min_moves":
                     main = 0 if t in orig_types else 1
                 else:
@@ -508,6 +511,8 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                         k = lambda l: (round(ev[l][3], 3), ev[l][5], ev[l][1], ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     elif prm.objective == "min_width":
                         k = lambda l: (round(ev[l][4], 3), ev[l][5], ev[l][1], ev[l][2], addr_of.get(l, ""))  # noqa: E731
+                    elif prm.objective == "min_cost":  # bins já existentes: menos bins de maior valor
+                        k = lambda l: (ev[l][1], round(ev[l][3], 3), ev[l][5], ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     else:
                         k = lambda l: (ev[l][1], ev[l][5], ev[l][2], round(ev[l][3], 3), addr_of.get(l, ""))  # noqa: E731
                     only["loc"] = min(ok_locs, key=k)
@@ -566,6 +571,14 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                     b, e = min(fits, key=lambda be: (partial(be[0]), wid[be[0].type_id], far(be[0]), be[0].id))
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), wid[be[0].type_id] / max(cap[be[0].type_id], 1),
+                                                      far(be[0]), -be[1], be[0].id))
+            elif prm.objective == "min_cost":
+                cst = lambda t: (types[t].cost or 0.0) if t in types else 0.0  # noqa: E731
+                if fits:
+                    b, e = min(fits, key=lambda be: (partial(be[0]), cst(be[0].type_id) * (1 - be[0].used),
+                                                     vol[be[0].type_id], far(be[0]), be[0].id))
+                else:
+                    b, e = min(cands, key=lambda be: (partial(be[0]), cst(be[0].type_id) / max(cap[be[0].type_id], 1),
                                                       far(be[0]), -be[1], be[0].id))
             elif prm.objective == "min_volume":
                 if fits:

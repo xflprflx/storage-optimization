@@ -169,7 +169,8 @@ def kpi(label: str, before, after, unit: str = "", places: int = 0, good_negativ
 
 
 CRIT_LABELS = {"displaced": "Unidades de outros itens desalojadas", "short": "Violações / falta de bins", "bins": "Bins", "volume": "Volume de bins (L)",
-               "width": "Largura de frente (cm)", "changes": "Mudanças / unidades movimentadas", "levels": "Bins fora do próprio nível"}
+               "width": "Largura de frente (cm)", "changes": "Mudanças / unidades movimentadas", "levels": "Bins fora do próprio nível",
+               "cost": "Custo de bins (R$)"}
 
 
 def _solver_view(info: Optional[dict], objective: str, priority, drop_changes: bool = False) -> Optional[dict]:

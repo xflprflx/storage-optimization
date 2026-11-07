@@ -80,6 +80,14 @@
           <label class="form-label mb-1"><i class="bi bi-inboxes"></i> Bins em cada endereço novo <small class="text-muted">(opcional)</small></label>
           {{ bin_editor(bin_types, data.get('bins') or [], none, 'Sem bins — pode atribuir depois na lista de endereços.') }}
         </div>
+        <div class="col-md-6">
+          <label class="form-label mb-1"><i class="bi bi-bookshelf"></i> Estrutura de armazenagem das estantes <small class="text-muted">(opcional)</small></label>
+          <select class="form-select" name="structure_type_id">
+            <option value="">— nenhuma —</option>
+            {% for st in structures %}<option value="{{ st.id }}" {% if data.get('structure_type_id') == st.id %}selected{% endif %}>{{ st.code }} — {{ st.levels }} níveis × {{ st.level_height|dec }} cm, frente {{ st.width|dec }} cm</option>{% endfor %}
+          </select>
+          <div class="form-text">Ao gerar, cada estante nova fica com essa estrutura: vão dos níveis e quantas bins de cada tipo cabem por nível.</div>
+        </div>
       </div>
     </div>
 
@@ -167,6 +175,9 @@
           <div class="col-4"><div class="border rounded p-2"><div class="fs-5 fw-bold">{{ result.replaced_exact|dec }}</div><small class="text-muted">Idênticos mantidos</small></div></div>
           <div class="col-4"><div class="border rounded p-2 {% if result.blocked_count %}border-warning{% endif %}"><div class="fs-5 fw-bold text-warning">{{ result.blocked_count|dec }}</div><small class="text-muted">Bloqueados (ocupados)</small></div></div>
         </div>
+        {% if result.executed and result.structure_note %}
+        <div class="alert alert-success mt-3 mb-0 small"><i class="bi bi-bookshelf"></i> {{ result.structure_note }}</div>
+        {% endif %}
         {% if result.executed and result.bins_assigned %}
         <div class="alert alert-success mt-3 mb-0 small"><i class="bi bi-inboxes"></i> Bins atribuídas a {{ result.bins_assigned|dec }} endereço(s) novo(s).</div>
         {% elif data.get('bins') and not result.executed %}

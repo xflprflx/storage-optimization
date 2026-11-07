@@ -78,6 +78,12 @@
           {{ field_error(errors, 'max_volume') }}
           <div class="form-text" id="volHint">Vazio = calcular pelas dimensões.</div>
         </div>
+        <div class="col-md-4">
+          <label class="form-label">Custo por bin (R$)</label>
+          <input class="form-control text-end {{ invalid(errors, 'cost') }}" name="cost" inputmode="decimal" value="{{ data.get('cost')|dec_input }}">
+          {{ field_error(errors, 'cost') }}
+          <div class="form-text">Usado nos objetivos de menor custo. Num compartimento vazio = custo da bin pai ÷ compartimentos.</div>
+        </div>
       </div>
       <div class="mt-4">
         <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>

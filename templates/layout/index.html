@@ -360,7 +360,7 @@
       x += b._s.w + G.BAY;
     }
     equalizeBays(bays, maxH);
-    const W = Math.max(x - G.BAY + G.LEFT, 200), floor = G.TOP + maxH, H = floor + G.FLOOR;
+    const W = Math.max(x - G.BAY + G.LEFT, 200), floor = G.TOP + maxH, H = floor + G.FLOOR + (bays.some(b => b.struct) ? 12 : 0);
     const out = [`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`,
       `<defs><pattern id="nkHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#0d6efd" stroke-width="1.5" opacity=".35"/></pattern></defs>`];
     out.push(`<line x1="0" y1="${floor + 0.5}" x2="${W}" y2="${floor + 0.5}" stroke="#9aa5ad" stroke-width="1"/>`);
@@ -373,6 +373,10 @@
       }
       drawNode(out, b, bx, floor);
       out.push(`<text x="${bx + s.w / 2}" y="${floor + 15}" font-size="11" font-weight="600" text-anchor="middle" fill="#1f2d33" font-family="ui-monospace,monospace">${esc(b.leaf ? b.leaf.address : aisle.code + '-' + b.code)}</text>`);
+      if (b.struct) {   // estrutura de armazenagem da estante
+        const st = b.struct;
+        out.push(`<text x="${bx + s.w / 2}" y="${floor + 28}" font-size="9" text-anchor="middle" fill="#3b5b8c" font-family="ui-monospace,monospace"><title>${esc(st.name)} — frente ${fmt(st.width)} cm, prof. ${fmt(st.depth)} cm, altura ${fmt(st.height)} cm, ${st.levels} níveis × ${fmt(st.level_h)} cm</title>▤ ${esc(st.code)}</text>`);
+      }
     }
     (function count(n) { if (n.leaf) { nLeaves++; if (n.leaf.occupied) nOcc++; } (n.children || []).forEach(count); })(aisle);
     out.push('</svg>');

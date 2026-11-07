@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import FormData
 
 from database import get_db
-from models import BinType, Branch, LevelCapacity, LocationBin, ShelfLevel, StorageLocation, Warehouse, branch_warehouse
+from models import (BinType, Branch, LevelCapacity, LocationBin, ShelfLevel, StorageLocation, StructureType, Warehouse,
+                    branch_warehouse)
 from routers.common import f_int, f_str, form_data, redirect, render, to_int
 from services.addressing import normalize_code
 from services.file_reader import parse_decimal
@@ -34,6 +35,7 @@ def _lookups(db: Session) -> dict:
         "warehouses": list(db.scalars(select(Warehouse).order_by(Warehouse.code))),
         "wh_branches": wh_branches,
         "bin_types": list(db.scalars(select(BinType).order_by(BinType.code))),
+        "structures": list(db.scalars(select(StructureType).order_by(StructureType.code))),
     }
 
 
@@ -88,13 +90,16 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
     ):
         loc_counts[(a, b_, lv)] = n
     bt_h = {bt.id: (bt.code, float(bt.height)) for bt in lk["bin_types"] if bt.height is not None}
+    from services.structure_service import bay_structures
+
+    bay_st = bay_structures(db, bid, wid)
     rows = []
     for k in page_keys:
         sl = levels[k]
         u = usage[k]
         tallest = max((bt_h[t][1] for t, n in u.used.items() if n and t in bt_h), default=None)
         rows.append({"key": k, "code": "-".join(k[2:]), "level": sl, "usage": u, "tallest": tallest,
-                     "locations": loc_counts.get(k[2:], 0)})
+                     "locations": loc_counts.get(k[2:], 0), "struct": bay_st.get(k[2:4])})
     ctx.update(rows=rows, total=total, page_no=page, pages=pages)
     return render(request, "levels/index.html", **ctx)
 
@@ -249,3 +254,49 @@ def delete_level(level_id: int, form: FormData = Depends(form_data), db: Session
     if n_locs:
         return redirect(_back(form), f"Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).")
     return redirect(_back(form), f"Nível reservado {code} excluído.")
+
+
+@router.post("/structure")
+def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Aplica (ou remove) uma estrutura de armazenagem às estantes que atendem às condições."""
+    from services.structure_service import apply_structure, matching_bays, remove_structure
+
+    bid = f_int(form, "f_branch_id")
+    wid = _wid(form.get("f_warehouse_id"))
+    if not bid:
+        return redirect(_back(form), "Selecione a filial.", "danger")
+    try:
+        bays = matching_bays(db, bid, wid, f_str(form, "s_aisle"), f_str(form, "s_bay"))
+    except ValueError as exc:
+        return redirect(_back(form), str(exc), "danger")
+    if not bays:
+        return redirect(_back(form), "Nenhuma estante corresponde às condições.", "warning")
+    sid = form.get("structure_type_id") or ""
+    if sid == "remove":
+        n = remove_structure(db, bays)
+        db.commit()
+        return redirect(_back(form), f"Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos.")
+    st = db.get(StructureType, int(sid)) if str(sid).isdigit() else None
+    if st is None:
+        return redirect(_back(form), "Escolha a estrutura de armazenagem.", "danger")
+    on = lambda k: str(form.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
+    try:
+        gap = float(parse_decimal(form.get("top_gap") or "5") or 0)
+    except ValueError:
+        return redirect(_back(form), "Folga acima da bin inválida.", "danger")
+    stats = apply_structure(db, bays, st, create_levels=on("create_levels"), set_heights=on("set_heights"),
+                            set_caps=on("set_caps"), replace_caps=on("replace_caps"), top_gap_cm=gap)
+    msgs = [f"Estrutura {st.code} aplicada a {stats['bays']} estante(s) ({stats['levels']} níveis"
+            + (f", {stats['levels_created']} criados" if stats["levels_created"] else "") + ")."]
+    if on("set_caps"):
+        msgs.append("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins.")
+    if stats["extra_levels"]:
+        msgs.append(f"Atenção: {stats['extra_levels']} nível(is) além dos {st.levels} da estrutura.")
+    adj = structure_message(stats["fit"])
+    if adj:
+        msgs.append(adj)
+    spilled = spill_message(db, stats["spill"])
+    if spilled:
+        msgs.append(spilled)
+    db.commit()
+    return redirect(_back(form), " ".join(msgs), "warning" if stats["extra_levels"] else "success")

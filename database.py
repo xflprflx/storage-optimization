@@ -138,7 +138,8 @@ def _add_missing_columns(conn) -> None:
     btcols = {c["name"] for c in insp.get_columns("bin_types")} if "bin_types" in tables else set()
     for col, ddl in (("parent_id", "INTEGER REFERENCES bin_types(id)"), ("fraction_num", "INTEGER"),
                      ("fraction_den", "INTEGER"), ("split_axis", "VARCHAR(10) NOT NULL DEFAULT 'width'"),
-                     ("dims_auto", "BOOLEAN NOT NULL DEFAULT 0"), ("div_w", "INTEGER"), ("div_l", "INTEGER")):
+                     ("dims_auto", "BOOLEAN NOT NULL DEFAULT 0"), ("div_w", "INTEGER"), ("div_l", "INTEGER"),
+                     ("cost", "BIGINT")):
         if "bin_types" in tables and col not in btcols:
             conn.execute(text(f"ALTER TABLE bin_types ADD COLUMN {col} {ddl}"))
     if "bin_types" in tables and "div_w" not in btcols:

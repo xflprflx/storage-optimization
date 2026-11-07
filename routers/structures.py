@@ -65,7 +65,9 @@ def list_structures(request: Request, q: str = "", sort: str = "", dir: str = ""
         "width": StructureType.width, "depth": StructureType.depth, "height": StructureType.height,
         "levels": StructureType.levels, "level_height": StructureType.level_height, "cost": StructureType.cost,
     }, default="code", tiebreak=StructureType.id)
-    return render(request, "structures/list.html", page=paginate(db, stmt, page), q=q, sort=srt)
+    from services.structure_service import usage_counts
+
+    return render(request, "structures/list.html", page=paginate(db, stmt, page), q=q, sort=srt, usage=usage_counts(db))
 
 
 @router.get("/new")
@@ -114,6 +116,12 @@ def delete_structure(sid: int, db: Session = Depends(get_db)):
     st = db.get(StructureType, sid)
     if not st:
         return redirect("/structures", "Estrutura não encontrada.", "danger")
+    from services.structure_service import usage_counts
+
+    n = usage_counts(db).get(st.id, 0)
+    if n:
+        return redirect("/structures", f"A estrutura {st.code} está em {n} estante(s). Remova-a das estantes em "
+                                       "Capacidade dos níveis → Aplicar estrutura → remover, antes de excluir.", "danger")
     code = st.code
     db.delete(st)
     db.commit()

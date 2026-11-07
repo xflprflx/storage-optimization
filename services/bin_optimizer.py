@@ -35,6 +35,7 @@ OBJECTIVES = {
     "min_volume": "Menos volume de bins (menos ar)",
     "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
     "min_changes": "Mínimo de mudanças (só corrige o que não comporta o saldo)",
+    "min_cost": "Menor custo de bins (R$)",
 }
 
 STATUS_LABELS = {
@@ -82,6 +83,7 @@ class BinSpec:
     volume_l: Optional[float] = None
     max_weight: Optional[float] = None
     front_w: Optional[float] = None  # largura de frente (compartimento: fração da largura da bin pai)
+    cost: Optional[float] = None  # custo de uma bin (R$); None = não informado (conta como 0)
 
     @property
     def fw(self) -> Optional[float]:
@@ -229,6 +231,7 @@ class Metrics:
     volume_l: float = 0.0
     width_cm: float = 0.0
     height_cm: float = 0.0
+    cost: float = 0.0  # R$ (tipos sem custo contam 0)
     unknown_dims: bool = False
 
 
@@ -350,6 +353,7 @@ def metrics(cfg: dict[int, int], types: dict[int, BinSpec]) -> Metrics:
         if t is None:
             m.unknown_dims = True
             continue
+        m.cost += (t.cost or 0.0) * n
         if t.volume_cm3 is not None:
             m.volume_l += t.volume_cm3 / 1000.0 * n
         if t.fw is not None and t.h is not None:
@@ -361,9 +365,9 @@ def metrics(cfg: dict[int, int], types: dict[int, BinSpec]) -> Metrics:
 
 
 CRITERIA = {"bins": "Menos bins", "volume": "Menos volume de bins", "width": "Menor largura de frente",
-            "changes": "Mínimo de mudanças / movimentações"}
+            "changes": "Mínimo de mudanças / movimentações", "cost": "Menor custo de bins"}
 OBJ_CRITERION = {"min_bins": "bins", "min_volume": "volume", "min_width": "width", "min_changes": "changes",
-                 "min_moves": "changes"}
+                 "min_moves": "changes", "min_cost": "cost"}
 
 
 def priority_list(objective: str, custom: Optional[list] = None) -> list[str]:
@@ -371,14 +375,14 @@ def priority_list(objective: str, custom: Optional[list] = None) -> list[str]:
     mínimo de mudanças e os demais na ordem bins, volume, largura)."""
     first = OBJ_CRITERION.get(objective, "volume")
     rest = [c for c in (custom or []) if c in CRITERIA and c != first]
-    default = ["changes", "bins", "volume", "width"]
+    default = ["changes", "bins", "volume", "width", "cost"]
     out = [first] + rest
     return out + [c for c in default if c not in out]
 
 
 def prio_key(m: Metrics, prio: list, changes: int = 0) -> tuple:
     r = lambda v: round(v, 4)  # noqa: E731
-    val = {"bins": m.bins, "volume": r(m.volume_l), "width": r(m.width_cm), "changes": changes}
+    val = {"bins": m.bins, "volume": r(m.volume_l), "width": r(m.width_cm), "changes": changes, "cost": r(m.cost)}
     return tuple(val[c] for c in prio)
 
 
@@ -388,6 +392,8 @@ def objective_key(m: Metrics, objective: str, changes: int = 0) -> tuple:
         return (m.bins, r(m.volume_l), r(m.width_cm), changes)
     if objective == "min_width":
         return (r(m.width_cm), m.bins, r(m.volume_l), changes)
+    if objective == "min_cost":
+        return (r(m.cost), r(m.volume_l), m.bins, r(m.width_cm), changes)
     return (r(m.volume_l), m.bins, r(m.width_cm), changes)  # min_volume (e base do min_changes)
 
 
@@ -467,7 +473,7 @@ def _sku_options(units: int, caps: dict[int, int], types: dict[int, BinSpec], pr
     ranked = sorted(opts.values(), key=lambda c: objective_key(metrics(c, types), prm.objective))
     keep = ranked[:OPTIONS_PER_SKU]
     # garante diversidade: melhor de cada métrica (ajuda quando há restrição de espaço / nº de bins)
-    for obj in ("min_bins", "min_volume", "min_width"):
+    for obj in ("min_bins", "min_volume", "min_width", "min_cost"):
         best = min(opts.values(), key=lambda c: objective_key(metrics(c, types), obj))
         if best not in keep:
             keep.append(best)

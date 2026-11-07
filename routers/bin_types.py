@@ -31,6 +31,7 @@ NUM_FIELDS = (
     ("length", "Comprimento"),
     ("max_weight", "Capacidade de peso"),
     ("max_volume", "Capacidade de volume"),
+    ("cost", "Custo por bin"),
 )
 
 
@@ -51,7 +52,7 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
         errors.add("name", "Nome é obrigatório.")
     for key, label in NUM_FIELDS:
         val = f_dec(form, key, errors, label)
-        if val is not None and val == 0:
+        if val is not None and val == 0 and key != "cost":
             errors.add(key, f"{label}: deve ser maior que zero (ou deixe vazio).")
         data[key] = val
     # Fração de uma bin inteira (compartimento): grade colunas (largura) × fileiras (comprimento)
@@ -117,7 +118,7 @@ def list_bin_types(request: Request, q: str = "", sort: str = "", dir: str = "",
     stmt, srt = apply_sort(stmt, sort, dir, {
         "code": BinType.code, "name": BinType.name,
         "height": BinType.height, "width": BinType.width, "length": BinType.length,
-        "max_weight": BinType.max_weight, "volume": volume,
+        "max_weight": BinType.max_weight, "volume": volume, "cost": BinType.cost,
         "locations": loc_count, "bins": bin_count,
     }, default="code", tiebreak=BinType.id)
     pg = paginate(db, stmt, page)
@@ -148,7 +149,7 @@ def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_
     bt = db.get(BinType, bin_type_id)
     if not bt:
         return redirect("/bin-types", "Tipo de bin não encontrado.", "danger")
-    data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume",
+    data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
                                         "parent_id", "dims_auto")}
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")
     if bt.dims_auto:  # dimensões vindas da bin pai: o formulário mostra vazio (continua automático)

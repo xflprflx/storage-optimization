@@ -145,8 +145,23 @@ flowchart TD
 - **Objetivo**: menos módulos, menor custo ou menos metros de fileira. A prioridade é sempre esta: 1º guardar toda a demanda, 2º o objetivo, 3º o desempate e, por último, o menor nº de níveis ocupados.
 - **Regras**: tipos de bin permitidos, enchimento máximo da bin, folga acima da bin e entre bins, aproveitamento da frente do nível, rotação, um tipo de bin por SKU e peso (da bin e da carga do nível). Cada nível recebe um único tipo de bin, e as bins maiores ficam nos níveis de baixo.
 - **Importar dados da filial nova**: no projeto, *Baixar modelo* gera um Excel já preenchido com os dados atuais. Ele tem as abas **Imóvel** (campo/valor, em metros), **Estruturas** (medidas em cm; modo *Otimizar*, *Fixa* ou *Não usar*; qtd. fixa, mínimo e máximo), **Bins** (os códigos novos são cadastrados) e **SKUs** (SKU, produto, material, dimensões, peso, **saldo, min level e max level da filial nova**). Todas as abas são opcionais e podem ter qualquer nome e colunas em qualquer ordem: ao enviar, abre a tela de **mapeamento**, onde você escolhe a aba de cada tipo de dado e a coluna de cada campo, com prévia das linhas. As sugestões vêm dos nomes das abas e colunas e do mapeamento usado na última importação do projeto. Um CSV é lido como uma aba só. Os SKUs ficam no projeto, sem alterar produtos ou saldos, e a fonte da demanda passa a ser *Arquivo importado*. Dimensões vazias vêm do cadastro de produtos quando o SKU existe, e SKUs repetidos têm as quantidades somadas. Assim não é preciso ter uma filial existente como referência.
+- **Custos**: estruturas têm *custo por módulo* e tipos de bin têm *custo por bin* (num compartimento sem custo próprio, vale o custo da bin pai ÷ compartimentos). O objetivo **Menor custo total (estruturas + bins)** deixa o solver escolher também as bins de cada SKU, entre as melhores opções, pesando o custo delas contra o das estruturas que ocupam. O plano mostra o custo das estruturas, o das bins e o total.
+- **Planilha de exemplo (seed)**: `samples/seed_filial_nova.xlsx`, gerada por `python scripts/generate_site_seed.py`, traz um galpão de 48 × 30 m, 4 estruturas, 5 caixas bin com custo e ~400 SKUs. Na tela de projetos dá para *Baixar planilha*, *Criar projeto de exemplo* ou *Criar projeto* já enviando a sua planilha.
 - **Cenários**: duplique o projeto para comparar alternativas (outro imóvel, outras estruturas, outro fator de demanda).
 - **Saídas**: indicadores, planta vista de cima, quantidades por estrutura e por tipo de bin (incluindo as bins pai dos compartimentos), situação de cada SKU, lista de endereços e exportação para Excel. *Gerar cadastro da filial* cria a filial com níveis (vão e capacidade), endereços e bins. Opcionalmente vincula cada SKU ao seu endereço com saldo zerado.
+
+---
+
+## 6. Estruturas de armazenagem nos depósitos existentes
+
+As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):
+
+- **Capacidade dos níveis → Aplicar estrutura**: escolha as estantes (corredor/estante, aceita faixas como `01-04`) e a estrutura. O sistema grava o vínculo, define o vão de cada nível e calcula quantas bins de cada tipo cabem por nível (frente × profundidade do módulo, altura da bin + folga). Opcionalmente cria os níveis que faltam e substitui as capacidades existentes. A tabela mostra a estrutura de cada estante.
+- **Gerar endereços em lote**: as estantes geradas podem receber uma estrutura na hora.
+- **Mapa do estoque**: a estante mostra a estrutura (▤ código, com as medidas no tooltip). A largura do nível passa a ser a frente do módulo, e o vão da estrutura vale quando o nível não tem vão próprio.
+- **Projeto de filial nova → Gerar cadastro da filial**: cada estante criada já fica vinculada à estrutura do plano.
+- **Otimização por endereço e pool**: novo critério/objetivo **Menor custo de bins (R$)**, na heurística e na pesquisa operacional, que também pode entrar na ordem de prioridade.
+- Uma estrutura em uso por alguma estante não pode ser excluída.
 
 ---
 

@@ -61,6 +61,7 @@ BIN_COLS = {
     "length": ["comprimento", "comprimentocm"],
     "max_weight": ["peso", "pesomax", "pesomaximo", "pesomaxkg", "pesomaximokg", "capacidadepeso"],
     "max_volume": ["volume", "volumel", "volumelitros", "capacidadevolume"],
+    "cost": ["custo", "custor", "custobin", "custoporbin", "preco", "valor"],
 }
 BUILDING_KEYS = {
     "length_m": ["comprimento", "comprimentom"],
@@ -128,7 +129,8 @@ FIELD_LABELS = {
                    "max_load": "Carga por nível (kg)", "cost": "Custo por módulo (R$)", "mode": "Modo",
                    "qty": "Qtd fixa", "min_qty": "Mínimo", "max_qty": "Máximo"},
     "bins": {"code": "Código", "name": "Nome", "height": "Altura (cm)", "width": "Largura (cm)",
-             "length": "Comprimento (cm)", "max_weight": "Peso máx. (kg)", "max_volume": "Volume (L)"},
+             "length": "Comprimento (cm)", "max_weight": "Peso máx. (kg)", "max_volume": "Volume (L)",
+             "cost": "Custo por bin (R$)"},
     "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
              "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
              "max": "Max level"},
@@ -279,17 +281,24 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         if cm["code"] is None:
             errs.append("Bins: coluna Código não encontrada.")
         else:
-            created = kept = 0
-            existing = set(db.scalars(select(BinType.code)))
+            created = kept = priced = 0
+            by_code = {bt.code: bt for bt in db.scalars(select(BinType))}
+            existing = set(by_code)
             for i, row in enumerate(rows, start=2):
                 code = normalize_code(_cell(row, cm["code"]))
                 if not code:
                     continue
-                if code in existing:
-                    kept += 1
-                    continue
                 e: list[str] = []
+                cost = _dec(row, cm["cost"], "custo", e, i)
+                if code in existing:  # tipo já cadastrado: dimensões mantidas; só o custo pode ser atualizado
+                    kept += 1
+                    bt = by_code.get(code)
+                    if bt is not None and cost is not None and not e and bt.cost != Decimal(str(cost)):
+                        bt.cost = Decimal(str(cost))
+                        priced += 1
+                    continue
                 vals = {k: _dec(row, cm[k], k, e, i) for k in ("height", "width", "length", "max_weight", "max_volume")}
+                vals["cost"] = cost
                 if e or not all(vals[k] for k in ("height", "width", "length")):
                     errs.append(f"Bins linha {i} ({code}): informe altura, largura e comprimento válidos.")
                     continue
@@ -298,7 +307,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 existing.add(code)
                 created += 1
             db.flush()
-            msgs.append(f"Bins: {created} tipo(s) cadastrado(s), {kept} já existente(s) mantido(s).")
+            msgs.append(f"Bins: {created} tipo(s) cadastrado(s), {kept} já existente(s) mantido(s)"
+                        + (f" ({priced} com custo atualizado)." if priced else "."))
 
     # ---- Estruturas ----
     if "structures" in sheets and len(sheets["structures"]) > 1:
@@ -422,8 +432,8 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
         "Imóvel: medidas em metros. Orientação: automática, comprimento ou largura.",
         "Estruturas: medidas em cm. Modo: Otimizar (o sistema decide a quantidade, com Mín./Máx. opcionais), "
         "Fixa (usa exatamente Qtd fixa) ou Não usar. Códigos existentes são atualizados.",
-        "Bins: medidas internas em cm, peso máx. em kg, volume em litros (vazio = calculado). Códigos já "
-        "cadastrados são mantidos.",
+        "Bins: medidas internas em cm, peso máx. em kg, volume em litros (vazio = calculado), custo em R$ por bin. "
+        "Códigos já cadastrados mantêm as medidas; só o custo é atualizado.",
         "SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. "
         "Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades.",
         "Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior).",
@@ -450,9 +460,10 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
           ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
            "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx."], rows, {2: 30})
     sheet(wb.create_sheet("Bins"),
-          ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)"],
+          ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
+           "Custo por bin (R$)"],
           [(bt.code, bt.name, *(float(v) if v is not None else None for v in
-                                (bt.height, bt.width, bt.length, bt.max_weight, bt.max_volume)))
+                                (bt.height, bt.width, bt.length, bt.max_weight, bt.max_volume, bt.cost)))
            for bt in db.scalars(select(BinType).where(BinType.parent_id.is_(None)).order_by(BinType.code))], {2: 30})
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",

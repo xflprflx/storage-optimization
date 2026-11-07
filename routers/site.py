@@ -3,6 +3,9 @@ estruturas/bins, exportação e geração do cadastro da filial."""
 from __future__ import annotations
 
 import copy
+import shutil
+import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
@@ -33,16 +36,55 @@ def list_projects(request: Request, db: Session = Depends(get_db)):
     return render(request, "site/index.html", projects=projects, n_structs=n_structs)
 
 
-@router.post("/new")
-def create_project(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
-    name = (form.get("name") or "").strip()[:150] or "Nova filial"
+SEED_FILE = Path(__file__).resolve().parent.parent / "samples" / "seed_filial_nova.xlsx"
+
+
+def _new_project(db: Session, name: str) -> SiteProject:
     cfg = merged(None)
     for st in db.scalars(select(StructureType)):
         cfg["structures"][str(st.id)] = {"mode": "auto", "qty": "", "min_qty": "", "max_qty": ""}
-    pr = SiteProject(name=name, config=cfg)
+    pr = SiteProject(name=name[:150] or "Nova filial", config=cfg)
     db.add(pr)
     db.commit()
+    return pr
+
+
+@router.post("/new")
+async def create_project(request: Request, db: Session = Depends(get_db)):
+    """Cria o projeto. Com arquivo (ou "exemplo"), segue direto para o mapeamento das colunas da planilha."""
+    from services.file_reader import UPLOAD_DIR, save_upload
+
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    upload = form.get("file")
+    has_file = upload is not None and getattr(upload, "filename", "")
+    if form.get("sample"):
+        if not SEED_FILE.exists():
+            return redirect("/optimization/site", "Planilha de exemplo não encontrada (rode scripts/generate_site_seed.py).",
+                            "danger")
+        pr = _new_project(db, name or "Exemplo — filial nova")
+        token = f"{uuid.uuid4().hex}.xlsx"
+        shutil.copyfile(SEED_FILE, UPLOAD_DIR / token)
+        return _mapping_page(request, pr, token, SEED_FILE.name)
+    token = None
+    if has_file:
+        try:
+            token = await save_upload(upload)
+        except ValueError as exc:
+            return redirect("/optimization/site", str(exc), "danger")
+    pr = _new_project(db, name or (Path(upload.filename).stem if has_file else "Nova filial"))
+    if token:
+        return _mapping_page(request, pr, token, upload.filename)
     return redirect(f"/optimization/site/{pr.id}", "Projeto criado. Informe as dimensões do imóvel e escolha as estruturas.")
+
+
+@router.get("/seed.xlsx")
+def download_seed():
+    if not SEED_FILE.exists():
+        return redirect("/optimization/site", "Planilha de exemplo não encontrada (rode scripts/generate_site_seed.py).",
+                        "danger")
+    return Response(SEED_FILE.read_bytes(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": 'attachment; filename="seed_filial_nova.xlsx"'})
 
 
 def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
@@ -141,7 +183,8 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
     br, stats = create_branch(db, plan, code, name, wh_code, wh_name, link_skus=link)
     db.commit()
     return redirect(f"/layout?branch_id={br.id}",
-                    f"Filial {br.code} criada: {stats['levels']} níveis, {stats['locations']} endereços e "
+                    f"Filial {br.code} criada: {stats.get('bays', 0)} estantes com estrutura, {stats['levels']} níveis, "
+                    f"{stats['locations']} endereços e "
                     f"{stats['bins']} bins.")
 
 
@@ -163,8 +206,7 @@ def download_template(pid: int, db: Session = Depends(get_db)):
 @router.post("/{pid}/upload")
 async def upload_data(pid: int, request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """1ª etapa: guarda o arquivo e mostra o mapeamento de abas e colunas (pré-preenchido)."""
-    from services.file_reader import UPLOAD_DIR, remove_upload, save_upload
-    from services.site_import import FIELD_LABELS, KIND_LABELS, REQUIRED, auto_mapping, guess_columns, read_sheets
+    from services.file_reader import save_upload
 
     pr = _get(db, pid)
     if not pr:
@@ -173,20 +215,28 @@ async def upload_data(pid: int, request: Request, file: UploadFile = File(...), 
         token = await save_upload(file)
     except ValueError as exc:
         return redirect(f"/optimization/site/{pid}", str(exc), "danger")
+    return _mapping_page(request, pr, token, file.filename or "")
+
+
+def _mapping_page(request: Request, pr: SiteProject, token: str, filename: str):
+    """Tela de mapeamento de abas/colunas de um arquivo já salvo em uploads (token)."""
+    from services.file_reader import UPLOAD_DIR, remove_upload
+    from services.site_import import FIELD_LABELS, KIND_LABELS, REQUIRED, auto_mapping, guess_columns, read_sheets
+
     try:
         preview = read_sheets(UPLOAD_DIR / token, limit=6)
     except Exception as exc:  # arquivo corrompido / formato inesperado
         remove_upload(token)
-        return redirect(f"/optimization/site/{pid}", f"Não foi possível ler o arquivo: {exc}", "danger")
+        return redirect(f"/optimization/site/{pr.id}", f"Não foi possível ler o arquivo: {exc}", "danger")
     if not preview or not any(preview.values()):
         remove_upload(token)
-        return redirect(f"/optimization/site/{pid}", "O arquivo não tem linhas.", "danger")
+        return redirect(f"/optimization/site/{pr.id}", "O arquivo não tem linhas.", "danger")
     remembered = ((pr.config or {}).get("import_mapping") or {})
     sheets = {name: {"headers": rows[0] if rows else [], "rows": rows[1:6]} for name, rows in preview.items()}
     # mapeamento automático de cada tipo para CADA aba (a tela reaplica ao trocar a aba)
     guesses = {kind: {name: guess_columns(kind, sh["headers"], remembered.get(kind)) for name, sh in sheets.items()}
                for kind in KIND_LABELS}
-    return render(request, "site/mapping.html", project=pr, token=token, filename=file.filename or "",
+    return render(request, "site/mapping.html", project=pr, token=token, filename=filename,
                   sheets=sheets, mapping=auto_mapping(preview, remembered), guesses=guesses,
                   KIND_LABELS=KIND_LABELS, FIELD_LABELS=FIELD_LABELS, REQUIRED=REQUIRED)
 

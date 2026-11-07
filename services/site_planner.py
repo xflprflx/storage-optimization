@@ -32,10 +32,11 @@ from typing import Optional
 from services.bin_optimizer import BinSpec, Params, ProductUnit, _sku_options, _units, capacity
 
 EPS = 1e-9
+OPTIONS_COST = 5  # opções de bins por SKU que o solver compara no objetivo de custo total
 
 SITE_OBJECTIVES = {
     "modules": "Menos módulos de estrutura",
-    "cost": "Menor custo de estruturas",
+    "cost": "Menor custo total (estruturas + bins)",
     "area": "Menos metros de fileira (mais área livre)",
 }
 STRUCT_MODES = {"auto": "Otimizar quantidade", "fixed": "Quantidade fixa", "off": "Não usar"}
@@ -349,6 +350,18 @@ class TypeLine:
     placed: int = 0
     parent_code: str = ""
     parents: int = 0  # bins inteiras (pai) a comprar quando o tipo é compartimento
+    parent_cost: Optional[float] = None
+
+    @property
+    def unit_cost(self) -> Optional[float]:
+        return self.spec.cost
+
+    @property
+    def cost(self) -> Optional[float]:
+        """Compra das bins necessárias (compartimento: as bins pai inteiras)."""
+        if self.parent_code:
+            return self.parents * self.parent_cost if self.parent_cost is not None else None
+        return self.needed * self.spec.cost if self.spec.cost is not None else None
 
     @property
     def shortage(self) -> int:
@@ -380,9 +393,22 @@ class SitePlan:
         return sum(s.qty for s in self.structs)
 
     @property
-    def total_cost(self) -> Optional[float]:
+    def structures_cost(self) -> Optional[float]:
         costs = [s.cost for s in self.structs if s.qty]
         return sum(c for c in costs if c is not None) if costs and all(c is not None for c in costs) else None
+
+    @property
+    def bins_cost(self) -> Optional[float]:
+        costs = [t.cost for t in self.types if t.needed]
+        return sum(c for c in costs if c is not None) if costs and all(c is not None for c in costs) else None
+
+    @property
+    def total_cost(self) -> Optional[float]:
+        """Estruturas + bins (só quando todos os itens usados têm custo informado)."""
+        parts = [c for c in (self.structures_cost, self.bins_cost)]
+        if self.total_modules and parts[0] is None or self.bins_needed and parts[1] is None:
+            return None
+        return sum(c or 0 for c in parts)
 
     @property
     def footprint_m2(self) -> float:
@@ -469,6 +495,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
 
     # ---- bins por SKU ----
     bp = prm.as_params()
+    choices: list[tuple[Demand, list[dict]]] = []
     for d in demands:
         d.units = _units(d.unit.qty, prm.growth)
         if d.units <= 0:
@@ -488,13 +515,26 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         d.bins = dict(opts[0]) if opts else None
         if not d.bins:
             d.status = "nao_cabe"
+        elif prm.objective == "cost" and len(opts) > 1:
+            # custo total: o solver escolhe entre as melhores opções de bins do SKU (a mais barata entre elas),
+            # pesando o custo das bins contra o das estruturas que elas ocupam
+            choices.append((d, [dict(o) for o in opts[:OPTIONS_COST]]))
+    fixed_need: dict[int, int] = {}
+    chosen = {id(d) for d, _ in choices}
+    for d in demands:
+        if id(d) in chosen:
+            continue
+        for t, n in (d.bins or {}).items():
+            fixed_need[t] = fixed_need.get(t, 0) + n
+
+    # ---- quantidade de estruturas (e, no custo total, as bins de cada SKU) ----
+    sol = _solve(floor, active, fixed_need, caps, prm, types, choices)
+    for (d, opts), k in zip(choices, sol.get("picks") or []):
+        d.bins = opts[k]
     need: dict[int, int] = {}
     for d in demands:
         for t, n in (d.bins or {}).items():
             need[t] = need.get(t, 0) + n
-
-    # ---- quantidade de estruturas ----
-    sol = _solve(floor, active, need, caps, prm)
     plan.solver = sol["info"]
     if sol.get("error"):
         plan.errors.append(sol["error"])
@@ -522,7 +562,8 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         if t in parents:
             pspec, per = parents[t]
             line.parent_code = pspec.code
-            line.parents = -(-line.placed // per)
+            line.parents = -(-line.needed // per)
+            line.parent_cost = pspec.cost
     plan.types = list(by_t.values())
     plan.demands = demands
     if plan.shortage:
@@ -531,8 +572,11 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     return plan
 
 
-def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps: dict, prm: SiteParams) -> dict:
-    """Modelo CP-SAT: módulos por trecho de fileira e níveis por tipo de bin."""
+def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps: dict, prm: SiteParams,
+           types: Optional[dict] = None, choices: Optional[list] = None) -> dict:
+    """Modelo CP-SAT: módulos por trecho de fileira e níveis por tipo de bin. `need` = bins já decididas por tipo;
+    `choices` = SKUs com várias opções de bins (objetivo de custo total): o modelo escolhe uma opção por SKU."""
+    types, choices = types or {}, choices or []
     info = {"status": "", "time": 0.0, "stages": []}
     segs = [(r.index, k) for r in floor.rows for k in range(len(floor.segments))]
     seg_len = int(math.floor(floor.seg_len * 10 + EPS))  # mm
@@ -575,21 +619,32 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
         used.append(u)
     for g in range(len(segs) - 1):  # simetria: os primeiros trechos enchem primeiro
         m.Add(used[g] >= used[g + 1])
+    # opções de bins por SKU (custo total): y[i][k] = 1 se o SKU i usa a opção k
+    y = []
+    for i, (_d, opts) in enumerate(choices):
+        vs = [m.NewBoolVar(f"y_{i}_{k}") for k in range(len(opts))]
+        m.AddExactlyOne(vs)
+        y.append(vs)
+    all_t = set(need) | {t for _d, opts in choices for o in opts for t in o}
+    need_ub = {t: need.get(t, 0) + sum(max(o.get(t, 0) for o in opts) for _d, opts in choices) for t in all_t}
+    need_ex = {t: need.get(t, 0) + sum(o.get(t, 0) * v for (_d, opts), vs in zip(choices, y)
+                                         for o, v in zip(opts, vs) if o.get(t)) for t in all_t}
     z = {}
     for s in active:
-        for t in need:
+        for t in all_t:
             if caps.get((t, s.id), 0) > 0:
                 z[(t, s.id)] = m.NewIntVar(0, s.levels * per_seg[s.id] * len(segs), f"z_{t}_{s.id}")
         m.Add(sum(v for (t, sid), v in z.items() if sid == s.id) <= s.levels * x[s.id])
     short = {}
-    for t, b in need.items():
-        short[t] = m.NewIntVar(0, b, f"short_{t}")
-        m.Add(sum(caps[(t, sid)] * v for (tt, sid), v in z.items() if tt == t) + short[t] >= b)
+    for t in all_t:
+        short[t] = m.NewIntVar(0, need_ub[t], f"short_{t}")
+        m.Add(sum(caps[(t, sid)] * v for (tt, sid), v in z.items() if tt == t) + short[t] >= need_ex[t])
 
     cost_c = {s.id: int(round((s.cost or 0) * 100)) for s in active}
     total_mods = sum(x.values())
     front = sum(w[s.id] * x[s.id] for s in active)
-    cost = sum(cost_c[s.id] * x[s.id] for s in active)
+    bin_c = {t: int(round(((types[t].cost if t in types else 0) or 0) * 100)) for t in all_t}
+    cost = sum(cost_c[s.id] * x[s.id] for s in active) + sum(bin_c[t] * need_ex[t] for t in all_t)
     levels_used = sum(z.values()) if z else 0
     main = {"modules": [("módulos", total_mods), ("metros de fileira", front)],
             "cost": [("custo", cost), ("módulos", total_mods)],
@@ -600,7 +655,7 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
     solver.parameters.num_workers = 8
     deadline = t0 + prm.time_limit
     all_optimal, ok = True, False
-    sol: dict = {"qty": {}, "z": {}, "seg_mods": []}
+    sol: dict = {"qty": {}, "z": {}, "seg_mods": [], "picks": []}
     for i, (label, expr) in enumerate(stages):
         if isinstance(expr, int):
             continue
@@ -624,12 +679,16 @@ def _solve(floor: Floor, active: list[StructureSpec], need: dict[int, int], caps
         # guarda a solução desta etapa (a próxima pode estourar o tempo)
         sol = {"qty": {s.id: solver.Value(x[s.id]) for s in active},
                "z": {k: solver.Value(v) for k, v in z.items()},
-               "seg_mods": [{s.id: solver.Value(n[(s.id, g)]) for s in active} for g in range(len(segs))]}
+               "seg_mods": [{s.id: solver.Value(n[(s.id, g)]) for s in active} for g in range(len(segs))],
+               "picks": [next(k for k, v in enumerate(vs) if solver.Value(v)) for vs in y]}
         m.ClearHints()
         for k, v in n.items():
             m.AddHint(v, sol["seg_mods"][k[1]][k[0]])
         for k, v in z.items():
             m.AddHint(v, sol["z"][k])
+        for vs, k in zip(y, sol["picks"]):
+            for j, v in enumerate(vs):
+                m.AddHint(v, 1 if j == k else 0)
     info["status"] = "ótimo comprovado" if all_optimal else "melhor solução no tempo limite"
     info["time"] = time.monotonic() - t0
     sol["seg_mods"] = list(zip(segs, sol["seg_mods"])) if sol["seg_mods"] else []

@@ -1,4 +1,5 @@
 from models.entities import (  # noqa: F401
+    BayStructure,
     BinContent,
     BinType,
     Branch,
@@ -16,6 +17,7 @@ from models.entities import (  # noqa: F401
 )
 
 __all__ = [
+    "BayStructure",
     "BinContent",
     "BinType",
     "Branch",

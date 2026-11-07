@@ -16,11 +16,24 @@
     <div class="card mb-3">
       <div class="card-header bg-white"><strong>Novo projeto</strong></div>
       <div class="card-body">
-        <form method="post" action="/optimization/site/new">
+        <form method="post" action="/optimization/site/new" enctype="multipart/form-data">
           <label class="form-label small mb-0">Nome do projeto</label>
-          <input class="form-control mb-2" name="name" maxlength="150" placeholder="Ex.: Filial Campinas — galpão 2.000 m²" required>
+          <input class="form-control mb-2" name="name" maxlength="150" placeholder="Ex.: Filial Campinas — galpão 2.000 m²">
+          <label class="form-label small mb-0">Planilha com os dados da filial <span class="text-muted">(opcional)</span></label>
+          <input class="form-control form-control-sm mb-1" type="file" name="file" accept=".xlsx,.xlsm,.csv,.txt">
+          <div class="form-text mt-0 mb-2">Imóvel, estruturas, bins e SKUs (saldo, min e max). Depois de criar, você confere o mapeamento das colunas.</div>
           <button class="btn btn-accent w-100"><i class="bi bi-plus-lg"></i> Criar projeto</button>
         </form>
+        <hr>
+        <div class="small fw-semibold mb-1"><i class="bi bi-stars"></i> Começar por um exemplo</div>
+        <div class="small text-muted mb-2">Planilha seed com um galpão de 48 × 30 m, 4 estruturas, 5 caixas bin com custo e ~400 SKUs. Use como modelo para os seus dados.</div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-sm btn-outline-secondary flex-fill" href="/optimization/site/seed.xlsx"><i class="bi bi-file-earmark-arrow-down"></i> Baixar planilha</a>
+          <form method="post" action="/optimization/site/new" class="flex-fill" onsubmit="return confirm('Criar um projeto de exemplo? Ao importar, as estruturas e bins da planilha são cadastradas.');">
+            <input type="hidden" name="sample" value="1"><input type="hidden" name="name" value="Exemplo — filial nova">
+            <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-magic"></i> Criar projeto de exemplo</button>
+          </form>
+        </div>
         {% if not n_structs %}
         <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle"></i> Nenhuma estrutura de armazenagem cadastrada.
           <a href="/structures/new">Cadastre as estantes/porta-paletes</a> que podem ser usadas antes de otimizar.</div>

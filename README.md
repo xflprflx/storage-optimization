@@ -321,7 +321,7 @@ Fica em `/optimization/site/{id}/routes` no projeto (link no cartão *Posição 
 
 Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o mais perto da referência) e volta. São três rotas no mesmo plano:
 - **Lista:** na ordem dos endereços, como a lista de separação costuma sair. Mostra o efeito da numeração (por exemplo, a serpentina).
-- **Serpentina:** rota em S, com os corredores em ordem e alternando o sentido.
+- **Serpentina:** rota em S, com os corredores em ordem e alternando o sentido. São testadas as duas ordens dos corredores (do primeiro ao último ou o contrário) e os dois sentidos de entrada no primeiro, e fica a de menor caminhada: o separador entra e sai pela ponta que for melhor.
 - **Otimizada:** a melhor entre vizinho mais próximo + 2-opt e as outras duas.
 
 **Distância:** com planta (o projeto ou a planta desenhada da filial), é o **menor caminho no piso livre** (`services/walk_net.py`):
@@ -337,7 +337,8 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 **Caminhada em 3D e vídeo** (botão *Ver caminhada em 3D / gravar vídeo* no simulador ou *Simular caminhada* no Arranjo 3D; dados em `/optimization/site/{id}/routes3d.json`):
 - **Separadores animados:** um boneco com carrinho anda pelos corredores, para em cada endereço e pega o produto. As bins do endereço se acendem na cor de quem pegou.
 - **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
-- **Painel:** distância percorrida, paradas feitas e tempo de cada rota. A lista de paradas risca as já feitas.
+- **Painel:** distância percorrida, paradas feitas, **peças pegas / total** e tempo de cada rota; no topo, linhas, paradas e peças do pedido. A lista de paradas risca as já feitas. O tempo de caminhada do vídeo usa a mesma distância da simulação (a do painel).
+- **Corredores:** o filtro *Corredor* do 3D aceita **vários corredores** (marque um ou mais; *Todos* limpa, *Inverter* troca a seleção).
 - **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças do endereço, todos editáveis. Cada parada dura o tempo fixo mais as peças daquele endereço; a lista de paradas mostra as peças e o tempo de cada uma.
 - **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).
 - **Câmera:** seguir os separadores (afasta para caberem todos), primeira pessoa, de cima (a rota toda) ou livre.
@@ -364,6 +365,8 @@ A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*)
 
 Informe a largura do corredor e o espaço livre na frente. Em *Corredores com outra largura*, dê uma largura própria a alguns corredores pela letra (ex.: `A=3,5; C=2,8`).
 
+**Mover estantes (módulos) de uma fileira:** no painel da fileira, marque as estantes (botões com os números ou Ctrl/⌘+clique no desenho) e clique em *Separar em nova fileira*. As marcadas viram uma fileira própria (lista fixa de estantes), ao lado, para arrastar, girar (R) e posicionar onde quiser — por exemplo, um módulo perpendicular na ponta de duas ruas costas com costas. As estantes que ficam continuam no lugar (um trecho do meio separado divide a fileira em duas). *Usar todas do lado* desfaz a lista fixa.
+
 **Corredor de cada fileira** (painel da fileira selecionada):
 - **Vizinho de frente:** automático (a fileira mais perto que olha para esta, sem pular uma vizinha que está no meio), **nenhum** (fileira sozinha) ou uma fileira escolhida — vale a escolha, com qualquer vão;
 - **Largura (m):** o vão até o vizinho de frente. Mudar aqui move o vizinho e, com *empurrar as seguintes*, as fileiras depois dele (cada corredor pode ter a sua largura);
@@ -387,7 +390,7 @@ O painel *Situação* lista as estantes que ficaram **fora da planta** e as que 
   - os campos de corredor de referência e distâncias passam a valer só para estantes fora da planta;
   - o resultado mostra "referência da planta".
 - **Simulador de trajeto da filial:** mede pelo menor caminho na planta (corredores, contornando fileiras e obstáculos, com a mão única) e desenha as três rotas do pedido escolhido, com as paradas numeradas. SKUs sem saldo usam os endereços atribuídos (saldo zero), como na filial recém-criada pelo projeto.
-- **3D da filial** (`/layout/plan/3d`): cada estante na sua posição, com os níveis da estrutura e as bins cadastradas em cada endereço, lado a lado, na ordem das posições. Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
+- **3D da filial** (`/layout/plan/3d`): cada estante na sua posição, com a frente e a **profundidade da estrutura cadastrada** (alinhada ao corredor; sem estrutura, a da fileira), os níveis com o **vão cadastrado de cada nível** (Capacidade dos níveis; a sobra da altura da estrutura vira a espessura das longarinas; sem vão, altura ÷ níveis) e as bins cadastradas em cada endereço, com as medidas do tipo de bin, lado a lado, na ordem das posições (bins que não cabem na profundidade aparecem sobrepostas). Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
 
 Obstáculos aparecem na planta e no 3D e **desviam o trajeto**. Remover a planta volta a estimar a caminhada pelo endereço.
 
@@ -412,6 +415,16 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 - **Pool:** os SKUs mais procurados por bin escolhem primeiro e, entre bins equivalentes, ficam nos endereços mais fáceis. Os itens C não disputam esses endereços, e quem sai junto fica perto do parceiro já posicionado. O objetivo do pool (menos bins, volume…) continua mandando: a posição pela saída entra como desempate antes da proximidade de hoje. Com a posição pela saída ligada, o pool usa o motor heurístico.
 - **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
 - **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
+
+## 6.0.4 Exclusão em massa
+
+- **Cadastros** (Filiais, Armazéns, Tipos de bin, Estruturas, Produtos, Saldos e Projetos de filial nova): marque os itens (o checkbox do cabeçalho marca a página) e clique em *Excluir selecionados*; em Produtos e Saldos também *Excluir todos do filtro*. A tela seguinte mostra os **registros relacionados** (totais e por item) e a opção **Excluir também os relacionados**:
+  - filial / armazém: endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico de pedidos e resultados de otimização;
+  - tipo de bin: as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis;
+  - estrutura: a atribuição às estantes; produto: os saldos; projeto: os resultados guardados.
+  Sem a opção, os itens com relacionados que impedem a exclusão ficam de fora e a mensagem diz quantos.
+- **Endereços:** *Excluir selecionados* ou *Excluir todos os filtrados*, com a opção de excluir também os **ocupados** (com os saldos; o endereço padrão dos produtos é recalculado).
+- **Resultados de otimização** (`/optimization/runs`): *Excluir selecionados* ou *Excluir todos do filtro* (modo, filial e busca).
 
 ## 7. Estruturas de armazenagem nos depósitos existentes
 

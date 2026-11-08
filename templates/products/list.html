@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons, material_select, search_help %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons, material_select, search_help %}
 {% block title %}Produtos{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -10,7 +10,8 @@
   </div>
 </div>
 <div class="card">
-  <div class="card-body border-bottom">
+  {{ bulk_delete_bar(request, "products", ".prod-check", total=page.total) }}
+<div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
       <div class="col-md-2"><select class="form-select" name="field" title="Em qual campo buscar">

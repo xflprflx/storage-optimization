@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
 {% block title %}Filiais{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -8,7 +8,8 @@
   <a href="/branches/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Nova filial</a></div>
 </div>
 <div class="card">
-  <div class="card-body border-bottom">
+  {{ bulk_delete_bar(request, "branches", ".bulk-branches") }}
+<div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
       <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome"></div>
@@ -18,6 +19,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-branches" title="Selecionar todos da página"></th>
         {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}
         {{ th(request, sort, 'warehouses', 'Armazéns') }}{{ th(request, sort, 'locations', 'Endereços', 'text-end') }}
         <th class="text-end" style="width:120px">Ações</th>
@@ -25,6 +27,7 @@
       <tbody>
       {% for b in page.items %}
         <tr>
+          <td><input type="checkbox" class="form-check-input bulk-branches" value="{{ b.id }}"></td>
           <td class="mono fw-semibold">{{ b.code }}</td>
           <td>{{ b.name }}</td>
           <td>{% for w in b.warehouses %}<span class="badge text-bg-secondary me-1">{{ w.code }}</span>{% else %}<span class="text-muted small">—</span>{% endfor %}</td>
@@ -35,7 +38,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma filial cadastrada.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma filial cadastrada.</td></tr>
       {% endfor %}
       </tbody>
     </table>

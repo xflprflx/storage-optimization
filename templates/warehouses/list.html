@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
 {% block title %}Armazéns{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -8,7 +8,8 @@
   <a href="/warehouses/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Novo armazém</a></div>
 </div>
 <div class="card">
-  <div class="card-body border-bottom">
+  {{ bulk_delete_bar(request, "warehouses", ".bulk-warehouses") }}
+<div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
       <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome"></div>
@@ -24,6 +25,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-warehouses" title="Selecionar todos da página"></th>
         {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}
         {{ th(request, sort, 'branches', 'Filiais') }}{{ th(request, sort, 'locations', 'Endereços', 'text-end') }}
         <th class="text-end" style="width:120px">Ações</th>
@@ -31,6 +33,7 @@
       <tbody>
       {% for w in page.items %}
         <tr>
+          <td><input type="checkbox" class="form-check-input bulk-warehouses" value="{{ w.id }}"></td>
           <td class="mono fw-semibold">{{ w.code }}</td>
           <td>{{ w.name }}</td>
           <td>{% for b in w.branches %}<span class="badge text-bg-info me-1">{{ b.code }}</span>{% else %}<span class="text-muted small">— sem filial —</span>{% endfor %}</td>
@@ -41,7 +44,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted py-4">Nenhum armazém cadastrado.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum armazém cadastrado.</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -30,10 +30,16 @@
 <div class="card">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
     <strong>{{ page.total }} resultado(s)</strong>
-    <button class="btn btn-sm btn-primary" id="cmpBtn" disabled><i class="bi bi-layout-three-columns"></i> Comparar selecionados</button>
+    <div class="d-flex gap-2">
+      <button class="btn btn-sm btn-primary" id="cmpBtn" disabled><i class="bi bi-layout-three-columns"></i> Comparar selecionados</button>
+      <button type="submit" class="btn btn-sm btn-outline-danger" id="delBtn" form="delForm" disabled
+              onclick="return confirm('Excluir os resultados selecionados?')"><i class="bi bi-trash"></i> Excluir selecionados</button>
+      {% if page.total %}<button type="submit" class="btn btn-sm btn-outline-danger" form="delAllForm"
+              onclick="return confirm('Excluir TODOS os {{ page.total }} resultado(s) deste filtro? Não dá para desfazer.')"><i class="bi bi-trash3"></i> Excluir todos do filtro ({{ page.total }})</button>{% endif %}
+    </div>
   </div>
   <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
-    <thead class="small"><tr><th style="width:32px"></th><th>Quando</th><th>Modo</th><th>Resultado</th><th>Indicadores</th><th class="text-end">Ações</th></tr></thead>
+    <thead class="small"><tr><th style="width:32px"><input class="form-check-input" type="checkbox" id="chkAll" title="Marcar todos da página"></th><th>Quando</th><th>Modo</th><th>Resultado</th><th>Indicadores</th><th class="text-end">Ações</th></tr></thead>
     <tbody>
     {% for r in page.items %}
       <tr>
@@ -52,14 +58,26 @@
   </table></div>
 </div>
 </form>
+<form method="post" action="/optimization/runs/bulk-delete" id="delForm"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.query_params }}"></form>
+<form method="post" action="/optimization/runs/bulk-delete" id="delAllForm">
+  <input type="hidden" name="all" value="1"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="branch_id" value="{{ branch_id }}">
+  <input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="back" value="/optimization/runs"></form>
 {{ pagination(request, page) }}
 {% endblock %}
 {% block scripts %}
 <script>
 (function () {
-  const btn = document.getElementById('cmpBtn');
-  const upd = () => { const n = document.querySelectorAll('.run-check:checked').length; btn.disabled = n < 2; btn.innerHTML = '<i class="bi bi-layout-three-columns"></i> Comparar selecionados' + (n ? ` (${n})` : ''); };
-  document.querySelectorAll('.run-check').forEach(c => c.addEventListener('change', upd)); upd();
+  const btn = document.getElementById('cmpBtn'), del = document.getElementById('delBtn'), df = document.getElementById('delForm');
+  const upd = () => {
+    const ck = [...document.querySelectorAll('.run-check:checked')], n = ck.length;
+    btn.disabled = n < 2; btn.innerHTML = '<i class="bi bi-layout-three-columns"></i> Comparar selecionados' + (n ? ` (${n})` : '');
+    del.disabled = !n; del.innerHTML = '<i class="bi bi-trash"></i> Excluir selecionados' + (n ? ` (${n})` : '');
+    df.querySelectorAll('input[name=ids]').forEach(i => i.remove());  // os marcados vão no formulário de exclusão
+    ck.forEach(c => df.insertAdjacentHTML('beforeend', `<input type="hidden" name="ids" value="${c.value}">`));
+  };
+  document.querySelectorAll('.run-check').forEach(c => c.addEventListener('change', upd));
+  document.getElementById('chkAll').addEventListener('change', e => { document.querySelectorAll('.run-check').forEach(c => { c.checked = e.target.checked; }); upd(); });
+  upd();
 })();
 </script>
 {% endblock %}

@@ -329,14 +329,17 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
         cur = 0.0
         for b in bs:
             w = b.w or r["bay_w"]
+            # profundidade da estrutura cadastrada (alinhada à face do corredor); sem estrutura, a da fileira
+            bd = min(b.d, r["depth"]) if b.d else r["depth"]
+            off = (r["depth"] - bd) if r["face"] == "+" else 0.0
             if r["orient"] == "h":
-                x, y, ww, dd = r["x"] + cur, r["y"], w, r["depth"]
+                x, y, ww, dd = r["x"] + cur, r["y"] + off, w, bd
                 along = x + w / 2
-                gx, gy = along, (y + dd if r["face"] == "+" else y)
+                gx, gy = along, (r["y"] + r["depth"] if r["face"] == "+" else r["y"])
             else:
-                x, y, ww, dd = r["x"], r["y"] + cur, r["depth"], w
+                x, y, ww, dd = r["x"] + off, r["y"] + cur, bd, w
                 along = y + w / 2
-                gx, gy = (x + ww if r["face"] == "+" else x), along
+                gx, gy = (r["x"] + r["depth"] if r["face"] == "+" else r["x"]), along
             key = (b.aisle, b.bay)
             if key in g.placed:
                 g.dup.append(f"{b.aisle}-{b.bay}")
@@ -575,6 +578,15 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     by_bay: dict[tuple, list] = {}
     for r in locs:
         by_bay.setdefault(((r.aisle or "").upper(), (r.bay or "").upper()), []).append(r)
+    # vão cadastrado de cada nível (Capacidade dos níveis): a altura de cada nível no desenho
+    from models import ShelfLevel
+
+    lv_h: dict[tuple, dict[int, float]] = {}
+    stl = select(ShelfLevel).where(ShelfLevel.branch_id == branch_id)
+    stl = stl.where(ShelfLevel.warehouse_id.is_(None) if warehouse_id is None else ShelfLevel.warehouse_id == warehouse_id)
+    for sl in db.scalars(stl):
+        if sl.height_cm:
+            lv_h.setdefault(((sl.aisle or "").upper(), (sl.bay or "").upper()), {})[_lvl(sl.level)] = float(sl.height_cm)
     for key, p in sorted(g.placed.items(), key=lambda kv: (natural_key(kv[0][0]), natural_key(kv[0][1]))):
         b = p.bay
         rows_here = by_bay.get(key, [])
@@ -598,11 +610,23 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
             h = pitch * nmax
         structs[sid]["qty"] += 1
         gold = structs[sid]["golden"]
+        # base (z) e altura de cada nível: o vão cadastrado do nível ou, sem ele, a altura ÷ níveis da estrutura
+        hs = lv_h.get(key, {})
+        # com estrutura, a sobra da altura (altura total − soma dos vãos) é a espessura das longarinas, repartida
+        # entre os níveis; os níveis sem vão cadastrado ocupam o passo da estrutura (altura ÷ níveis)
+        vaos = [hs.get(n) for n in range(1, nmax + 1)]
+        beam = 0.0
+        if st is not None and all(vaos):
+            beam = max(0.0, (h - sum(vaos)) / nmax)
+        zs, hl, acc = {}, {}, 0.0
+        for n in range(1, nmax + 1):
+            zs[n], hl[n] = acc, hs.get(n) or pitch
+            acc += hl[n] + (beam if hs.get(n) else 0.0)
 
         def is_gold(n):
             if not gold:
                 return False
-            mid = (n - 1) * pitch + pitch / 2
+            mid = zs[n] + hl[n] / 2
             return gold[0] <= mid <= gold[1]
 
         if gold:
@@ -613,9 +637,9 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         wgold = node is not None and dist(ref, node) <= wlim + 1e-6
         row = d["rows"][p.row]
         front_x = row["orient"] == "h"
-        out_mods.append({"x": round(p.x, 1), "y": round(p.y, 1), "w": round(p.w, 1), "d": round(p.d, 1), "h": round(max(h, pitch * nmax), 1),
+        out_mods.append({"x": round(p.x, 1), "y": round(p.y, 1), "w": round(p.w, 1), "d": round(p.d, 1), "h": round(max(h, acc), 1),
                          "s": sid, "code": f"{b.aisle}-{b.bay}", "fx": front_x, "cap": False,
-                         "levels": [{"n": n, "z": round((n - 1) * pitch, 1)} for n in range(1, nmax + 1)]})
+                         "levels": [{"n": n, "z": round(zs[n], 1)} for n in range(1, nmax + 1)]})
         # bins por nível, na ordem das posições
         for n in range(1, nmax + 1):
             here = sorted((r for r in rows_here if _lvl(r.level) == n), key=lambda r: (natural_key(r.position or ""),
@@ -646,8 +670,8 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                             bx, by, bwx, bdy = p.x + cur, p.y + acr, bw, bd
                         else:
                             bx, by, bwx, bdy = p.x + acr, p.y + cur, bd, bw
-                        out_bins.append([round(bx, 1), round(by, 1), round((n - 1) * pitch + 2.0, 1), round(bwx, 1),
-                                         round(bdy, 1), round(min(bh, pitch - 4), 1), tidx[tid], fill, mi, r.address, sku,
+                        out_bins.append([round(bx, 1), round(by, 1), round(zs[n] + 2.0, 1), round(bwx, 1),
+                                         round(bdy, 1), round(min(bh, hl[n] - 4), 1), tidx[tid], fill, mi, r.address, sku,
                                          is_gold(n), abc.get(sku, ""), wgold])
                         fills_by_type.setdefault(tid, []).append(fill)
                         cur += bw

@@ -578,28 +578,44 @@ def recalc_occupancy(db: Session = Depends(get_db)):
 
 @router.post("/bulk-delete")
 def bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
-    ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
+    """Exclui os endereços marcados (ou, com scope_del=filtered, todos os do filtro). Com `cascade`, os ocupados também
+    saem, com os saldos (os produtos têm o endereço padrão recalculado); sem, eles são ignorados."""
+    from services.stock_service import sync_default_locations
+
     back = f_str(form, "back") or "/locations"
     if not back.startswith("/locations"):
         back = "/locations"
+    if f_str(form, "scope_del") == "filtered":  # (o "scope" do formulário é o da atribuição de bins)
+        filters = {k: f_str(form, f"f_{k}") for k in FILTER_KEYS}
+        ids = list(db.scalars(_apply_filters(select(StorageLocation.id), filters)))
+    else:
+        ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
     if not ids:
         return redirect(back, "Nenhum endereço selecionado.", "warning")
-    deletable = list(db.scalars(
-        select(StorageLocation.id).where(
-            StorageLocation.id.in_(ids),
-            StorageLocation.is_occupied.is_(False),
-            ~has_items_expr(StorageLocation.id, correlate=StorageLocation),
-        )
-    ))
+    cascade = bool(f_str(form, "cascade"))
+    deletable: list[int] = []
+    for i in range(0, len(ids), 800):
+        ch = ids[i:i + 800]
+        q = select(StorageLocation.id).where(StorageLocation.id.in_(ch))
+        if not cascade:
+            q = q.where(StorageLocation.is_occupied.is_(False), ~has_items_expr(StorageLocation.id, correlate=StorageLocation))
+        deletable += list(db.scalars(q))
     lv_msg = ""
     if deletable:
-        keys = [level_key_of(l) for l in db.scalars(select(StorageLocation).where(StorageLocation.id.in_(deletable)))]
-        db.execute(delete(StorageLocation).where(StorageLocation.id.in_(deletable)))
+        keys, prods = [], set()
+        for i in range(0, len(deletable), 800):
+            ch = deletable[i:i + 800]
+            keys += [level_key_of(l) for l in db.scalars(select(StorageLocation).where(StorageLocation.id.in_(ch)))]
+            prods |= set(db.scalars(select(StockItem.product_id).where(StockItem.location_id.in_(ch))))
+            db.execute(delete(StorageLocation).where(StorageLocation.id.in_(ch)))  # saldos e bins: ON DELETE CASCADE
         if f_str(form, "drop_levels"):
             lv_msg = _levels_msg(*drop_unused_levels(db, keys))
+        if prods:
+            db.flush()
+            sync_default_locations(db, sorted(prods))
         db.commit()
     skipped = len(ids) - len(deletable)
-    msg = f"{len(deletable)} endereço(s) excluído(s)." + lv_msg
+    msg = f"{len(deletable)} endereço(s) excluído(s)" + (" (com os saldos dos ocupados)." if cascade else ".") + lv_msg
     if skipped:
         msg += f" {skipped} ignorado(s) por estarem ocupados (com item atrelado)."
     return redirect(back, msg, "warning" if skipped else "success")

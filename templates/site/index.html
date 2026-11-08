@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar %}
 {% block title %}Projeto de filial nova{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -47,14 +48,15 @@
   </div>
   <div class="col-lg-8">
     <div class="card">
-      <div class="card-header bg-white"><strong>Projetos</strong></div>
+      <div class="card-header bg-white"><strong>Projetos</strong>{{ bulk_delete_bar(request, "projects", ".bulk-projects") }}</div>
       <div class="table-responsive">
         <table class="table table-hover mb-0 align-middle">
-          <thead><tr><th>Projeto</th><th>Imóvel</th><th>Atualizado</th><th class="text-end" style="width:170px">Ações</th></tr></thead>
+          <thead><tr><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-projects"></th><th>Projeto</th><th>Imóvel</th><th>Atualizado</th><th class="text-end" style="width:170px">Ações</th></tr></thead>
           <tbody>
           {% for p in projects %}
             {% set b = (p.config or {}).get('building', {}) %}
             <tr>
+              <td><input type="checkbox" class="form-check-input bulk-projects" value="{{ p.id }}"></td>
               <td><a class="fw-semibold" href="/optimization/site/{{ p.id }}">{{ p.name }}</a></td>
               <td class="small">{% if b.get('length_m') and b.get('width_m') %}{{ b.length_m }} × {{ b.width_m }} m{% if b.get('clear_height_m') %} · pé-direito {{ b.clear_height_m }} m{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
               <td class="small text-muted">{{ p.updated_at.strftime('%d/%m/%Y %H:%M') if p.updated_at else '' }}</td>
@@ -65,7 +67,7 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="4" class="text-center text-muted py-4">Nenhum projeto ainda.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-4">Nenhum projeto ainda.</td></tr>
           {% endfor %}
           </tbody>
         </table>

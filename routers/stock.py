@@ -39,6 +39,31 @@ def _lookups(db: Session) -> dict:
     }
 
 
+def filtered_stock(p):
+    """select(StockItem) com os filtros da lista de saldos (também usado na exclusão de "todos do filtro")."""
+    L = StorageLocation
+    base = (
+        select(StockItem)
+        .join(Product, Product.id == StockItem.product_id)
+        .join(L, L.id == StockItem.location_id)
+        .join(Branch, Branch.id == L.branch_id)
+        .outerjoin(Warehouse, Warehouse.id == L.warehouse_id)
+    )
+    bid, wid = to_int(p.get("branch_id")), to_int(p.get("warehouse_id"))
+    if bid:
+        base = base.where(L.branch_id == bid)
+    if wid:
+        base = base.where(L.warehouse_id == wid)
+    base = text_search(base, p.get("sku") or "", Product.sku, Product.name, fields=sku_name_fields(Product))
+    cond = material_condition(p.get("material") or "")
+    if cond is not None:
+        base = base.where(cond)
+    base = text_search(base, p.get("address") or "", L.address, address_columns=(L.address,))
+    if (p.get("only_positive") if p.get("only_positive") is not None else "1") == "1":
+        base = base.where(StockItem.quantity != Decimal("0"))
+    return base
+
+
 @router.get("")
 def list_stock(
     request: Request,
@@ -54,25 +79,8 @@ def list_stock(
     db: Session = Depends(get_db),
 ):
     L = StorageLocation
-    base = (
-        select(StockItem)
-        .join(Product, Product.id == StockItem.product_id)
-        .join(L, L.id == StockItem.location_id)
-        .join(Branch, Branch.id == L.branch_id)
-        .outerjoin(Warehouse, Warehouse.id == L.warehouse_id)
-    )
-    bid, wid = to_int(branch_id), to_int(warehouse_id)
-    if bid:
-        base = base.where(L.branch_id == bid)
-    if wid:
-        base = base.where(L.warehouse_id == wid)
-    base = text_search(base, sku, Product.sku, Product.name, fields=sku_name_fields(Product))
-    cond = material_condition(material)
-    if cond is not None:
-        base = base.where(cond)
-    base = text_search(base, address, L.address, address_columns=(L.address,))
-    if only_positive == "1":
-        base = base.where(StockItem.quantity != Decimal("0"))
+    base = filtered_stock({"branch_id": branch_id, "warehouse_id": warehouse_id, "sku": sku, "material": material,
+                           "address": address, "only_positive": only_positive})
     physical = (L.aisle, L.bay, L.level, L.position, L.compartment)
     stmt = base.options(
         joinedload(StockItem.product),
@@ -88,7 +96,7 @@ def list_stock(
     }, default="sku", tiebreak=StockItem.id)
     pg = paginate(db, stmt, page)
     total_qty = db.scalar(base.with_only_columns(func.coalesce(func.sum(StockItem.quantity), Decimal("0"))))
-    return render(request, "stock/list.html", page=pg, branch_id=bid, warehouse_id=wid, sku=sku, material=material, address=address,
+    return render(request, "stock/list.html", page=pg, branch_id=to_int(branch_id), warehouse_id=to_int(warehouse_id), sku=sku, material=material, address=address,
                   only_positive=only_positive, total_qty=total_qty, sort=srt, **_lookups(db))
 
 

@@ -45,7 +45,7 @@
   <div class="col-xl-9 col-lg-8">
     <div class="nk-plan-wrap" id="wrap">
       <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="nk-plan-hint">Arraste fileiras e obstáculos · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
+      <div class="nk-plan-hint">Arraste fileiras e obstáculos · Ctrl+clique marca estantes · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
       <div class="nk-plan-coord" id="coord"></div>
     </div>
   </div>
@@ -84,6 +84,14 @@
           <button class="btn btn-sm btn-outline-danger" id="pDel" title="Apagar (Del)"><i class="bi bi-trash"></i></button>
         </div>
         <div class="col-12 text-muted mt-1" id="pInfo"></div>
+        <div class="col-12 mt-2 pt-1 border-top fw-semibold">Estantes (módulos) desta fileira</div>
+        <div class="col-12 text-muted">Clique nas estantes (aqui ou no desenho, com Ctrl/⌘) para marcar e separe-as numa fileira nova, que você
+          arrasta, gira (R) e posiciona onde quiser — por exemplo, uma cabeceira perpendicular na ponta de duas ruas costas com costas.</div>
+        <div class="col-12 d-flex flex-wrap gap-1" id="pBays"></div>
+        <div class="col-12 d-flex flex-wrap gap-1 mt-1">
+          <button class="btn btn-sm btn-outline-primary" id="pSplit" disabled><i class="bi bi-box-arrow-up-right"></i> Separar em nova fileira</button>
+          <button class="btn btn-sm btn-outline-secondary" id="pAllBays" title="Volta a usar todas as estantes do corredor/lado (desfaz a lista fixa)"><i class="bi bi-arrow-counterclockwise"></i> Usar todas do lado</button>
+        </div>
         <div class="col-12 mt-2 pt-1 border-top fw-semibold">Corredor desta fileira</div>
         <div class="col-12"><label class="form-label mb-0" title="Fileira do outro lado do corredor (as duas formam um corredor de caminhada)">Vizinho de frente</label>
           <select class="form-select form-select-sm" id="pPair"></select></div>
@@ -152,6 +160,7 @@
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
   let D = null, BAYS = {}, INFO = {}, saved = false, dirty = false, sel = null, refMode = false;
+  let pick = new Set();  // estantes marcadas na fileira selecionada (para separar)
   let vb = { x: 0, y: 0, w: 1000, h: 1000 };
   const SNAP = 10;
   const snap = (v, e) => (e && e.shiftKey) ? Math.round(v) : Math.round(v / SNAP) * SNAP;
@@ -216,10 +225,11 @@
       el('rect', { class: 'nk-row-box', x: r.x, y: r.y, width: G.w, height: G.d, fill: G.bays.length ? '#cfd8df' : '#f8d7da', stroke: '#24548c', 'stroke-width': sw * 1.5 }, g);
       G.bays.forEach((b, k) => {
         const a = r.orient === 'h' ? { x: r.x + b.off, y: r.y, width: b.w, height: r.depth } : { x: r.x, y: r.y + b.off, width: r.depth, height: b.w };
-        el('rect', { ...a, fill: 'none', stroke: '#7b8a95', 'stroke-width': sw * 0.6 }, g);
+        const on = sel && sel.kind === 'row' && sel.i === i && pick.has(b.bay);
+        el('rect', { ...a, fill: on ? '#fde68a' : 'transparent', stroke: on ? '#e11d48' : '#7b8a95', 'stroke-width': sw * (on ? 1.5 : 0.6), 'data-bay': b.bay }, g);
         const big = b.w / vb.w * svg.clientWidth > 16;
         if (big || k === 0 || k === G.bays.length - 1) {
-          const t = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 + fs * 0.22, 'font-size': fs * 0.6, fill: '#1f2d33', 'text-anchor': 'middle' }, g);
+          const t = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 + fs * 0.22, 'font-size': fs * 0.6, fill: '#1f2d33', 'text-anchor': 'middle', 'pointer-events': 'none' }, g);
           t.textContent = b.bay;
         }
       });
@@ -252,6 +262,13 @@
     const p = pt(e);
     if (refMode) { D.ref.x = Math.round(Math.min(D.L, Math.max(0, p.x))); D.ref.y = Math.round(Math.min(D.W, Math.max(0, p.y))); setRefMode(false); draw(); changed(); return; }
     const g = e.target.closest('[data-kind]');
+    if (g && (e.ctrlKey || e.metaKey) && g.dataset.kind === 'row' && e.target.dataset.bay) {  // Ctrl+clique: marca a estante
+      const i = +g.dataset.i;
+      if (!(sel && sel.kind === 'row' && sel.i === i)) select('row', i);
+      const bay = e.target.dataset.bay;
+      if (pick.has(bay)) pick.delete(bay); else pick.add(bay);
+      draw(); props(); return;
+    }
     if (g) {
       const kind = g.dataset.kind, i = +g.dataset.i, o = kind === 'row' ? D.rows[i] : D.obstacles[i];
       select(kind, i);
@@ -283,7 +300,10 @@
   new ResizeObserver(() => D && fit()).observe($('wrap'));
 
   // ---------------------------------------------------------------- seleção e propriedades
-  function select(kind, i) { sel = kind == null ? null : { kind, i }; draw(); props(); }
+  function select(kind, i) {
+    if (!(sel && kind === sel.kind && i === sel.i)) pick = new Set();
+    sel = kind == null ? null : { kind, i }; draw(); props();
+  }
   function props() {
     $('propCard').style.display = sel ? 'block' : 'none';
     if (!sel) return;
@@ -298,6 +318,11 @@
       $('pInfo').textContent = (G.bays.length ? `${G.bays.length} estante(s): ${G.bays[0].bay} → ${G.bays[G.bays.length - 1].bay} · ${fmt(G.len / 100)} m`
         : 'Nenhuma estante deste corredor/lado nos endereços.') + (r.bays && r.bays.length ? ' · lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)' : '');
       corridorProps(r);
+      $('pBays').innerHTML = G.bays.map(b => `<button type="button" class="btn btn-sm py-0 px-1 ${pick.has(b.bay) ? 'btn-warning' : 'btn-outline-secondary'}" data-bay="${esc(b.bay)}">${esc(b.bay)}</button>`).join('')
+        || '<span class="text-muted">—</span>';
+      $('pSplit').disabled = !pick.size || pick.size >= G.bays.length;
+      $('pSplit').innerHTML = `<i class="bi bi-box-arrow-up-right"></i> Separar ${pick.size || ''} em nova fileira`;
+      $('pAllBays').style.display = r.bays && r.bays.length ? '' : 'none';
     } else {
       const o = D.obstacles[sel.i];
       $('propTitle').textContent = 'Obstáculo';
@@ -354,6 +379,40 @@
     draw(); props(); changed();
   });
   const nextId = () => Math.max(0, ...D.rows.map(r => r.id || 0)) + 1;
+
+  // ---------------------------------------------------------------- separar estantes numa fileira nova
+  $('pBays').addEventListener('click', e => {
+    const b = e.target.closest('[data-bay]'); if (!b || !sel || sel.kind !== 'row') return;
+    if (pick.has(b.dataset.bay)) pick.delete(b.dataset.bay); else pick.add(b.dataset.bay);
+    draw(); props();
+  });
+  $('pAllBays').addEventListener('click', () => {
+    if (!sel || sel.kind !== 'row') return;
+    delete D.rows[sel.i].bays; pick = new Set(); draw(); props(); changed();
+  });
+  $('pSplit').addEventListener('click', () => {
+    if (!sel || sel.kind !== 'row' || !pick.size) return;
+    const r = D.rows[sel.i], G = rowGeom(r), h = r.orient === 'h';
+    const at = (off) => h ? { x: r.x + off, y: r.y } : { x: r.x, y: r.y + off };
+    const base = { aisle: r.aisle, side: r.side, orient: r.orient, rev: false, face: r.face, depth: r.depth, bay_w: r.bay_w, flow: r.flow || '' };
+    // trechos contínuos das estantes que ficam (o 1º continua sendo esta fileira; os outros viram fileiras no mesmo lugar)
+    const runs = [];
+    let cur = null;
+    G.bays.forEach(b => {
+      if (pick.has(b.bay)) { cur = null; return; }
+      if (!cur) { cur = { off: b.off, bays: [] }; runs.push(cur); }
+      cur.bays.push(b.bay);
+    });
+    const taken = G.bays.filter(b => pick.has(b.bay));
+    Object.assign(r, at(runs[0].off), { bays: runs[0].bays, rev: false });
+    runs.slice(1).forEach(run => D.rows.push({ ...base, ...at(run.off), bays: run.bays, id: nextId(), pair: 0 }));
+    // a fileira nova (estantes marcadas) aparece ao lado, do lado de trás, para ser arrastada e girada
+    const p0 = at(taken[0].off), back = (r.face === '+' ? -1 : 1) * (r.depth + 100);
+    const nr = { ...base, x: h ? p0.x : p0.x + back, y: h ? p0.y + back : p0.y, bays: taken.map(b => b.bay), id: nextId(), pair: -1 };
+    D.rows.push(nr);
+    pick = new Set();
+    select('row', D.rows.length - 1); changed();
+  });
 
   const cm = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
   const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });

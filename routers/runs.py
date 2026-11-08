@@ -32,6 +32,32 @@ def list_runs(request: Request, kind: str = "", branch_id: str = "", q: str = ""
                   branches=list(db.scalars(select(Branch).order_by(Branch.code))))
 
 
+@router.post("/bulk-delete")
+def runs_bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Exclui os resultados marcados ou, com `all`, todos os do filtro (modo, filial, busca)."""
+    from sqlalchemy import delete
+
+    back = str(form.get("back") or "/optimization/runs")
+    back = back if back.startswith("/optimization/runs") else "/optimization/runs"
+    if form.get("all") == "1":
+        stmt = delete(OptimizationRun)
+        kind, bid, q = str(form.get("kind") or ""), to_int(form.get("branch_id")), str(form.get("q") or "").strip()
+        if kind in KINDS:
+            stmt = stmt.where(OptimizationRun.kind == kind)
+        if bid:
+            stmt = stmt.where(OptimizationRun.branch_id == bid)
+        if q:
+            stmt = stmt.where(OptimizationRun.title.ilike(f"%{q}%") | OptimizationRun.note.ilike(f"%{q}%"))
+    else:
+        ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
+        if not ids:
+            return redirect(back, "Marque os resultados a excluir.", "warning")
+        stmt = delete(OptimizationRun).where(OptimizationRun.id.in_(ids))
+    n = db.execute(stmt).rowcount or 0
+    db.commit()
+    return redirect(back if form.get("all") != "1" else "/optimization/runs", f"{n} resultado(s) excluído(s).", "secondary")
+
+
 @router.get("/compare")
 def compare_runs(request: Request, db: Session = Depends(get_db)):
     ids = [i for i in (to_int(v) for v in request.query_params.getlist("ids")) if i]

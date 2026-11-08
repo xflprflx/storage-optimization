@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons, material_select %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons, material_select %}
 {% block title %}Saldos{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -10,7 +10,8 @@
   </div>
 </div>
 <div class="card">
-  <div class="card-body border-bottom">
+  {{ bulk_delete_bar(request, "stock", ".bulk-stock", total=page.total) }}
+<div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
       <div class="col-md-2"><input class="form-control" type="search" name="sku" value="{{ sku }}" placeholder="SKU ou nome" title="10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · &quot;frase inteira&quot; · sku:10* só no SKU, nome:… só no nome"></div>
@@ -38,6 +39,7 @@
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0">
       <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-stock" title="Selecionar todos da página"></th>
         {{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'name', 'Produto') }}{{ th(request, sort, 'material', 'Tipo de material') }}
         {{ th(request, sort, 'branch', 'Filial') }}{{ th(request, sort, 'warehouse', 'Armazém') }}
         {{ th(request, sort, 'address', 'Endereço') }}{{ th(request, sort, 'quantity', 'Quantidade', 'text-end') }}
@@ -47,6 +49,7 @@
       <tbody>
       {% for s in page.items %}
         <tr>
+          <td><input type="checkbox" class="form-check-input bulk-stock" value="{{ s.id }}"></td>
           <td class="mono fw-semibold"><a href="/products/{{ s.product_id }}">{{ s.product.sku }}</a></td>
           <td>{{ s.product.name }}</td>
           <td class="small">{{ s.product.material_type or '—' }}</td>
@@ -61,11 +64,11 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="9" class="text-center text-muted py-4">Nenhum saldo encontrado.</td></tr>
+        <tr><td colspan="10" class="text-center text-muted py-4">Nenhum saldo encontrado.</td></tr>
       {% endfor %}
       </tbody>
       {% if page.items %}
-      <tfoot><tr><th colspan="6" class="text-end">Total filtrado</th><th class="text-end">{{ total_qty|dec }}</th><th colspan="2"></th></tr></tfoot>
+      <tfoot><tr><th colspan="7" class="text-end">Total filtrado</th><th class="text-end">{{ total_qty|dec }}</th><th colspan="3"></th></tr></tfoot>
       {% endif %}
     </table>
   </div>

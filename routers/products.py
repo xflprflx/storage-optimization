@@ -229,6 +229,23 @@ def bulk_dims(form: FormData = Depends(form_data), db: Session = Depends(get_db)
     return redirect(back, f"{n} produto(s) atualizado(s) ({what})." + (f" {len(ids) - n} já tinham essas medidas." if len(ids) > n else ""))
 
 
+def filtered_products(q: str = "", material: str = "", field: str = "", mode: str = "contains"):
+    """select(Product) com a busca e o filtro de material da lista (também usado na exclusão de "todos do filtro")."""
+    field = field if field in SEARCH_FIELDS else ""
+    mode = mode if mode in SEARCH_MODES else "contains"
+    default_addresses = _default_addresses()
+    # Endereços onde o produto está (saldo) — usados na busca
+    SL = aliased(StorageLocation)
+    stock_addresses = (select(func.group_concat(SL.address, " ")).select_from(StockItem)
+                       .join(SL, SL.id == StockItem.location_id)
+                       .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
+    stmt = text_search(select(Product), q, Product.sku, Product.name, Product.material_type, default_addresses,
+                       stock_addresses, address_columns=(default_addresses, stock_addresses), mode=mode, only=field or None,
+                       fields=_search_fields(default_addresses, stock_addresses))
+    cond = material_condition(material)
+    return stmt.where(cond) if cond is not None else stmt
+
+
 @router.get("")
 def list_products(request: Request, q: str = "", material: str = "", sort: str = "", dir: str = "", page: int = 1,
                   field: str = "", mode: str = "contains", db: Session = Depends(get_db)):
@@ -236,22 +253,12 @@ def list_products(request: Request, q: str = "", material: str = "", sort: str =
     mode = mode if mode in SEARCH_MODES else "contains"
     total_stock = (select(func.coalesce(func.sum(StockItem.quantity), Decimal("0")))
                    .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
-    stmt = select(Product)
-    default_addresses, first_default = _default_addresses(), _default_addresses(first=True)
-    # Endereços onde o produto está (saldo) — usados na busca e na ordenação
+    first_default = _default_addresses(first=True)
     SL = aliased(StorageLocation)
-    stock_addresses = (select(func.group_concat(SL.address, " ")).select_from(StockItem)
-                       .join(SL, SL.id == StockItem.location_id)
-                       .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
     first_stock_address = (select(func.min(SL.address)).select_from(StockItem)
                            .join(SL, SL.id == StockItem.location_id)
                            .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
-    stmt = text_search(stmt, q, Product.sku, Product.name, Product.material_type, default_addresses, stock_addresses,
-                       address_columns=(default_addresses, stock_addresses), mode=mode, only=field or None,
-                       fields=_search_fields(default_addresses, stock_addresses))
-    cond = material_condition(material)
-    if cond is not None:
-        stmt = stmt.where(cond)
+    stmt = filtered_products(q, material, field, mode)
     stmt, srt = apply_sort(stmt, sort, dir, {
         "sku": Product.sku, "name": Product.name, "material": (func.nullif(Product.material_type, ""), Product.sku),
         "location": (func.coalesce(first_default, first_stock_address), Product.sku),

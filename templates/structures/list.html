@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
 {% block title %}Estruturas de armazenagem{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -12,7 +12,8 @@
 <div class="small text-muted mb-3">Módulos (estantes, porta-paletes…) usados no projeto de filial nova e nas estantes dos depósitos existentes
   (<a href="/levels">Capacidade dos níveis → Aplicar estrutura</a>: define o vão e calcula a capacidade de cada nível). Medidas em cm; o vão útil é a altura livre de cada nível.</div>
 <div class="card">
-  <div class="card-body border-bottom">
+  {{ bulk_delete_bar(request, "structures", ".bulk-structures") }}
+<div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
       <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código, nome ou tipo"></div>
@@ -22,6 +23,7 @@
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-structures" title="Selecionar todos da página"></th>
         {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}{{ th(request, sort, 'kind', 'Tipo') }}
         {{ th(request, sort, 'width', 'Frente', 'text-end') }}{{ th(request, sort, 'depth', 'Prof.', 'text-end') }}
         {{ th(request, sort, 'height', 'Altura', 'text-end') }}{{ th(request, sort, 'levels', 'Níveis', 'text-end') }}
@@ -32,6 +34,7 @@
       <tbody>
       {% for s in page.items %}
         <tr>
+          <td><input type="checkbox" class="form-check-input bulk-structures" value="{{ s.id }}"></td>
           <td class="mono fw-semibold">{{ s.code }}</td>
           <td>{{ s.name }}</td>
           <td>{{ s.kind }}</td>
@@ -49,7 +52,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="12" class="text-center text-muted py-4">Nenhuma estrutura cadastrada.</td></tr>
+        <tr><td colspan="13" class="text-center text-muted py-4">Nenhuma estrutura cadastrada.</td></tr>
       {% endfor %}
       </tbody>
     </table>

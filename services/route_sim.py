@@ -134,24 +134,43 @@ def _optimized(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
     return route
 
 
+def _corr_key(n: Node) -> tuple:
+    """Corredor da parada para a serpentina, em ordem espacial: na planta da filial cada corredor é uma "zona"
+    própria, então a ordem é pela orientação e pela posição do eixo; no projeto, pela zona e pelo eixo."""
+    if n.net is not None and isinstance(n.corridor, int):
+        c = n.net.corridors.get(n.corridor)
+        return (getattr(c, "orient", "h"), n.cross)
+    return (n.zone, n.cross)
+
+
 def _s_shape(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
     """Rota em S (serpentina): os corredores com paradas em ordem, alternando o sentido (ida num, volta no
-    seguinte); paradas fora de corredor (cabeceiras) entram onde aumentam menos o trajeto."""
+    seguinte). Testa as duas ordens dos corredores (do primeiro ao último ou o contrário) e os dois sentidos de
+    entrada no primeiro, e fica com a de menor caminhada — o separador entra e sai pela ponta mais conveniente.
+    Paradas fora de corredor (cabeceiras) entram onde aumentam menos o trajeto."""
     corr: dict[tuple, list] = {}
     loose = []
     for n in nodes:
         if n.aisle >= 0:
-            corr.setdefault((n.zone, n.cross), []).append(n)
+            corr.setdefault(_corr_key(n), []).append(n)
         else:
             loose.append(n)
-    route = []
-    for i, k in enumerate(sorted(corr)):
-        route += sorted(corr[k], key=lambda n: n.along, reverse=bool(i % 2))
-    for n in loose:  # inserção mais barata
-        pts = [start] + route + [start]
-        j = min(range(1, len(pts)), key=lambda j: d(pts[j - 1], n) + d(n, pts[j]) - d(pts[j - 1], pts[j]))
-        route.insert(j - 1, n)
-    return route
+    best, best_d = None, None
+    for keys in (sorted(corr), sorted(corr, reverse=True)):
+        for first_rev in (False, True):
+            route = []
+            for i, k in enumerate(keys):
+                route += sorted(corr[k], key=lambda n: n.along, reverse=bool(i % 2) != first_rev)
+            for n in loose:  # inserção mais barata
+                pts = [start] + route + [start]
+                j = min(range(1, len(pts)), key=lambda j: d(pts[j - 1], n) + d(n, pts[j]) - d(pts[j - 1], pts[j]))
+                route.insert(j - 1, n)
+            v = _tour(route, start, d)
+            if best_d is None or v < best_d - 1e-9:
+                best, best_d = route, v
+        if len(keys) <= 1 and not loose:
+            break
+    return best or []
 
 
 def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Callable = dist,

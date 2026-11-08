@@ -122,7 +122,10 @@
         <button class="btn btn-sm btn-accent" formaction="/locations/bins" id="bulkApply"><i class="bi bi-check2-all"></i> Aplicar</button>
       </div>
       <div class="d-flex justify-content-between align-items-center">
-      <button class="btn btn-sm btn-outline-danger" id="bulkDelete"><i class="bi bi-trash"></i> Excluir selecionados</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-danger" id="bulkDelete"><i class="bi bi-trash"></i> Excluir selecionados</button>
+        <button class="btn btn-sm btn-outline-danger" id="bulkDeleteAll" title="Todos os endereços do filtro atual"><i class="bi bi-trash3"></i> Excluir todos os filtrados ({{ total_filtered }})</button>
+      </div>
       <small class="text-muted">Itens por página:
         {% for n in [50, 100, 250, 500] %}<a class="ms-1 {% if per_page == n %}fw-bold{% endif %}" href="{{ url_with(request, per_page=n, page=1) }}">{{ n }}</a>{% endfor %}
       </small>
@@ -146,6 +149,10 @@
         </div>
         <div class="form-text">Só sai do mapa o nível que ficar <b>sem nenhum endereço</b> e sem bins de outros endereços guardadas nele.
           Sem esta opção, o nível continua no mapa como espaço reservado (vazio).</div>
+        <div class="form-check mt-2" id="delCascadeBox">
+          <input class="form-check-input" type="checkbox" id="delCascade">
+          <label class="form-check-label" for="delCascade"><b>Excluir também os ocupados</b>, com os saldos que estão neles (o endereço padrão dos produtos é recalculado)</label>
+        </div>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -178,14 +185,25 @@
   document.getElementById('bulkDelete').addEventListener('click', e => {
     e.preventDefault();
     if (!selected()) { alert('Selecione ao menos um endereço.'); return; }
+    form.querySelectorAll('input[name=scope_del]').forEach(i => i.remove());
     askDelete(form, document.getElementById('bulkDelete'), 'Excluir endereços',
-              `Excluir os ${selected()} endereço(s) selecionado(s)? Endereços ocupados serão ignorados.`);
+              `Excluir os ${selected()} endereço(s) selecionado(s)? Sem a última opção, os ocupados são ignorados.`, true);
+  });
+  document.getElementById('bulkDeleteAll').addEventListener('click', e => {
+    e.preventDefault();
+    if (!{{ total_filtered }}) { alert('Nenhum endereço no filtro.'); return; }
+    form.querySelectorAll('input[name=scope_del]').forEach(i => i.remove());
+    const h = document.createElement('input'); h.type = 'hidden'; h.name = 'scope_del'; h.value = 'filtered'; form.appendChild(h);
+    askDelete(form, document.getElementById('bulkDelete'), 'Excluir endereços do filtro',
+              `Excluir TODOS os {{ total_filtered }} endereço(s) do filtro atual? Sem a última opção, os ocupados são ignorados.`, true);
   });
 })();
 let delTarget = null, delSubmitter = null;
 const delModal = () => bootstrap.Modal.getOrCreateInstance(document.getElementById('delModal'));
-function askDelete(target, submitter, title, text) {
+function askDelete(target, submitter, title, text, bulk = false) {
   delTarget = target; delSubmitter = submitter;
+  document.getElementById('delCascadeBox').style.display = bulk ? '' : 'none';
+  document.getElementById('delCascade').checked = false;
   document.getElementById('delTitle').textContent = title;
   document.getElementById('delText').textContent = text;
   try { document.getElementById('delLevels').checked = localStorage.getItem('nk_del_levels') === '1'; } catch (_) {}
@@ -195,7 +213,11 @@ document.getElementById('delOk').addEventListener('click', () => {
   if (!delTarget) return;
   const on = document.getElementById('delLevels').checked;
   try { localStorage.setItem('nk_del_levels', on ? '1' : '0'); } catch (_) {}
-  delTarget.querySelectorAll('input[name=drop_levels]').forEach(i => i.remove());
+  delTarget.querySelectorAll('input[name=drop_levels],input[name=cascade]').forEach(i => i.remove());
+  if (document.getElementById('delCascade').checked && document.getElementById('delCascadeBox').style.display !== 'none') {
+    if (!confirm('Os endereços ocupados e os saldos neles também serão excluídos. Continuar?')) return;
+    const c = document.createElement('input'); c.type = 'hidden'; c.name = 'cascade'; c.value = '1'; delTarget.appendChild(c);
+  }
   if (on) {
     const h = document.createElement('input'); h.type = 'hidden'; h.name = 'drop_levels'; h.value = '1';
     delTarget.appendChild(h);

@@ -44,7 +44,14 @@
       <option value="abc">Curva ABC (saída)</option>
     </select></div>
   <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
-    <select class="form-select form-select-sm w-auto" id="nkAisle"><option value="">Todos</option></select></div>
+    <div class="dropdown">
+      <button type="button" class="form-select form-select-sm text-start" style="min-width:110px" id="nkAisleBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+              title="Mostra só os corredores marcados (um ou vários)">Todos</button>
+      <div class="dropdown-menu p-2 small" id="nkAisle" style="max-height:55vh;overflow:auto;min-width:180px">
+        <div class="d-flex gap-2 mb-1"><a href="#" id="nkAisleAll">Todos</a><a href="#" id="nkAisleInv">Inverter</a></div>
+        <div id="nkAisleList"></div>
+      </div>
+    </div></div>
   <div class="d-flex align-items-center gap-1" title="Esconde o que fica acima desta altura, para ver os níveis de dentro">
     <span class="text-muted">Altura até</span><input type="range" class="form-range" style="width:130px" id="nkCut" min="10" max="1000" step="5">
     <span id="nkCutV" class="mono"></span></div>
@@ -233,7 +240,14 @@ const structById = Object.fromEntries(data.structs.map(s => [s.id, s]));
 const mods = data.modules;
 const aisleOf = m => m.code.split('-')[0];
 [...new Set(mods.map(aisleOf))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
-  .forEach(a => $('nkAisle').insertAdjacentHTML('beforeend', `<option value="${esc(a)}">${esc(a)}</option>`));
+  .forEach(a => $('nkAisleList').insertAdjacentHTML('beforeend', `<div class="form-check"><input class="form-check-input" type="checkbox" value="${esc(a)}" id="nkA-${esc(a)}">` +
+    `<label class="form-check-label" for="nkA-${esc(a)}">${esc(a)}</label></div>`));
+// corredores marcados (nenhum marcado = todos)
+const aisleSel = () => new Set([...document.querySelectorAll('#nkAisleList input:checked')].map(i => i.value));
+function aisleText() {
+  const s = [...aisleSel()];
+  $('nkAisleBtn').textContent = !s.length ? 'Todos' : s.length <= 3 ? s.join(', ') : `${s.length} corredores`;
+}
 const maxH = Math.max(B.H, ...mods.map(m => m.h));
 $('nkCut').max = Math.ceil(maxH / 5) * 5; $('nkCut').value = $('nkCut').max;
 
@@ -279,9 +293,10 @@ function binColor(b, mode) {
 }
 
 function rebuild() {
-  const aisle = $('nkAisle').value, cut = +$('nkCut').value, mode = $('nkColor').value;
+  const sel = aisleSel(), cut = +$('nkCut').value, mode = $('nkColor').value;
+  aisleText();
   $('nkCutV').textContent = `${fmt(cut / 100, 2)} m`;
-  const showMod = m => !aisle || aisleOf(m) === aisle;
+  const showMod = m => !sel.size || sel.has(aisleOf(m));
   let ip = 0, il = 0;
   mods.forEach(m => {
     const s = structById[m.s], show = showMod(m), color = s?.color || '#888';
@@ -384,7 +399,9 @@ function select(i) {
 
 // ------------------------------------------------------------------ controles
 $('nkColor').addEventListener('change', rebuild);
-$('nkAisle').addEventListener('change', rebuild);
+$('nkAisleList').addEventListener('change', rebuild);
+$('nkAisleAll').addEventListener('click', e => { e.preventDefault(); document.querySelectorAll('#nkAisleList input').forEach(i => { i.checked = false; }); rebuild(); });
+$('nkAisleInv').addEventListener('click', e => { e.preventDefault(); document.querySelectorAll('#nkAisleList input').forEach(i => { i.checked = !i.checked; }); rebuild(); });
 $('nkCut').addEventListener('input', rebuild);
 $('nkBins').addEventListener('change', e => { bins.visible = e.target.checked; if (!e.target.checked) select(null); });
 $('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = e.target.checked; });
@@ -516,15 +533,16 @@ function build() {
     }
     // linha do tempo: anda até cada parada, para (pega o produto) e segue; no fim volta à referência
     const ev = [], arrive = {};
+    const k2m = R.m > 0 ? R.m / total : 1;  // o tempo de caminhada usa a distância da simulação (a do painel), não o traçado desenhado
     let t = 0, dPrev = 0;
     R.stops.forEach((pi, s) => {
       const dd = cum[pi];
-      ev.push({ t0: t, t1: (t += (dd - dPrev) / walkV()), d0: dPrev, d1: dd });
+      ev.push({ t0: t, t1: (t += (dd - dPrev) * k2m / walkV()), d0: dPrev, d1: dd });
       arrive[R.keys[s]] = t;
       ev.push({ t0: t, t1: (t += stopT(R, s)), d0: dd, d1: dd, stop: s });
       dPrev = dd;
     });
-    ev.push({ t0: t, t1: (t += (total - dPrev) / walkV()), d0: dPrev, d1: total });
+    ev.push({ t0: t, t1: (t += (total - dPrev) * k2m / walkV()), d0: dPrev, d1: total });
     // o separador: corpo, cabeça e carrinho (aponta o sentido) e um anel no piso
     const fig = new THREE.Group();
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.85, 4, 12), new THREE.MeshLambertMaterial({ color: R.color })); body.position.y = 0.65;
@@ -591,11 +609,16 @@ function update() {
 
 function hudLines() {
   const d = WK.data;
-  const out = [{ text: `Pedido ${d.order} · ${d.lines} linha(s) · ${d.stops} parada(s) · ${mmss(Math.min(WK.t, WK.T))}`, bold: true }];
+  const pcs = d.units != null ? ` · ${fmt(d.units, 2)} peça(s)` : '';
+  const out = [{ text: `Pedido ${d.order} · ${d.lines} linha(s) · ${d.stops} parada(s)${pcs} · ${mmss(Math.min(WK.t, WK.T))}`, bold: true }];
   WK.walkers.forEach(w => {
-    const dm = w.R.m * w.d / w.total, done = WK.t >= w.T;
+    const dm = w.R.m * w.d / w.total, done = WK.t >= w.T, q = s => (w.R.qty ? +w.R.qty[s] || 0 : 1);
+    // peças já pegas: paradas concluídas (a do momento entra quando termina a pega)
+    let got = 0, all = 0;
+    w.R.keys.forEach((k, s) => { all += q(s); if (w.arrive[k] + stopT(w.R, s) <= WK.t + 1e-9) got += q(s); });
     out.push({ color: w.R.color, text: `${w.R.name.split(' ')[0]}: ${fmt(dm)} de ${fmt(w.R.m)} m · paradas ${w.picked}/${w.R.keys.length} · ` +
-      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${w.R.keys[w.pick]}` : mmss(WK.t)) });
+      `peças ${fmt(got, 2)}/${fmt(all, 2)} · ` +
+      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${w.R.keys[w.pick]} (${fmt(q(w.pick), 2)} pç)` : mmss(WK.t)) });
   });
   return out;
 }

@@ -33,13 +33,15 @@ def plan_3d(plan: SitePlan) -> dict:
     clear_h = b.clear_height_m * 100.0
     out: dict = {
         "building": {"L": fl.length_cm, "W": fl.width_cm, "H": clear_h, "name": ""},
-        "areas": [], "obstacles": [], "zones": [], "structs": [], "types": [], "modules": [], "bins": [],
+        "areas": [], "obstacles": [], "sectors": [], "zones": [], "structs": [], "types": [], "modules": [], "bins": [],
         "aisles": [],
     }
     for kind, X, Y, w, d, label in fl.shapes():
         if kind == "obstacle":
             out["obstacles"].append({"x": _r(X), "y": _r(Y), "w": _r(w), "d": _r(d), "h": min(OBSTACLE_H, clear_h),
                                      "name": label})
+        elif kind == "sector":
+            out["sectors"].append({"x": _r(X), "y": _r(Y), "w": _r(w), "d": _r(d), "name": label})
         elif kind == "zone":
             out["zones"].append({"x": _r(X), "y": _r(Y), "w": _r(w), "d": _r(d), "name": label})
         elif kind in ("reserved", "avenue", "aisle", "cross"):
@@ -51,7 +53,9 @@ def plan_3d(plan: SitePlan) -> dict:
         if sl.qty:
             s = sl.struct
             out["structs"].append({"id": s.id, "code": s.code, "name": s.name, "qty": sl.qty, "color": scol[s.id],
-                                   "w": s.width, "d": s.depth, "h": s.height, "levels": s.levels})
+                                   "w": s.width, "d": s.depth, "h": s.height, "levels": s.levels,
+                                   "golden": [s.golden_from, s.golden_to] if s.golden_from is not None else None,
+                                   "golden_levels": s.golden_levels})
     tidx: dict[int, int] = {}
     for i, tl in enumerate(t for t in plan.types if t.placed or t.needed):
         tidx[tl.spec.id] = i
@@ -72,7 +76,7 @@ def plan_3d(plan: SitePlan) -> dict:
         for lv in sorted(m.levels, key=lambda v: v.n):
             z0 = (lv.n - 1) * pitch
             mod["levels"].append({"n": lv.n, "z": _r(z0), "t": tidx.get(lv.type_id) if lv.type_id is not None else None,
-                                  "used": lv.used, "cap": lv.cap})
+                                  "used": lv.used, "cap": lv.cap, "g": s.is_golden(lv.n)})
             if lv.type_id is None or not lv.positions:
                 continue
             spec = specs.get(lv.type_id)
@@ -84,6 +88,7 @@ def plan_3d(plan: SitePlan) -> dict:
             bw, bl, bh = body.w, body.l, body.h
             deep = max(1, int(math.floor(s.depth / bl + EPS)))
             k = 0
+            golden = s.is_golden(lv.n)
             for pos in lv.positions:
                 skus.setdefault(pos.sku, pos.name)
                 for _ in range(pos.bins):
@@ -98,7 +103,8 @@ def plan_3d(plan: SitePlan) -> dict:
                     else:
                         bx, by, bwx, bdy = X + across, Y + along, bl, cw
                     out["bins"].append([_r(bx), _r(by), _r(z0 + 2.0), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
-                                        None if pos.fill is None else round(pos.fill, 1), mi, pos.address, pos.sku])
+                                        None if pos.fill is None else round(pos.fill, 1), mi, pos.address, pos.sku,
+                                        golden])
                     k += 1
         out["modules"].append(mod)
     out["skus"] = skus

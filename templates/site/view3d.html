@@ -31,6 +31,7 @@
       <option value="fill">Ocupação das bins (%)</option>
       <option value="struct">Estrutura</option>
       <option value="sku">SKU</option>
+      <option value="golden">Zona de ouro</option>
     </select></div>
   <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
     <select class="form-select form-select-sm w-auto" id="nkAisle"><option value="">Todos</option></select></div>
@@ -40,6 +41,7 @@
   <input class="form-control form-control-sm" style="max-width:210px" type="search" id="nkFind" placeholder="Buscar SKU ou endereço">
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">Bins</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">Estruturas</label></div>
+  <div class="form-check form-switch mb-0" id="nkGoldWrap"><input class="form-check-input" type="checkbox" id="nkGold" checked><label class="form-check-label" for="nkGold" title="Faixa de altura da zona de ouro de cada estrutura">Zona de ouro</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">Paredes</label></div>
   <div class="btn-group btn-group-sm" role="group">
     <button type="button" class="btn btn-outline-secondary" data-view="persp" title="Vista em perspectiva"><i class="bi bi-box"></i> 3D</button>
@@ -154,6 +156,12 @@ function label(text, x, y, z, color = '#5b6770', size = LBL) {
   sp.scale.set(size * c.width / c.height, size, 1); sp.position.set(x, y, z); sp.renderOrder = 10;
   return sp;
 }
+(data.sectors || []).forEach(o => {  // setores: área no piso (verde) com o nome e a área
+  const m = new THREE.Mesh(new THREE.BoxGeometry(M(o.w), 0.04, M(o.d)), new THREE.MeshLambertMaterial({ color: '#bfe6cb', transparent: true, opacity: 0.9 }));
+  m.position.set(M(o.x + o.w / 2), 0.02, M(o.y + o.d / 2)); scene.add(m);
+  outline(o.x, o.y, o.w, o.d, '#3b8c5a', true, 0.045);
+  scene.add(label(`${o.name} · ${fmt(o.w * o.d / 10000)} m²`, M(o.x + o.w / 2), 0.6, M(o.y + o.d / 2), '#24613a'));
+});
 const aisleLabels = new THREE.Group();
 data.aisles.forEach(a => aisleLabels.add(label(a.label.replace(/^Corredor\s*/i, ''), M(a.x), 0.5, M(a.y), '#24548c', LBL * 0.8)));
 scene.add(aisleLabels);
@@ -174,7 +182,13 @@ const nPosts = mods.length * 4, nPlates = mods.reduce((s, m) => s + m.levels.len
 const posts = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), nPosts);
 const plates = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.85 }), nPlates);
 const bins = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), Math.max(1, data.bins.length));
-scene.add(posts, plates, bins);
+// zona de ouro: faixa translúcida na altura definida em cada estrutura
+const goldMods = mods.filter(m => structById[m.s]?.golden);
+const gold = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ color: '#f5be28', transparent: true, opacity: 0.22, depthWrite: false }),
+  Math.max(1, goldMods.length));
+gold.count = goldMods.length;
+if (!goldMods.length) { document.getElementById('nkGoldWrap').style.display = 'none'; document.querySelector('#nkColor option[value=golden]').remove(); }
+scene.add(posts, plates, bins, gold);
 const tmp = new THREE.Object3D(), col = new THREE.Color();
 const setBox = (mesh, i, x, y, z, w, d, h, show) => {  // x,y = planta (cm); z = altura (cm)
   tmp.position.set(M(x), M(z), M(y));
@@ -197,6 +211,7 @@ function binColor(b, mode) {
   if (mode === 'fill') return fillColor(b[7]);
   if (mode === 'struct') return col.set(structById[mods[b[8]].s]?.color || '#888');
   if (mode === 'sku') return skuColor(b[10]);
+  if (mode === 'golden') return b[11] ? col.set('#e0a800') : col.set('#c3cbd1');
   return col.set(data.types[b[6]]?.color || '#888');
 }
 
@@ -217,6 +232,11 @@ function rebuild() {
       plates.setColorAt(il++, col.set(color).lerp(new THREE.Color('#ffffff'), 0.45));
     });
   });
+  goldMods.forEach((m, i) => {
+    const [g0, g1] = structById[m.s].golden;
+    setBox(gold, i, m.x - 1, m.y - 1, g0, m.w + 2, m.d + 2, Math.min(g1, cut) - g0, showMod(m) && g0 < cut);
+  });
+  gold.instanceMatrix.needsUpdate = true; gold.computeBoundingSphere();
   data.bins.forEach((b, i) => {
     const m = mods[b[8]];
     setBox(bins, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], showMod(m) && b[2] + b[5] <= cut + 0.1);
@@ -236,6 +256,10 @@ function legend(mode) {
       <div class="mt-1"><span class="nk3d-sw" style="background:#b8c0c6"></span>sem dimensões · média ${fmt(data.kpis.bin_fill)}%</div>`;
   } else if (mode === 'struct') {
     el.innerHTML = '<b>Estruturas</b>' + data.structs.map(s => `<div><span class="nk3d-sw" style="background:${s.color}"></span>${esc(s.code)} (${s.qty})</div>`).join('');
+  } else if (mode === 'golden') {
+    el.innerHTML = '<b>Zona de ouro</b>' + data.structs.filter(s => s.golden).map(s =>
+      `<div>${esc(s.code)}: ${fmt(s.golden[0] / 100, 2)}–${fmt(s.golden[1] / 100, 2)} m · níveis ${s.golden_levels.join(', ') || '—'}</div>`).join('') +
+      `<div class="mt-1"><span class="nk3d-sw" style="background:#e0a800"></span>bins em nível da zona de ouro · ${data.bins.filter(b => b[11]).length} de ${data.bins.length}</div>`;
   } else if (mode === 'sku') {
     el.innerHTML = `<b>SKU</b> <span class="text-muted">uma cor por SKU · ${Object.keys(data.skus).length} SKUs</span>`;
   } else {
@@ -281,7 +305,7 @@ function select(i) {
   info.innerHTML = `<div class="d-flex justify-content-between"><b class="mono">${esc(b[9])}</b><button type="button" class="btn-close btn-sm" aria-label="Fechar"></button></div>
     <div><span class="mono">${esc(b[10])}</span> — ${esc(data.skus[b[10]] || '')}</div>
     <div class="mt-1">Bin <span class="mono">${esc(t?.code)}</span> · ${same} bin(s) no endereço</div>
-    <div>Ocupação das bins: <b>${fmt(b[7])}%</b></div>
+    <div>Ocupação das bins: <b>${fmt(b[7])}%</b></div>${b[11] ? '<div><span class="badge text-bg-warning">Zona de ouro</span></div>' : ''}
     <div class="text-muted">Estante ${esc(m.code)} · ${esc(s?.code)}${m.cap ? ' · cabeceira' : ''} · altura ${fmt(b[2] / 100, 2)} m</div>`;
   info.style.display = 'block';
   info.querySelector('.btn-close').addEventListener('click', () => select(null));
@@ -294,6 +318,7 @@ $('nkCut').addEventListener('input', rebuild);
 $('nkBins').addEventListener('change', e => { bins.visible = e.target.checked; if (!e.target.checked) select(null); });
 $('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = e.target.checked; });
 $('nkWalls').addEventListener('change', e => { walls.visible = e.target.checked; });
+$('nkGold').addEventListener('change', e => { gold.visible = e.target.checked; });
 let findTimer = null;
 $('nkFind').addEventListener('input', () => {
   clearTimeout(findTimer);

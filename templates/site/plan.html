@@ -141,7 +141,7 @@
       <div class="card-header bg-white"><strong><i class="bi bi-layers"></i> Níveis ({{ rep.levels|length }})</strong></div>
       <div class="table-responsive nk-scroll"><table class="table table-sm mb-0 small" data-no-resize>
         <thead class="sticky-top bg-white"><tr><th>Nível</th><th>Tipo</th><th class="text-end">Cap.</th><th class="text-end">Uso</th><th class="text-end">Carga</th></tr></thead>
-        <tbody>{% for r in rep.levels %}<tr class="{{ 'text-muted' if r.type == 'livre' else '' }}"><td class="mono">{{ r.bay }}-{{ r.level }}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.cap }}</td>
+        <tbody>{% for r in rep.levels %}<tr class="{{ 'text-muted' if r.type == 'livre' else '' }}"><td class="mono">{{ r.bay }}-{{ r.level }}{% if r.golden %} <i class="bi bi-star-fill text-warning" title="Zona de ouro"></i>{% endif %}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.cap }}</td>
           <td class="text-end">{{ r.used }}{% if r.cap %} <span class="text-muted">({{ (r.used / r.cap * 100)|round|int }}%)</span>{% endif %}</td>
           <td class="text-end">{{ r.load|dec(1) }}{% if r.max_load %} <span class="text-muted">/ {{ r.max_load|dec }} kg</span>{% endif %}</td></tr>{% endfor %}</tbody>
       </table></div>

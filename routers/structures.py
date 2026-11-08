@@ -21,6 +21,8 @@ NUM_FIELDS = (  # chave, rótulo, obrigatório
     ("level_height", "Vão útil por nível", True),
     ("max_load", "Carga máxima por nível", False),
     ("cost", "Custo por módulo", False),
+    ("golden_from", "Zona de ouro — início", False),
+    ("golden_to", "Zona de ouro — fim", False),
 )
 
 
@@ -44,12 +46,19 @@ def _validate(db: Session, form: FormData, sid: int | None):
         val = f_dec(form, key, errors, label)
         if val is None and req and not errors.get(key):
             errors.add(key, f"{label}: obrigatório.")
-        elif val is not None and val == 0 and key != "cost":
+        elif val is not None and val == 0 and key not in ("cost", "golden_from"):
             errors.add(key, f"{label}: deve ser maior que zero.")
         data[key] = val
     data["levels"] = f_int(form, "levels")
     if not data["levels"] or data["levels"] < 1:
         errors.add("levels", "Nº de níveis: inteiro maior que zero.")
+    gf, gt = data.get("golden_from"), data.get("golden_to")
+    if (gf is None) != (gt is None):
+        errors.add("golden_to", "Zona de ouro: informe início e fim (ou deixe os dois vazios).")
+    elif gf is not None and gt <= gf:
+        errors.add("golden_to", "Zona de ouro: o fim deve ser maior que o início.")
+    elif gf is not None and data.get("height") and gt > data["height"]:
+        errors.add("golden_to", f"Zona de ouro: o fim passa da altura total ({data['height']} cm).")
     if not errors and data["levels"] * data["level_height"] > data["height"]:
         errors.add("level_height", f"{data['levels']} níveis × vão {data['level_height']} cm passam da altura total "
                                    f"({data['height']} cm).")

@@ -138,7 +138,8 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     rep.kpis = [
         ("Módulos de estrutura", _fmt(plan.total_modules), ", ".join(f"{s.qty}× {s.struct.code}" for s in plan.structs if s.qty)),
         ("Bins", _fmt(plan.bins_needed), ", ".join(f"{t.needed}× {t.spec.code}" for t in plan.types if t.needed)),
-        ("Custo total", _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"),
+        ("Custo total", _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"
+         + (f" · sem custo (R$ 0): {', '.join(dict.fromkeys(plan.missing_costs))}" if plan.missing_costs else "")),
         ("Endereços", _fmt(len(plan.positions)), f"{_fmt(plan.levels_total)} níveis em {len(plan.modules)} estantes"
          + (f" ({plan.end_caps} cabeceiras)" if plan.end_caps else "")),
         ("Ocupação dos níveis", (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
@@ -192,7 +193,7 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
             rep.levels.append({"bay": f"{m.aisle}-{m.bay}", "level": lv.n, "struct": m.struct.code,
                                "type": code(lv.type_id) if lv.type_id is not None else "livre", "cap": lv.cap,
                                "used": lv.used, "load": lv.load, "max_load": m.struct.max_load,
-                               "positions": len(lv.positions)})
+                               "positions": len(lv.positions), "golden": m.struct.is_golden(lv.n)})
     for pos in plan.positions:
         rep.addresses.append({"address": pos.address, "struct": pos.struct_code, "type": code(pos.type_id),
                               "bins": pos.bins, "sku": pos.sku, "name": pos.name, "units": pos.units,
@@ -332,9 +333,9 @@ def to_xlsx(rep: SiteReport) -> bytes:
             r["w"], r["d"], r["levels"], r["level_h"], r["config"]) for r in rep.modules], {6: 40, 13: 70})
     ws = wb.create_sheet("Níveis")
     table(ws, ["Estante", "Nível", "Estrutura", "Tipo de bin", "Capacidade (bins)", "Em uso", "Endereços",
-               "Carga (kg)", "Carga máx. (kg)"],
+               "Carga (kg)", "Carga máx. (kg)", "Zona de ouro"],
           [(r["bay"], r["level"], r["struct"], r["type"], r["cap"], r["used"], r["positions"], round(r["load"], 1),
-            r["max_load"]) for r in rep.levels])
+            r["max_load"], "sim" if r.get("golden") else "") for r in rep.levels])
     ws = wb.create_sheet("Endereços")
     pc = lambda v: round(v, 1) if v is not None else None  # noqa: E731
     table(ws, ["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocupação das bins (%)",
@@ -382,10 +383,10 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
         if label and kind == "zone":
             dw.add(String((X + 15) * sc, Yp(Y, 0) + 1.5, label, fontSize=5.5, fillColor=colors.HexColor("#4A6A94")))
             continue
-        if label and kind in ("reserved", "avenue", "obstacle") and min(w, d) * sc >= 6:
-            txt = area_label(plan, label) if kind != "obstacle" else label
+        if label and kind in ("reserved", "avenue", "obstacle", "sector") and min(w, d) * sc >= 6:
+            txt = area_label(plan, label) if kind in ("reserved", "avenue") else label
             st = String(0, 0, txt, fontSize=6, fillColor=colors.HexColor(
-                {"reserved": "#8A6D1C", "avenue": "#3B5B8C"}.get(kind, "#FFFFFF")), textAnchor="middle")
+                {"reserved": "#8A6D1C", "avenue": "#3B5B8C", "sector": "#24613A"}.get(kind, "#FFFFFF")), textAnchor="middle")
             if d > w:  # faixa vertical: texto girado
                 from reportlab.graphics.shapes import Group
 
@@ -418,7 +419,7 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
             f"fileiras ao longo do {'comprimento' if fl.along == 'length' else 'largura'}")
     size = f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · " if dims != "none" else ""
     dw.add(String(0, 2, f"{size}{desc} · "
-                        "amarelo = docas/áreas reservadas · azul = avenidas · preto = obstáculos · tracejado = cabeceiras",
+                        "amarelo = docas/áreas reservadas · azul = avenidas · verde = setores · preto = obstáculos · tracejado = cabeceiras",
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
     if inside:
         blue = colors.HexColor("#24548C")

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
 {% block title %}{{ 'Editar' if item else 'Nova' }} estrutura{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1><i class="bi bi-bookshelf"></i> {{ 'Editar estrutura ' ~ item.code if item else 'Nova estrutura de armazenagem' }}</h1>
@@ -67,6 +68,31 @@
           {{ field_error(errors, 'cost') }}
           <div class="form-text">Usado no objetivo "menor custo".</div>
         </div>
+      </div>
+      <hr class="my-4">
+      <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-star"></i> Zona de ouro <span class="text-lowercase fw-normal">(opcional)</span></h6>
+      <div class="small text-muted mb-3">Faixa de altura mais fácil de pegar (entre a cintura e o ombro, tipicamente 75–150 cm a partir do piso).
+        Arraste no desenho para marcar, puxe as bordas para ajustar ou arraste a faixa para mover (de 5 em 5 cm). Os níveis cuja
+        altura de pega (meio do vão) cai na faixa ficam marcados como zona de ouro no plano e no 3D.</div>
+      <div class="row g-3 align-items-start">
+        <div class="col-md-4">
+          <label class="form-label">Início (cm do piso)</label>
+          <input class="form-control text-end {{ invalid(errors, 'golden_from') }}" name="golden_from" inputmode="decimal" value="{{ data.get('golden_from')|dec_input }}">
+          {{ field_error(errors, 'golden_from') }}
+          <label class="form-label mt-2">Fim (cm do piso)</label>
+          <input class="form-control text-end {{ invalid(errors, 'golden_to') }}" name="golden_to" inputmode="decimal" value="{{ data.get('golden_to')|dec_input }}">
+          {{ field_error(errors, 'golden_to') }}
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-sm btn-outline-warning" id="gzSuggest" title="75 a 150 cm do piso">Sugerir 75–150 cm</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="gzClear">Limpar</button>
+          </div>
+          <div class="small mt-2" id="gzLevels"></div>
+        </div>
+        <div class="col-md-8">
+          <div id="gzEditor" class="border rounded bg-white" style="height:360px; touch-action:none; user-select:none"></div>
+        </div>
+      </div>
+      <div class="row g-3 mt-1">
         <div class="col-12">
           <label class="form-label">Observações</label>
           <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="Fornecedor, modelo, prazo…">
@@ -79,4 +105,108 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Zona de ouro com o mouse: vista de frente do módulo (níveis em escala) e uma pessoa de 1,75 m como referência. */
+(function () {
+  const form = document.getElementById('stForm'), host = document.getElementById('gzEditor');
+  if (!form || !host) return;
+  const inp = n => form.querySelector(`[name="${n}"]`);
+  const num = v => { v = String(v ?? '').trim(); if (!v) return null; if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const fmt = v => (Math.round(v * 10) / 10).toLocaleString('pt-BR');
+  const NS = 'http://www.w3.org/2000/svg', SNAP = 5, PERSON = 175;
+  const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a || {})) e.setAttribute(k, v); if (p) p.appendChild(e); return e; };
+  let drag = null;
+  function geo() {
+    const H = num(inp('height').value) || 200, W = num(inp('width').value) || 100, n = Math.max(1, parseInt(inp('levels').value, 10) || 1);
+    const clear = num(inp('level_height').value) || H / n;
+    return { H, W, n, clear, pitch: H / n };
+  }
+  function band() { return [num(inp('golden_from').value), num(inp('golden_to').value)]; }
+  function setBand(a, b) {
+    inp('golden_from').value = a == null ? '' : fmt(a); inp('golden_to').value = b == null ? '' : fmt(b);
+  }
+  function render() {
+    const g = geo(), [gf, gt] = band();
+    const top = Math.max(g.H, PERSON) + 20, Wtot = g.W + 120;
+    host.innerHTML = '';
+    const svg = el('svg', { viewBox: `-60 ${-top} ${Wtot + 40} ${top + 30}`, width: '100%', height: '100%', preserveAspectRatio: 'xMidYMid meet' }, host);
+    svg.style.cursor = 'crosshair';
+    const Y = z => -z;  // altura (cm) -> y do SVG
+    el('line', { x1: -60, y1: 0, x2: Wtot, y2: 0, stroke: '#1f2d33', 'stroke-width': 1.5 }, svg);  // piso
+    // régua
+    for (let z = 0; z <= top - 20; z += 50) {
+      el('line', { x1: -12, y1: Y(z), x2: -4, y2: Y(z), stroke: '#8a959c', 'stroke-width': 0.8 }, svg);
+      const t = el('text', { x: -16, y: Y(z) + 3, 'font-size': 9, 'text-anchor': 'end', fill: '#5b6770' }, svg); t.textContent = z;
+    }
+    // zona de ouro
+    if (gf != null && gt != null && gt > gf) {
+      const r = el('rect', { x: -4, y: Y(gt), width: g.W + 100, height: gt - gf, fill: 'rgba(245,190,40,.28)', stroke: '#d4a017', 'stroke-width': 1, class: 'gz-band' }, svg);
+      r.style.cursor = 'grab';
+      [['top', gt], ['bottom', gf]].forEach(([k, z]) => {
+        const h = el('rect', { x: -4, y: Y(z) - 4, width: g.W + 100, height: 8, fill: 'transparent', class: 'gz-h' }, svg);
+        h.style.cursor = 'ns-resize'; h.dataset.edge = k;
+        el('line', { x1: -4, y1: Y(z), x2: g.W + 96, y2: Y(z), stroke: '#b8860b', 'stroke-width': 1.5, 'pointer-events': 'none' }, svg);
+        const t = el('text', { x: g.W + 98, y: Y(z) + (k === 'top' ? -3 : 11), 'font-size': 10, fill: '#8a6d1c', 'text-anchor': 'end', 'pointer-events': 'none' }, svg);
+        t.textContent = `${fmt(z)} cm`;
+      });
+    }
+    // módulo: colunas, níveis (bandeja na base de cada nível) e vão útil
+    el('rect', { x: 0, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
+    el('rect', { x: g.W - 4, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
+    const golden = [];
+    for (let i = 0; i < g.n; i++) {
+      const z0 = i * g.pitch, mid = z0 + g.clear / 2;
+      const isG = gf != null && gt != null && mid >= gf && mid <= gt;
+      if (isG) golden.push(i + 1);
+      el('rect', { x: 4, y: Y(z0 + g.clear), width: g.W - 8, height: g.clear, fill: isG ? 'rgba(245,190,40,.35)' : 'rgba(47,126,216,.06)', 'pointer-events': 'none' }, svg);
+      el('rect', { x: 0, y: Y(z0) - 3, width: g.W, height: 3, fill: '#5b6770', 'pointer-events': 'none' }, svg);
+      const t = el('text', { x: g.W / 2, y: Y(mid) + 3, 'font-size': 10, 'text-anchor': 'middle', fill: isG ? '#8a6d1c' : '#5b6770', 'pointer-events': 'none' }, svg);
+      t.textContent = `Nível ${i + 1}`;
+    }
+    // pessoa de referência (1,75 m)
+    const px = g.W + 45, P = { 'stroke': '#5b6770', 'stroke-width': 3, 'stroke-linecap': 'round', fill: 'none', 'pointer-events': 'none' };
+    el('circle', { cx: px, cy: Y(162), r: 11, ...P }, svg);
+    el('line', { x1: px, y1: Y(150), x2: px, y2: Y(90), ...P }, svg);
+    el('line', { x1: px, y1: Y(90), x2: px - 12, y2: Y(2), ...P }, svg);
+    el('line', { x1: px, y1: Y(90), x2: px + 12, y2: Y(2), ...P }, svg);
+    el('line', { x1: px, y1: Y(140), x2: px - 18, y2: Y(95), ...P }, svg);
+    el('line', { x1: px, y1: Y(140), x2: px + 18, y2: Y(95), ...P }, svg);
+    const pt = el('text', { x: px, y: Y(PERSON) - 6, 'font-size': 9, 'text-anchor': 'middle', fill: '#5b6770', 'pointer-events': 'none' }, svg); pt.textContent = '1,75 m';
+    document.getElementById('gzLevels').innerHTML = gf != null && gt != null && gt > gf
+      ? (golden.length ? `<span class="badge text-bg-warning">Zona de ouro</span> nível(is) ${golden.join(', ')}` : '<span class="text-muted">Nenhum nível tem a altura de pega dentro da faixa.</span>')
+      : '<span class="text-muted">Sem zona de ouro.</span>';
+  }
+  // interação (no contêiner, que não é recriado ao redesenhar: a captura do ponteiro continua durante o arraste)
+  const zAt = ev => { const svg = host.querySelector('svg'); const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return -p.matrixTransform(svg.getScreenCTM().inverse()).y; };
+  const snap = z => Math.min(geo().H, Math.max(0, Math.round(z / SNAP) * SNAP));
+  host.addEventListener('pointerdown', ev => {
+    const z = zAt(ev), [a, b] = band(), t = ev.target;
+    if (t.classList.contains('gz-h')) drag = { mode: t.dataset.edge };
+    else if (t.classList.contains('gz-band')) drag = { mode: 'move', z0: z, a, b };
+    else drag = { mode: 'new', z0: snap(z) };
+    host.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+  });
+  host.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    const H = geo().H, z = snap(zAt(ev)), [a, b] = band();
+    if (drag.mode === 'top') setBand(a, Math.max(z, (a ?? 0) + SNAP));
+    else if (drag.mode === 'bottom') setBand(Math.min(z, (b ?? H) - SNAP), b);
+    else if (drag.mode === 'move') {
+      const d = Math.round((zAt(ev) - drag.z0) / SNAP) * SNAP, span = drag.b - drag.a;
+      const na = Math.min(Math.max(0, drag.a + d), H - span);
+      setBand(na, na + span);
+    } else if (Math.abs(z - drag.z0) >= SNAP) setBand(Math.min(z, drag.z0), Math.max(z, drag.z0));
+    render();
+  });
+  host.addEventListener('pointerup', () => { drag = null; });
+  ['height', 'width', 'levels', 'level_height', 'golden_from', 'golden_to'].forEach(n => inp(n)?.addEventListener('input', () => { if (!drag) render(); }));
+  document.getElementById('gzSuggest').addEventListener('click', () => { const g = geo(); setBand(Math.min(75, g.H), Math.min(150, g.H)); render(); });
+  document.getElementById('gzClear').addEventListener('click', () => { setBand(null, null); render(); });
+  render();
+})();
+</script>
 {% endblock %}

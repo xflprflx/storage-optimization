@@ -148,6 +148,10 @@ def _add_missing_columns(conn) -> None:
                           "WHERE parent_id IS NOT NULL AND fraction_num > 0 AND split_axis != 'length'"))
         conn.execute(text("UPDATE bin_types SET div_w = 1, div_l = fraction_den / fraction_num "
                           "WHERE parent_id IS NOT NULL AND fraction_num > 0 AND split_axis = 'length'"))
+    stcols = {c["name"] for c in insp.get_columns("structure_types")} if "structure_types" in tables else set()
+    for col in ("golden_from", "golden_to"):
+        if "structure_types" in tables and col not in stcols:
+            conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} BIGINT"))
     if "products" in tables and "material_type" not in {c["name"] for c in insp.get_columns("products")}:
         conn.execute(text("ALTER TABLE products ADD COLUMN material_type VARCHAR(60) NOT NULL DEFAULT ''"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_products_material_type ON products (material_type)"))

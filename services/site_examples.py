@@ -24,6 +24,8 @@ STRUCTURES = {
     "EST-120-60": ("Estante reforçada 120 × 60, 4 níveis", "Estante", 120, 60, 240, 4, 58, 250, 790),
     "PP-270-110": ("Porta-palete 270 × 110, 3 níveis", "Porta-palete", 270, 110, 600, 3, 160, 2000, 2400),
 }
+# zona de ouro (cm do piso) das estantes: entre a cintura e o ombro
+GOLDEN = {"EST-100-40": (75, 150), "EST-100-60": (75, 150), "EST-120-60": (75, 150)}
 # código, nome, altura, largura, comprimento (cm, internas), peso máx. (kg), volume (L, vazio = calculado), custo (R$)
 BINS = {
     "BIN-3": ("Caixa bin nº 3", 12, 14, 25, 5, None, 6.90),
@@ -143,14 +145,17 @@ EXAMPLES = [
         "title": "CD com porta-paletes e picking",
         "description": "Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de "
                        "empilhadeira de 3,2 m, e zona de picking em estantes com corredor de 1,2 m e um transversal, "
-                       "separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins.",
-        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "~350 SKUs"],
+                       "separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins. "
+                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas.",
+        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "~350 SKUs"],
         "building": {"length_m": 60, "width_m": 36, "clear_height_m": 9, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 10, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
         "zones": [("Porta-paletes", None, None, 28, None, "ao longo do comprimento", 3.2, None, "PP-270-110"),
                   ("Picking", None, None, None, None, "ao longo do comprimento", None, 1, "EST-100-60, EST-120-60")],
         "obstacles": [],
+        # setores: só a área necessária; o sistema escolhe o lugar junto às docas
+        "sectors": [("Recebimento", 60, 5, "docas"), ("Expedição", 45, 5, "docas")],
         "structures": {"PP-270-110": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None),
                        "EST-120-60": ("Otimizar", None, None, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7", "BIN-8", "PALETE"],
@@ -221,10 +226,15 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
           ex["zones"], {1: 22, 6: 30, 9: 34})
     sheet(wb.create_sheet("Obstáculos"), ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
           ex["obstacles"], {1: 24})
+    sheet(wb.create_sheet("Setores"), ["Nome", "Área necessária (m²)", "Lado mínimo (m)",
+                                       "Onde (automático, docas, fundo, lateral, fixa)"],
+          ex.get("sectors") or [], {1: 22, 4: 40})
     sheet(wb.create_sheet("Estruturas"),
           ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
-           "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx."],
-          [(code, *STRUCTURES[code], *mode) for code, mode in ex["structures"].items()], {2: 36})
+           "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx.",
+           "Zona de ouro início (cm)", "Zona de ouro fim (cm)"],
+          [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None))) for code, mode in ex["structures"].items()],
+          {2: 36})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)"], [(code, *BINS[code]) for code in ex["bins"]], {2: 36})
@@ -240,7 +250,7 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
 # Prévia da planta (antes de otimizar): zonas, avenidas, obstáculos e fileiras disponíveis
 # --------------------------------------------------------------------------- #
 def building_of(ex: dict):
-    from services.site_planner import Building, Obstacle, StructureSpec, ZoneSpec
+    from services.site_planner import Building, Obstacle, SectorSpec, StructureSpec, ZoneSpec
 
     bd = ex["building"]
     b = Building(**{k: float(bd[k]) for k in ("length_m", "width_m", "clear_height_m", "aisle_m", "wall_gap_m",
@@ -253,12 +263,15 @@ def building_of(ex: dict):
         if mode == "Não usar":
             continue
         name, _kind, w, d, h, lv, vh, load, cost = STRUCTURES[code]
-        structs.append(StructureSpec(ids[code], code, name, w, d, h, lv, vh, load, cost))
+        gf, gt = GOLDEN.get(code, (None, None))
+        structs.append(StructureSpec(ids[code], code, name, w, d, h, lv, vh, load, cost, golden_from=gf, golden_to=gt))
     for name, x, y, ln, wd, ori, aisle, cross, codes in ex["zones"]:
         sids = {ids[c.strip()] for c in (codes or "").split(",") if c.strip()} or None
         b.zones.append(ZoneSpec(ln, "across" if ori.startswith("perp") else "along", aisle, int(cross or 0), sids, name,
                                 x_m=x, y_m=y, width_m=wd))
     b.obstacles = [Obstacle(*o) for o in ex["obstacles"]]
+    places = {"docas": "front", "fundo": "back", "lateral": "side", "automático": "auto"}
+    b.sectors = [SectorSpec(n, a, s, places.get(p, "auto")) for n, a, s, p in ex.get("sectors") or []]
     return b, structs
 
 

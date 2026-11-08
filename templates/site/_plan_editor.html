@@ -4,11 +4,11 @@
 <style>
   .nk-plan-svg { width: 100%; height: auto; max-height: 520px; background: #fff; border: 1px solid #e1e6ea; border-radius: .35rem;
     touch-action: none; user-select: none; }
-  .nk-plan-svg.tool-zone, .nk-plan-svg.tool-obstacle { cursor: crosshair; }
+  .nk-plan-svg.tool-zone, .nk-plan-svg.tool-obstacle, .nk-plan-svg.tool-sector { cursor: crosshair; }
   .nk-plan-svg .shape { cursor: move; }
   .nk-plan-svg .handle { cursor: nwse-resize; }
   .nk-plan-svg text { font-family: system-ui, sans-serif; pointer-events: none; }
-  #zonesTable tr.table-active td, #obsTable tr.table-active td { background: #fff3cd !important; }
+  #zonesTable tr.table-active td, #obsTable tr.table-active td, #secTable tr.table-active td { background: #fff3cd !important; }
 </style>
 <script>
 (function () {
@@ -30,15 +30,20 @@
   const NS = 'http://www.w3.org/2000/svg';
 
   // ------------------------------------------------------------------ estado (a partir do formulário)
+  // tabelas do formulário por tipo de forma (setor: só os de posição fixa são desenhados/editados aqui)
+  const TABLE = { zone: '#zonesTable', obstacle: '#obsTable', sector: '#secTable' };
+  const TPL = { zone: 'zoneTpl', obstacle: 'obsTpl', sector: 'secTpl' };
+  const IDX = { zone: 'z_idx', obstacle: 'o_idx', sector: 'sec_idx' };
+  const kindOf = tr => tr.closest('#zonesTable') ? 'zone' : tr.closest('#secTable') ? 'sector' : 'obstacle';
   function rowsOf(kind) {
-    const tb = document.querySelector(kind === 'zone' ? '#zonesTable tbody' : '#obsTable tbody');
+    const tb = document.querySelector(TABLE[kind] + ' tbody');
     return tb ? [...tb.querySelectorAll('tr')] : [];
   }
   function field(tr, key) {
     const map = { zone: { name: 'z_name_', x: 'z_x_', y: 'z_y_', len: 'z_len_', wid: 'z_wid_', ori: 'z_ori_' },
-                  obstacle: { name: 'o_name_', x: 'o_x_m_', y: 'o_y_m_', len: 'o_length_m_', wid: 'o_width_m_' } };
-    const kind = tr.closest('#zonesTable') ? 'zone' : 'obstacle';
-    return tr.querySelector(`[name^="${map[kind][key]}"]`);
+                  obstacle: { name: 'o_name_', x: 'o_x_m_', y: 'o_y_m_', len: 'o_length_m_', wid: 'o_width_m_' },
+                  sector: { name: 'sec_name_', x: 'sec_x_m_', y: 'sec_y_m_', len: 'sec_length_m_', wid: 'sec_width_m_', place: 'sec_place_' } };
+    return tr.querySelector(`[name^="${map[kindOf(tr)][key]}"]`);
   }
   function state() {
     const L = val('b_length_m'), W = val('b_width_m');
@@ -67,7 +72,11 @@
       tr, i, name: field(tr, 'name')?.value || `Obstáculo ${i + 1}`, X: num(field(tr, 'x')?.value),
       Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
-    return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles };
+    const sectors = rowsOf('sector').filter(tr => field(tr, 'place')?.value === 'fixed').map((tr, i) => ({
+      tr, i, name: field(tr, 'name')?.value || `Setor ${i + 1}`, X: num(field(tr, 'x')?.value),
+      Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
+      .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
+    return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles, sectors };
   }
 
   // ------------------------------------------------------------------ escrita nas tabelas
@@ -76,16 +85,17 @@
     if (el) { el.value = v == null ? '' : fmt(v); el.dispatchEvent(new Event('input', { bubbles: true })); }
   }
   function nextIndex(kind) {
-    const name = kind === 'zone' ? 'z_idx' : 'o_idx';
+    const name = IDX[kind];
     return Math.max(-1, ...[...form.querySelectorAll(`[name="${name}"]`)].map(i => parseInt(i.value, 10) || 0)) + 1;
   }
   function addRow(kind, r) {
-    const tb = document.querySelector(kind === 'zone' ? '#zonesTable tbody' : '#obsTable tbody');
-    const tpl = document.getElementById(kind === 'zone' ? 'zoneTpl' : 'obsTpl');
+    const tb = document.querySelector(TABLE[kind] + ' tbody');
+    const tpl = document.getElementById(TPL[kind]);
     tb.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', nextIndex(kind)));
     const tr = tb.lastElementChild;
     const n = rowsOf(kind).length;
-    field(tr, 'name').value = kind === 'zone' ? `Zona ${n}` : `Obstáculo ${n}`;
+    field(tr, 'name').value = { zone: `Zona ${n}`, obstacle: `Obstáculo ${n}`, sector: `Setor ${n}` }[kind];
+    if (kind === 'sector') { const p = field(tr, 'place'); p.value = 'fixed'; p.dispatchEvent(new Event('change', { bubbles: true })); }
     ['x', 'y', 'len', 'wid'].forEach(k => setField(tr, k, r[k]));
     return tr;
   }
@@ -93,7 +103,7 @@
     st.zones.forEach(z => { setField(z.tr, 'x', z.X); setField(z.tr, 'y', z.Y); setField(z.tr, 'len', z.Lx); setField(z.tr, 'wid', z.Wy); });
   }
   function select(tr) {
-    document.querySelectorAll('#zonesTable tr.table-active, #obsTable tr.table-active').forEach(r => r.classList.remove('table-active'));
+    document.querySelectorAll('#zonesTable tr.table-active, #obsTable tr.table-active, #secTable tr.table-active').forEach(r => r.classList.remove('table-active'));
     if (tr) tr.classList.add('table-active');
     sel = tr;
   }
@@ -172,7 +182,17 @@
     // fileiras e corredores (servidor)
     if (server && server.shapes) {
       const sty = { aisle: ['#eef2f4', 'none'], cross: ['#eef2f4', 'none'], lane: ['#e8f0fe', '#9ab7e6'] };
-      server.shapes.forEach(([k, x, y, w, d]) => {
+      server.shapes.forEach(([k, x, y, w, d, name]) => {
+        if (k === 'sector') {  // setor posicionado pelo sistema (os de posição fixa são desenhados abaixo, editáveis)
+          if (st.sectors.some(o => Math.abs(o.X * 100 - x) < 1 && Math.abs(o.Y * 100 - y) < 1)) return;
+          addBrk(x / 100, y / 100, w / 100, d / 100);
+          el('rect', { x: x / 100, y: y / 100, width: w / 100, height: d / 100, fill: 'rgba(59,140,90,.16)', stroke: '#3b8c5a',
+            'stroke-width': fs * 0.1, 'stroke-dasharray': `${fs * 0.5} ${fs * 0.3}` }, svg);
+          const cx = (x + w / 2) / 100, cy = (y + d / 2) / 100;
+          text(svg, cx, cy, `${name} · ${fmt(w * d / 10000)} m² (automático)`, { 'font-size': fs * 0.7, 'text-anchor': 'middle',
+            'dominant-baseline': 'middle', fill: '#24613a', transform: d > w * 1.6 ? `rotate(-90 ${cx} ${cy})` : '' });
+          return;
+        }
         if (!sty[k]) return;
         if (k !== 'lane') addBrk(x / 100, y / 100, w / 100, d / 100);
         el('rect', { x: x / 100, y: y / 100, width: w / 100, height: d / 100, fill: sty[k][0], stroke: sty[k][1], 'stroke-width': fs * 0.04 }, svg);
@@ -180,15 +200,15 @@
     }
     // zonas e obstáculos
     const shape = (o, kind) => {
-      const isZone = kind === 'zone';
+      const isZone = kind === 'zone', isSec = kind === 'sector';
       addBrk(o.X, o.Y, o.Lx, o.Wy);
       const g = el('g', {}, svg);
       const r = el('rect', { x: o.X, y: o.Y, width: Math.max(0, o.Lx), height: Math.max(0, o.Wy), class: edit ? 'shape' : '',
-        fill: isZone ? 'rgba(47,126,216,.08)' : '#2b2f33', stroke: isZone ? '#2f6db5' : '#111',
-        'stroke-width': fs * (sel === o.tr ? 0.25 : 0.12), 'stroke-dasharray': isZone ? `${fs * 0.6} ${fs * 0.3}` : '' }, g);
-      const lbl = isZone ? `${o.name} · ${o.ori === 'across' ? '↕' : '↔'}` : o.name;
+        fill: isZone ? 'rgba(47,126,216,.08)' : isSec ? 'rgba(59,140,90,.18)' : '#2b2f33', stroke: isZone ? '#2f6db5' : isSec ? '#3b8c5a' : '#111',
+        'stroke-width': fs * (sel === o.tr ? 0.25 : 0.12), 'stroke-dasharray': isZone || isSec ? `${fs * 0.6} ${fs * 0.3}` : '' }, g);
+      const lbl = isZone ? `${o.name} · ${o.ori === 'across' ? '↕' : '↔'}` : isSec ? `${o.name} · ${fmt(o.Lx * o.Wy)} m²` : o.name;
       const big = o.Lx > fs * 8 && o.Wy > fs * 3;
-      const tAttrs = { 'font-size': fs * 0.85, fill: isZone ? '#24548c' : '#fff' };
+      const tAttrs = { 'font-size': fs * 0.85, fill: isZone ? '#24548c' : isSec ? '#24613a' : '#fff' };
       if (big) {
         text(g, o.X + fs * 0.4, o.Y + fs * 1.1, lbl, tAttrs);
         if (full) text(g, o.X + fs * 0.4, o.Y + fs * 2.1, `${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} · Y ${fmt(o.Y)}`, { ...tAttrs, 'font-size': fs * 0.7 });
@@ -209,6 +229,7 @@
     };
     st.zones.forEach(z => shape(z, 'zone'));
     st.obstacles.forEach(o => shape(o, 'obstacle'));
+    st.sectors.forEach(o => shape(o, 'sector'));
     if (full) chains(svg, st, brk, m, fs);
     svg._fs = fs; svg._inner = null;
     if (inside) drawInner(svg, st, fs);
@@ -221,7 +242,7 @@
     note.textContent = parts.join(' · ');
     if (edit) svg.addEventListener('pointerdown', ev => {
       // desenhar: em qualquer lugar (inclusive por cima de outras formas); selecionar: clique no fundo tira a seleção
-      if (tool === 'zone' || tool === 'obstacle') startDraw(ev, svg, st, tool);
+      if (tool === 'zone' || tool === 'obstacle' || tool === 'sector') startDraw(ev, svg, st, tool);
       else if (!ev.target.classList.contains('shape') && !ev.target.classList.contains('handle')) startDraw(ev, svg, st, tool);
     });
   }
@@ -260,7 +281,7 @@
       text(g, vertical ? cx - t : cx, vertical ? cy : cy - t, label,
         { ...tA, fill: dark ? '#fff' : ink, ...(dark ? { stroke: 'none' } : {}), transform: vertical ? `rotate(-90 ${cx - t} ${cy})` : '' });
     };
-    const rects = [...st.zones, ...st.obstacles.map(o => ({ ...o, obstacle: true }))].filter(o => o.Lx > 0 && o.Wy > 0);
+    const rects = [...st.zones, ...st.obstacles.map(o => ({ ...o, obstacle: true })), ...st.sectors].filter(o => o.Lx > 0 && o.Wy > 0);
     const all = rects.concat(extra ? [extra] : []);
     all.forEach(o => {
       const { X, Y, Lx: w, Wy: d } = o, dark = !!o.obstacle;
@@ -287,7 +308,7 @@
     return p.matrixTransform(svg.getScreenCTM().inverse());
   }
   function startDraw(ev, svg, st, tool) {
-    if (tool !== 'zone' && tool !== 'obstacle') { select(null); renderAll(); return; }
+    if (tool !== 'zone' && tool !== 'obstacle' && tool !== 'sector') { select(null); renderAll(); return; }
     const p0 = point(svg, ev);
     const tmp = el('rect', { x: p0.x, y: p0.y, width: 0, height: 0, fill: 'rgba(47,126,216,.15)', stroke: '#2f6db5', 'stroke-width': Math.max(st.L, st.W) / 300 }, svg);
     svg.setPointerCapture(ev.pointerId);
@@ -356,6 +377,7 @@
           <input type="radio" class="btn-check" name="nk-tool" value="select" id="nkt-sel" checked><label class="btn btn-outline-secondary" for="nkt-sel"><i class="bi bi-cursor"></i> Selecionar/mover</label>
           <input type="radio" class="btn-check" name="nk-tool" value="zone" id="nkt-zone"><label class="btn btn-outline-primary" for="nkt-zone"><i class="bi bi-bounding-box"></i> Desenhar zona</label>
           <input type="radio" class="btn-check" name="nk-tool" value="obstacle" id="nkt-obs"><label class="btn btn-outline-dark" for="nkt-obs"><i class="bi bi-square-fill"></i> Desenhar obstáculo</label>
+          <input type="radio" class="btn-check" name="nk-tool" value="sector" id="nkt-sec"><label class="btn btn-outline-success" for="nkt-sec" title="Setor em posição fixa (para o sistema escolher o lugar, informe só a área na tabela de setores)"><i class="bi bi-door-open"></i> Desenhar setor</label>
         </div><span class="text-muted nk-help">Arraste para desenhar · arraste a forma para mover · canto para redimensionar · Delete apaga a selecionada · medidas de 10 em 10 cm</span>` : ''}
       </div>
       <div class="nk-plan-body"></div>
@@ -378,7 +400,7 @@
   });
   form.addEventListener('input', () => { renderAll(); scheduleServer(); });
   form.addEventListener('change', () => { renderAll(); scheduleServer(); });
-  ['#zonesTable tbody', '#obsTable tbody'].forEach(s => {
+  ['#zonesTable tbody', '#obsTable tbody', '#secTable tbody'].forEach(s => {
     const tb = document.querySelector(s);
     if (tb) new MutationObserver(() => { renderAll(); scheduleServer(); }).observe(tb, { childList: true });
   });
@@ -386,7 +408,7 @@
     if (e.key !== 'Delete' || !sel || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
     sel.remove(); sel = null; renderAll(); scheduleServer();
   });
-  document.querySelectorAll('#zonesTable, #obsTable').forEach(t => t.addEventListener('focusin', e => {
+  document.querySelectorAll('#zonesTable, #obsTable, #secTable').forEach(t => t.addEventListener('focusin', e => {
     const tr = e.target.closest('tbody tr'); if (tr && tr !== sel) { select(tr); renderAll(); }
   }));
   if (window.nkDims) window.nkDims.apply();  // monta os seletores de medidas recém-criados

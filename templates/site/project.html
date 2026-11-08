@@ -158,9 +158,53 @@
             </tbody>
           </table>
         </div>
+        <hr class="my-3">
+        {% set sectors = b.get('sectors') or [] %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-1">
+          <strong class="small">Setores (recebimento, expedição, conferência…)</strong>
+          <button type="button" class="btn btn-sm btn-outline-success" id="addSector"><i class="bi bi-plus-lg"></i> Adicionar setor</button>
+        </div>
+        <div class="small text-muted mb-2">Informe só a <b>área necessária</b>: o sistema testa faixas junto às paredes e cantos em várias proporções e escolhe
+          o lugar que deixa mais posições de estrutura (empate: o mais perto das docas). Lado mínimo evita setores estreitos demais.
+          A preferência restringe onde procurar; "Posição fixa" usa X/Y/comprimento/largura (como um obstáculo, inclusive desenhado com o mouse).
+          A posição escolhida aparece na planta (com "Mostrar fileiras"), no resultado, no PDF e no 3D.</div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0" id="secTable" data-no-resize>
+            <thead class="small"><tr><th>Nome</th><th style="width:100px">Área (m²)</th><th style="width:100px">Lado mín. (m)</th><th style="width:230px">Onde</th>
+              <th style="width:85px">X (m)</th><th style="width:85px">Y (m)</th><th style="width:100px">Compr. X (m)</th><th style="width:100px">Larg. Y (m)</th><th style="width:40px"></th></tr></thead>
+            <tbody>
+            {% for sc in sectors %}{% set si = loop.index0 %}
+              <tr>
+                <td><input type="hidden" name="sec_idx" value="{{ si }}"><input class="form-control form-control-sm" name="sec_name_{{ si }}" value="{{ sc.name }}" maxlength="40" placeholder="Recebimento"></td>
+                <td><input class="form-control form-control-sm text-end" name="sec_area_m2_{{ si }}" inputmode="decimal" value="{{ sc.area_m2 }}" placeholder="m²"></td>
+                <td><input class="form-control form-control-sm text-end sec-auto" name="sec_min_side_m_{{ si }}" inputmode="decimal" value="{{ sc.min_side_m }}" placeholder="2"></td>
+                <td><select class="form-select form-select-sm sec-place" name="sec_place_{{ si }}">{% for k, v in SECTOR_PLACES.items() %}<option value="{{ k }}" {{ "selected" if sc.place == k }}>{{ v }}</option>{% endfor %}</select></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_x_m_{{ si }}" inputmode="decimal" value="{{ sc.x_m }}"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_y_m_{{ si }}" inputmode="decimal" value="{{ sc.y_m }}"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_length_m_{{ si }}" inputmode="decimal" value="{{ sc.length_m }}"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_width_m_{{ si }}" inputmode="decimal" value="{{ sc.width_m }}"></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
+  <template id="secTpl">
+    <tr>
+      <td><input type="hidden" name="sec_idx" value="__i__"><input class="form-control form-control-sm" name="sec_name___i__" maxlength="40" placeholder="Recebimento"></td>
+                <td><input class="form-control form-control-sm text-end" name="sec_area_m2___i__" inputmode="decimal" placeholder="m²"></td>
+                <td><input class="form-control form-control-sm text-end sec-auto" name="sec_min_side_m___i__" inputmode="decimal" placeholder="2"></td>
+                <td><select class="form-select form-select-sm sec-place" name="sec_place___i__">{% for k, v in SECTOR_PLACES.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_x_m___i__" inputmode="decimal"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_y_m___i__" inputmode="decimal"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_length_m___i__" inputmode="decimal"></td>
+                <td><input class="form-control form-control-sm text-end sec-fixed" name="sec_width_m___i__" inputmode="decimal"></td>
+                <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="Remover"><i class="bi bi-x-lg"></i></button></td>
+    </tr>
+  </template>
   <template id="zoneTpl">
     <tr class="zone-row">
       <td><input type="hidden" name="z_idx" value="__i__"><input class="form-control form-control-sm" name="z_name___i__" placeholder="Zona" maxlength="40"></td>
@@ -408,7 +452,8 @@
 <div class="row g-3 mb-3">
   {% set kpis = [
     ('Módulos de estrutura', plan.total_modules, plan.structs|selectattr('qty')|map(attribute='struct.code')|join(', ')),
-    ('Custo total', money(plan.total_cost), 'estruturas ' ~ money(plan.structures_cost)|striptags ~ ' + bins ' ~ money(plan.bins_cost)|striptags),
+    ('Custo total', money(plan.total_cost), 'estruturas ' ~ money(plan.structures_cost)|striptags ~ ' + bins ' ~ money(plan.bins_cost)|striptags
+      ~ ((' · sem custo (R$ 0): ' ~ plan.missing_costs|unique|join(', ')) if plan.missing_costs else '')),
     ('Bins', plan.bins_placed ~ ' / ' ~ plan.bins_needed, 'alocadas / necessárias'),
     ('Ocupação dos níveis', pct(plan.fill), plan.levels_used ~ ' de ' ~ plan.levels_total ~ ' níveis em uso'),
     ('Ocupação das bins', pct(plan.bin_fill), 'volume dos produtos ÷ volume útil das bins'),
@@ -537,6 +582,20 @@
   let on = ot ? ot.querySelectorAll('tr').length : 0;
   document.getElementById('addObstacle')?.addEventListener('click', () => ot.insertAdjacentHTML('beforeend', otpl.innerHTML.replaceAll('__i__', on++)));
   ot?.addEventListener('click', e => { const b = e.target.closest('.zone-del'); if (b) b.closest('tr').remove(); });
+  // setores: linhas e campos conforme "Onde" (posição fixa usa X/Y/medidas; os outros, área e lado mínimo)
+  const sct = document.querySelector('#secTable tbody'), stpl = document.getElementById('secTpl');
+  let sn = sct ? sct.querySelectorAll('tr').length : 0;
+  const secRow = tr => {
+    const fixed = tr.querySelector('.sec-place')?.value === 'fixed';
+    tr.querySelectorAll('.sec-fixed').forEach(i => { i.disabled = !fixed; });
+    tr.querySelectorAll('.sec-auto, [name^="sec_area_m2_"]').forEach(i => { i.disabled = fixed; });
+  };
+  document.getElementById('addSector')?.addEventListener('click', () => {
+    sct.insertAdjacentHTML('beforeend', stpl.innerHTML.replaceAll('__i__', sn++)); secRow(sct.lastElementChild);
+  });
+  sct?.addEventListener('click', e => { const b = e.target.closest('.zone-del'); if (b) b.closest('tr').remove(); });
+  sct?.addEventListener('change', e => { if (e.target.classList.contains('sec-place')) secRow(e.target.closest('tr')); });
+  sct?.querySelectorAll('tr').forEach(secRow);
   // prioridade: um critério não pode aparecer duas vezes
   const ps = [...document.querySelectorAll('.prio-sel')];
   const dedupe = () => { const seen = new Set(); ps.forEach(s => { [...s.options].forEach(o => o.disabled = !!o.value && seen.has(o.value) && !o.selected);

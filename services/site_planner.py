@@ -85,6 +85,7 @@ class Building:
     zones: list = field(default_factory=list)  # [ZoneSpec]; vazio = zona única
     avenue_m: float = 2.0  # largura das avenidas entre zonas
     obstacles: list = field(default_factory=list)  # [Obstacle] áreas bloqueadas
+    sectors: list = field(default_factory=list)  # [SectorSpec] recebimento, expedição…: posição escolhida pelo sistema
 
     @property
     def area_m2(self) -> float:
@@ -107,6 +108,24 @@ class StructureSpec:
     qty: int = 0  # modo "fixed"
     min_qty: int = 0  # modo "auto"
     max_qty: Optional[int] = None  # modo "auto" (None = sem limite além da planta)
+    golden_from: Optional[float] = None  # zona de ouro: faixa de altura (cm do piso) mais ergonômica para pegar
+    golden_to: Optional[float] = None
+
+    @property
+    def pitch(self) -> float:
+        """Distância entre as bases de dois níveis (cm): a altura total dividida pelos níveis."""
+        return self.height / max(1, self.levels)
+
+    def is_golden(self, n: int) -> bool:
+        """O nível `n` (1 = de baixo) está na zona de ouro: a altura de pega (meio do vão) cai na faixa."""
+        if self.golden_from is None or self.golden_to is None:
+            return False
+        mid = (n - 1) * self.pitch + self.level_h / 2
+        return self.golden_from - EPS <= mid <= self.golden_to + EPS
+
+    @property
+    def golden_levels(self) -> list[int]:
+        return [n for n in range(1, self.levels + 1) if self.is_golden(n)]
 
 
 @dataclass
@@ -207,6 +226,28 @@ class Obstacle:
     y_m: float
     length_m: float  # extensão em X
     width_m: float  # extensão em Y
+    kind: str = "obstacle"  # "obstacle" | "sector" (setor posicionado: ocupa o piso como um obstáculo)
+    note: str = ""
+
+
+SECTOR_PLACES = {"auto": "Automático (onde perde menos espaço de armazenagem)",
+                 "front": "Junto às docas (frente)", "back": "No fundo", "side": "Nas laterais (paredes de cima/baixo)",
+                 "fixed": "Posição fixa (X/Y)"}
+
+
+@dataclass
+class SectorSpec:
+    """Setor operacional (recebimento, expedição, conferência, embalagem…): o usuário informa só o espaço
+    necessário; o sistema escolhe o lugar (faixa junto a uma parede ou canto, em proporções diferentes) que deixa o
+    máximo de posições de estrutura na planta. Com `place = "fixed"`, X/Y/comprimento/largura definem o retângulo."""
+    name: str
+    area_m2: float
+    min_side_m: float = 2.0  # menor lado aceitável do retângulo
+    place: str = "auto"
+    x_m: Optional[float] = None
+    y_m: Optional[float] = None
+    length_m: Optional[float] = None
+    width_m: Optional[float] = None
 
 
 @dataclass
@@ -272,7 +313,8 @@ class Layout:
     zones: list[Floor] = field(default_factory=list)
     areas: list = field(default_factory=list)  # [(tipo, X, Y, W, D, rótulo)] globais: avenidas e faixas reservadas
     notes: list[str] = field(default_factory=list)
-    obstacles: list = field(default_factory=list)  # [Obstacle]
+    obstacles: list = field(default_factory=list)  # [Obstacle] (inclui os setores posicionados, kind="sector")
+    sectors: list = field(default_factory=list)  # [Obstacle] setores posicionados
 
     @property
     def mixed(self) -> bool:
@@ -315,7 +357,8 @@ class Layout:
                 r = z.rows[ln.row]
                 out.append(("lane", *z.to_global(ln.x0, r.y, ln.length, r.depth), ""))
         for ob in self.obstacles:  # por cima de corredores e avenidas
-            out.append(("obstacle", ob.x_m * 100, ob.y_m * 100, ob.length_m * 100, ob.width_m * 100, ob.name))
+            out.append((getattr(ob, "kind", "obstacle"), ob.x_m * 100, ob.y_m * 100, ob.length_m * 100,
+                        ob.width_m * 100, ob.name))
         return out
 
 
@@ -474,7 +517,7 @@ def apply_obstacles(lay: Layout, obstacles: list, clearance_cm: float = 0.0) -> 
                 if ln.x1 - (ox + ow) >= 1:  # pedaço depois
                     keep.append(Lane(ln.row, ln.seg, ox + ow, ln.x1, None, ln.end, False, ln.full_end))
             z.lanes = keep
-        if cut:
+        if cut and getattr(ob, "kind", "obstacle") == "obstacle":
             lay.notes.append(f"Obstáculo {ob.name}: {cut} trecho(s) de fileira encurtado(s) ou removido(s).")
 
 
@@ -588,9 +631,100 @@ def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -
 
 
 def build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
+    if b.sectors:
+        return _layout_with_sectors(b, structs)
     lay = _build_layout(b, structs)
     if b.obstacles:
         apply_obstacles(lay, b.obstacles, b.wall_gap_m * 100.0)
+    return lay
+
+
+def _slots(lay: Layout, structs: list[StructureSpec]) -> int:
+    """Medida da capacidade de armazenagem da planta: módulos da estrutura mais estreita que cabem nos trechos."""
+    narrow = min((s.width for s in structs), default=100.0) or 100.0
+    return sum(int(math.floor(ln.length / narrow + EPS)) for z in lay.zones for ln in z.lanes)
+
+
+def _sector_candidates(b: Building, sec: SectorSpec, taken: list) -> list[tuple[str, float, float, float, float]]:
+    """Retângulos possíveis (lugar, X, Y, extensão X, extensão Y em cm) com a área do setor: faixas encostadas numa
+    parede (largura inteira) e cantos em proporções diferentes, sem invadir docas, faixa do fundo, obstáculos e
+    setores já posicionados."""
+    L, W = b.length_m * 100.0, b.width_m * 100.0
+    gap, front, back = (v * 100.0 for v in (b.wall_gap_m, b.front_reserved_m, b.back_reserved_m))
+    x0, x1, y0, y1 = gap + front, L - gap - back, gap, W - gap
+    fw, fh = x1 - x0, y1 - y0
+    area, mins = sec.area_m2 * 10_000.0, (sec.min_side_m or 0) * 100.0
+    up = lambda v: math.ceil(v / 10.0 - EPS) * 10.0  # noqa: E731  (múltiplos de 10 cm, sem perder área)
+    out = []
+    if fh > 0:  # faixas na largura inteira, na frente (junto às docas) e no fundo
+        d = up(area / fh)
+        out += [("front", x0, y0, d, fh), ("back", x1 - d, y0, d, fh)]
+    if fw > 0:  # faixas no comprimento inteiro, nas paredes de cima e de baixo
+        d = up(area / fw)
+        out += [("side", x0, y0, fw, d), ("side", x0, y1 - d, fw, d)]
+    for r in (1.0, 2.0, 0.5, 3.0, 1 / 3):  # cantos (comprimento/largura = r)
+        w = up(math.sqrt(area * r))
+        d = up(area / w)
+        for place, x, y in (("front", x0, y0), ("front", x0, y1 - d), ("back", x1 - w, y0), ("back", x1 - w, y1 - d)):
+            out.append((place, x, y, w, d))
+    ok = []
+    for c in out:
+        _, x, y, w, d = c
+        if w < mins - EPS or d < mins - EPS or w <= 0 or d <= 0:
+            continue
+        if x < x0 - EPS or y < y0 - EPS or x + w > x1 + EPS or y + d > y1 + EPS:
+            continue
+        if any(_overlap((x, y, w, d), t) for t in taken):
+            continue
+        if c not in ok:
+            ok.append(c)
+    return ok
+
+
+def _layout_with_sectors(b: Building, structs: list[StructureSpec]) -> Layout:
+    """Posiciona os setores (do maior para o menor), cada um no candidato que deixa mais posições de estrutura;
+    empate: o mais perto das docas. Os setores entram na planta como áreas ocupadas (cortam as fileiras)."""
+    import dataclasses
+
+    placed: list[Obstacle] = []
+    notes: list[str] = []
+    taken = [(o.x_m * 100, o.y_m * 100, o.length_m * 100, o.width_m * 100) for o in b.obstacles]
+    for sec in [s for s in b.sectors if s.place == "fixed"]:
+        ob = Obstacle(sec.name, sec.x_m or 0.0, sec.y_m or 0.0, sec.length_m or 0.0, sec.width_m or 0.0, kind="sector",
+                      note="posição fixa")
+        placed.append(ob)
+        taken.append((ob.x_m * 100, ob.y_m * 100, ob.length_m * 100, ob.width_m * 100))
+    br = lambda v: f"{v:.2f}".rstrip("0").rstrip(".").replace(".", ",")  # noqa: E731
+    for sec in sorted([s for s in b.sectors if s.place != "fixed"], key=lambda s: -s.area_m2):
+        cands = [c for c in _sector_candidates(b, sec, taken) if sec.place == "auto" or c[0] == sec.place]
+        if not cands:
+            notes.append(f"Setor {sec.name}: não coube ({br(sec.area_m2)} m², lado mínimo {br(sec.min_side_m or 0)} m"
+                         f"{'' if sec.place == 'auto' else ', ' + SECTOR_PLACES[sec.place].lower()}).")
+            continue
+        best = None
+        for c in cands:
+            _, x, y, w, d = c
+            ob = Obstacle(sec.name, x / 100, y / 100, w / 100, d / 100, kind="sector")
+            trial = dataclasses.replace(b, sectors=[], obstacles=list(b.obstacles) + placed + [ob])
+            lay = _build_layout(trial, structs)
+            apply_obstacles(lay, trial.obstacles, b.wall_gap_m * 100.0)
+            score = (_slots(lay, structs), -x, -abs(w - d))  # mais posições; depois mais perto das docas; mais compacto
+            if best is None or score > best[0]:
+                best = (score, ob)
+        ob = best[1]
+        ob.note = f"{br(ob.length_m)} × {br(ob.width_m)} m ({br(ob.length_m * ob.width_m)} m²)"
+        placed.append(ob)
+        taken.append((ob.x_m * 100, ob.y_m * 100, ob.length_m * 100, ob.width_m * 100))
+    final = dataclasses.replace(b, sectors=[], obstacles=list(b.obstacles) + placed)
+    lay = _build_layout(final, structs)
+    apply_obstacles(lay, final.obstacles, b.wall_gap_m * 100.0)
+    lay.sectors = placed
+    for ob in placed:
+        who = ob.name if ob.name.lower().startswith("setor") else f"Setor {ob.name}"
+        size = f"{br(ob.length_m)} × {br(ob.width_m)} m"
+        lay.notes.append(f"{who}: X {br(ob.x_m)} m, Y {br(ob.y_m)} m, "
+                         + (f"{size} ({ob.note})." if ob.note == "posição fixa" else f"{ob.note}."))
+    lay.notes += notes
     return lay
 
 
@@ -826,21 +960,28 @@ class SitePlan:
 
     @property
     def structures_cost(self) -> Optional[float]:
+        """Custo das estruturas usadas. Estrutura sem custo informado conta como 0 (ver `missing_costs`);
+        None só quando nenhuma das usadas tem custo."""
         costs = [s.cost for s in self.structs if s.qty]
-        return sum(c for c in costs if c is not None) if costs and all(c is not None for c in costs) else None
+        return sum(c or 0 for c in costs) if any(c is not None for c in costs) else None
 
     @property
     def bins_cost(self) -> Optional[float]:
+        """Custo das bins necessárias (tipo sem custo informado conta como 0, como no solver)."""
         costs = [t.cost for t in self.types if t.needed]
-        return sum(c for c in costs if c is not None) if costs and all(c is not None for c in costs) else None
+        return sum(c or 0 for c in costs) if any(c is not None for c in costs) else None
 
     @property
     def total_cost(self) -> Optional[float]:
-        """Estruturas + bins (só quando todos os itens usados têm custo informado)."""
-        parts = [c for c in (self.structures_cost, self.bins_cost)]
-        if self.total_modules and parts[0] is None or self.bins_needed and parts[1] is None:
-            return None
-        return sum(c or 0 for c in parts)
+        """Estruturas + bins; None só quando nada usado tem custo informado."""
+        parts = [c for c in (self.structures_cost, self.bins_cost) if c is not None]
+        return sum(parts) if parts else None
+
+    @property
+    def missing_costs(self) -> list[str]:
+        """Códigos das estruturas e tipos de bin usados sem custo informado (entram como R$ 0 no total)."""
+        return ([s.struct.code for s in self.structs if s.qty and s.cost is None]
+                + [t.spec.code if not t.parent_code else t.parent_code for t in self.types if t.needed and t.cost is None])
 
     @property
     def footprint_m2(self) -> float:
@@ -1415,6 +1556,7 @@ PALETTE = ["#2f7ed8", "#e8743b", "#19a979", "#ed4a7b", "#945ecf", "#13a4b4", "#c
 
 
 SHAPE_STYLE = {  # tipo -> (preenchimento, contorno, tracejado)
+    "sector": ("#e3f4e8", "#3b8c5a", "5 3"),
     "reserved": ("#fff3cd", "#e0c068", ""), "avenue": ("#e3ecf7", "#b9cbe3", ""), "aisle": ("#eef2f4", "none", ""),
     "cross": ("#eef2f4", "none", ""), "lane": ("none", "#c9d1d6", "3 2"), "obstacle": ("#2b2f33", "#111111", ""),
     "zone": ("none", "#6f8fb8", "6 3"),
@@ -1461,7 +1603,7 @@ def area_label(plan: SitePlan, label: str) -> str:
 
 
 DIM_MODES = {"none": "Ocultar medidas", "summary": "Resumo (C × L)", "full": "Medidas ao longo da planta"}
-DIM_KINDS = ("zone", "obstacle", "reserved", "avenue", "aisle", "cross")  # áreas que entram nas cotas encadeadas
+DIM_KINDS = ("zone", "obstacle", "sector", "reserved", "avenue", "aisle", "cross")  # áreas que entram nas cotas encadeadas
 
 
 def dim_mode(v) -> str:
@@ -1503,7 +1645,7 @@ def inner_dims(fl, off: float, min_len: float) -> list[tuple]:
     `min_len` ficam sem cota. (Na tela de edição, a forma selecionada ganha também a distância até a vizinha.)"""
     out = []
     for kind, X, Y, w, d, _ in fl.shapes():
-        if kind not in ("zone", "obstacle") or w <= 0 or d <= 0:
+        if kind not in ("zone", "obstacle", "sector") or w <= 0 or d <= 0:
             continue
         if w >= min_len:
             y = Y + d - min(off, d / 2)
@@ -1549,13 +1691,17 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
                 ty = Y * sc - 3 if Y * sc > 14 else Y * sc + 11
                 out.append(f'<text x="{(X + 15) * sc:.1f}" y="{ty:.1f}" font-size="10" fill="#4a6a94">{label}'
                            f'<tspan class="nk-dim-fo"> · {size} · X {_m(X)} · Y {_m(Y)}</tspan></text>')
-        if label and kind == "obstacle":
+        if label and kind in ("obstacle", "sector"):
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc
+            rot = f' transform="rotate(-90 {cx:.1f} {cy:.1f})"' if kind == "sector" and d > w * 1.6 else ""
             out.append(f'<text x="{cx:.1f}" y="{cy:.1f}" font-size="11" text-anchor="middle" dominant-baseline="middle" '
-                       f'fill="#ffffff">{label}</text>')
+                       f'fill="{"#ffffff" if kind == "obstacle" else "#24613a"}"'
+                       + (' font-weight="bold"' if kind == "sector" else "") + f'{rot}>{label}'
+                       + (f'<tspan class="nk-dim-s" font-weight="normal"> · {_m(w * d / 100)} m²</tspan>' if kind == "sector" else "")
+                       + '</text>')
             if d * sc >= 30:
                 full.append(f'<text class="nk-dim-fo" x="{cx:.1f}" y="{cy + 12:.1f}" font-size="9" text-anchor="middle" '
-                            f'dominant-baseline="middle" fill="#dfe5ea">{size}</text>')
+                            f'dominant-baseline="middle" fill="{"#dfe5ea" if kind == "obstacle" else "#24613a"}">{size}</text>')
         if label and kind in ("reserved", "avenue"):
             label = area_label(plan, label)
             cx, cy = (X + w / 2) * sc, (Y + d / 2) * sc

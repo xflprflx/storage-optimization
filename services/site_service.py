@@ -37,6 +37,8 @@ from services.site_planner import (
     SitePlan,
     StructureSpec,
     Obstacle,
+    SECTOR_PLACES,
+    SectorSpec,
     ZoneSpec,
     plan_site,
 )
@@ -55,7 +57,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
 )
 DEFAULT_CONFIG = {
     "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row",
-                                                          "zones": [], "obstacles": []},
+                                                          "zones": [], "obstacles": [], "sectors": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
                "factor": "100"},
@@ -128,6 +130,15 @@ def config_from_form(form: Mapping) -> dict:
             row["name"] = row["name"][:40]
             obs.append(row)
     cfg["building"]["obstacles"] = obs
+    secs = []
+    for si in (form.getlist("sec_idx") if hasattr(form, "getlist") else []):
+        row = {k: str(form.get(f"sec_{k}_{si}") or "").strip()
+               for k in ("name", "area_m2", "min_side_m", "place", "x_m", "y_m", "length_m", "width_m")}
+        if row["area_m2"] or row["name"] or row["length_m"]:
+            row["name"] = row["name"][:40]
+            row["place"] = row["place"] if row["place"] in SECTOR_PLACES else "auto"
+            secs.append(row)
+    cfg["building"]["sectors"] = secs
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -198,6 +209,28 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
             errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
             continue
         b.obstacles.append(Obstacle(name, **vals_o))
+    for i, sc in enumerate(bc.get("sectors") or [], start=1):
+        name = sc.get("name") or f"Setor {i}"
+        place = sc.get("place") if sc.get("place") in SECTOR_PLACES else "auto"
+        if place == "fixed":
+            v = {k: _num(sc.get(k), f"{name}: {lab}", errors, None, lo=0, required=True)
+                 for k, lab in (("x_m", "X"), ("y_m", "Y"), ("length_m", "comprimento"), ("width_m", "largura"))}
+            if any(x is None for x in v.values()):
+                continue
+            if v["length_m"] <= 0 or v["width_m"] <= 0:
+                errors.append(f"{name}: comprimento e largura devem ser maiores que zero.")
+                continue
+            if b.length_m and b.width_m and (v["x_m"] + v["length_m"] > b.length_m + 1e-6
+                                             or v["y_m"] + v["width_m"] > b.width_m + 1e-6):
+                errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+                continue
+            b.sectors.append(SectorSpec(name, v["length_m"] * v["width_m"], 0.0, "fixed", **v))
+            continue
+        area = _num(sc.get("area_m2"), f"{name}: área", errors, None, lo=0.5, required=True)
+        side = _num(sc.get("min_side_m"), f"{name}: lado mínimo", errors, 2.0, lo=0)
+        if area is None:
+            continue
+        b.sectors.append(SectorSpec(name, area, side if side is not None else 2.0, place))
     positioned = [z for z in b.zones if z.positioned]
     if positioned:  # zonas em qualquer lugar do imóvel
         if len(positioned) != len(b.zones):
@@ -265,7 +298,9 @@ def structure_specs(db: Session, modes: dict) -> list[StructureSpec]:
         out.append(StructureSpec(st.id, st.code, st.name, float(st.width), float(st.depth), float(st.height),
                                  int(st.levels), float(st.level_height),
                                  float(st.max_load) if st.max_load is not None else None,
-                                 float(st.cost) if st.cost is not None else None, **md))
+                                 float(st.cost) if st.cost is not None else None, **md,
+                                 golden_from=float(st.golden_from) if st.golden_from is not None else None,
+                                 golden_to=float(st.golden_to) if st.golden_to is not None else None))
     return out
 
 

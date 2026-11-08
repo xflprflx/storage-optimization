@@ -466,6 +466,9 @@ class StructureType(TimestampMixin, Base):
     level_height: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # vão útil de cada nível (cm)
     max_load: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # carga máx. por nível (kg)
     cost: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # custo por módulo (R$)
+    # zona de ouro (opcional): faixa de altura, a partir do piso, mais ergonômica para pegar itens (cm)
+    golden_from: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    golden_to: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
 
     @property

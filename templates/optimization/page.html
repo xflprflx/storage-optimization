@@ -159,9 +159,11 @@
         {% for key, label in objectives.items() %}
         <div class="form-check mb-1">
           <input class="form-check-input" type="radio" name="objective" id="obj_{{ key }}" value="{{ key }}" {% if params.objective == key %}checked{% endif %}>
-          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">(só com bins existentes)</span>{% endif %}</label>
+          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">(só com bins existentes)</span>{% endif %}{% if key in ('min_walk', 'max_pick') %} <span class="text-muted">(usa o histórico de saídas; motor heurístico)</span>{% endif %}</label>
         </div>
         {% endfor %}
+        {% if not POOL %}<div class="form-text mb-2"><i class="bi bi-signpost-split"></i> Trajeto e pega: neste modo os produtos ficam nos endereços — use as
+          <b>trocas sugeridas</b> da posição pela saída (no resultado) ou o modo <a href="/optimization/pool">Pool</a>, que tem os objetivos de menor caminhada e de zona de ouro da pega.</div>{% endif %}
         <div class="small fw-semibold mt-2 mb-1">Depois, desempatar por <span class="fw-normal text-muted">(ordem de prioridade)</span></div>
         <div class="d-flex gap-1 mb-1">
           {% for i in (2, 3, 4) %}{% set cur = params['prio' ~ i] %}

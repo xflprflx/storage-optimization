@@ -456,6 +456,10 @@
         <div class="form-text mb-2">Cada critério só desempata entre as soluções empatadas no anterior. Sem desempate escolhido, vale o padrão
           (módulos ↔ metros de fileira) e, por último, menos níveis ocupados. Quando algum critério depende das bins (custo total, custo de
           bins, menos bins), o sistema também escolhe as bins de cada SKU entre as melhores opções. Custos vêm dos cadastros (sem custo = R$ 0).</div>
+        <div class="form-text mb-2"><b>Trajeto e pega:</b> "Menor caminhada" entra no solver (com sobra de espaço, as estruturas ficam nos trechos de fileira
+          mais perto da expedição) e na posição dos SKUs; "Zona de ouro da pega" decide a posição: os tipos de bin e os SKUs mais procurados ficam nos níveis da
+          zona de ouro de cada estrutura. Quem vem antes na ordem manda. Os dois usam os dados de saída (etapa Posição dos SKUs). Com eles, as bins
+          mais procuradas podem ficar acima das maiores (o peso continua conferido nível a nível).</div>
         <label class="form-label small mb-0">Tempo limite do solver (s)</label>
         <div class="d-flex align-items-center gap-3 mb-1 flex-wrap">
           <input class="form-control form-control-sm text-end" name="p_time_limit" id="p_time_limit" inputmode="decimal" value="{{ p.time_limit }}" style="max-width:120px">
@@ -657,8 +661,9 @@
         em {{ plan.solver.time|dec(1) }} s{% if plan.solver.unlimited %} · sem limite de tempo{% endif %}
         {% if plan.solver.optimal is defined and not plan.solver.optimal %}<div class="text-warning-emphasis mt-1"><i class="bi bi-info-circle"></i> O tempo acabou antes de provar a melhor solução{% if plan.solver.skipped %}; não chegaram a ser otimizados: {{ plan.solver.skipped|join(', ') }}{% endif %}. Para a solução do solver a qualquer custo, marque "Sem limite de tempo" na etapa Objetivo.</div>{% endif %}
         <ol class="mb-0 ps-3 mt-1">
-        {% for st in plan.solver.stages %}<li>{{ st.label }}: <b>{% if st.unit == 'R$' %}R$ {{ st.display|dec(2) }}{% elif st.unit == 'm' %}{{ st.display|dec(1) }} m{% else %}{{ st.display|dec(0) }} {{ st.unit }}{% endif %}</b>
-          {% if st.fixed %}<span class="text-muted">(já definido pelas etapas anteriores)</span>{% elif not st.optimal %}<span title="o tempo acabou nesta etapa">(melhor encontrado)</span>{% else %}<span class="text-success">(ótimo)</span>{% endif %}</li>{% endfor %}
+        {% for st in plan.solver.stages %}<li>{{ st.label }}: <b>{% if st.unit == 'R$' %}R$ {{ st.display|dec(2) }}{% elif st.unit in ('m', 'm·módulo', 'm por saída', '% das saídas') %}{{ st.display|dec(1) }} {{ st.unit }}{% else %}{{ st.display|dec(0) }} {{ st.unit }}{% endif %}</b>
+          {% if st.placement %}<span class="text-muted" title="Decidido na posição dos SKUs (depois do solver): tipos e SKUs mais procurados nos melhores níveis/endereços">(posição dos SKUs)</span>{% elif st.fixed %}<span class="text-muted">(já definido pelas etapas anteriores)</span>{% elif not st.optimal %}<span title="o tempo acabou nesta etapa">(melhor encontrado)</span>{% else %}<span class="text-success">(ótimo)</span>{% endif %}
+          {% if st.criterion == 'walk' and not st.placement %}<span class="text-muted small">— estruturas nos trechos mais perto da expedição</span>{% endif %}</li>{% endfor %}
         </ol>
       </div>
       {% endif %}

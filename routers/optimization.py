@@ -746,8 +746,17 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
         else:
             try:
                 ids, focus = pool_scope(db, filters, raw)
+                from services.pool_optimizer import SLOT_OBJECTIVES
+
+                if prm.objective in SLOT_OBJECTIVES:
+                    raw["slot"] = "1"  # trajeto/pega no objetivo: a posição pela saída é obrigatória
+                    if prm.objective == "max_pick":
+                        raw["slot_golden_m"] = "1000"  # pega antes da caminhada
                 sl = _slot_setup(db, filters, raw, ids)
                 slot_notes = []
+                if prm.objective in SLOT_OBJECTIVES and not sl.get("on"):
+                    raise ValueError("O objetivo de caminhada/zona de ouro usa o histórico de saídas da filial: envie a aba "
+                                     "Pedidos (ou a coluna Saída) na etapa Posição pela saída.")
                 if sl.get("on") and not prm.unlimited:
                     prm.slotting = {"geo": sl["geo"], "pop": sl["pop"], "abc": sl["abc"], "aff": sl["aff"]}
                     prm.slot_key = sl["key"]

@@ -42,12 +42,18 @@ SITE_CRITERIA = {  # critérios do projeto (ordem de prioridade definida pelo us
     "bins_cost": "Menor custo de bins",
     "bins": "Menos bins",
     "levels": "Menos níveis ocupados (mais níveis livres)",
+    "walk": "Menor caminhada na separação (trajeto)",
+    "pick": "Mais saídas na zona de ouro da pega",
 }
 SITE_OBJECTIVES = SITE_CRITERIA  # o 1º critério é o objetivo
 DEFAULT_TIEBREAK = {"modules": ["area"], "cost": ["modules"], "area": ["modules"], "structures_cost": ["modules"],
-                    "bins_cost": ["modules"], "bins": ["modules"], "levels": ["modules"]}
+                    "bins_cost": ["modules"], "bins": ["modules"], "levels": ["modules"], "walk": ["modules"],
+                    "pick": ["modules"]}
+# trajeto e pega: "walk" também entra no solver (estruturas nos trechos de fileira mais perto da expedição); os dois
+# decidem a posição: tipos de bin mais procurados nos níveis da zona de ouro / mais perto, SKUs idem
+PLACEMENT_CRITERIA = {"walk", "pick"}
 BIN_CRITERIA = {"cost", "bins_cost", "bins"}  # critérios que dependem das bins escolhidas para cada SKU
-CRIT_UNITS = {"cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
+CRIT_UNITS = {"walk": ("m·módulo", 10), "cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
               "modules": ("módulos", 1), "bins": ("bins", 1), "levels": ("níveis", 1)}
 
 
@@ -1082,6 +1088,12 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     floor = build_layout(b, active)
     plan.floor = floor
     plan.notes.extend(floor.notes)
+    if any(c in PLACEMENT_CRITERIA for c in prm.order):
+        prm.walk_ref = ref_point(plan, prm.slotting or {})  # trajeto no solver: distância até a expedição
+        if not any(d.pop for d in demands):
+            plan.notes.append("Trajeto/pega no objetivo: sem dados de saída (aba Pedidos ou coluna Saída), a posição dos "
+                              "SKUs não tem como priorizar os mais procurados; o trajeto vale só para a posição das "
+                              "estruturas.")
 
     # ---- capacidade por (tipo, estrutura) ----
     allowed = [t for t in types.values() if prm.allowed_types is None or t.id in prm.allowed_types]
@@ -1148,6 +1160,13 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         if not plan.shortage or sol.get("error") or stat != "mean":
             break
     compute_bin_fill(plan, types, demands)
+    k = plan.slotting or {}
+    for c in [c for c in prm.order if c in PLACEMENT_CRITERIA]:  # resultado do trajeto/pega (na posição dos SKUs)
+        v = k.get("avg_dist") if c == "walk" else k.get("golden_picks")
+        if v is not None and isinstance(plan.solver, dict):
+            plan.solver.setdefault("stages", []).append(
+                {"criterion": c, "label": SITE_CRITERIA[c] + " — na posição dos SKUs", "value": v, "display": v,
+                 "unit": "m por saída" if c == "walk" else "% das saídas", "optimal": True, "placement": True})
     if plan.shortage:
         plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
                           "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
@@ -1368,7 +1387,19 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     levels_used = sum(z.values()) if z else 0
     exprs = {"modules": total_mods, "area": front, "cost": st_cost + bins_cost, "structures_cost": st_cost,
              "bins_cost": bins_cost, "bins": sum(need_ex[t] for t in all_t), "levels": levels_used}
-    stages = [("short", sum(short.values()) if short else 0)] + [(c, exprs[c]) for c in prm.order]
+    ref = getattr(prm, "walk_ref", None)
+    if ref and "walk" in prm.order:
+        # trajeto: cada módulo "custa" a distância (em L, dm) do início do trecho de fileira até a expedição — com
+        # sobra de espaço, as estruturas ficam nos trechos mais perto (os módulos começam no início do trecho)
+        wd = []
+        for zi, li in segs:
+            zn = zones[zi]
+            ln = zn.lanes[li]
+            r = zn.rows[ln.row]
+            gx, gy, _w, _d = zn.to_global(ln.x0, r.y + (r.depth if r.side == "L" else 0), 0, 0)
+            wd.append(int(round((abs(gx - ref["x"]) + abs(gy - ref["y"])) / 10)))
+        exprs["walk"] = sum(v * wd[g] for (sid, g), v in n.items())
+    stages = [("short", sum(short.values()) if short else 0)] + [(c, exprs[c]) for c in prm.order if c in exprs]
 
     solver = cp_model.CpSolver()
     solver.parameters.num_workers = 8
@@ -1453,6 +1484,7 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     by_id = {s.id: s for s in active}
     zones = floor.zones
     align = plan.building.cap_align if plan.building.cap_align in CAP_ALIGN else "row"
+    goal = [c for c in prm.order if c in PLACEMENT_CRITERIA]  # trajeto/pega no objetivo
     lv_of = lambda s: [LevelPlaced(n=i + 1) for i in range(s.levels)]  # noqa: E731
     # cabeceiras: (zona, faixa, trecho, ponta) -> (estrutura, qtd); a da ponta inicial empurra as fileiras do trecho
     cap_at = {kk[:4]: (by_id[kk[4]], q) for kk, q in (end_caps or []) if kk[4] in by_id}
@@ -1529,11 +1561,32 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     plan.modules.sort(key=_bay_key)
     plan.aisle_codes = {a: c for a, c in aisle_code.items()}
 
-    # tipos nos níveis: por estrutura, os níveis mais baixos recebem as bins mais altas/pesadas
+    # tipos nos níveis: por estrutura, os níveis mais baixos recebem as bins mais altas/pesadas. Com trajeto/pega no
+    # objetivo (e dados de saída): os tipos mais procurados por bin ficam com os níveis da zona de ouro e/ou mais
+    # perto da expedição (o peso continua conferido nível a nível na alocação)
+    goal_types = bool(goal) and any(d.pop for d in demands)
+    tpop: dict[int, float] = {}
+    if goal_types:
+        need_t: dict[int, float] = {}
+        for d in demands:
+            for t_, k_ in (d.bins or {}).items():
+                tpop[t_] = tpop.get(t_, 0.0) + (d.pop or 0.0) * k_ / (d.total_bins or 1)
+                need_t[t_] = need_t.get(t_, 0.0) + k_
+        tpop = {t_: v / max(1.0, need_t.get(t_, 1.0)) for t_, v in tpop.items()}
+        ref0 = ref_point(plan, prm.slotting or {})
+        mdist0 = {id(m): _walk_m(access_point(m), ref0) for m in plan.modules}
     for s in active:
         alloc = sorted([(t, k) for (t, sid), k in z.items() if sid == s.id and k > 0],
                        key=lambda tk: (-(types[tk[0]].h or 0), -(types[tk[0]].volume_cm3 or 0), types[tk[0]].code))
         slots = sorted([lv for m in plan.modules if m.struct.id == s.id for lv in m.levels], key=lambda lv: lv.n)
+        if goal_types:
+            alloc.sort(key=lambda tk: (-tpop.get(tk[0], 0.0), types[tk[0]].code))
+            lv_mod = {id(lv): m for m in plan.modules if m.struct.id == s.id for lv in m.levels}
+            if goal[0] == "pick":
+                slots.sort(key=lambda lv: (not s.is_golden(lv.n), mdist0[id(lv_mod[id(lv)])], lv.n))
+            else:
+                slots.sort(key=lambda lv: (math.floor(mdist0[id(lv_mod[id(lv)])] / SLOT_BUCKET_M),
+                                           not s.is_golden(lv.n), lv.n))
         # ordem: nível 1 de todos os módulos, depois nível 2... (mantém o mesmo tipo contínuo ao longo do corredor)
         it = iter(slots)
         for t, k in alloc:
@@ -1547,8 +1600,12 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     ref = ref_point(plan, (prm.slotting or {}))
     plan.slotting["ref"] = ref
     mdist = {id(m): _walk_m(access_point(m), ref) for m in plan.modules}
-    sl = prm.slotting if prm.slotting and prm.slotting.get("on") and any(d.pop for d in demands) else None
+    goal = [c for c in prm.order if c in PLACEMENT_CRITERIA]  # trajeto/pega no objetivo: posição pela saída ligada
+    has_pop = any(d.pop for d in demands)
+    sl = prm.slotting if prm.slotting and (prm.slotting.get("on") or goal) and has_pop else None
     golden_m = float((sl or {}).get("golden_m") or 0.0)
+    if goal and goal[0] == "pick":
+        golden_m = 1e6  # pega antes do trajeto: zona de ouro primeiro, a caminhada só desempata
 
     def ease(lv) -> float:  # menor = melhor: caminhada + penalidade fora da zona de ouro (quando a estrutura tem uma)
         m = owner[id(lv)]

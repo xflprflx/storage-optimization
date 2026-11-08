@@ -272,6 +272,17 @@ flowchart TD
 
 ---
 
+## 5.0 Trajeto e pega no objetivo
+
+- **Projeto de filial nova:** os critérios **Menor caminhada na separação (trajeto)** e **Mais saídas na zona de ouro da pega** podem ser o objetivo ou um desempate.
+  - **Trajeto no solver:** cada módulo "custa" a distância do início do trecho de fileira até a expedição. Com sobra de espaço, as estruturas ficam nos trechos mais perto.
+  - **Trajeto e pega na posição:** os tipos de bin mais procurados (por bin) ficam com os níveis da zona de ouro e/ou mais perto da expedição. Os SKUs mais procurados ficam nos melhores endereços. A ordem entre os dois decide quem manda.
+  - **Resultado:** os valores alcançados aparecem na lista de etapas do solver, marcados "posição dos SKUs".
+
+  No exemplo do CD, com o mesmo número de módulos, a caminhada média caiu de 31,7 m para cerca de 21,5 m e as saídas na zona de ouro da pega subiram de 62% para cerca de 68%.
+- **Pool:** objetivos **Menor caminhada na separação** e **Mais saídas na zona de ouro da pega**. Exigem o histórico de saídas da filial e usam o motor heurístico. No exemplo do CD, com pega, 93% das saídas ficam na zona de ouro.
+- **Por endereço:** os produtos ficam nos endereços. Para trajeto e pega valem as trocas sugeridas da posição pela saída, ou o Pool.
+
 ## 5.1 Tempo limite × solução do solver a qualquer custo
 
 No projeto (etapa Objetivo) e nos modos Por endereço e Pool (motor *Pesquisa operacional*) há a opção **Sem limite de tempo**. Com ela, o solver vai até **provar o ótimo** em cada critério, o que pode levar muitos minutos em escopos grandes.

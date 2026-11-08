@@ -28,7 +28,10 @@ POOL_OBJECTIVES = {
     "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
     "min_moves": "Mínimo de movimentações (mantém o que já está nas bins)",
     "min_cost": "Menor custo de bins (R$)",
+    "min_walk": "Menor caminhada na separação (mais procurados perto da expedição)",
+    "max_pick": "Mais saídas na zona de ouro da pega (mais procurados nos níveis de ouro)",
 }
+SLOT_OBJECTIVES = {"min_walk", "max_pick"}  # objetivos de posição pela saída (precisam do histórico de saídas)
 
 
 @dataclass
@@ -551,6 +554,8 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                         k = lambda l: (round(ev[l][4], 3), ev[l][5], ev[l][1], sk(l), ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     elif prm.objective == "min_cost":  # bins já existentes: menos bins de maior valor
                         k = lambda l: (ev[l][1], round(ev[l][3], 3), ev[l][5], sk(l), ev[l][2], addr_of.get(l, ""))  # noqa: E731
+                    elif prm.objective in SLOT_OBJECTIVES:
+                        k = lambda l: (sk(l), ev[l][1], ev[l][5], ev[l][2], round(ev[l][3], 3), addr_of.get(l, ""))  # noqa: E731
                     else:
                         k = lambda l: (ev[l][1], ev[l][5], sk(l), ev[l][2], round(ev[l][3], 3), addr_of.get(l, ""))  # noqa: E731
                     only["loc"] = min(ok_locs, key=k)
@@ -625,6 +630,10 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), vol[be[0].type_id] / max(cap[be[0].type_id], 1),
                                                       far2(be[0]), -be[1], be[0].id))
+            elif prm.objective in SLOT_OBJECTIVES and sl:  # trajeto/pega: o endereço mais fácil manda
+                pool_k = fits or cands
+                b, e = min(pool_k, key=lambda be: (sk(be[0].location_id), partial(be[0]), -be[1] if not fits else be[1],
+                                                   far(be[0]), be[0].id))
             else:  # min_bins
                 if fits:
                     b, e = min(fits, key=lambda be: (partial(be[0]), be[1], far2(be[0]), vol[be[0].type_id], be[0].id))

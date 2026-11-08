@@ -76,7 +76,13 @@
       tr, i, name: field(tr, 'name')?.value || `Setor ${i + 1}`, X: num(field(tr, 'x')?.value),
       Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
-    return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles, sectors };
+    // ponto de referência da posição pela saída (etapa Posição dos SKUs), quando informado por X/Y
+    let ref = null;
+    if (form.querySelector('[name="slot_ref"]')?.value === 'xy') {
+      const rx = num(form.querySelector('[name="slot_ref_x"]')?.value), ry = num(form.querySelector('[name="slot_ref_y"]')?.value);
+      if (rx != null && ry != null) ref = { x: rx, y: ry };
+    }
+    return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles, sectors, ref };
   }
 
   // ------------------------------------------------------------------ escrita nas tabelas
@@ -233,6 +239,27 @@
     if (full) chains(svg, st, brk, m, fs);
     svg._fs = fs; svg._inner = null;
     if (inside) drawInner(svg, st, fs);
+    // ponto de referência (X/Y): marcador; na planta da etapa Posição dos SKUs, clique para marcar
+    if (st.ref) {
+      const g = el('g', { style: 'pointer-events:none' }, svg);
+      el('circle', { cx: st.ref.x, cy: st.ref.y, r: fs * 0.6, fill: '#d62728', stroke: '#fff', 'stroke-width': fs * 0.15 }, g);
+      el('circle', { cx: st.ref.x, cy: st.ref.y, r: fs * 1.4, fill: 'none', stroke: '#d62728', 'stroke-width': fs * 0.1 }, g);
+      text(g, st.ref.x + fs * 1.7, st.ref.y + fs * 0.35, `Referência · X ${fmt(st.ref.x)} · Y ${fmt(st.ref.y)}`,
+        { 'font-size': fs * 0.8, fill: '#d62728', 'font-weight': 'bold' });
+    }
+    if (host.dataset.planMode === 'ref') {
+      svg.style.cursor = 'crosshair';
+      svg.addEventListener('click', ev => {
+        const p = point(svg, ev);
+        const x = snap(Math.min(Math.max(p.x, 0), L)), y = snap(Math.min(Math.max(p.y, 0), W));
+        const sel = form.querySelector('[name="slot_ref"]');
+        if (sel) { sel.value = 'xy'; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+        ['slot_ref_x', 'slot_ref_y'].forEach((n, i) => {
+          const inp = form.querySelector(`[name="${n}"]`);
+          if (inp) { inp.value = fmt(i ? y : x); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+        });
+      });
+    }
     // notas
     const parts = [];
     if (server && server.error) parts.push(server.error);

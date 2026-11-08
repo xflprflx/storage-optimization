@@ -25,7 +25,8 @@ STRUCTURES = {
     "PP-270-110": ("Porta-palete 270 × 110, 3 níveis", "Porta-palete", 270, 110, 600, 3, 160, 2000, 2400),
 }
 # zona de ouro (cm do piso) das estantes: entre a cintura e o ombro
-GOLDEN = {"EST-100-40": (75, 150), "EST-100-60": (75, 150), "EST-120-60": (75, 150)}
+GOLDEN = {"EST-100-40": (75, 150), "EST-100-60": (75, 150), "EST-120-60": (75, 150),
+          "PP-270-110": (0, 160)}  # porta-palete: a separação boa é no nível do chão
 # código, nome, altura, largura, comprimento (cm, internas), peso máx. (kg), volume (L, vazio = calculado), custo (R$)
 BINS = {
     "BIN-3": ("Caixa bin nº 3", 12, 14, 25, 5, None, 6.90),
@@ -92,7 +93,7 @@ EXAMPLES = [
         "title": "Galpão médio de picking",
         "description": "Galpão de 48 × 30 m com docas na frente, um corredor transversal e estantes de 3 tamanhos "
                        "(porta-palete desligado). Zona única, orientação automática.",
-        "tags": ["48 × 30 m", "zona única", "~400 SKUs", "cabeceiras"],
+        "tags": ["48 × 30 m", "zona única", "~400 SKUs", "cabeceiras", "pedidos"],
         "building": {"length_m": 48, "width_m": 30, "clear_height_m": 7.5, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 8, "back_reserved_m": 3, "cross_aisles": 1, "cross_aisle_m": 2,
                      "avenue_m": 2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -101,6 +102,7 @@ EXAMPLES = [
                        "EST-120-60": ("Otimizar", None, None, 60), "PP-270-110": ("Não usar", None, None, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7", "BIN-8", "CX-50"],
         "skus": lambda rng: _skus(rng, SMALL, (18, 28), SIZES, prefix="GM"),
+        "orders": 1800,  # aba Pedidos: um mês de histórico (saídas com sinal negativo)
     },
     {
         "slug": "perimetro-escritorio",
@@ -108,7 +110,7 @@ EXAMPLES = [
         "description": "Imóvel de 24 × 26 m com zonas posicionadas por X/Y: fileiras perpendiculares encostadas nas "
                        "paredes da esquerda e da direita (esta abaixo do escritório), fileiras horizontais no meio (mais "
                        "curtas no alto), uma fileira curta perpendicular junto ao escritório e circulação entre as zonas.",
-        "tags": ["24 × 26 m", "5 zonas X/Y", "obstáculo", "~350 SKUs"],
+        "tags": ["24 × 26 m", "5 zonas X/Y", "obstáculo", "~350 SKUs", "pedidos"],
         "building": {"length_m": 24, "width_m": 26, "clear_height_m": 6, "aisle_m": 1.5, "wall_gap_m": 0.1,
                      "front_reserved_m": 0, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -122,6 +124,7 @@ EXAMPLES = [
         "structures": {"EST-100-60": ("Otimizar", None, None, None), "EST-100-40": ("Otimizar", None, 45, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7", "BIN-8"],
         "skus": lambda rng: _skus(rng, SMALL, (16, 24), SIZES, scale=4.5, prefix="PE"),
+        "orders": 1500,  # aba Pedidos: um mês de histórico (saídas com sinal negativo)
     },
     {
         "slug": "imovel-estreito",
@@ -129,7 +132,7 @@ EXAMPLES = [
         "description": "Loja/depósito de 14 × 3,2 m onde só cabe um corredor. Em vez de o corredor terminar na parede "
                        "(o colaborador vai até o fundo e volta), uma zona no fundo com fileira perpendicular de frente "
                        "para a avenida abre a circulação.",
-        "tags": ["14 × 3,2 m", "2 zonas", "avenida", "~110 SKUs"],
+        "tags": ["14 × 3,2 m", "2 zonas", "avenida", "~110 SKUs", "pedidos"],
         "building": {"length_m": 14, "width_m": 3.2, "clear_height_m": 4.5, "aisle_m": 1.2, "wall_gap_m": 0.1,
                      "front_reserved_m": 1.5, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -139,6 +142,7 @@ EXAMPLES = [
         "structures": {"EST-100-40": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7"],
         "skus": lambda rng: _skus(rng, SMALL[:12], (8, 10), SIZES, scale=0.5, prefix="IE"),
+        "orders": 600,  # aba Pedidos: um mês de histórico (saídas com sinal negativo)
     },
     {
         "slug": "cd-paletes-picking",
@@ -146,9 +150,8 @@ EXAMPLES = [
         "description": "Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de "
                        "empilhadeira de 3,2 m, e zona de picking em estantes com corredor de 1,2 m e um transversal, "
                        "separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins. "
-                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas. "
-                       "Traz um mês de pedidos (aba Pedidos) para a posição dos SKUs pela saída.",
-        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "pedidos", "~350 SKUs"],
+                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas.",
+        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "~350 SKUs", "pedidos"],
         "building": {"length_m": 60, "width_m": 36, "clear_height_m": 9, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 10, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -238,6 +241,9 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
         "em R$. SKUs: dimensões em cm, peso em kg por unidade, saldo/min/max em unidades.",
         "Ao importar, as estruturas e bins são cadastradas (códigos existentes de bins mantêm as medidas; o custo é "
         "atualizado). Os SKUs ficam só no projeto.",
+        "Pedidos: um mês de histórico (pedido, data, SKU, quantidade), no formato de relatório de movimentação — a "
+        "saída vem com sinal negativo: marque \"Converter quantidades para valor absoluto\" no mapeamento. Serve para "
+        "a posição dos SKUs pela saída (curva ABC e itens que saem juntos), no projeto e nos modos Por endereço e Pool.",
     ]:
         ws.append([line])
     ws["A1"].font = Font(bold=True, size=13)

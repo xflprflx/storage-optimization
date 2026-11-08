@@ -101,6 +101,10 @@ class PoolParams:
     # foco nos SKUs filtrados: "free" = só bins livres (sem saldo de outros produtos); "any" = qualquer bin
     bin_source: str = "free"
     orphans: str = "relocate"  # "relocate" = realoca os produtos desalojados; "leave" = ficam fora de bin (órfãos)
+    # posição pela saída (slotting, ver services/slotting.py): {"geo": {endereço: Geo}, "pop": {sku: popularidade},
+    # "abc": {sku: A/B/C}, "aff": {(a, b): força}}; fora do repr (o cache usa `slot_key`)
+    slotting: Optional[dict] = field(default=None, repr=False, compare=False)
+    slot_key: str = ""
 
     @property
     def unlimited(self) -> bool:
@@ -417,6 +421,24 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
         best = max(caps[d.sku].values() or [0])
         return d.qty / best if best else math.inf
     order = sorted(demands, key=lambda d: (-bins_needed(d), d.sku))
+    sl = prm.slotting if prm.slotting and prm.slotting.get("pop") and not prm.unlimited else None
+    placed_locs: dict[str, set] = {}  # SKU -> endereços onde já ficou (para aproximar os que saem juntos)
+    if sl:
+        # posição pela saída: os mais procurados (por bin) escolhem primeiro, os que saem juntos em sequência; os
+        # endereços livres de cada tipo ficam em ordem de facilidade (o "outro endereço" candidato é o mais fácil)
+        from services.slotting import geo_dist, slot_order
+
+        geo, pop, abc = sl["geo"], sl["pop"], sl.get("abc") or {}
+        partners: dict[str, dict] = {}
+        for (a_, b_), st in (sl.get("aff") or {}).items():
+            partners.setdefault(a_, {})[b_] = st
+            partners.setdefault(b_, {})[a_] = st
+        need_of = {d.sku: (bins_needed(d) if bins_needed(d) != math.inf else 1e6) for d in demands}
+        by_sku = {d.sku: d for d in demands}
+        order = [by_sku[s_] for s_ in slot_order([d.sku for d in order], pop, need_of, sl.get("aff") or {})]
+        far_ease = lambda l: geo[l].ease if l in geo else 1e9  # noqa: E731
+        for t_ in locs_by_type:
+            locs_by_type[t_].sort(key=far_ease)
 
     for d in order:
         need = int(math.ceil(d.qty * (1 + prm.growth) - EPS)) if d.qty > 0 else 0
@@ -456,6 +478,20 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
             plan.shortage, plan.note = need, "Não cabe em nenhum tipo de bin do escopo."
             continue
         here = set(d.current) | ({d.default_location_id} if d.default_location_id else set())
+
+        def sk(l) -> float:
+            """Nota do endereço para o SKU (posição pela saída): facilidade para os itens A/B (os C não disputam os
+            melhores endereços) + força × distância até os parceiros já posicionados."""
+            if not sl or l is None or l not in geo:
+                return 0.0
+            w = {"A": 1.0, "B": 0.5}.get(abc.get(d.sku, "C"), 0.0)
+            v = w * geo[l].ease
+            near = [(st, o) for o_, st in partners.get(d.sku, {}).items() for o in placed_locs.get(o_, ()) if o in geo]
+            if near:
+                v += min(st * geo_dist(geo[l], geo[o]) for st, o in near)
+            return round(v, 1)
+        mm = prm.objective == "min_moves"
+        far2 = (lambda b: (far(b), sk(b.location_id))) if mm else (lambda b: (sk(b.location_id), far(b)))  # noqa: E731
 
         def eff(b: PoolBin) -> int:
             c = cap.get(b.type_id, 0)
@@ -505,16 +541,17 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                 ok_locs = [l for l, e in ev.items() if e[0] >= need]
                 addr_of = {b.location_id: b.address for b in pool}
                 if ok_locs:
+                    # com a posição pela saída, a nota do endereço (sk) vem antes da proximidade de hoje (ev[l][2])
                     if prm.objective == "min_moves":
-                        k = lambda l: (ev[l][2], ev[l][1], ev[l][5], ev[l][3], addr_of.get(l, ""))  # noqa: E731
+                        k = lambda l: (ev[l][2], ev[l][1], ev[l][5], sk(l), ev[l][3], addr_of.get(l, ""))  # noqa: E731
                     elif prm.objective == "min_volume":
-                        k = lambda l: (round(ev[l][3], 3), ev[l][5], ev[l][1], ev[l][2], addr_of.get(l, ""))  # noqa: E731
+                        k = lambda l: (round(ev[l][3], 3), ev[l][5], ev[l][1], sk(l), ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     elif prm.objective == "min_width":
-                        k = lambda l: (round(ev[l][4], 3), ev[l][5], ev[l][1], ev[l][2], addr_of.get(l, ""))  # noqa: E731
+                        k = lambda l: (round(ev[l][4], 3), ev[l][5], ev[l][1], sk(l), ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     elif prm.objective == "min_cost":  # bins já existentes: menos bins de maior valor
-                        k = lambda l: (ev[l][1], round(ev[l][3], 3), ev[l][5], ev[l][2], addr_of.get(l, ""))  # noqa: E731
+                        k = lambda l: (ev[l][1], round(ev[l][3], 3), ev[l][5], sk(l), ev[l][2], addr_of.get(l, ""))  # noqa: E731
                     else:
-                        k = lambda l: (ev[l][1], ev[l][5], ev[l][2], round(ev[l][3], 3), addr_of.get(l, ""))  # noqa: E731
+                        k = lambda l: (ev[l][1], ev[l][5], sk(l), ev[l][2], round(ev[l][3], 3), addr_of.get(l, ""))  # noqa: E731
                     only["loc"] = min(ok_locs, key=k)
                 else:
                     only["loc"] = max(per_loc, key=lambda l: (ev[l][0], -ev[l][2]))
@@ -559,39 +596,39 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                 local = [be for be in cands if far(be[0]) <= 3]
                 lfits = [be for be in fits if far(be[0]) <= 3]
                 if lfits:
-                    b, e = min(lfits, key=lambda be: (far(be[0]), partial(be[0]), be[1], vol[be[0].type_id], be[0].id))
+                    b, e = min(lfits, key=lambda be: (far2(be[0]), partial(be[0]), be[1], vol[be[0].type_id], be[0].id))
                 elif local:
-                    b, e = min(local, key=lambda be: (far(be[0]), partial(be[0]), -be[1], be[0].id))
+                    b, e = min(local, key=lambda be: (far2(be[0]), partial(be[0]), -be[1], be[0].id))
                 elif fits:
                     b, e = min(fits, key=lambda be: (partial(be[0]), be[1], vol[be[0].type_id], be[0].id))
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), -be[1], be[0].id))
             elif prm.objective == "min_width":
                 if fits:
-                    b, e = min(fits, key=lambda be: (partial(be[0]), wid[be[0].type_id], far(be[0]), be[0].id))
+                    b, e = min(fits, key=lambda be: (partial(be[0]), wid[be[0].type_id], far2(be[0]), be[0].id))
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), wid[be[0].type_id] / max(cap[be[0].type_id], 1),
-                                                      far(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], be[0].id))
             elif prm.objective == "min_cost":
                 cst = lambda t: (types[t].cost or 0.0) if t in types else 0.0  # noqa: E731
                 if fits:
                     b, e = min(fits, key=lambda be: (partial(be[0]), cst(be[0].type_id) * (1 - be[0].used),
-                                                     vol[be[0].type_id], far(be[0]), be[0].id))
+                                                     vol[be[0].type_id], far2(be[0]), be[0].id))
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), cst(be[0].type_id) / max(cap[be[0].type_id], 1),
-                                                      far(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], be[0].id))
             elif prm.objective == "min_volume":
                 if fits:
                     b, e = min(fits, key=lambda be: (partial(be[0]), vol[be[0].type_id] * (1 - be[0].used),
-                                                     far(be[0]), be[0].id))
+                                                     far2(be[0]), be[0].id))
                 else:
                     b, e = min(cands, key=lambda be: (partial(be[0]), vol[be[0].type_id] / max(cap[be[0].type_id], 1),
-                                                      far(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], be[0].id))
             else:  # min_bins
                 if fits:
-                    b, e = min(fits, key=lambda be: (partial(be[0]), be[1], far(be[0]), vol[be[0].type_id], be[0].id))
+                    b, e = min(fits, key=lambda be: (partial(be[0]), be[1], far2(be[0]), vol[be[0].type_id], be[0].id))
                 else:
-                    b, e = min(cands, key=lambda be: (partial(be[0]), -be[1], far(be[0]), be[0].id))
+                    b, e = min(cands, key=lambda be: (partial(be[0]), -be[1], far2(be[0]), be[0].id))
             m = min(need, e)
             if b.used <= EPS:
                 if b.location_id is None:
@@ -604,6 +641,8 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
             if b.used >= 1 - EPS and b in partials:
                 partials.remove(b)
             plan.allocations.append((b, m))
+            if b.location_id is not None:
+                placed_locs.setdefault(d.sku, set()).add(b.location_id)
             need -= m
 
     return finish_pool_result(res, bins, pool_all, pool, virtual, plans, prm, vol, wid, known, occupied_before,

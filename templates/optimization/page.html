@@ -188,6 +188,53 @@
       </div>
     </div>
 
+    {# ---------------- posição dos SKUs pela saída (slotting) ---------------- #}
+    <div class="card mb-3 nk-step" data-step-title="Posição pela saída">
+      <div class="card-header bg-white"><strong>Posição dos SKUs pela saída</strong></div>
+      <div class="card-body small">
+        {{ switch('slot', 'Considerar a saída dos SKUs', '(curva ABC, zona de ouro e itens que saem juntos)') }}
+        <div class="text-muted mb-2">{% if POOL %}Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem
+          juntos ficam perto. Usa o motor heurístico.{% else %}Os produtos continuam nos endereços: o resultado mostra a caminhada e a zona de ouro de hoje
+          e sugere <b>trocas de endereço</b> entre SKUs que usam exatamente as mesmas bins (sempre viáveis).{% endif %}</div>
+        <div class="border rounded p-2 mb-2">
+          <div class="fw-semibold mb-1">Histórico de saídas da filial</div>
+          {% if slot_info.history %}
+            <div><span class="badge text-bg-success">{{ slot_info.summary }}</span></div>
+            <div class="text-muted">{{ slot_info.history.filename }}</div>
+            <button class="btn btn-link btn-sm text-danger p-0" form="slotDelete" onclick="return confirm('Remover o histórico de saídas desta filial?')">remover</button>
+          {% elif filters.branch_id %}<div class="text-muted">Nenhum histórico para a filial selecionada.</div>
+          {% else %}<div class="text-muted">Escolha a filial no escopo.</div>{% endif %}
+          <div class="mt-2">
+            <input class="form-control form-control-sm mb-1" type="file" name="file" form="slotUpload" accept=".xlsx,.xlsm,.csv,.txt">
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="abs" value="1" form="slotUpload" id="slotAbs" checked>
+              <label class="form-check-label" for="slotAbs">Converter quantidades para valor absoluto (saída com sinal negativo)</label></div>
+            <button class="btn btn-sm btn-outline-primary mt-1" form="slotUpload"><i class="bi bi-upload"></i> Enviar histórico</button>
+            <div class="form-text">Aba <b>Pedidos</b> (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna <b>Saída</b>. Fica salvo para a filial (só o resumo).</div>
+          </div>
+        </div>
+        <div class="row g-2">
+          <div class="col-12"><label class="form-label mb-0">Medida</label>
+            <select class="form-select form-select-sm" name="slot_metric">
+              <option value="lines" {% if params.slot_metric != 'units' %}selected{% endif %}>Linhas de pedido (visitas ao endereço)</option>
+              <option value="units" {% if params.slot_metric == 'units' %}selected{% endif %}>Unidades</option></select></div>
+          <div class="col-12"><label class="form-label mb-0">Corredor mais perto da expedição</label>
+            <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="o primeiro" maxlength="20"></div>
+          <div class="col-6"><label class="form-label mb-0" title="Distância de um corredor para o seguinte">Entre corredores (m)</label>
+            <input class="form-control form-control-sm text-end" name="slot_aisle_m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0" title="Frente de cada estante, ao longo do corredor">Frente da estante (m)</label>
+            <input class="form-control form-control-sm text-end" name="slot_bay_m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0" title="Metros de caminhada que um nível fora da zona de ouro &quot;custa&quot;">Zona de ouro vale (m)</label>
+            <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ params.slot_golden_m }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0" title="Para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro</label>
+            <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="ex.: 2,3"></div>
+        </div>
+        {{ switch('slot_aff', 'Deixar perto os itens que saem juntos') }}
+        <div class="form-text">A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores
+          + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante
+          (Cadastros → Estruturas) ou dos níveis informados.</div>
+      </div>
+    </div>
+
     <div class="card mb-3 nk-step" data-step-title="Restrições">
       <div class="card-header bg-white"><strong>Restrições</strong></div>
       <div class="card-body small">
@@ -242,6 +289,14 @@
       </div>
     </div>
   </div>
+  </form>
+  <form method="post" action="/optimization/slotting/history" enctype="multipart/form-data" id="slotUpload"
+        onsubmit="this.branch_id.value = document.getElementById('branch_id').value; this.back.value = location.pathname + location.search;">
+    <input type="hidden" name="branch_id"><input type="hidden" name="back">
+  </form>
+  <form method="post" action="/optimization/slotting/history/delete" id="slotDelete"
+        onsubmit="this.back.value = location.pathname + location.search;">
+    <input type="hidden" name="branch_id" value="{{ filters.branch_id }}"><input type="hidden" name="back">
   </form>
   </div>
 
@@ -312,6 +367,46 @@
       {% endfor %}
     </div>
 
+    {% if slot %}{% set a, z = slot.before, slot.after %}
+    <div class="card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2">
+        <strong><i class="bi bi-signpost-split"></i> Posição pela saída</strong>
+        <span class="small text-muted">referência: corredor {{ slot.ref }} · {{ slot.info.summary }}</span>
+      </div>
+      <div class="card-body small">
+        <div class="row g-2">
+          {% macro cmp(label, b, c, unit, better_low=true, hint='') %}
+          <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">{{ label }}</div>
+            <div class="fs-6 fw-semibold">{{ b|dec(1) if b is not none else '—' }}{{ unit }} → {{ c|dec(1) if c is not none else '—' }}{{ unit }}</div>
+            {% if b is not none and c is not none %}{% set dl = c - b %}<div class="{{ ('text-success' if (dl < 0) == better_low else 'text-danger') if dl|abs > 0.05 else 'text-muted' }}">{{ '+' if dl > 0 }}{{ dl|dec(1) }}{{ unit }}</div>{% endif %}
+            {% if hint %}<div class="text-muted" style="font-size:.72rem">{{ hint }}</div>{% endif %}</div></div>
+          {% endmacro %}
+          {{ cmp('Caminhada média por saída', a.get('avg_dist'), z.get('avg_dist'), ' m', true, 'ponderada pela popularidade; ao acaso: ' ~ (z.random_dist|dec(1) if z.random_dist is not none else '—') ~ ' m') }}
+          {% if a.get('golden_picks') is not none %}{{ cmp('Saídas na zona de ouro', a.golden_picks, z.golden_picks, '%', false, 'a zona de ouro tem ' ~ (z.golden_positions|dec(0)) ~ '% das posições usadas') }}{% endif %}
+          {% if a.get('pairs_avg') is not none or z.get('pairs_avg') is not none %}{{ cmp('Itens que saem juntos', a.get('pairs_avg'), z.get('pairs_avg'), ' m', true, 'distância entre os pares mais frequentes') }}{% endif %}
+          {% if not POOL %}<div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">Trocas sugeridas</div>
+            <div class="fs-6 fw-semibold">{{ slot.n_pairs }} troca(s)</div><div class="text-muted" style="font-size:.72rem">{{ slot.swaps|length }} SKUs mudam · entre {{ slot.mono }} endereços com 1 SKU e as mesmas bins de outros ({{ slot.groups }} grupos) · só quando o mais procurado ganha {{ [2, 2 * (slot.info.spec.bay_m)]|max|dec(1) }} m ou mais</div></div></div>{% endif %}
+        </div>
+        {% if not POOL and slot.swaps %}
+        <details class="mt-2" open><summary>Trocas de endereço sugeridas (mais procurados primeiro)</summary>
+          <div class="table-responsive" style="max-height:340px"><table class="table table-sm mb-0 mt-1" data-no-resize>
+            <thead class="sticky-top bg-white"><tr><th>SKU</th><th>ABC</th><th class="text-end">Saída</th><th>Hoje</th><th class="text-end">Caminhada</th><th>Sugerido</th><th class="text-end">Caminhada</th></tr></thead>
+            <tbody>{% for x in slot.swaps[:300] %}<tr><td class="mono">{{ x.sku }}</td><td>{{ x.abc }}</td><td class="text-end">{{ x.out|dec }}</td>
+              <td class="mono">{{ x.from }}{% if x.from_gold %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</td><td class="text-end">{{ x.from_m|dec(1) }} m</td>
+              <td class="mono">{{ x.to }}{% if x.to_gold %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</td><td class="text-end">{{ x.to_m|dec(1) }} m</td></tr>{% endfor %}</tbody>
+          </table></div>
+          <div class="text-muted mt-1">As trocas não são aplicadas automaticamente: a troca de endereço move o saldo dos dois SKUs (e o endereço padrão).</div>
+        </details>
+        {% endif %}
+        {% if z.get('pairs') %}
+        <details class="mt-2"><summary>Pares que mais saem juntos ({{ z.pairs|length }})</summary>
+          <table class="table table-sm w-auto mb-0 mt-1" data-no-resize><thead><tr><th>SKU</th><th>SKU</th><th class="text-end">Pedidos juntos</th><th class="text-end">Distância {{ 'no plano' if POOL else 'com as trocas' }}</th></tr></thead>
+            <tbody>{% for x in z.pairs %}<tr><td class="mono">{{ x.a }}</td><td class="mono">{{ x.b }}</td><td class="text-end">{{ x.count }}</td><td class="text-end">{{ x.dist|dec(1) }} m</td></tr>{% endfor %}</tbody></table>
+        </details>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     {% if orphans %}
     <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> <b>{{ orphans|length }} item(ns) órfão(s)</b> —
       perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use "Realocar os itens desalojados"):

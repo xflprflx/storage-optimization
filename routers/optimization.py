@@ -184,11 +184,116 @@ def _solver_view(info: Optional[dict], objective: str, priority, drop_changes: b
     return {**info, "order": order}
 
 
+def _slot_raw(src: Mapping, raw: dict) -> dict:
+    """Parâmetros da posição pela saída (slot_*) no `raw` da tela (padrões quando o formulário não foi enviado)."""
+    from services.slotting import SLOT_DEFAULTS
+
+    submitted = "objective" in src
+    raw.update({k: (src.get(k, "") if submitted else d) for k, d in SLOT_DEFAULTS.items()})
+    return raw
+
+
+def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[list] = None) -> dict:
+    """Histórico de saídas da filial do escopo e, se a posição pela saída estiver ligada e houver histórico, os dados
+    para o motor/indicadores: popularidade, ABC, pares e a facilidade estimada de cada endereço."""
+    from models import PickHistory
+    from services.slotting import address_geo, affinity, classify_abc, popularity, slot_spec, summary_text
+
+    out = {"history": None, "summary": "", "on": False}
+    bid = to_int(filters.get("branch_id"))
+    if not bid:
+        return out
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid))
+    if h is not None:
+        out.update(history=h, summary=summary_text(h.data))
+    spec = slot_spec(raw)
+    if not spec or h is None or location_ids is None:
+        return out
+    pop = popularity(h.data, spec["metric"])
+    aff, counts = affinity(h.data) if spec["affinity"] else ({}, {})
+    geo, ref = address_geo(db, location_ids, spec)
+    out.update(on=bool(pop), spec=spec, pop=pop, abc=classify_abc(pop), aff=aff, counts=counts, geo=geo, ref=ref,
+               key=f"{h.id}:{h.updated_at}:{sorted((k, str(v)) for k, v in spec.items())}")
+    return out
+
+
+def _sku_assign(db: Session, location_ids: list[int]) -> dict[str, list[tuple[int, float]]]:
+    """Distribuição atual (saldo) dos SKUs nos endereços: SKU -> [(endereço, unidades)]."""
+    from models import Product
+
+    out: dict[str, list] = {}
+    for i in range(0, len(location_ids), 900):
+        for sku, lid, q in db.execute(select(Product.sku, StockItem.location_id, StockItem.quantity)
+                                      .join(Product, Product.id == StockItem.product_id)
+                                      .where(StockItem.location_id.in_(location_ids[i:i + 900]))):
+            if q and float(q) > 0:
+                out.setdefault(sku, []).append((lid, float(q)))
+    return out
+
+
+def _address_slotting(db: Session, slot: dict, location_ids: list[int], results) -> dict:
+    """Modo Por endereço: os produtos ficam onde estão, então a posição pela saída vira SUGESTÃO DE TROCAS — entre
+    endereços com um único SKU e exatamente as mesmas bins (troca sempre viável: as bins já estão lá), os mais
+    procurados vão para os endereços mais fáceis. Indicadores hoje × com as trocas."""
+    from services.slotting import kpis
+
+    geo, pop = slot["geo"], slot["pop"]
+    assign = _sku_assign(db, location_ids)
+    by_loc: dict[int, list] = {}
+    for sku, lst in assign.items():
+        for l, q in lst:
+            by_loc.setdefault(l, []).append((sku, q))
+    sig = {r.id: tuple(sorted((r.current or {}).items())) for r in results if r.current}
+    groups: dict[tuple, list] = {}
+    for l, items in by_loc.items():
+        if len(items) == 1 and l in sig and l in geo:
+            groups.setdefault(sig[l], []).append(l)
+    # trocas aos pares, dentro de cada grupo (mesmas bins): do mais procurado para o menos, o SKU troca com o do
+    # endereço mais fácil que esteja com um SKU bem menos procurado, se ganhar ao menos MIN_GAIN de caminhada
+    min_gain = max(2.0, 2 * slot["spec"]["bay_m"])
+    cur = {l: by_loc[l][0][0] for locs in groups.values() for l in locs}
+    pairs_done = []
+    for locs in groups.values():
+        if len(locs) < 2:
+            continue
+        for sku in sorted({cur[l] for l in locs}, key=lambda s_: (-pop.get(s_, 0.0), s_)):
+            p0 = pop.get(sku, 0.0)
+            if p0 <= 0:
+                break
+            here = next(l for l in locs if cur[l] == sku)
+            cands = [m for m in locs if geo[m].ease <= geo[here].ease - min_gain and pop.get(cur[m], 0.0) < 0.8 * p0]
+            if not cands:
+                continue
+            dst = min(cands, key=lambda m: (geo[m].ease, m))
+            other = cur[dst]
+            cur[here], cur[dst] = other, sku
+            pairs_done.append((sku, here, dst, other))
+    now = {l: by_loc[l][0][0] for locs in groups.values() for l in locs}
+    where = {}  # SKU -> endereço final (só os que trocaram)
+    for l, sku in cur.items():
+        if now[l] != sku:
+            where[sku] = l
+    after = {sku: [(where.get(sku, l) if l in now else l, q) for l, q in lst] for sku, lst in assign.items()}
+    addr = {r.id: r.address for r in results}
+    swaps = []
+    for sku, l_new in where.items():
+        l_old = next(l for l, s_ in now.items() if s_ == sku)
+        swaps.append({"sku": sku, "abc": slot["abc"].get(sku, ""), "out": pop.get(sku, 0.0),
+                      "from": addr.get(l_old, l_old), "from_m": geo[l_old].walk_m, "from_gold": geo[l_old].golden,
+                      "to": addr.get(l_new, l_new), "to_m": geo[l_new].walk_m, "to_gold": geo[l_new].golden})
+    swaps.sort(key=lambda x: -x["out"])
+    return {"before": kpis(assign, pop, geo, slot["counts"], slot["aff"]),
+            "after": kpis(after, pop, geo, slot["counts"], slot["aff"]),
+            "swaps": swaps, "n_pairs": len(pairs_done), "groups": sum(1 for g in groups.values() if len(g) > 1),
+            "mono": sum(len(g) for g in groups.values())}
+
+
 def _common_ctx(db: Session, mode: str, filters: dict, raw: dict, errors: list, objectives: dict, unlimited: bool) -> dict:
     return {"mode": mode, "criteria": CRITERIA, "crit_labels": CRIT_LABELS, "solvers": [], "bin_sources": BIN_SOURCES,
             "orphan_modes": ORPHAN_MODES, "orphans": [], "displaced": 0, "filters": filters, "params": raw, "errors": errors, "objectives": objectives, "bases": BASES,
             "bins_modes": BINS_MODES, "unlimited": unlimited, "results": None,
-            "base_url": "/optimization" if mode == "address" else "/optimization/pool", **_lookups(db)}
+            "base_url": "/optimization" if mode == "address" else "/optimization/pool", **_lookups(db),
+            "slot_info": _slot_setup(db, filters, raw), "slot": None}
 
 
 @router.get("")
@@ -196,6 +301,7 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
     qp = request.query_params
     filters = {k: qp.get(k, "") for k in FILTER_KEYS}
     prm, raw, errors = parse_params(qp)
+    _slot_raw(qp, raw)
     unlimited = raw.get("bins_mode") == "unlimited"
     ctx = _common_ctx(db, "address", filters, raw, errors, OBJECTIVES, unlimited)
     if qp.get("run") and not errors:
@@ -205,6 +311,9 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
             try:
                 ids, donors = address_scope(db, filters, raw)
                 results, summary, types = run(db, ids, prm, donors)
+                sl = _slot_setup(db, filters, raw, ids)
+                if sl.get("on"):
+                    ctx["slot"] = {**_address_slotting(db, sl, ids, results), "ref": sl["ref"], "info": sl}
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:
@@ -571,6 +680,7 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
     qp = request.query_params
     filters = {k: qp.get(k, "") for k in FILTER_KEYS}
     prm, basis, raw, errors = parse_pool_params(qp)
+    _slot_raw(qp, raw)
     ctx = _common_ctx(db, "pool", filters, raw, errors, POOL_OBJECTIVES, prm.unlimited)
     if qp.get("run") and not errors:
         if not filters.get("branch_id"):
@@ -578,7 +688,26 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
         else:
             try:
                 ids, focus = pool_scope(db, filters, raw)
+                sl = _slot_setup(db, filters, raw, ids)
+                slot_notes = []
+                if sl.get("on") and not prm.unlimited:
+                    prm.slotting = {"geo": sl["geo"], "pop": sl["pop"], "abc": sl["abc"], "aff": sl["aff"]}
+                    prm.slot_key = sl["key"]
+                    if prm.engine == "or":
+                        prm.engine = "heuristic"
+                        slot_notes.append("Posição pela saída ligada: o pool usou o motor heurístico (é nele que os "
+                                          "SKUs mais procurados escolhem os endereços mais fáceis).")
                 results, locs, types, notes = run_pool(db, ids, prm, basis, focus)
+                notes = list(notes) + slot_notes
+                if sl.get("on"):
+                    from services.slotting import kpis as slot_kpis
+
+                    before = {p.sku: [(b.location_id, float(q)) for b, q in p.orig_bins] for r in results for p in r.plans}
+                    after = {p.sku: [(b.location_id, float(q)) for b, q in p.allocations if b.location_id is not None]
+                             for r in results for p in r.plans}
+                    ctx["slot"] = {"before": slot_kpis(before, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
+                                   "after": slot_kpis(after, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
+                                   "ref": sl["ref"], "info": sl, "applied": bool(prm.slotting)}
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:
@@ -849,3 +978,57 @@ def pool_plan_xlsx(request: Request, db: Session = Depends(get_db)):
 @router.get("/pool/plan.pdf")
 def pool_plan_pdf(request: Request, db: Session = Depends(get_db)):
     return _plan_response(request, db, "pool", "pdf")
+
+
+@router.post("/slotting/history")
+async def upload_history(request: Request, db: Session = Depends(get_db)):
+    """Histórico de saídas da filial (aba Pedidos ou coluna Saída) para a posição pela saída nos modos Por endereço e
+    Pool. Guarda só o resumo, por filial (substitui o anterior)."""
+    from models import PickHistory
+    from services.file_reader import remove_upload, save_upload, token_path
+    from services.slotting import read_history, summary_text
+
+    form = await request.form()
+    back = str(form.get("back") or "/optimization")
+    back = back if back.startswith("/optimization") else "/optimization"
+    bid = to_int(form.get("branch_id"))
+    upload = form.get("file")
+    if not bid or db.get(Branch, bid) is None:
+        return redirect(back, "Escolha a filial (escopo) antes de enviar o histórico.", "danger")
+    if upload is None or not getattr(upload, "filename", ""):
+        return redirect(back, "Escolha o arquivo do histórico.", "danger")
+    try:
+        token = await save_upload(upload)
+    except ValueError as exc:
+        return redirect(back, str(exc), "danger")
+    try:
+        data, err = read_history(token_path(token), form.get("abs") == "1")
+    except Exception as exc:  # noqa: BLE001  (arquivo corrompido etc.)
+        data, err = None, f"não foi possível ler o arquivo ({exc})."
+    finally:
+        remove_upload(token)
+    if err:
+        return redirect(back, f"Histórico não importado: {err}", "danger")
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid)) or PickHistory(branch_id=bid)
+    h.filename, h.data = str(upload.filename)[:200], data
+    db.add(h)
+    db.commit()
+    neg = ""
+    if data.get("neg"):
+        neg = f" {data['neg']} quantidade(s) negativa(s) " + ("convertida(s) para valor absoluto." if data["abs"]
+                                                             else "ignorada(s) (sem a conversão).")
+    return redirect(back, f"Histórico de saídas salvo para a filial: {summary_text(data)}.{neg}", "success")
+
+
+@router.post("/slotting/history/delete")
+def delete_history(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    from models import PickHistory
+
+    back = str(form.get("back") or "/optimization")
+    back = back if back.startswith("/optimization") else "/optimization"
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == to_int(form.get("branch_id"))))
+    if h is not None:
+        db.delete(h)
+        db.commit()
+    return redirect(back, "Histórico de saídas removido.", "secondary")
+

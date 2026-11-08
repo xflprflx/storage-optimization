@@ -488,17 +488,10 @@ def slotting_spec(cfg: dict, demands: list[Demand]) -> tuple[Optional[dict], str
         golden_m = float(parse_decimal(str(sl.get("golden_m") or "0")) or 0)
     except ValueError:
         golden_m = 0.0
-    affinity, counts = {}, {}
+    from services.slotting import affinity as pair_affinity
+
     orders = cfg.get("orders") or {}
-    if sl.get("affinity") and used == "orders" and orders.get("pairs"):
-        lines = {s: v[0] for s, v in (orders.get("skus") or {}).items()}
-        n_orders = max(1, int(orders.get("orders") or 1))
-        min_count = max(3, round(n_orders * 0.002))  # suporte mínimo: evita "pares" de itens raros (1 ou 2 pedidos)
-        for a, b, c in orders["pairs"]:
-            st = c / max(1, min(lines.get(a, 0), lines.get(b, 0)))  # em que fração das vezes saem juntos
-            if c >= min_count and st >= 0.2:
-                affinity[(a, b)] = round(min(1.0, st), 3)
-                counts[(a, b)] = c
+    affinity, counts = pair_affinity(orders) if sl.get("affinity") and used == "orders" else ({}, {})
     spec = {"on": bool(sl.get("on")), "ref": ref, "ref_xy": ref_xy, "golden_m": golden_m, "affinity": affinity,
             "source": label, "metric": sl.get("metric") or "lines", "pair_counts": counts}
     note = ""

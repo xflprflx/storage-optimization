@@ -401,6 +401,8 @@
                   {% for sc in b.get('sectors') or [] %}{% set v = 'sector:' ~ sc.name %}<option value="{{ v }}" {% if sl.ref == v %}selected{% endif %}>Setor {{ sc.name }}</option>{% endfor %}
                   <option value="xy" {% if sl.ref == 'xy' %}selected{% endif %}>Ponto X/Y informado</option>
                 </select></div>
+              <div class="col-12"><div class="nk-plan" data-plan-mode="ref"></div>
+                <div class="form-text">Clique na planta para marcar o ponto de referência (vira "Ponto X/Y informado"); o marcador vermelho aparece em todas as plantas.</div></div>
               <div class="col-6 slot-xy"><label class="form-label small mb-0">X (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_x" value="{{ sl.ref_x }}" inputmode="decimal"></div>
               <div class="col-6 slot-xy"><label class="form-label small mb-0">Y (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_y" value="{{ sl.ref_y }}" inputmode="decimal"></div>
               <div class="col-12"><label class="form-label small mb-0">A zona de ouro vale quantos metros de caminhada?</label>

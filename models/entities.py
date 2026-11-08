@@ -516,3 +516,18 @@ Index(
     BayStructure.bay,
     unique=True,
 )
+
+
+class PickHistory(TimestampMixin, Base):
+    """Histórico de saídas de uma filial existente (resumo de uma planilha de pedidos ou da coluna Saída), usado na
+    posição dos SKUs (slotting) dos modos Por endereço e Pool. Guarda só o resumo em `data` (JSON): linhas de pedido e
+    unidades por SKU e os pares de SKUs que saem juntos (o arquivo bruto não fica no sistema)."""
+
+    __tablename__ = "pick_histories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, unique=True,
+                                           index=True)
+    filename: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+

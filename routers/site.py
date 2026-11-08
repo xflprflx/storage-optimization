@@ -19,7 +19,7 @@ from routers.common import form_data, redirect, render
 from services.addressing import normalize_code
 from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
-from services.site_planner import (CAP_ALIGN, ORIENTATIONS, SECTOR_PLACES, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, ZONE_ORIENTATIONS,
+from services.site_planner import (ADDRESS_MODES, CAP_ALIGN, ORIENTATIONS, SECTOR_PLACES, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, ZONE_ORIENTATIONS,
                                    floor_svg, struct_colors, dim_mode, dim_pos)
 from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, SLOT_METRICS, SLOT_SOURCES,
                                    config_from_form, create_branch, merged, run_project)
@@ -163,7 +163,7 @@ def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
         branches=list(db.scalars(select(Branch).order_by(Branch.code))),
         warehouses=list(db.scalars(select(Warehouse).order_by(Warehouse.code))),
         BUILDING_FIELDS=BUILDING_FIELDS, ORIENTATIONS=ORIENTATIONS, SITE_OBJECTIVES=SITE_OBJECTIVES, SITE_CRITERIA=SITE_CRITERIA,
-        ZONE_ORIENTATIONS=ZONE_ORIENTATIONS, CAP_ALIGN=CAP_ALIGN, SECTOR_PLACES=SECTOR_PLACES,
+        ZONE_ORIENTATIONS=ZONE_ORIENTATIONS, CAP_ALIGN=CAP_ALIGN, ADDRESS_MODES=ADDRESS_MODES, SECTOR_PLACES=SECTOR_PLACES,
         DEFAULT_LOCATION_MODES=DEFAULT_LOCATION_MODES,
         STRUCT_MODES=STRUCT_MODES, BASES=BASES, OBJECTIVES=OBJECTIVES,
         SLOT_SOURCES=SLOT_SOURCES, SLOT_METRICS=SLOT_METRICS,

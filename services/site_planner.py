@@ -82,6 +82,7 @@ class Building:
     orientation: str = "auto"
     end_caps: bool = True  # módulos de cabeceira (girados 90°) nas pontas das fileiras, aproveitando a sobra
     cap_align: str = "row"  # cabeceira "row" = encostada na fileira | "edge" = alinhada à borda do trecho
+    address_mode: str = "aisle"  # letra por "aisle" (corredor: os dois lados com a mesma letra) | "row" (por rua/fileira)
     zones: list = field(default_factory=list)  # [ZoneSpec]; vazio = zona única
     avenue_m: float = 2.0  # largura das avenidas entre zonas
     obstacles: list = field(default_factory=list)  # [Obstacle] áreas bloqueadas
@@ -369,6 +370,10 @@ class Layout:
 
 
 ZONE_ORIENTATIONS = {"along": "Fileiras ao longo do comprimento", "across": "Fileiras ao longo da largura (perpendiculares)"}
+ADDRESS_MODES = {"aisle": "Uma letra por corredor (as duas fileiras de frente têm a mesma letra; estantes ímpares de um lado, "
+                          "pares do outro)",
+                 "row": "Uma letra por rua/fileira (fileiras de frente uma para a outra têm letras diferentes; estantes "
+                        "01, 02, 03… ao longo da fileira)"}
 CAP_ALIGN = {"row": "Encostada na fileira (a sobra fica do lado da área livre)",
              "edge": "Alinhada à borda do trecho (a sobra fica entre a fileira e a cabeceira)"}
 
@@ -1466,21 +1471,38 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
         for i in range(q):
             caps_mods.append(ModulePlaced(struct=s, row=row, x0=x0, levels=lv_of(s), rotated=True,
                                           y0=bk.y + i * s.width, faces=zn.seg_ends[k][e], segment=k, zone=zn))
-    # endereço: corredor (letra, única em toda a planta, zona por zona) e estante (ímpar de um lado, par do outro,
-    # na ordem ao longo do corredor)
+    # endereço. Modo "aisle": a letra é do corredor (única em toda a planta, zona por zona) e a estante é ímpar de um
+    # lado e par do outro, na ordem ao longo do corredor. Modo "row": a letra é da rua (fileira), e as fileiras de
+    # frente uma para a outra têm letras diferentes; estantes 01, 02, 03… ao longo da fileira
     akey = lambda m: (m.zone.index if m.zone else 0, m.row.aisle)  # noqa: E731
     aisles_used = sorted({akey(m) for m in plan.modules + caps_mods})
-    aisle_code = {a: _letters(i) for i, a in enumerate(aisles_used)}
-    for a in aisles_used:
-        for side, start in (("L", 1), ("R", 2)):
-            mods = sorted([m for m in plan.modules if akey(m) == a and m.row.side == side], key=lambda m: m.x0)
+    if plan.building.address_mode == "row":
+        rkey = lambda m: (m.zone.index if m.zone else 0, m.row.y, m.row.index)  # noqa: E731
+        rows_used = sorted({rkey(m) for m in plan.modules + caps_mods})
+        row_code = {r: _letters(i) for i, r in enumerate(rows_used)}
+        for r in rows_used:
+            mods = sorted([m for m in plan.modules if rkey(m) == r], key=lambda m: m.x0)
             for i, m in enumerate(mods):
-                m.aisle, m.bay = aisle_code[a], f"{start + 2 * i:02d}"
-    # cabeceiras: no corredor da 1ª fileira da faixa, estantes C01, C02… (ao longo da fileira, depois na transversal)
-    for a in aisles_used:
-        mods = sorted([m for m in caps_mods if akey(m) == a], key=lambda m: (m.x0, m.y0))
-        for i, m in enumerate(mods):
-            m.aisle, m.bay = aisle_code[a], f"C{i + 1:02d}"
+                m.aisle, m.bay = row_code[r], f"{i + 1:02d}"
+            for i, m in enumerate(sorted([m for m in caps_mods if rkey(m) == r], key=lambda m: (m.x0, m.y0))):
+                m.aisle, m.bay = row_code[r], f"C{i + 1:02d}"
+        # rótulo de cada corredor: as letras das ruas dos dois lados (ex.: "B | C")
+        side = {}
+        for m in plan.modules + caps_mods:
+            side.setdefault(akey(m), {}).setdefault(m.row.side, set()).add(m.aisle)
+        aisle_code = {a: " | ".join(sorted(side[a].get("L", set())) + sorted(side[a].get("R", set()))) for a in aisles_used}
+    else:
+        aisle_code = {a: _letters(i) for i, a in enumerate(aisles_used)}
+        for a in aisles_used:
+            for side, start in (("L", 1), ("R", 2)):
+                mods = sorted([m for m in plan.modules if akey(m) == a and m.row.side == side], key=lambda m: m.x0)
+                for i, m in enumerate(mods):
+                    m.aisle, m.bay = aisle_code[a], f"{start + 2 * i:02d}"
+        # cabeceiras: no corredor da 1ª fileira da faixa, estantes C01, C02… (ao longo da fileira, depois na transversal)
+        for a in aisles_used:
+            mods = sorted([m for m in caps_mods if akey(m) == a], key=lambda m: (m.x0, m.y0))
+            for i, m in enumerate(mods):
+                m.aisle, m.bay = aisle_code[a], f"C{i + 1:02d}"
     plan.modules += caps_mods
     plan.modules.sort(key=_bay_key)
     plan.aisle_codes = {a: c for a, c in aisle_code.items()}
@@ -1776,6 +1798,7 @@ def aisle_labels(plan: SitePlan) -> list[tuple]:
     for (zi, ai), code in plan.aisle_codes.items():
         if zi >= len(plan.floor.zones):
             continue
+        name = aisle_name(plan, code)
         zn = plan.floor.zones[zi]
         y, wdt = zn.aisles[ai]
         if wdt <= 0:
@@ -1784,10 +1807,10 @@ def aisle_labels(plan: SitePlan) -> list[tuple]:
             # borda da zona de frente para a circulação: o rótulo fica do lado de fora
             yy = y - zn.aisle_cm / 2 if y <= zn.cross_lo + EPS else y + zn.aisle_cm / 2
             X, Y, _, _ = zn.to_global(zn.x_start + 20, yy, 0, 0)
-            out.append((f"Corredor {code}", X, Y, zn.rot))
+            out.append((name, X, Y, zn.rot))
             continue
         X, Y, _, _ = zn.to_global(zn.x_start + 20, y + wdt / 2, 0, 0)
-        out.append((f"Corredor {code}", X, Y, zn.rot))
+        out.append((name, X, Y, zn.rot))
     return out
 
 
@@ -1800,12 +1823,20 @@ def _same_area(edge: str, label: str) -> bool:
     return e.endswith(lb)
 
 
+def aisle_name(plan: SitePlan, code: str) -> str:
+    """"Corredor B" (letra por corredor) ou "Ruas B | C" / "Rua A" (letra por rua: as ruas dos dois lados)."""
+    if plan.building.address_mode == "row":
+        return ("Ruas " if "|" in code else "Rua ") + code
+    return f"Corredor {code}"
+
+
 def area_label(plan: SitePlan, label: str) -> str:
     """Rótulo de avenida/faixa reservada + os corredores de borda que usam a área (ex.: "Avenida 1 · corredor B")."""
     codes = [code for (zi, ai), code in sorted(plan.aisle_codes.items(), key=lambda kv: kv[1])
              if zi < len(plan.floor.zones) and plan.floor.zones[zi].aisles[ai][1] <= 0
              and _same_area(plan.floor.zones[zi].edge_names.get(ai) or "", label)]
-    return label + (f" · corredor {', '.join(codes)}" if codes else "")
+    word = "rua" if plan.building.address_mode == "row" else "corredor"
+    return label + (f" · {word} {', '.join(codes)}" if codes else "")
 
 
 DIM_MODES = {"none": "Ocultar medidas", "summary": "Resumo (C × L)", "full": "Medidas ao longo da planta"}

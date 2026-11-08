@@ -56,7 +56,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("avenue_m", "Largura das avenidas entre zonas (m)", "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row",
+    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle",
                                                           "zones": [], "obstacles": [], "sectors": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
@@ -117,6 +117,7 @@ def config_from_form(form: Mapping) -> dict:
     cfg["building"]["orientation"] = form.get("b_orientation") if form.get("b_orientation") in ORIENTATIONS else "auto"
     cfg["building"]["end_caps"] = on("b_end_caps")
     cfg["building"]["cap_align"] = form.get("b_cap_align") if form.get("b_cap_align") in CAP_ALIGN else "row"
+    cfg["building"]["address_mode"] = "row" if form.get("b_address_mode") == "row" else "aisle"
     zones = []
     for zi in (form.getlist("z_idx") if hasattr(form, "getlist") else []):
         ori = form.get(f"z_ori_{zi}")
@@ -194,7 +195,8 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  back_reserved_m=vals["back_reserved_m"] or 0, cross_aisles=int(vals["cross_aisles"] or 0),
                  cross_aisle_m=vals["cross_aisle_m"] or 0, orientation=bc.get("orientation") or "auto",
                  end_caps=bool(bc.get("end_caps")), avenue_m=vals["avenue_m"] or 0,
-                 cap_align=bc.get("cap_align") if bc.get("cap_align") in CAP_ALIGN else "row")
+                 cap_align=bc.get("cap_align") if bc.get("cap_align") in CAP_ALIGN else "row",
+                 address_mode="row" if bc.get("address_mode") == "row" else "aisle")
     for i, zc in enumerate(bc.get("zones") or [], start=1):
         name = zc.get("name") or f"Zona {i}"
         ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)

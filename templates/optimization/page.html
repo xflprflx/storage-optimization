@@ -218,7 +218,7 @@
               <option value="lines" {% if params.slot_metric != 'units' %}selected{% endif %}>Linhas de pedido (visitas ao endereço)</option>
               <option value="units" {% if params.slot_metric == 'units' %}selected{% endif %}>Unidades</option></select></div>
           <div class="col-12"><label class="form-label mb-0">Corredor mais perto da expedição</label>
-            <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="o primeiro" maxlength="20"></div>
+            <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="o primeiro" maxlength="20" title="Corredor (ou rua) mais perto da expedição"></div>
           <div class="col-6"><label class="form-label mb-0" title="Distância de um corredor para o seguinte">Entre corredores (m)</label>
             <input class="form-control form-control-sm text-end" name="slot_aisle_m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" title="Frente de cada estante, ao longo do corredor">Frente da estante (m)</label>
@@ -228,6 +228,7 @@
           <div class="col-6"><label class="form-label mb-0" title="Para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro</label>
             <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="ex.: 2,3"></div>
         </div>
+        {{ switch('slot_rows', 'Letras por rua', '(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)') }}
         {{ switch('slot_aff', 'Deixar perto os itens que saem juntos') }}
         <div class="form-text">A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores
           + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante

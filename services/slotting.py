@@ -28,7 +28,7 @@ from typing import Optional
 
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
-                 "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1"}
+                 "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1", "slot_rows": ""}
 AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" (fração dos pedidos do menos vendido)
 
 
@@ -150,7 +150,9 @@ def slot_spec(raw: dict) -> Optional[dict]:
             "ref": str(raw.get("slot_ref") or "").strip().upper(),
             "aisle_m": max(0.1, _num(raw.get("slot_aisle_m"), 3.0)), "bay_m": max(0.1, _num(raw.get("slot_bay_m"), 1.0)),
             "golden_m": max(0.0, _num(raw.get("slot_golden_m"), 5.0)), "golden_levels": levels,
-            "affinity": str(raw.get("slot_aff") or "").lower() in {"1", "on", "true"}}
+            "affinity": str(raw.get("slot_aff") or "").lower() in {"1", "on", "true"},
+            # letra por rua: duas letras por corredor (A|B, C|D… — a 1ª rua encostada na parede) e estantes 01, 02…
+            "rows": str(raw.get("slot_rows") or "").lower() in {"1", "on", "true"}}
 
 
 def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo], str]:
@@ -183,7 +185,10 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     for lid, br, wh, a, bay, lvl in locs:
         a, bay = (a or "").upper(), (bay or "").upper()
         digits = re.sub(r"\D", "", bay)
-        pos = (int(digits) + 1) // 2 if digits else rank[a].get(bay, 0) // 2 + 1  # ímpar/par: lados do corredor
+        if spec.get("rows"):  # letra por rua: estantes numeradas em sequência ao longo da rua
+            pos = int(digits) if digits else rank[a].get(bay, 0) + 1
+        else:  # letra por corredor: ímpares de um lado, pares do outro
+            pos = (int(digits) + 1) // 2 if digits else rank[a].get(bay, 0) // 2 + 1
         n = int(re.sub(r"\D", "", lvl or "") or 0)
         st = st_of.get((br, wh, a, bay)) or st_of.get((br, None, a, bay))
         golden = None
@@ -194,7 +199,11 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         elif spec.get("golden_levels") and n:
             golden = n in spec["golden_levels"]
         ai = aisles.index(a)
-        y = abs(ai - ridx) * spec["aisle_m"]
+        if spec.get("rows"):  # duas ruas por corredor
+            ai, r0 = ai // 2, ridx // 2
+        else:
+            r0 = ridx
+        y = abs(ai - r0) * spec["aisle_m"]
         x = max(0, pos - 1) * spec["bay_m"] + spec["bay_m"] / 2
         walk = x + y
         out[lid] = Geo(ai, x, y, golden, walk, walk + (spec["golden_m"] if golden is False else 0.0))

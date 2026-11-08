@@ -28,6 +28,29 @@
     <div class="small text-muted">total {{ (sim.list_total / 1000)|dec(1) }} km na lista · a rota otimizada economizaria <b>{{ sim.gain_pct|dec(0) }}%</b>{% if sim.skipped_lines %} · {{ sim.skipped_lines }} linha(s) de SKUs fora do plano ignoradas{% endif %}</div>
   </div></div></div>
 </div>
+{% set tm = sim.get('times') %}
+{% if tm %}
+{% macro mmss(v) %}{{ (v // 60)|int }}:{{ '%02d'|format((v % 60)|int) }}{% endmacro %}
+<div class="card mb-3"><div class="card-body py-2">
+  <form method="get" class="row g-2 align-items-end small">
+    {% for k, v in keep %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    <div class="col-auto"><div class="text-muted">Tempo médio por pedido</div>
+      <div class="fs-6 fw-semibold"><span title="Lista de separação">{{ mmss(tm.list_avg) }}</span> <span class="text-muted small fw-normal">lista</span>
+        {% if tm.s_avg is defined %}· <span class="text-primary">{{ mmss(tm.s_avg) }}</span> <span class="text-muted small fw-normal">serpentina</span>{% endif %}
+        · <span class="text-success">{{ mmss(tm.opt_avg) }}</span> <span class="text-muted small fw-normal">otimizada</span></div>
+      <div class="text-muted">pega: {{ mmss(tm.pick_avg) }} por pedido ({{ tm.units_avg|dec(1) }} peça(s) em média) · total {{ tm.list_h|dec(1) }} h na lista,
+        {{ tm.opt_h|dec(1) }} h na otimizada{% if not sim.has_qty %} · <span class="text-warning-emphasis">amostra sem quantidades: cada linha = 1 peça (reenvie o histórico)</span>{% endif %}</div></div>
+    <div class="col-auto ms-auto"><label class="form-label mb-0" for="t_v">Caminhada (m/s)</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.1" min="0.2" max="3" name="t_v" id="t_v" value="{{ tm.params.t_v }}"></div>
+    <div class="col-auto"><label class="form-label mb-0" for="t_stop" title="Tempo fixo em cada endereço (chegar, localizar, conferir)">Por parada (s)</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="0" name="t_stop" id="t_stop" value="{{ tm.params.t_stop }}"></div>
+    <div class="col-auto"><label class="form-label mb-0" for="t_piece" title="Tempo para pegar cada peça">Por peça (s)</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_piece" id="t_piece" value="{{ tm.params.t_piece }}"></div>
+    <div class="col-auto"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-stopwatch"></i> Recalcular</button></div>
+  </form>
+  <div class="text-muted small mt-1">Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça.</div>
+</div></div>
+{% endif %}
 <div class="small text-muted mb-2"><b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas
   (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a
   numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). Cada SKU é buscado na posição dele mais
@@ -48,10 +71,10 @@
       <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>Pedidos</strong>
         <input class="form-control form-control-sm" style="max-width:180px" type="search" placeholder="Filtrar" id="ordFilter"></div>
       <div class="table-responsive" style="max-height:620px"><table class="table table-sm table-hover mb-0 small" id="ordTable" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>Pedido</th><th class="text-end">Linhas</th><th class="text-end">Lista (m)</th><th class="text-end">Serp. (m)</th><th class="text-end">Otim. (m)</th></tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>Pedido</th><th class="text-end">Linhas</th><th class="text-end">Lista (m)</th><th class="text-end">Serp. (m)</th><th class="text-end">Otim. (m)</th>{% if tm %}<th class="text-end" title="Tempo na rota otimizada">Tempo</th>{% endif %}</tr></thead>
         <tbody>{% for r in rows %}<tr class="{{ 'table-active' if sel and r.order == sel.order }}">
           <td>{% if svg %}<a href="{{ link }}order={{ r.order|urlencode }}">{{ r.order }}</a>{% else %}{{ r.order }}{% endif %}</td><td class="text-end">{{ r.lines }}</td>
-          <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td></tr>{% endfor %}</tbody>
+          <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td>{% if tm %}<td class="text-end">{{ mmss(r.opt_t) if r.opt_t is defined else '—' }}</td>{% endif %}</tr>{% endfor %}</tbody>
       </table></div>
       <div class="card-footer bg-white small text-muted">Ordenados pela caminhada na lista (maiores primeiro){% if rows|length < sim.orders %} · {{ rows|length }} de {{ sim.orders }}{% endif %}.</div>
     </div>

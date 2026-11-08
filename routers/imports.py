@@ -10,7 +10,7 @@ from starlette.datastructures import FormData
 
 from database import SessionLocal
 from models import Branch, Warehouse
-from routers.common import f_bool, f_str, form_data, render, to_int
+from routers.common import f_bool, f_str, form_data, redirect, render, to_int
 from services.file_reader import (
     auto_map,
     normalize_header,
@@ -73,6 +73,124 @@ def download_template(kind: str):
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="modelo_{kind}.csv"'},
     )
+
+
+# --------------------------------------------------------------------------- #
+# Histórico de pedidos (saídas) de uma filial: envio -> confirmação da aba e das colunas -> resumo salvo
+# --------------------------------------------------------------------------- #
+def _safe_back(raw) -> str:
+    back = str(raw or "").strip()
+    return back if back.startswith("/") and not back.startswith("//") else "/imports/history"
+
+
+def _history_mapping_page(request: Request, db: Session, token: str, filename: str, branch_id: int, to_abs: bool,
+                          back: str, chosen: dict | None = None, error: str = "", status_code: int = 200):
+    from services.file_reader import token_path
+    from services.site_import import read_sheets
+    from services.slotting import HISTORY_FIELDS, HISTORY_KINDS, detect_history, guess_history_cols
+
+    sheets = read_sheets(token_path(token), limit=13)
+    det = detect_history(sheets)
+    info = {name: {"headers": rows[0] if rows else [], "rows": rows[1:13],
+                   "guess": {k: guess_history_cols(k, rows[0] if rows else []) for k in HISTORY_FIELDS}}
+            for name, rows in sheets.items()}
+    choice = chosen or {"kind": det["kind"], "sheet": det["sheet"],
+                        "cols": info.get(det["sheet"], {}).get("guess", {}).get(det["kind"], {})}
+    return render(request, "imports/mapping_history.html", status_code=status_code, token=token, filename=filename,
+                  branch=db.get(Branch, branch_id), to_abs=to_abs, back=back, sheets=info, choice=choice,
+                  kinds=HISTORY_KINDS, fields={k: {f: lbl for f, (lbl, _r) in v.items()} for k, v in HISTORY_FIELDS.items()},
+                  required={k: [f for f, (_l, r) in v.items() if r] for k, v in HISTORY_FIELDS.items()}, error=error)
+
+
+@router.get("/history")
+def history_form(request: Request, branch_id: str = "", back: str = ""):
+    db = SessionLocal()
+    try:
+        from models import PickHistory
+        from services.slotting import summary_text
+
+        branches = list(db.scalars(select(Branch).order_by(Branch.code)))
+        saved = {h.branch_id: (h.filename, summary_text(h.data), h.updated_at) for h in db.scalars(select(PickHistory))}
+    finally:
+        db.close()
+    return render(request, "imports/history.html", branches=branches, branch_id=to_int(branch_id), saved=saved,
+                  back=_safe_back(back) if back else "", error=None)
+
+
+@router.post("/history/upload")
+async def history_upload(request: Request):
+    from services.file_reader import save_upload
+
+    form = await request.form()
+    back = _safe_back(form.get("back"))
+    bid = to_int(form.get("branch_id"))
+    upload = form.get("file")
+    db = SessionLocal()
+    try:
+        if not bid or db.get(Branch, bid) is None:
+            return redirect(back, "Escolha a filial do histórico.", "danger")
+        if upload is None or not getattr(upload, "filename", ""):
+            return redirect(back, "Escolha o arquivo do histórico.", "danger")
+        try:
+            token = await save_upload(upload)
+        except ValueError as exc:
+            return redirect(back, str(exc), "danger")
+        try:
+            return _history_mapping_page(request, db, token, str(upload.filename)[:200], bid,
+                                         str(form.get("abs") or "") in {"1", "on", "true"}, back)
+        except Exception as exc:  # noqa: BLE001  (arquivo corrompido etc.)
+            remove_upload(token)
+            return redirect(back, f"Não foi possível ler o arquivo: {exc}", "danger")
+    finally:
+        db.close()
+
+
+@router.post("/history/confirm")
+async def history_confirm(request: Request, form: FormData = Depends(form_data)):
+    from models import PickHistory
+    from services.slotting import HISTORY_FIELDS, read_history, summary_text
+
+    back = _safe_back(form.get("back"))
+    token = f_str(form, "token")
+    bid = to_int(form.get("branch_id"))
+    filename = f_str(form, "filename")
+    to_abs = f_bool(form, "abs")
+    try:
+        path = token_path(token)
+    except ValueError as exc:
+        return redirect(back, str(exc), "danger")
+    if form.get("action") == "cancel":
+        remove_upload(token)
+        return redirect(back, "Envio do histórico cancelado.", "secondary")
+    kind = f_str(form, "kind") if f_str(form, "kind") in HISTORY_FIELDS else "orders"
+    cols = {f: to_int(form.get(f"col_{f}")) if str(form.get(f"col_{f}") or "").isdigit() else None
+            for f in HISTORY_FIELDS[kind]}
+    mapping = {"kind": kind, "sheet": f_str(form, "sheet"), "cols": cols}
+    db = SessionLocal()
+    try:
+        if not bid or db.get(Branch, bid) is None:
+            return redirect(back, "Filial não encontrada.", "danger")
+        try:
+            data, err = await run_in_threadpool(read_history, path, to_abs, mapping)
+        except Exception as exc:  # noqa: BLE001
+            data, err = None, f"não foi possível ler o arquivo ({exc})."
+        if err:
+            return _history_mapping_page(request, db, token, filename, bid, to_abs, back, mapping,
+                                         f"Histórico não importado: {err}", 422)
+        remove_upload(token)
+        h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid)) or PickHistory(branch_id=bid)
+        h.filename, h.data = filename[:200], data
+        db.add(h)
+        db.commit()
+        br = db.get(Branch, bid)
+        neg = ""
+        if data.get("neg"):
+            neg = f" {data['neg']} quantidade(s) negativa(s) " + ("convertida(s) para valor absoluto." if data["abs"]
+                                                                 else "ignorada(s) (sem a conversão).")
+        return redirect(back, f"Histórico de saídas salvo para a filial {br.code}: {summary_text(data)} "
+                              f"(aba {data.get('sheet')}).{neg}", "success")
+    finally:
+        db.close()
 
 
 @router.get("/{kind}")

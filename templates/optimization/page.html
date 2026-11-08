@@ -219,7 +219,8 @@
             <div class="form-check"><input class="form-check-input" type="checkbox" name="abs" value="1" form="slotUpload" id="slotAbs" checked>
               <label class="form-check-label" for="slotAbs">Converter quantidades para valor absoluto (saída com sinal negativo)</label></div>
             <button class="btn btn-sm btn-outline-primary mt-1" form="slotUpload"><i class="bi bi-upload"></i> Enviar histórico</button>
-            <div class="form-text">Aba <b>Pedidos</b> (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna <b>Saída</b>. Fica salvo para a filial (só o resumo).</div>
+            <a class="small ms-1" href="/imports/history{% if filters.branch_id %}?branch_id={{ filters.branch_id }}{% endif %}">ou em Importações</a>
+            <div class="form-text">Aba <b>Pedidos</b> (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna <b>Saída</b>. Na próxima etapa você confere a aba e as colunas. Fica salvo para a filial (só o resumo).</div>
           </div>
         </div>
         <div class="border rounded p-2 mb-2">
@@ -316,7 +317,7 @@
     </div>
   </div>
   </form>
-  <form method="post" action="/optimization/slotting/history" enctype="multipart/form-data" id="slotUpload"
+  <form method="post" action="/imports/history/upload" enctype="multipart/form-data" id="slotUpload"
         onsubmit="this.branch_id.value = document.getElementById('branch_id').value; this.back.value = location.pathname + location.search;">
     <input type="hidden" name="branch_id"><input type="hidden" name="back">
   </form>

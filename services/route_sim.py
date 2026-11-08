@@ -6,12 +6,12 @@ Para cada pedido: sai do ponto de referência (expedição), passa em uma posiç
     das ruas (por exemplo, a serpentina);
   - "otimizada": vizinho mais próximo + melhorias 2-opt — o melhor caminho para aquele pedido.
 
-Distância pelos corredores (projeto de filial nova, onde há a planta):
-  - no mesmo corredor: ao longo dele;
-  - corredores diferentes da mesma zona: sai pela ponta do corredor ou por um transversal (o que der menos) e entra
-    no outro;
-  - zonas diferentes, cabeceiras e o ponto de referência: em L (distância de Manhattan) até a ponta usada.
-Nas filiais existentes (sem planta), a distância é a estimada pelo endereço (services/slotting.geo_dist).
+Distância: com a rede de caminhada da planta (Node.net — projeto de filial nova ou planta desenhada da filial), o
+menor caminho no piso livre (services/walk_net): pelo eixo dos corredores, saindo pela ponta ou por uma passagem, e
+contornando fileiras e obstáculos; corredores de mão única só no sentido permitido (a distância pode não ser simétrica).
+Sem a rede, o cálculo antigo: no mesmo corredor ao longo dele; corredores da mesma zona pela ponta/transversal; o
+resto em L. Nas filiais existentes sem planta, a distância é a estimada pelo endereço (services/slotting.geo_dist).
+O tempo do pedido (add_times) soma caminhada ÷ velocidade, paradas × tempo por parada e peças × tempo por peça.
 """
 from __future__ import annotations
 
@@ -34,6 +34,8 @@ class Node:
     cross: float = 0.0  # centro do corredor (cm, coordenada local)
     ends: tuple = ()  # pontas e transversais do corredor (cm, ao longo)
     to_global: Optional[Callable] = None
+    corridor: object = None  # corredor na rede de caminhada (services/walk_net)
+    net: object = None  # rede de caminhada da planta: com ela, a distância e o trajeto contornam as estruturas
 
 
 def _natural(v: str):
@@ -49,7 +51,12 @@ def plan_nodes(plan) -> tuple[dict[str, list[Node]], dict]:
     for m in plan.modules:
         gx, gy = access_point(m)
         zn = m.zone
-        if m.rotated or zn is None or not zn.aisles:
+        if m.rotated and zn is not None:  # cabeceira: para em frente à face (voltada para a ponta do trecho)
+            seg = zn.segments[m.segment] if m.segment < len(zn.segments) else (zn.x_start, zn.x_end)
+            lx = m.x0 - 50.0 if m.x0 <= seg[0] + 1.0 else m.x0 + m.struct.depth + 50.0
+            gx, gy = zn.to_global(lx, m.y0 + m.struct.width / 2, 0, 0)[:2]
+            node = dict(gx=gx, gy=gy)
+        elif m.rotated or zn is None or not zn.aisles:
             node = dict(gx=gx, gy=gy)
         else:
             y, w = zn.aisles[m.row.aisle]
@@ -69,7 +76,9 @@ def _glob(n: Node, e: float) -> tuple[float, float]:
 
 
 def dist(a: Node, b: Node) -> float:
-    """cm, pelos corredores."""
+    """cm, pelos corredores (com a rede de caminhada, pelo menor caminho que contorna as estruturas)."""
+    if a.net is not None and a.net is b.net:
+        return a.net.dist(a, b)
     if a.aisle >= 0 and b.aisle >= 0 and a.zone == b.zone:
         if a.aisle == b.aisle:
             return abs(a.along - b.along)
@@ -107,15 +116,20 @@ def _optimized(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
         route.append(nxt)
         cur = nxt
     improved = len(route) > 3
-    while improved:
-        improved = False
+    cost = _tour(route, start, d)
+    passes = 0
+    while improved and passes < 60:
+        improved, passes = False, passes + 1
         pts = [start] + route + [start]
         for i in range(1, len(pts) - 2):
             for j in range(i + 1, len(pts) - 1):
                 delta = (d(pts[i - 1], pts[j]) + d(pts[i], pts[j + 1])) - (d(pts[i - 1], pts[i]) + d(pts[j], pts[j + 1]))
                 if delta < -1e-6:
-                    pts[i:j + 1] = reversed(pts[i:j + 1])
-                    improved = True
+                    cand = pts[:i] + pts[i:j + 1][::-1] + pts[j + 1:]
+                    # com mão única a distância não é simétrica: confere o custo real do trecho invertido
+                    new = _tour(cand[1:-1], start, d)
+                    if new < cost - 1e-6:
+                        pts, cost, improved = cand, new, True
         route = pts[1:-1]
     return route
 
@@ -146,11 +160,14 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
     metros (100 para cm). Retorna indicadores e, por pedido, as duas distâncias (e as rotas pedidas)."""
     near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
     rows, skipped_lines, routes = [], 0, {}
-    for oid, skus in sample:
+    for entry in sample:
+        oid, skus = entry[0], entry[1]
+        qty = entry[2] if len(entry) > 2 and entry[2] else None  # unidades por SKU (amostras antigas não têm)
         pts = [near[s] for s in skus if s in near]
         skipped_lines += len(skus) - len(pts)
         if not pts:
             continue
+        units = sum(float(q) for s, q in zip(skus, qty) if s in near) if qty else float(len(pts))
         uniq = list({n.key: n for n in pts}.values())  # o mesmo endereço uma vez
         by_list = sorted(uniq, key=lambda n: _natural(n.key))
         opt = _optimized(uniq, start, d)
@@ -158,7 +175,7 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         # "otimizada" = a melhor das rotas calculadas (a heurística não garante ser melhor que a em S)
         opt = min([r for r in (opt, s_route, by_list) if r is not None], key=lambda r: _tour(r, start, d))
         dl, do = _tour(by_list, start, d) / unit, _tour(opt, start, d) / unit
-        row = {"order": oid, "lines": len(skus), "stops": len(uniq), "list_m": dl, "opt_m": do}
+        row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "list_m": dl, "opt_m": do}
         if s_route is not None:
             row["s_m"] = _tour(s_route, start, d) / unit
         rows.append(row)
@@ -174,6 +191,7 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
     extra = {"s_avg": statistics.mean(S), "s_per_line": sum(S) / lines, "s_p50": q(S, 0.5), "s_p90": q(S, 0.9),
              "s_total": sum(S)} if S else {}
     return {**extra, "orders": len(rows), "rows": rows, "skipped_lines": skipped_lines, "routes": routes,
+            "has_qty": any(len(e) > 2 and e[2] for e in sample),
             "lines": lines, "list_avg": statistics.mean(L), "opt_avg": statistics.mean(O),
             "list_per_line": sum(L) / lines, "opt_per_line": sum(O) / lines,
             "list_p50": q(L, 0.5), "list_p90": q(L, 0.9), "opt_p50": q(O, 0.5), "opt_p90": q(O, 0.9),
@@ -182,11 +200,17 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
 
 
 def path_points(route: list[Node], start: Node, stops: Optional[list] = None) -> list[tuple[float, float]]:
-    """Pontos (cm, planta) do trajeto para desenhar: pelos corredores (sai pela ponta usada) e em L entre eles.
+    """Pontos (cm, planta) do trajeto para desenhar: com a rede de caminhada, o menor caminho que contorna as estruturas;
+    sem ela, pelos corredores (sai pela ponta usada) e em L entre eles.
     Se `stops` for uma lista, recebe o índice (em pts) de cada parada, na ordem da rota (o último = a volta)."""
     pts = [(start.gx, start.gy)]
     seq = [start] + route + [start]
     for a, b in zip(seq, seq[1:]):
+        if a.net is not None and a.net is b.net:
+            pts += a.net.path(a, b)
+            if stops is not None:
+                stops.append(len(pts) - 1)
+            continue
         if a.aisle >= 0 and b.aisle >= 0 and a.zone == b.zone and a.aisle == b.aisle:
             pts += [_glob(a, a.along), _glob(b, b.along), (b.gx, b.gy)]  # pelo meio do corredor
             if stops is not None:
@@ -214,6 +238,41 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
     return pts
 
 
+TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0}  # m/s, s por parada, s por peça
+
+
+def time_params(qp) -> dict:
+    """Parâmetros de tempo da tela (velocidade de caminhada, tempo por parada e por peça), com limites."""
+    out = {}
+    for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0))):
+        try:
+            v = float(str(qp.get(k) if qp.get(k) not in (None, "") else TIME_DEFAULTS[k]).replace(",", "."))
+        except ValueError:
+            v = TIME_DEFAULTS[k]
+        out[k] = min(hi, max(lo, v))
+    return out
+
+
+def add_times(sim: dict, tp: dict) -> dict:
+    """Tempo por pedido (s) de cada rota: caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por
+    peça. Grava no `sim` (times: média, total em horas e o tempo de cada pedido nas linhas)."""
+    rows = sim.get("rows") or []
+    if not rows:
+        return sim
+    fixed = lambda r: r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
+    out = {"params": tp, "pick_avg": sum(fixed(r) for r in rows) / len(rows)}
+    for k in ("list", "s", "opt"):
+        if all(f"{k}_m" in r for r in rows):
+            ts = [r[f"{k}_m"] / tp["t_v"] + fixed(r) for r in rows]
+            for r, t in zip(rows, ts):
+                r[f"{k}_t"] = t
+            out[f"{k}_avg"] = sum(ts) / len(ts)
+            out[f"{k}_h"] = sum(ts) / 3600
+    out["units_avg"] = sum(r.get("units", r["lines"]) for r in rows) / len(rows)
+    sim["times"] = out
+    return sim
+
+
 ROUTE_KINDS = (("list", "Lista de separação", "#d62728"), ("s", "Serpentina (rota em S)", "#2f6db5"),
                ("opt", "Otimizada", "#1a9850"))
 
@@ -224,7 +283,8 @@ def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Call
     rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
     r2 = lambda v: round(v, 2) if v is not None else None  # noqa: E731
     return {"ref": ref, "kinds": [{"key": k, "name": n, "color": c} for k, n, c in ROUTE_KINDS],
-            "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"]},
+            "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"],
+                                                                                                "has_qty": sim.get("has_qty", False)},
             "orders": [{"order": r["order"], "lines": r["lines"], "stops": r["stops"], "list_m": r2(r["list_m"]),
                         "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"])} for r in rows]}
 
@@ -239,6 +299,13 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
     if not rt:
         return {"error": f"Os SKUs do pedido {order} não estão na planta."}
     sku_of = {n.key: s for s, ns in nodes_of.items() for n in ns}
+    entry = lines[0]
+    qty_of = dict(zip(entry[1], entry[2])) if len(entry) > 2 and entry[2] else {}
+    units_at: dict[str, float] = {}  # peças em cada parada (SKUs do pedido naquele endereço)
+    near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
+    for s_ in entry[1]:
+        if s_ in near:
+            units_at[near[s_].key] = units_at.get(near[s_].key, 0.0) + float(qty_of.get(s_, 1.0))
     row = sim["rows"][0]
     routes = {}
     for kind, name, color in ROUTE_KINDS:
@@ -248,5 +315,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
         pts = path_points(rt[kind], start, idx)
         routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
                         "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "skus": [sku_of.get(n.key, "") for n in rt[kind]],
+                        "qty": [round(units_at.get(n.key, 1.0), 3) for n in rt[kind]],
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
-    return {"order": order, "lines": row["lines"], "stops": row["stops"], "ref": ref, "routes": routes}
+    return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
+            "ref": ref, "routes": routes}

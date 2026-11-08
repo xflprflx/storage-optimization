@@ -88,8 +88,11 @@ def _plan_qs(br: Branch, wid: Optional[int]) -> str:
 
 
 def _geom_info(g) -> dict:
+    rows = g.data.get("rows") or []
     return {"corridors": [{"orient": c.orient, "center": round(c.center, 1), "width": round(c.width, 1), "lo": round(c.lo, 1),
-                           "hi": round(c.hi, 1), "ends": [round(e, 1) for e in c.ends]} for c in g.corridors],
+                           "hi": round(c.hi, 1), "ends": [round(e, 1) for e in c.ends], "flow": c.flow,
+                           "rows": [rows[ri]["id"] for ri in c.rows]} for c in g.corridors],
+            "pairs": [[rows[i]["id"], rows[j]["id"], round(gap, 1), manual] for i, j, gap, manual in g.pairs],
             "unplaced": g.unplaced, "dup": g.dup[:50], "placed": len(g.placed)}
 
 
@@ -103,7 +106,11 @@ def plan_editor(request: Request, branch_id: str = "", warehouse_id: str = "", d
         if lk["branches"]:
             return redirect(f"/layout/plan?branch_id={lk['branches'][0].id}")
         return redirect("/layout", "Cadastre uma filial e os endereços antes de desenhar a planta.", "warning")
-    return render(request, "layout/plan.html", branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid), **lk)
+    from models import SiteProject
+
+    projects = list(db.execute(select(SiteProject.id, SiteProject.name).order_by(SiteProject.updated_at.desc())))
+    return render(request, "layout/plan.html", branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid), projects=projects,
+                  **lk)
 
 
 @router.get("/layout/plan/data")
@@ -129,8 +136,33 @@ async def plan_auto(request: Request, db: Session = Depends(get_db)):
     if br is None:
         return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
     bays = scope_bays(db, br.id, wid)
-    data = auto_layout(bays, "row" if body.get("mode") == "row" else "aisle", body.get("aisle_w"), body.get("front"))
+    from services.branch_layout import parse_widths
+
+    data = auto_layout(bays, "row" if body.get("mode") == "row" else "aisle", body.get("aisle_w"), body.get("front"),
+                       parse_widths(str(body.get("widths") or "")))
     return {"data": data, **_geom_info(build(data, bays))}
+
+
+@router.post("/layout/plan/from_project")
+async def plan_from_project(request: Request, db: Session = Depends(get_db)):
+    """Planta a partir do plano de um projeto de filial nova (as estantes precisam ter os mesmos códigos de endereço:
+    é o caso da filial criada pelo projeto). Não salva: volta para o editor."""
+    from models import SiteProject
+    from routers.site import _plan_for
+    from services.branch_layout import build, clean, from_plan, scope_bays
+
+    body = await request.json()
+    br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    pr = db.get(SiteProject, to_int(body.get("project_id")) or 0)
+    if pr is None:
+        return JSONResponse({"error": "Projeto não encontrado."}, status_code=404)
+    plan, errors, _cfg = _plan_for(db, pr)
+    if errors or plan is None or not plan.modules:
+        return JSONResponse({"error": "O projeto não tem plano válido: " + (" ".join(errors) or "rode a otimização.")})
+    data = clean(from_plan(plan))
+    return {"data": data, **_geom_info(build(data, scope_bays(db, br.id, wid)))}
 
 
 @router.post("/layout/plan/check")
@@ -244,15 +276,19 @@ def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
     if not sample:
         return None, None, None, None, g, ("O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). "
                                            "Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).")
-    rows = db.execute(scope_filter(select(Product.sku, StorageLocation.aisle, StorageLocation.bay, StorageLocation.address)
+    rows = db.execute(scope_filter(select(Product.sku, StorageLocation.aisle, StorageLocation.bay, StorageLocation.address,
+                                          StockItem.quantity)
                                    .join(StockItem, StockItem.product_id == Product.id)
                                    .join(StorageLocation, StorageLocation.id == StockItem.location_id)
-                                   .where(StockItem.quantity > 0), branch_id, wid))
+                                   .where(StockItem.quantity >= 0), branch_id, wid))
     nodes: dict[str, list] = {}
-    for sku, a, bay, addr in rows:
+    zero: dict[str, list] = {}  # SKU só atribuído ao endereço (saldo zero, como na filial recém-criada pelo projeto)
+    for sku, a, bay, addr, qty in rows:
         n = g.node(a, bay)
         if n is not None:
-            nodes.setdefault(sku, []).append(dataclasses.replace(n, key=addr))
+            (nodes if qty and qty > 0 else zero).setdefault(sku, []).append(dataclasses.replace(n, key=addr))
+    for sku, ns in zero.items():
+        nodes.setdefault(sku, ns)
     return sample, nodes, g.ref_node(), g.ref, g, ""
 
 

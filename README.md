@@ -317,16 +317,20 @@ Fica em `/optimization/site/{id}/skus` no projeto (link no cartão *Posição do
 
 ## 6.0.1 Simulador de trajeto pelos pedidos
 
-Fica em `/optimization/site/{id}/routes` no projeto (link no cartão *Posição dos SKUs*) e em `/optimization/slotting/routes?branch_id=…` nas filiais existentes (link no histórico de saídas). Usa uma **amostra de até 3.000 pedidos**, guardada ao importar a aba Pedidos. Históricos enviados antes desta versão precisam ser importados de novo.
+Fica em `/optimization/site/{id}/routes` no projeto (link no cartão *Posição dos SKUs*) e em `/optimization/slotting/routes?branch_id=…` nas filiais existentes (link no histórico de saídas). Usa uma **amostra de até 3.000 pedidos**, guardada ao importar a aba Pedidos, com a **quantidade de cada item**. Históricos enviados antes desta versão precisam ser importados de novo (sem as quantidades, cada linha conta como 1 peça).
 
 Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o mais perto da referência) e volta. São três rotas no mesmo plano:
 - **Lista:** na ordem dos endereços, como a lista de separação costuma sair. Mostra o efeito da numeração (por exemplo, a serpentina).
 - **Serpentina:** rota em S, com os corredores em ordem e alternando o sentido.
 - **Otimizada:** a melhor entre vizinho mais próximo + 2-opt e as outras duas.
 
-**Distância:**
-- **No projeto:** pelos corredores. Para trocar de corredor, sai pela ponta ou por um transversal.
-- **Nas filiais existentes:** a estimada pelo endereço.
+**Distância:** com planta (o projeto ou a planta desenhada da filial), é o **menor caminho no piso livre** (`services/walk_net.py`):
+- dentro do corredor, pelo eixo; para trocar de corredor, sai pela ponta ou por uma passagem/transversal;
+- fora dos corredores, contorna as fileiras, as cabeceiras e os **obstáculos** pelos cantos (nunca atravessa uma estrutura). Vãos menores que 80 cm (costas com costas) não servem de passagem; setores (expedição, recebimento…) são áreas por onde se anda;
+- respeita a **mão única** dos corredores marcados assim na planta da filial;
+- sem planta (filial existente sem desenho), a distância é a estimada pelo endereço.
+
+**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça**. Os três são editáveis na tela (padrão 1 m/s, 10 s e 2 s); a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
 
 **Resultado:** caminhada média por pedido e por linha, mediana e 90º percentil, total, e quanto a rota otimizada economizaria. No projeto, a planta desenha as três rotas do pedido escolhido, com as paradas numeradas. No exemplo de galpão médio com letra por rua, a lista sem serpentina anda cerca de 4% mais que a rota em S; com serpentina, a lista praticamente coincide com ela.
 
@@ -334,7 +338,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Separadores animados:** um boneco com carrinho anda pelos corredores, para em cada endereço e pega o produto. As bins do endereço se acendem na cor de quem pegou.
 - **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
 - **Painel:** distância percorrida, paradas feitas e tempo de cada rota. A lista de paradas risca as já feitas.
-- **Tempo estimado:** caminhada (m/s) + tempo por parada (s), ambos editáveis.
+- **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças do endereço, todos editáveis. Cada parada dura o tempo fixo mais as peças daquele endereço; a lista de paradas mostra as peças e o tempo de cada uma.
 - **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).
 - **Câmera:** seguir os separadores (afasta para caberem todos), primeira pessoa, de cima (a rota toda) ou livre.
 - **Tela cheia:** botão no canto da vista 3D (Esc volta).
@@ -349,7 +353,8 @@ O cadastro de uma filial tem só os endereços. A **Planta da filial** (`/layout
 - as estantes de um lado: ímpares, pares ou todas;
 - posição, orientação (horizontal ou vertical) e sentido da numeração;
 - o **lado do corredor**, de onde se pega (faixa laranja);
-- profundidade.
+- profundidade;
+- opcional: a **lista fixa de estantes** (plantas geradas do projeto, onde um corredor tem trechos separados).
 
 A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*) ou da frente informada na fileira.
 
@@ -357,7 +362,14 @@ A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*)
 - uma letra por corredor: ímpares de um lado e pares do outro, frente a frente;
 - uma letra por rua: A|B, C|D… frente a frente.
 
-Informe a largura do corredor e o espaço livre na frente.
+Informe a largura do corredor e o espaço livre na frente. Em *Corredores com outra largura*, dê uma largura própria a alguns corredores pela letra (ex.: `A=3,5; C=2,8`).
+
+**Corredor de cada fileira** (painel da fileira selecionada):
+- **Vizinho de frente:** automático (a fileira mais perto que olha para esta, sem pular uma vizinha que está no meio), **nenhum** (fileira sozinha) ou uma fileira escolhida — vale a escolha, com qualquer vão;
+- **Largura (m):** o vão até o vizinho de frente. Mudar aqui move o vizinho e, com *empurrar as seguintes*, as fileiras depois dele (cada corredor pode ter a sua largura);
+- **Sentido:** dois sentidos (**contra fluxo permitido**) ou **mão única** num sentido. Num corredor de mão única o separador só anda no sentido marcado (setas azuis na planta): para voltar, sai pela ponta e dá a volta. Vale para a posição pela saída, o simulador e o 3D.
+
+**Planta de um projeto de filial nova:** a filial criada pelo botão *Gerar cadastro da filial* do projeto já nasce com a planta do plano (fileiras, cabeceiras, obstáculos e a referência) e com o histórico de pedidos do projeto. Para uma filial criada antes, o cartão *Planta de um projeto de filial nova* do editor traz a planta do projeto (os endereços precisam ter os mesmos códigos; se o sistema foi reiniciado, rode o projeto de novo antes, porque o solver pode chegar a outro plano).
 
 **Editor com o mouse:**
 - arrastar fileiras e obstáculos (encaixe de 10 cm; com Shift, livre);
@@ -366,7 +378,7 @@ Informe a largura do corredor e o espaço livre na frente.
 - botão para marcar o **ponto de referência** (expedição) com um clique;
 - imóvel (comprimento e largura) e obstáculos.
 
-O painel *Situação* lista as estantes que ficaram **fora da planta** e as que estão em mais de uma fileira. O editor mostra os **corredores de caminhada** (faixas azuis): duas fileiras frente a frente, com até 6 m de vão, formam um corredor; uma fileira sozinha tem o corredor a 1 m da face. As pontas das fileiras e as passagens entre elas são por onde se troca de corredor.
+O painel *Situação* lista as estantes que ficaram **fora da planta** e as que estão em mais de uma fileira. O editor mostra os **corredores de caminhada** (faixas azuis, com a largura escrita): duas fileiras frente a frente, com até 6 m de vão (ou o vizinho escolhido à mão), formam um corredor; uma fileira sozinha tem o corredor a 1 m da face. As pontas das fileiras e as passagens entre elas são por onde se troca de corredor.
 
 **O que muda com a planta salva:**
 - **Posição pela saída** (Por endereço e Pool):
@@ -374,10 +386,10 @@ O painel *Situação* lista as estantes que ficaram **fora da planta** e as que 
   - a distância entre os itens que saem juntos também;
   - os campos de corredor de referência e distâncias passam a valer só para estantes fora da planta;
   - o resultado mostra "referência da planta".
-- **Simulador de trajeto da filial:** mede pelos corredores da planta e desenha as três rotas do pedido escolhido, com as paradas numeradas.
+- **Simulador de trajeto da filial:** mede pelo menor caminho na planta (corredores, contornando fileiras e obstáculos, com a mão única) e desenha as três rotas do pedido escolhido, com as paradas numeradas. SKUs sem saldo usam os endereços atribuídos (saldo zero), como na filial recém-criada pelo projeto.
 - **3D da filial** (`/layout/plan/3d`): cada estante na sua posição, com os níveis da estrutura e as bins cadastradas em cada endereço, lado a lado, na ordem das posições. Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
 
-Obstáculos aparecem na planta e no 3D, mas não desviam o trajeto. Remover a planta volta a estimar a caminhada pelo endereço.
+Obstáculos aparecem na planta e no 3D e **desviam o trajeto**. Remover a planta volta a estimar a caminhada pelo endereço.
 
 ## 6.0.2 Resultados salvos e comparação
 
@@ -394,7 +406,7 @@ Cada execução de otimização fica guardada (tabela `optimization_runs`): Por 
 
 A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.
 
-- **Histórico de saídas por filial:** envie uma planilha com a aba **Pedidos** (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna **Saída**. Há a opção *Converter quantidades para valor absoluto*. O histórico fica salvo para a filial do escopo, só o resumo (tabela `pick_histories`), e pode ser substituído ou removido.
+- **Histórico de saídas por filial:** envie uma planilha com a aba **Pedidos** (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna **Saída** — pela etapa *Posição pela saída*, por **Importações → 8. Histórico de pedidos** (`/imports/history`) ou pelo botão *Histórico de pedidos* da planta. Depois do envio, uma tela de **conferência** mostra o tipo, a aba e as colunas sugeridas (um `<select>` por campo) e a amostra da aba com as colunas marcadas: dá para trocar, por exemplo, "Código" por "Produto" como SKU antes de importar. Há a opção *Converter quantidades para valor absoluto*. O histórico fica salvo para a filial, só o resumo (tabela `pick_histories`), e pode ser substituído ou removido (também na tela de Importações).
 - **Caminhada estimada pelo endereço:** o sistema não tem a planta de uma filial existente, então a conta é: corredores de distância até o *corredor mais perto da expedição* × *distância entre corredores* + posição da estante no corredor × *frente da estante*. As estantes 01/02 ficam na ponta da expedição; ímpares de um lado e pares do outro.
 - **Zona de ouro:** vem da estrutura cadastrada na estante (início/fim em cm). Sem estrutura, vale o campo *Níveis de ouro* (ex.: 2,3). Um nível fora dela "custa" os metros informados.
 - **Pool:** os SKUs mais procurados por bin escolhem primeiro e, entre bins equivalentes, ficam nos endereços mais fáceis. Os itens C não disputam esses endereços, e quem sai junto fica perto do parceiro já posicionado. O objetivo do pool (menos bins, volume…) continua mandando: a posição pela saída entra como desempate antes da proximidade de hoje. Com a posição pela saída ligada, o pool usa o motor heurístico.

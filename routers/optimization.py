@@ -1199,8 +1199,10 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
             return by_addr[(b if a.key == "REF" else a).key].walk_m * 100
         return geo_dist(by_addr[a.key], by_addr[b.key]) * 100
 
-    sim = simulate(sample, nodes, start, d)
-    ctx.update(rows=sorted(sim["rows"], key=lambda r: -r["list_m"])[:500], ref_label=f"ponta do corredor {ref}",
+    from services.route_sim import add_times, time_params
+
+    sim = add_times(simulate(sample, nodes, start, d), time_params(qp))
+    ctx.update(keep=[(k, v) for k, v in qp.multi_items() if not k.startswith("t_")], rows=sorted(sim["rows"], key=lambda r: -r["list_m"])[:500], ref_label=f"ponta do corredor {ref}",
                how="letras por rua" + (" em serpentina" if spec.get("serpentine") else "") if spec.get("rows")
                else "uma letra por corredor")
     return render(request, "slotting/routes.html", **ctx, sim=sim, error="" if sim["orders"] else
@@ -1215,10 +1217,14 @@ def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp
     q_no_order = urlencode([(k, v) for k, v in qp.multi_items() if k != "order"])
     ctx.update(link=f"/optimization/slotting/routes?{q_no_order}&", walk3d=f"/layout/plan/3d?{plan_qs}&walk=1&",
                ref_label=f"{ref['label']} (planta, {wlabel})", how="planta desenhada",
-               dist_note="Distância pelos corredores da planta desenhada: sai pela ponta da fileira (ou por uma passagem) "
-                         "para trocar de corredor; obstáculos não desviam o trajeto.",
+               dist_note="Distância pelo menor caminho na planta desenhada: pelos corredores (respeitando a mão única), "
+                         "saindo pela ponta da fileira ou por uma passagem para trocar de corredor, contornando fileiras e "
+                         "obstáculos.",
                plan_link=f"/layout/plan?{plan_qs}")
-    sim = simulate(sample, nodes, start)
+    from services.route_sim import add_times, time_params
+
+    sim = add_times(simulate(sample, nodes, start), time_params(qp))
+    ctx["keep"] = [(k, v) for k, v in qp.multi_items() if not k.startswith("t_")]
     if not sim["orders"]:
         return render(request, "slotting/routes.html", **ctx, sim={}, error="Nenhum pedido da amostra tem SKUs com saldo "
                       "em estantes da planta.")
@@ -1263,7 +1269,7 @@ def delete_history(form: FormData = Depends(form_data), db: Session = Depends(ge
     from models import PickHistory
 
     back = str(form.get("back") or "/optimization")
-    back = back if back.startswith("/optimization") else "/optimization"
+    back = back if back.startswith(("/optimization", "/imports/history")) else "/optimization"
     h = db.scalar(select(PickHistory).where(PickHistory.branch_id == to_int(form.get("branch_id"))))
     if h is not None:
         db.delete(h)

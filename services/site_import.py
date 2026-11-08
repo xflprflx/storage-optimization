@@ -662,7 +662,11 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
 
     ids = sorted(orders)
     pick = random.Random(1).sample(ids, min(MAX_SAMPLE, len(ids)))
-    sample = [[o, sorted(set(orders[o]))] for o in sorted(pick)]
+    # [pedido, SKUs, unidades de cada SKU] — as unidades entram no tempo de pega (tempo por peça) do simulador
+    sample = []
+    for o in sorted(pick):
+        ss = sorted(set(orders[o]))
+        sample.append([o, ss, [round(lines[(o, x)], 3) for x in ss]])
     return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3), "sample": sample,
             "skus": {s: [n, round(u, 3)] for s, (n, u) in skus.items()}, "pairs": top, "neg": neg, "abs": to_abs,
             "ignored": ignored, "bad": bad, "big_orders": big,

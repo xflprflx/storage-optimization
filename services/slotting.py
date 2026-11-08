@@ -35,52 +35,114 @@ AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" 
 # --------------------------------------------------------------------------- #
 # Histórico de saídas
 # --------------------------------------------------------------------------- #
-def read_history(path: Path, to_abs: bool) -> tuple[Optional[dict], str]:
-    """Lê uma planilha (ou CSV) com o histórico de pedidos (pedido, SKU, quantidade[, data]) ou, na falta dela, uma
-    lista de SKUs com a coluna Saída. Retorna (resumo, mensagem de erro)."""
+HISTORY_KINDS = {"orders": "Pedidos (pedido, SKU, quantidade[, data])", "column": "Lista de SKUs com a coluna Saída"}
+HISTORY_FIELDS = {
+    "orders": {"order": ("Pedido (identificador)", True), "sku": ("SKU", True), "qty": ("Quantidade", True),
+               "date": ("Data", False)},
+    "column": {"sku": ("SKU", True), "out": ("Saída (linhas ou unidades no período)", True)},
+}
+
+
+def detect_history(sheets: dict[str, list[list[str]]]) -> dict:
+    """Tipo, aba e colunas sugeridos para o histórico: 1º uma aba de pedidos (pelos sinônimos de pedido, SKU e
+    quantidade, preferindo a aba chamada Pedidos), 2º uma lista de SKUs com a coluna Saída.
+    {"kind", "sheet", "cols": {"orders": {...}, "column": {...}}} (colunas sugeridas por aba escolhida)."""
     from services.file_reader import normalize_header
-    from services.site_import import ORDER_COLS, SHEETS, SKU_COLS, _map, _orders, read_sheets
+    from services.site_import import ORDER_COLS, SHEETS, SKU_COLS, _map
+
+    order_names = {normalize_header(s) for s in SHEETS["orders"]}
+    ranked = sorted(sheets, key=lambda n: (normalize_header(n) not in order_names, n))
+    for name in ranked:
+        rows = sheets[name]
+        if len(rows) >= 2:
+            cm = _map(rows[0], ORDER_COLS)
+            if cm["order"] is not None and cm["sku"] is not None and cm["qty"] is not None:
+                return {"kind": "orders", "sheet": name}
+    for name in ranked:
+        rows = sheets[name]
+        if len(rows) >= 2:
+            cm = _map(rows[0], {"sku": SKU_COLS["sku"], "out": SKU_COLS["out"]})
+            if cm["sku"] is not None and cm["out"] is not None:
+                return {"kind": "column", "sheet": name}
+    return {"kind": "orders", "sheet": ranked[0] if ranked else ""}
+
+
+def guess_history_cols(kind: str, headers: list[str]) -> dict:
+    from services.site_import import ORDER_COLS, SKU_COLS, _map
+
+    spec = ORDER_COLS if kind == "orders" else {"sku": SKU_COLS["sku"], "out": SKU_COLS["out"]}
+    return _map(headers, spec)
+
+
+def _column_summary(rows: list[list[str]], cm: dict, to_abs: bool, name: str) -> Optional[dict]:
+    skus: dict[str, list] = {}
+    neg = 0
+    for r in rows[1:]:
+        sku = (r[cm["sku"]] if cm["sku"] < len(r) else "") or ""
+        raw = (r[cm["out"]] if cm["out"] < len(r) else "") or ""
+        try:
+            v = float(str(raw).replace(".", "").replace(",", ".")) if "," in str(raw) else float(raw or 0)
+        except ValueError:
+            continue
+        if v < 0:
+            neg += 1
+            if not to_abs:
+                continue
+            v = -v
+        if sku.strip() and v > 0:
+            e = skus.setdefault(sku.strip()[:60], [0.0, 0.0])
+            e[0] += v
+            e[1] += v
+    if not skus:
+        return None
+    return {"kind": "column", "sheet": name, "orders": 0, "lines": 0, "skus": skus, "pairs": [], "neg": neg,
+            "abs": to_abs, "dates": None}
+
+
+def read_history(path: Path, to_abs: bool, mapping: Optional[dict] = None) -> tuple[Optional[dict], str]:
+    """Lê uma planilha (ou CSV) com o histórico de pedidos (pedido, SKU, quantidade[, data]) ou, na falta dela, uma
+    lista de SKUs com a coluna Saída. `mapping` = {"kind": "orders"|"column", "sheet": aba, "cols": {campo: índice}}
+    escolhido na tela de confirmação; sem ele, aba e colunas são detectadas pelos nomes.
+    Retorna (resumo, mensagem de erro)."""
+    from services.site_import import read_sheets
 
     sheets = read_sheets(path)
     if not sheets:
         return None, "A planilha não tem abas com dados."
-    order_names = {normalize_header(s) for s in SHEETS["orders"]}
-    ranked = sorted(sheets, key=lambda n: (normalize_header(n) not in order_names, n))
-    for name in ranked:  # 1º: histórico de pedidos
-        rows = sheets[name]
-        if len(rows) < 2:
-            continue
-        cm = _map(rows[0], ORDER_COLS)
-        if cm["order"] is not None and cm["sku"] is not None and cm["qty"] is not None:
-            res = _orders(rows, cm, to_abs)
-            if res.get("error"):
-                return None, f"Aba {name}: {res['error']}"
-            res["sheet"], res["kind"] = name, "orders"
-            return res, ""
-    for name in ranked:  # 2º: SKU + Saída
-        rows = sheets[name]
-        if len(rows) < 2:
-            continue
-        cm = _map(rows[0], {"sku": SKU_COLS["sku"], "out": SKU_COLS["out"]})
-        if cm["sku"] is None or cm["out"] is None:
-            continue
-        skus: dict[str, list] = {}
-        for r in rows[1:]:
-            sku = (r[cm["sku"]] if cm["sku"] < len(r) else "") or ""
-            raw = (r[cm["out"]] if cm["out"] < len(r) else "") or ""
-            try:
-                v = abs(float(str(raw).replace(".", "").replace(",", "."))) if "," in str(raw) else abs(float(raw or 0))
-            except ValueError:
-                continue
-            if sku.strip() and v > 0:
-                e = skus.setdefault(sku.strip()[:60], [0.0, 0.0])
-                e[0] += v
-                e[1] += v
-        if skus:
-            return {"kind": "column", "sheet": name, "orders": 0, "lines": 0, "skus": skus, "pairs": [], "neg": 0,
-                    "abs": to_abs, "dates": None}, ""
-    return None, ("Nenhuma aba reconhecida: use uma aba Pedidos (pedido, SKU, quantidade) ou uma lista de SKUs com a "
-                  "coluna Saída.")
+    if mapping is None:
+        det = detect_history(sheets)
+        name = det["sheet"]
+        if not name or len(sheets.get(name) or []) < 2:
+            return None, "A planilha não tem linhas."
+        mapping = {"kind": det["kind"], "sheet": name, "cols": guess_history_cols(det["kind"], sheets[name][0])}
+        if any(mapping["cols"].get(f) is None for f, (_l, req) in HISTORY_FIELDS[det["kind"]].items() if req):
+            return None, ("Nenhuma aba reconhecida: use uma aba Pedidos (pedido, SKU, quantidade) ou uma lista de SKUs "
+                          "com a coluna Saída.")
+    return summarize_history(sheets, to_abs, mapping)
+
+
+def summarize_history(sheets: dict, to_abs: bool, mapping: dict) -> tuple[Optional[dict], str]:
+    from services.site_import import _orders
+
+    kind, name, cols = mapping.get("kind"), mapping.get("sheet"), dict(mapping.get("cols") or {})
+    if kind not in HISTORY_FIELDS:
+        return None, "Escolha o tipo do arquivo."
+    if name not in sheets or len(sheets[name]) < 2:
+        return None, f"A aba {name!r} não tem linhas."
+    missing = [lbl for f, (lbl, req) in HISTORY_FIELDS[kind].items() if req and cols.get(f) is None]
+    if missing:
+        return None, "Escolha a coluna de " + ", ".join(missing) + "."
+    used = [v for v in cols.values() if v is not None]
+    if len(used) != len(set(used)):
+        return None, "A mesma coluna foi escolhida para mais de um campo."
+    if kind == "orders":
+        res = _orders(sheets[name], {f: cols.get(f) for f in HISTORY_FIELDS["orders"]}, to_abs)
+        if res.get("error"):
+            return None, f"Aba {name}: {res['error']}"
+        res["sheet"], res["kind"] = name, "orders"
+        return res, ""
+    res = _column_summary(sheets[name], cols, to_abs, name)
+    return (res, "") if res else (None, f"Aba {name}: nenhum SKU com saída maior que zero.")
 
 
 def popularity(data: Optional[dict], metric: str = "lines") -> dict[str, float]:

@@ -96,8 +96,10 @@
           <option value="top">De cima (rota toda)</option><option value="free">Livre (mouse)</option></select></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="Velocidade de caminhada do separador">Caminhada (m/s)</label>
         <input class="form-control form-control-sm" type="number" id="nkWalkV" min="0.2" max="3" step="0.1" value="1.0"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="Tempo parado em cada endereço para pegar o produto">Tempo por parada (s)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="Tempo fixo parado em cada endereço (chegar, localizar, conferir)">Tempo por parada (s)</label>
         <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="10"></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkPiece" title="Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo">Tempo por peça (s)</label>
+        <input class="form-control form-control-sm" type="number" id="nkPiece" min="0" max="120" step="0.5" value="2"></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="Grava a simulação do início ao fim e baixa o vídeo (.webm)"><i class="bi bi-record-circle"></i> Gravar vídeo</button>
@@ -416,6 +418,8 @@ const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const walkV = () => Math.min(3, Math.max(0.2, +$('nkWalkV').value || 1));
 const pickS = () => Math.min(300, Math.max(0, +$('nkPick').value || 0));
+const pieceS = () => Math.min(120, Math.max(0, +$('nkPiece').value || 0));
+const stopT = (R, s) => pickS() + pieceS() * (R.qty ? +R.qty[s] || 0 : 1);  // tempo parado: fixo + peças × tempo por peça
 const speed = () => +$('nkSpeed').value || 1;
 
 function setPlayIcon() { $('nkPlay').innerHTML = WK.playing ? '<i class="bi bi-pause-fill"></i>' : '<i class="bi bi-play-fill"></i>'; }
@@ -517,7 +521,7 @@ function build() {
       const dd = cum[pi];
       ev.push({ t0: t, t1: (t += (dd - dPrev) / walkV()), d0: dPrev, d1: dd });
       arrive[R.keys[s]] = t;
-      ev.push({ t0: t, t1: (t += pickS()), d0: dd, d1: dd, stop: s });
+      ev.push({ t0: t, t1: (t += stopT(R, s)), d0: dd, d1: dd, stop: s });
       dPrev = dd;
     });
     ev.push({ t0: t, t1: (t += (total - dPrev) / walkV()), d0: dPrev, d1: total });
@@ -535,12 +539,14 @@ function build() {
   WK.T = Math.max(...WK.walkers.map(w => w.T));
   const R0 = d.routes;
   const gain = R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
-  $('nkWalkInfo').innerHTML = `<b>Pedido ${esc(d.order)}</b> · ${d.lines} linha(s) · ${d.stops} parada(s)<br>` +
+  $('nkWalkInfo').innerHTML = `<b>Pedido ${esc(d.order)}</b> · ${d.lines} linha(s) · ${d.stops} parada(s)${d.units != null ? ` · ${fmt(d.units, 2)} peça(s)` : ''}<br>` +
     kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>') +
     (gain != null ? `<br>A rota otimizada anda <b>${fmt(gain, 0)}%</b> menos que a lista.` : '') +
     `<br><span class="text-muted">Vídeo ≈ ${mmss(WK.T / speed())} na velocidade escolhida.</span>`;
   $('nkStops').innerHTML = `<div class="text-muted">Paradas — ${esc(first.name)}:</div>` + first.keys.map((k, j) =>
-    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(k)}</span> · ${esc(first.skus[j])} ${esc(data.skus[first.skus[j]] || '')}</div>`).join('');
+    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(k)}</span> · ${esc(first.skus[j])} ${esc(data.skus[first.skus[j]] || '')}` +
+    (first.qty ? ` · <b>${fmt(first.qty[j], 2)} pç</b> (${fmt(stopT(first, j), 0)} s)` : '') + '</div>').join('') +
+    (d.has_qty ? '' : '<div class="text-warning-emphasis">Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).</div>');
   WK.t = 0; update(); camMode(true);
   $('nkHud').style.display = 'block';
 }
@@ -600,7 +606,7 @@ function hud() {
   const w0 = WK.walkers[0];
   document.querySelectorAll('#nkStops [data-j]').forEach(el => {
     const j = +el.dataset.j, key = w0.R.keys[j];
-    el.className = w0.arrive[key] + pickS() <= WK.t + 1e-9 ? 'done' : w0.pick === j ? 'now' : '';
+    el.className = w0.arrive[key] + stopT(w0.R, j) <= WK.t + 1e-9 ? 'done' : w0.pick === j ? 'now' : '';
   });
 }
 
@@ -698,7 +704,7 @@ function recFrame() {
     ctx.fillStyle = '#1f2d33'; ctx.font = `${l.bold ? 700 : 500} ${px}px system-ui, sans-serif`;
     ctx.fillText(l.text, pad * 2 + (l.color ? px * 1.2 : 0), y);
   });
-  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada · vídeo ${speed()}×`;
+  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada + ${fmt(pieceS(), 1)} s por peça · vídeo ${speed()}×`;
   ctx.font = `500 ${Math.round(px * 0.8)}px system-ui, sans-serif`;
   const fw = ctx.measureText(foot).width;
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c.width - fw - pad * 3, c.height - px * 1.8, fw + pad * 2, px * 1.4);
@@ -721,7 +727,7 @@ function walkTick(dt) {
 $('nkWalkBtn').addEventListener('click', () => openWalk($('nkWalk').style.display !== 'block'));
 $('nkWalkClose').addEventListener('click', () => openWalk(false));
 $('nkOrder').addEventListener('change', () => { if (WK.rec) stopRec(true); loadOrder($('nkOrder').value); });
-['nkRoute', 'nkWalkV', 'nkPick'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
+['nkRoute', 'nkWalkV', 'nkPick', 'nkPiece'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
 $('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
 $('nkCam').addEventListener('change', () => camMode(true));
 $('nkPlay').addEventListener('click', () => (WK.playing ? pause() : play()));

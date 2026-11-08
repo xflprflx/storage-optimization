@@ -733,5 +733,14 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
     db.flush()
     refresh_occupancy(db, new_ids)
     refresh_contents(db, new_ids)
+    # planta da filial: a do plano (o simulador de trajeto, a caminhada da posição pela saída e o 3D usam os
+    # corredores do projeto, sem precisar desenhar)
+    from models import BranchLayout
+    from services.branch_layout import from_plan
+
+    data = from_plan(plan)
+    if data["rows"]:
+        db.add(BranchLayout(branch_id=br.id, warehouse_id=wh.id if wh else None, data=data))
+        stats["layout_rows"] = len(data["rows"])
     db.flush()
     return br, stats

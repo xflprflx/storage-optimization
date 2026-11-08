@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Histórico de pedidos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-clock-history"></i> Histórico de pedidos (saídas)</h1>
+  <a href="{{ back or '/imports' }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card"><div class="card-body">
+      <div class="mb-3">
+        <span class="badge rounded-pill text-bg-primary">1. Enviar arquivo</span>
+        <span class="badge rounded-pill text-bg-light border">2. Conferir aba e colunas</span>
+        <span class="badge rounded-pill text-bg-light border">3. Resumo salvo</span>
+      </div>
+      <form method="post" action="/imports/history/upload" enctype="multipart/form-data">
+        <input type="hidden" name="back" value="{{ back or '/imports/history' }}">
+        <div class="mb-3"><label class="form-label">Filial</label>
+          <select class="form-select" name="branch_id" required>
+            <option value="">— escolha —</option>
+            {% for b in branches %}<option value="{{ b.id }}" {% if b.id == branch_id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
+          </select></div>
+        <div class="mb-3"><label class="form-label">Arquivo (XLSX, CSV ou TXT)</label>
+          <input type="file" class="form-control" name="file" accept=".xlsx,.xlsm,.csv,.txt" required>
+          <div class="form-text">Uma aba de pedidos (pedido, SKU, quantidade e, opcional, data — uma linha por item do pedido) ou uma lista de SKUs com a coluna Saída. Na próxima etapa você confere a aba e as colunas.</div></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="abs" value="1" id="abs" checked>
+          <label class="form-check-label" for="abs">Converter quantidades negativas para valor absoluto (relatórios que lançam a saída como negativa)</label></div>
+        <button class="btn btn-accent"><i class="bi bi-arrow-right"></i> Enviar e conferir colunas</button>
+      </form>
+      <hr>
+      <ul class="small text-muted mb-0">
+        <li>Só o <b>resumo</b> fica no sistema (linhas e unidades por SKU, pares que saem juntos e uma amostra de até 3.000 pedidos com as quantidades, para o simulador de trajeto); o arquivo é descartado.</li>
+        <li>Um histórico por filial: o envio substitui o anterior.</li>
+        <li>É usado na posição pela saída (Por endereço e Pool), no relatório de SKUs, na curva ABC do 3D e no simulador de trajeto.</li>
+      </ul>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card"><div class="card-header bg-white"><strong>Históricos salvos</strong></div>
+      <ul class="list-group list-group-flush small">
+        {% for b in branches %}{% set h = saved.get(b.id) %}
+        <li class="list-group-item d-flex justify-content-between gap-2">
+          <span><b>{{ b.code }}</b> - {{ b.name }}<br>
+            {% if h %}<span class="text-muted">{{ h[1] }} · {{ h[0] }}</span>{% else %}<span class="text-muted">sem histórico</span>{% endif %}</span>
+          {% if h %}<form method="post" action="/optimization/slotting/history/delete" onsubmit="return confirm('Remover o histórico da filial {{ b.code }}?')">
+            <input type="hidden" name="branch_id" value="{{ b.id }}"><input type="hidden" name="back" value="/imports/history">
+            <button class="btn btn-sm btn-link text-danger p-0" title="Remover"><i class="bi bi-trash"></i></button></form>{% endif %}
+        </li>
+        {% else %}<li class="list-group-item text-muted">Nenhuma filial cadastrada.</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

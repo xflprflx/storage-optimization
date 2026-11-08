@@ -456,8 +456,12 @@ def _route_setup(db: Session, pr: SiteProject):
     plan, errors, _cfg = _plan_for(db, pr)
     if errors or plan is None or not plan.modules:
         return None, None, None, None, None, " ".join(errors) or "Rode a otimização primeiro."
+    from services.walk_net import plan_net
+
     nodes, ref = plan_nodes(plan)
-    return sample, plan, nodes, ref_node(ref), ref, ""
+    start = ref_node(ref)
+    plan_net(plan, nodes, start)  # trajeto pelo piso livre: contorna estruturas e obstáculos
+    return sample, plan, nodes, start, ref, ""
 
 
 @router.get("/{pid}/routes")
@@ -470,11 +474,14 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
     ctx = dict(title=f"Projeto {pr.name}", back=f"/optimization/site/{pid}?run=1#resultado", svg="", rows=[], sel=None,
                link=f"/optimization/site/{pid}/routes?", ref_label="", how="", walk3d=f"/optimization/site/{pid}/3d?walk=1&",
-               dist_note="Distância pelos corredores: sai pela ponta do corredor ou por um transversal para trocar de corredor.")
+               dist_note="Distância pelo menor caminho no piso livre: pelos corredores, saindo pela ponta ou por um transversal "
+                         "para trocar de corredor, contornando estruturas e obstáculos.")
     sample, plan, nodes, start, ref, error = _route_setup(db, pr)
     if error:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=error)
-    rows_first = simulate(sample, nodes, start)
+    from services.route_sim import add_times, time_params
+
+    rows_first = add_times(simulate(sample, nodes, start), time_params(request.query_params))
     rows = sorted(rows_first["rows"], key=lambda r: -r["list_m"])
     chosen = order or (rows[0]["order"] if rows else "")
     sim = simulate([o for o in sample if o[0] == chosen], nodes, start, keep_routes={chosen}) if chosen else {}
@@ -497,8 +504,11 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
         svg = base.replace("</svg>", "".join(overlay) + "</svg>")
     how = ("ruas em serpentina" if plan.building.serpentine else "ruas na mesma direção") \
         if plan.building.address_mode == "row" else "uma letra por corredor (ímpares/pares)"
+    keep = [(k, v) for k, v in request.query_params.multi_items() if not k.startswith("t_")]
+    tq = "&".join(f"{k}={v}" for k, v in rows_first.get("times", {}).get("params", {}).items())
+    ctx["link"] = f"/optimization/site/{pid}/routes?{tq}&"
     return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
-                                                      "ref_label": ref["label"], "how": how},
+                                                      "ref_label": ref["label"], "how": how, "keep": keep},
                   sim=rows_first, error="")
 
 
@@ -572,6 +582,12 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
     br, stats = create_branch(db, plan, code, name, wh_code, wh_name, link_skus=on("link_skus"), items=items,
                               create_products=on("create_products"), update_products=on("update_products"),
                               default_mode=mode, launch_stock=on("launch_stock"))
+    orders = cfg.get("orders") or {}
+    if orders.get("skus"):  # histórico de pedidos do projeto vira o da filial (posição pela saída e simulador)
+        from models import PickHistory
+
+        db.add(PickHistory(branch_id=br.id, filename=f"projeto {pr.name}"[:200], data=orders))
+        stats["history"] = True
     db.commit()
     parts = [f"Filial {br.code} criada: {stats['bays']} estantes com estrutura, {stats['levels']} níveis, "
              f"{stats['locations']} endereços e {stats['bins']} bins."]
@@ -583,6 +599,9 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
         parts.append(f"{stats['assigned']} atribuição(ões) produto → endereço"
                      + (f", {stats['defaults']} endereço(s) padrão definido(s)" if stats["defaults"] else "")
                      + (f", {stats['stock_units']:g} unidade(s) de saldo lançadas" if stats["stock_units"] else "") + ".")
+    if stats.get("layout_rows"):
+        parts.append(f"Planta da filial gerada a partir do plano ({stats['layout_rows']} fileiras)"
+                     + (" e histórico de pedidos copiado do projeto" if stats.get("history") else "") + ".")
     if stats["skus_without_product"]:
         parts.append(f"{stats['skus_without_product']} SKU(s) sem cadastro de produto ficaram sem atribuição.")
     return redirect(f"/layout?branch_id={br.id}", " ".join(parts), "warning" if stats["skus_without_product"] else "success")

@@ -25,6 +25,7 @@
     <a class="btn btn-outline-secondary" href="/layout?{{ qs }}"><i class="bi bi-bricks"></i> Mapa do estoque</a>
     <a class="btn btn-outline-secondary" id="lnk3d" href="/layout/plan/3d?{{ qs }}"><i class="bi bi-box"></i> Ver em 3D</a>
     <a class="btn btn-outline-secondary" id="lnkRoutes" href="/optimization/slotting/routes?{{ qs }}"><i class="bi bi-signpost-2"></i> Simulador de trajeto</a>
+    <a class="btn btn-outline-secondary" href="/imports/history?branch_id={{ branch.id }}&back={{ ('/layout/plan?' ~ qs)|urlencode }}" title="Enviar o histórico de pedidos da filial (usado pelo simulador e pela posição pela saída)"><i class="bi bi-clock-history"></i> Histórico de pedidos</a>
     <button class="btn btn-primary" id="btnSave"><i class="bi bi-save"></i> Salvar planta</button>
   </div>
 </div>
@@ -83,6 +84,16 @@
           <button class="btn btn-sm btn-outline-danger" id="pDel" title="Apagar (Del)"><i class="bi bi-trash"></i></button>
         </div>
         <div class="col-12 text-muted mt-1" id="pInfo"></div>
+        <div class="col-12 mt-2 pt-1 border-top fw-semibold">Corredor desta fileira</div>
+        <div class="col-12"><label class="form-label mb-0" title="Fileira do outro lado do corredor (as duas formam um corredor de caminhada)">Vizinho de frente</label>
+          <select class="form-select form-select-sm" id="pPair"></select></div>
+        <div class="col-6"><label class="form-label mb-0" title="Vão entre esta fileira e o vizinho de frente: mudar aqui move o vizinho">Largura (m)</label>
+          <input class="form-control form-control-sm" id="pGap" type="number" step="0.1" min="0.5"></div>
+        <div class="col-6 d-flex align-items-end"><div class="form-check mb-1">
+          <input class="form-check-input" type="checkbox" id="pPush" checked>
+          <label class="form-check-label" for="pPush" title="Ao mudar a largura, as fileiras depois do vizinho andam junto">empurrar as seguintes</label></div></div>
+        <div class="col-12"><label class="form-label mb-0" title="Mão única: o separador só anda no corredor num sentido (sem contra fluxo)">Sentido</label>
+          <select class="form-select form-select-sm" id="pFlow"></select></div>
       </div>
       <div id="obsProps" class="row g-1">
         <div class="col-12"><label class="form-label mb-0">Nome</label><input class="form-control form-control-sm" id="oName" maxlength="60"></div>
@@ -108,9 +119,21 @@
       <div class="row g-1">
         <div class="col-6"><label class="form-label mb-0">Corredor (m)</label><input class="form-control form-control-sm" id="aW" type="number" step="0.1" value="3"></div>
         <div class="col-6"><label class="form-label mb-0" title="Espaço livre antes das fileiras (expedição)">Frente livre (m)</label><input class="form-control form-control-sm" id="aF" type="number" step="0.1" value="4"></div>
+        <div class="col-12"><label class="form-label mb-0" title="Largura própria de alguns corredores, pela letra: A=3,5; C=2,8">Corredores com outra largura</label>
+          <input class="form-control form-control-sm" id="aWs" placeholder="ex.: A=3,5; C=2,8"></div>
       </div>
       <button class="btn btn-sm btn-outline-primary mt-1" id="btnAuto"><i class="bi bi-magic"></i> Gerar</button>
     </div></div>
+
+    {% if projects %}
+    <div class="card mb-2"><div class="card-body py-2">
+      <div class="fw-semibold mb-1">Planta de um projeto de filial nova</div>
+      <div class="text-muted mb-1">Usa as fileiras, as cabeceiras, os obstáculos e a referência do plano do projeto (os endereços precisam ter os
+        mesmos códigos — é o caso da filial criada pelo projeto).</div>
+      <select class="form-select form-select-sm mb-1" id="prjSel">{% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+      <button class="btn btn-sm btn-outline-primary" id="btnPrj"><i class="bi bi-diagram-3"></i> Usar a planta do projeto</button>
+    </div></div>
+    {% endif %}
 
     <form method="post" action="/layout/plan/delete" onsubmit="return confirm('Remover a planta desta filial? A caminhada volta a ser estimada pelo endereço.')">
       <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
@@ -136,7 +159,9 @@
   // estantes de uma fileira (como no servidor): do corredor, pelo lado dos números, na ordem (ou invertida)
   const par = b => b.p;
   function rowBays(r) {
-    const bs = (BAYS[r.aisle] || []).filter(b => r.side === 'all' || par(b) === (r.side === 'odd' ? 1 : 0));
+    let bs;
+    if (r.bays && r.bays.length) { const by = Object.fromEntries((BAYS[r.aisle] || []).map(b => [b.bay, b])); bs = r.bays.filter(c => by[c]).map(c => by[c]); }
+    else bs = (BAYS[r.aisle] || []).filter(b => r.side === 'all' || par(b) === (r.side === 'odd' ? 1 : 0));
     return r.rev ? bs.slice().reverse() : bs;
   }
   function rowGeom(r) {
@@ -165,6 +190,20 @@
       el('rect', { ...a, fill: '#dbe7f5', opacity: 0.8 }, svg);
       const ln = c.orient === 'h' ? { x1: c.lo, y1: c.center, x2: c.hi, y2: c.center } : { x1: c.center, y1: c.lo, x2: c.center, y2: c.hi };
       el('line', { ...ln, stroke: '#2f6db5', 'stroke-width': sw, 'stroke-dasharray': `${sw * 6} ${sw * 4}` }, svg);
+      if (c.flow) {  // mão única: setas no sentido permitido
+        const n = Math.max(1, Math.floor((c.hi - c.lo) / Math.max(300, fs * 8))), a = fs * 0.5;
+        for (let k = 0; k < n; k++) {
+          const t = c.lo + (c.hi - c.lo) * (k + 0.5) / n, tip = t + c.flow * a, back = t - c.flow * a;
+          const P = c.orient === 'h' ? [[tip, c.center], [back, c.center - a * 0.8], [back, c.center + a * 0.8]]
+            : [[c.center, tip], [c.center - a * 0.8, back], [c.center + a * 0.8, back]];
+          el('polygon', { points: P.map(p => p.join(',')).join(' '), fill: '#2f6db5', opacity: 0.8 }, svg);
+        }
+      }
+      if (c.rows.length > 1) {  // largura do corredor (vão entre as fileiras frente a frente)
+        const at = c.orient === 'h' ? { x: c.lo + fs * 0.4, y: c.center - fs * 0.25 } : { x: c.center, y: c.lo + fs, transform: `rotate(-90 ${c.center} ${c.lo + fs})` };
+        const t = el('text', { ...at, 'font-size': fs * 0.55, fill: '#2f6db5', 'text-anchor': c.orient === 'h' ? 'start' : 'end' }, svg);
+        t.textContent = `${fmt(c.width / 100, 2)} m`;
+      }
     });
     D.obstacles.forEach((o, i) => {
       const g = el('g', { class: 'nk-obs' + (sel && sel.kind === 'obs' && sel.i === i ? ' sel' : ''), 'data-kind': 'obs', 'data-i': i }, svg);
@@ -256,18 +295,70 @@
       $('propTitle').textContent = `Fileira ${r.aisle} (${SIDE[r.side]})`;
       $('pAisle').value = r.aisle; $('pSide').value = r.side;
       $('pX').value = r.x / 100; $('pY').value = r.y / 100; $('pDepth').value = r.depth / 100; $('pBayW').value = r.bay_w / 100;
-      $('pInfo').textContent = G.bays.length ? `${G.bays.length} estante(s): ${G.bays[0].bay} → ${G.bays[G.bays.length - 1].bay} · ${fmt(G.len / 100)} m`
-        : 'Nenhuma estante deste corredor/lado nos endereços.';
+      $('pInfo').textContent = (G.bays.length ? `${G.bays.length} estante(s): ${G.bays[0].bay} → ${G.bays[G.bays.length - 1].bay} · ${fmt(G.len / 100)} m`
+        : 'Nenhuma estante deste corredor/lado nos endereços.') + (r.bays && r.bays.length ? ' · lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)' : '');
+      corridorProps(r);
     } else {
       const o = D.obstacles[sel.i];
       $('propTitle').textContent = 'Obstáculo';
       $('oName').value = o.name; $('oX').value = o.x / 100; $('oY').value = o.y / 100; $('oW').value = o.w / 100; $('oD').value = o.d / 100;
     }
   }
+  // ---------------------------------------------------------------- corredor: vizinho de frente, largura e sentido
+  const SIDE_TXT = { odd: 'ímpares', even: 'pares', all: 'todas' };
+  const rowLabel = r => `${r.aisle} ${SIDE_TXT[r.side]}${r.bays && r.bays.length ? ' ' + r.bays[0] + '…' : ''} (#${r.id})`;
+  const byId = id => D.rows.find(r => r.id === id);
+  const partners = r => (INFO.pairs || []).filter(p => p[0] === r.id || p[1] === r.id).map(p => ({ row: byId(p[0] === r.id ? p[1] : p[0]), gap: p[2], manual: p[3] })).filter(p => p.row);
+  const corridorOf = r => (INFO.corridors || []).find(c => c.rows.includes(r.id));
+  function corridorProps(r) {
+    const opts = D.rows.filter(o => o !== r && o.orient === r.orient && o.face !== r.face);
+    $('pPair').innerHTML = '<option value="0">Automático (a fileira mais perto que olha para esta)</option><option value="-1">Nenhum — fileira sozinha</option>' +
+      opts.map(o => `<option value="${o.id}">${esc(rowLabel(o))}</option>`).join('');
+    $('pPair').value = String(r.pair || 0);
+    const ps = partners(r);
+    $('pGap').disabled = !ps.length;
+    $('pGap').value = ps.length ? fmt(ps[0].gap / 100, 2).replace(',', '.') : '';
+    $('pGap').title = ps.length ? `Vizinho: ${ps.map(p => rowLabel(p.row)).join(', ')}` : 'Sem vizinho de frente: o corredor fica a 1 m da face';
+    const h = r.orient === 'h';
+    $('pFlow').innerHTML = `<option value="">Dois sentidos (contra fluxo permitido)</option><option value="+">Mão única ${h ? '→ (X crescente)' : '↓ (Y crescente)'}</option>` +
+      `<option value="-">Mão única ${h ? '← (X decrescente)' : '↑ (Y decrescente)'}</option>`;
+    const c = corridorOf(r);
+    $('pFlow').value = c && c.flow ? (c.flow > 0 ? '+' : '-') : (r.flow || '');
+  }
+  $('pPair').addEventListener('change', () => {
+    if (!sel || sel.kind !== 'row') return;
+    const r = D.rows[sel.i], v = +$('pPair').value, old = r.pair;
+    D.rows.forEach(o => { if (o !== r && (o.pair === r.id || (old > 0 && o.id === old && o.pair === r.id))) o.pair = 0; });
+    r.pair = v;
+    if (v > 0) { const o = byId(v); if (o) o.pair = r.id; }
+    draw(); props(); changed();
+  });
+  $('pGap').addEventListener('change', () => {
+    if (!sel || sel.kind !== 'row') return;
+    const r = D.rows[sel.i], ps = partners(r), want = cm($('pGap').value);
+    if (!ps.length || !(want > 0)) return;
+    const k = r.orient === 'h' ? 'y' : 'x', dir = r.face === '+' ? 1 : -1;
+    ps.forEach(p => {
+      const delta = (want - p.gap) * dir, from = p.row[k];
+      const moving = $('pPush').checked
+        ? D.rows.filter(o => o !== r && o.orient === r.orient && (dir > 0 ? o[k] >= from - 1 : o[k] <= from + 1))
+        : [p.row];
+      moving.forEach(o => { o[k] = Math.round(o[k] + delta); });
+    });
+    draw(); props(); changed();
+  });
+  $('pFlow').addEventListener('change', () => {
+    if (!sel || sel.kind !== 'row') return;
+    const r = D.rows[sel.i], c = corridorOf(r), ids = c ? c.rows : [r.id];
+    D.rows.forEach(o => { if (ids.includes(o.id)) o.flow = $('pFlow').value; });
+    draw(); props(); changed();
+  });
+  const nextId = () => Math.max(0, ...D.rows.map(r => r.id || 0)) + 1;
+
   const cm = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
   const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
-  bind('pAisle', r => { r.aisle = $('pAisle').value; });
-  bind('pSide', r => { r.side = $('pSide').value; });
+  bind('pAisle', r => { r.aisle = $('pAisle').value; delete r.bays; });
+  bind('pSide', r => { r.side = $('pSide').value; delete r.bays; });
   bind('pX', r => { if (!isNaN(cm($('pX').value))) r.x = cm($('pX').value); });
   bind('pY', r => { if (!isNaN(cm($('pY').value))) r.y = cm($('pY').value); });
   bind('pDepth', r => { const v = cm($('pDepth').value); if (v > 0) r.depth = v; });
@@ -286,7 +377,8 @@
   $('pDup').addEventListener('click', () => {
     if (!sel || sel.kind !== 'row') return;
     const r = D.rows[sel.i], G = rowGeom(r);
-    const c = { ...r, side: r.side === 'odd' ? 'even' : r.side === 'even' ? 'odd' : r.side, face: r.face === '+' ? '-' : '+' };
+    const c = { ...r, id: nextId(), pair: 0, side: r.side === 'odd' ? 'even' : r.side === 'even' ? 'odd' : r.side, face: r.face === '+' ? '-' : '+' };
+    delete c.bays;
     if (r.orient === 'h') c.y = r.y + (r.face === '+' ? G.d + 300 : -G.d - 300); else c.x = r.x + (r.face === '+' ? G.w + 300 : -G.w - 300);
     D.rows.push(c); select('row', D.rows.length - 1); changed();
   });
@@ -314,7 +406,7 @@
           && (BAYS[a] || []).some(b => s === 'all' || b.p === (s === 'odd' ? 1 : 0))) { aisle = a; side = s; break outer; }
     }
     const c = { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
-    D.rows.push({ aisle, side, x: snap(c.x), y: snap(c.y), orient: 'h', rev: false, face: '+', depth: 60, bay_w: 100 });
+    D.rows.push({ id: nextId(), pair: 0, flow: '', aisle, side, x: snap(c.x), y: snap(c.y), orient: 'h', rev: false, face: '+', depth: 60, bay_w: 100 });
     select('row', D.rows.length - 1); changed();
   });
   $('addObs').addEventListener('click', () => {
@@ -335,7 +427,14 @@
   function changed() {
     dirty = true; status();
     clearTimeout(checkTimer);
-    checkTimer = setTimeout(async () => { const r = await post('/layout/plan/check', { data: D }); if (!r.error) { INFO = r; draw(); info(); } }, 400);
+    checkTimer = setTimeout(async () => {
+      const r = await post('/layout/plan/check', { data: D });
+      if (r.error) return;
+      INFO = r;
+      // ids novos atribuídos pelo servidor (fileiras sem id) voltam para o editor
+      (r.data.rows || []).forEach((sr, i) => { if (D.rows[i] && !D.rows[i].id) D.rows[i].id = sr.id; });
+      draw(); info(); if (!drag) props();
+    }, 400);
   }
   function status() {
     $('status').innerHTML = dirty ? '<span class="text-warning-emphasis"><i class="bi bi-pencil"></i> Alterações não salvas</span>'
@@ -358,7 +457,13 @@
   }
   $('btnAuto').addEventListener('click', async () => {
     if (D.rows.length && !confirm('Substituir a planta em edição pela gerada automaticamente?')) return;
-    const r = await post('/layout/plan/auto', { mode: $('aMode').value, aisle_w: cm($('aW').value), front: cm($('aF').value) });
+    const r = await post('/layout/plan/auto', { mode: $('aMode').value, aisle_w: cm($('aW').value), front: cm($('aF').value), widths: $('aWs').value });
+    if (r.error) { alert(r.error); return; }
+    load({ ...r, bays: BAYS }); dirty = true; status();
+  });
+  if ($('btnPrj')) $('btnPrj').addEventListener('click', async () => {
+    if (D.rows.length && !confirm('Substituir a planta em edição pela do projeto?')) return;
+    const r = await post('/layout/plan/from_project', { project_id: +$('prjSel').value });
     if (r.error) { alert(r.error); return; }
     load({ ...r, bays: BAYS }); dirty = true; status();
   });

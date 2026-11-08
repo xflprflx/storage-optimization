@@ -11,12 +11,19 @@ todos). Cada fileira guarda:
     rev     a numeração começa na outra ponta
     face    lado do corredor de acesso: "+" (Y/X maior) ou "-" (Y/X menor)
     depth   profundidade da fileira (cm); bay_w = frente de cada estante sem estrutura cadastrada (cm)
+    id      identificador estável da fileira (para o vizinho de frente)
+    pair    vizinho de frente: 0 = automático (a fileira mais perto que olha para esta), -1 = nenhum (fileira sozinha)
+            ou o id da fileira escolhida
+    flow    sentido do corredor: "" = dois sentidos (contra fluxo permitido), "+" = só no sentido crescente de X/Y,
+            "-" = só no decrescente (mão única)
+    bays    opcional: lista fixa das estantes da fileira, na ordem (plantas geradas do projeto de filial nova)
 A frente de cada estante vem da estrutura cadastrada (Estruturas nas estantes) ou de bay_w.
 
-Corredores de caminhada: duas fileiras que se olham (mesma orientação, faces opostas, até MAX_AISLE de vão) formam um
-corredor com o eixo no meio; uma fileira sozinha tem o eixo a LONE_AISLE da face. As pontas do corredor (e as
-passagens entre fileiras) são por onde se entra e sai. A distância segue services/route_sim (pelos corredores e em L
-entre eles; obstáculos não desviam o trajeto).
+Corredores de caminhada: duas fileiras que se olham (mesma orientação, faces opostas, até MAX_AISLE de vão; as mais
+perto primeiro, sem uma fileira "atravessar" outra) formam um corredor com o eixo no meio; com o vizinho escolhido à
+mão, vale a escolha (qualquer vão). Uma fileira sozinha tem o eixo a LONE_AISLE da face. As pontas do corredor (e as
+passagens entre fileiras) são por onde se entra e sai. A distância é o menor caminho pela rede de caminhada
+(services/walk_net), que contorna as fileiras e os obstáculos e respeita a mão única dos corredores.
 """
 from __future__ import annotations
 
@@ -100,16 +107,35 @@ def bays_json(bays: dict[str, list[Bay]]) -> dict:
 
 def row_bays(row: dict, bays: dict[str, list[Bay]]) -> list[Bay]:
     side = row.get("side") or "all"
-    out = [b for b in bays.get((row.get("aisle") or "").upper(), [])
-           if side == "all" or parity(b.bay) == (1 if side == "odd" else 0)]
+    have = bays.get((row.get("aisle") or "").upper(), [])
+    if row.get("bays"):  # lista fixa (na ordem dada)
+        by = {b.bay: b for b in have}
+        out = [by[c] for c in row["bays"] if c in by]
+    else:
+        out = [b for b in have if side == "all" or parity(b.bay) == (1 if side == "odd" else 0)]
     return out[::-1] if row.get("rev") else out
 
 
-def auto_layout(bays: dict[str, list[Bay]], mode: str = "aisle", aisle_w: float = 300.0, front: float = 400.0) -> dict:
+def parse_widths(text: str) -> dict[str, float]:
+    """"A=3,5; C=2.8" -> {"A": 350.0, "C": 280.0} (metros -> cm): largura própria de alguns corredores."""
+    out = {}
+    for part in re.split(r"[;\n]+", text or ""):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            w = _num(v, 0.0, 0, 50)
+            if k.strip() and w > 0:
+                out[k.strip().upper()] = round(w * 100, 1)
+    return out
+
+
+def auto_layout(bays: dict[str, list[Bay]], mode: str = "aisle", aisle_w: float = 300.0, front: float = 400.0,
+                widths: Optional[dict] = None) -> dict:
     """Planta inicial: fileiras horizontais empilhadas, na ordem dos corredores, com a frente (expedição) à esquerda.
     mode "aisle": uma letra por corredor — ímpares de um lado e pares do outro, frente a frente;
-    mode "row": uma letra por rua — as ruas em pares (A|B, C|D…) frente a frente."""
+    mode "row": uma letra por rua — as ruas em pares (A|B, C|D…) frente a frente.
+    widths: largura própria (cm) de alguns corredores, pela letra (no modo "row", a de qualquer uma das duas ruas)."""
     aisle_w = _num(aisle_w, 300.0, 80, 2000)
+    widths = {str(k).upper(): _num(v, aisle_w, 80, 5000) for k, v in (widths or {}).items()}
     front = _num(front, 400.0, 0, 10000)
     rows, y = [], 150.0
 
@@ -138,7 +164,7 @@ def auto_layout(bays: dict[str, list[Bay]], mode: str = "aisle", aisle_w: float 
         r1 = {"aisle": top[0], "side": top[1]}
         d1 = depth_of(row_bays(r1, bays))
         rows.append({**r1, "x": front, "y": y, "orient": "h", "rev": False, "face": "+", "depth": d1, "bay_w": DEFAULT_BAY_W})
-        y += d1 + aisle_w
+        y += d1 + (widths.get(top[0]) or (widths.get(bottom[0]) if bottom else None) or aisle_w)
         if bottom:
             r2 = {"aisle": bottom[0], "side": bottom[1]}
             d2 = depth_of(row_bays(r2, bays))
@@ -147,7 +173,7 @@ def auto_layout(bays: dict[str, list[Bay]], mode: str = "aisle", aisle_w: float 
             y += d2
         y += 60.0  # costas com costas / folga até a próxima fileira
     for i, r in enumerate(rows):
-        r["id"] = i + 1
+        r.update(id=i + 1, pair=0, flow="")
     length = max([front + length_of(row_bays(r, bays)) for r in rows] + [front + 500.0]) + 300.0
     width = y + 150.0
     return {"L": round(length), "W": round(width), "rows": rows, "obstacles": [],
@@ -159,10 +185,31 @@ def clean(data: dict) -> dict:
     L = _num(data.get("L"), 3000, 100, 100000)
     W = _num(data.get("W"), 2000, 100, 100000)
     rows = []
-    for i, r in enumerate(data.get("rows") or []):
-        if not isinstance(r, dict) or not str(r.get("aisle") or "").strip():
-            continue
-        rows.append({"id": i + 1, "aisle": str(r["aisle"]).strip().upper()[:20],
+    ids: set[int] = set()
+    raw = [r for r in (data.get("rows") or []) if isinstance(r, dict) and str(r.get("aisle") or "").strip()]
+    for r in raw:  # id estável (o vizinho de frente aponta para ele); repetido ou ausente ganha um novo
+        try:
+            rid = int(r.get("id"))
+        except (TypeError, ValueError):
+            rid = 0
+        r["_id"] = rid if rid > 0 and rid not in ids else 0
+        ids.add(r["_id"])
+    nxt = max(ids | {0}) + 1
+    for r in raw:
+        if not r["_id"]:
+            r["_id"], nxt = nxt, nxt + 1
+    valid = {r["_id"] for r in raw}
+    for r in raw:
+        try:
+            pair = int(r.get("pair") or 0)
+        except (TypeError, ValueError):
+            pair = 0
+        pair = pair if pair == -1 or (pair in valid and pair != r["_id"]) else 0
+        bl = [str(b).strip().upper()[:20] for b in (r.get("bays") or []) if str(b).strip()][:2000] \
+            if isinstance(r.get("bays"), list) else []
+        rows.append({"id": r["_id"], "pair": pair, "flow": r.get("flow") if r.get("flow") in ("+", "-") else "",
+                     **({"bays": bl} if bl else {}),
+                     "aisle": str(r["aisle"]).strip().upper()[:20],
                      "side": r.get("side") if r.get("side") in SIDES else "all",
                      "x": round(_num(r.get("x"), 0, -L, 2 * L), 1), "y": round(_num(r.get("y"), 0, -W, 2 * W), 1),
                      "orient": "v" if r.get("orient") == "v" else "h", "rev": bool(r.get("rev")),
@@ -203,6 +250,9 @@ class Corridor:
     ends: tuple
     lo: float
     hi: float
+    flow: int = 0  # 0 = dois sentidos; +1 / -1 = mão única (sentido crescente / decrescente de X ou Y)
+    rows: list = field(default_factory=list)  # índices das fileiras do corredor
+    covered: list = field(default_factory=list)  # trechos (ao longo) com fileiras
 
 
 @dataclass
@@ -215,13 +265,15 @@ class Geometry:
     row_rects: list[tuple] = field(default_factory=list)  # (x, y, w, d, row)
     unplaced: list[str] = field(default_factory=list)  # "A (ímpares)…" sem fileira
     dup: list[str] = field(default_factory=list)  # estantes em mais de uma fileira
+    pairs: list[tuple] = field(default_factory=list)  # (fileira, fileira, vão em cm, manual?) frente a frente
+    net: object = None  # rede de caminhada (services/walk_net.WalkNet)
 
     @property
     def ref(self) -> dict:
         return self.data["ref"]
 
     def ref_node(self) -> Node:
-        return Node(key="REF", gx=self.ref["x"], gy=self.ref["y"])
+        return Node(key="REF", gx=self.ref["x"], gy=self.ref["y"], net=self.net)
 
     def node(self, aisle: str, bay: str) -> Optional[Node]:
         return self.nodes.get(((aisle or "").upper(), (bay or "").upper()))
@@ -236,7 +288,39 @@ def _edge(r: dict, length: float) -> tuple[float, float, float]:
     return e, r["y"], r["y"] + length
 
 
-def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
+def _pairs(rows: list, info: list) -> list[tuple]:
+    """Fileiras frente a frente: (i, j, vão, centro do corredor, manual?). Primeiro as escolhidas à mão; depois as mais
+    perto, sem que uma fileira forme corredor com outra que está atrás de uma vizinha já aceita (o trecho em comum
+    não pode repetir)."""
+    cands = []
+    for k, (ri, r, e, a0, a1) in enumerate(info):
+        for rj, s_, e2, b0, b1 in info[k + 1:]:
+            if s_["orient"] != r["orient"] or s_["face"] == r["face"]:
+                continue
+            gap = (e2 - e) if r["face"] == "+" else (e - e2)
+            o0, o1 = max(a0, b0), min(a1, b1)
+            manual = r.get("pair") == s_.get("id") or s_.get("pair") == r.get("id")
+            if manual:
+                if gap >= 0:
+                    cands.append((0, gap, ri, rj, o0, o1, (e + e2) / 2))
+                continue
+            if r.get("pair") or s_.get("pair") or o1 - o0 <= 0 or not 0 <= gap <= MAX_AISLE:
+                continue  # quem escolheu o vizinho (ou "nenhum") não entra no automático
+            cands.append((1, gap, ri, rj, o0, o1, (e + e2) / 2))
+    cands.sort(key=lambda c: (c[0], c[1]))
+    taken: dict[int, list] = {}
+    out = []
+    for auto, gap, ri, rj, o0, o1, c in cands:
+        hit = lambda r: any(min(o1, q1) - max(o0, q0) > 1e-6 for q0, q1 in taken.get(r, []))  # noqa: E731
+        if auto and (hit(ri) or hit(rj)):
+            continue
+        taken.setdefault(ri, []).append((o0, o1))
+        taken.setdefault(rj, []).append((o0, o1))
+        out.append((ri, rj, gap, c, not auto))
+    return out
+
+
+def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geometry:
     g = Geometry(data=data, bays=bays)
     rows = data.get("rows") or []
     info = []
@@ -263,7 +347,7 @@ def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
         rw, rd = (length, r["depth"]) if r["orient"] == "h" else (r["depth"], length)
         g.row_rects.append((r["x"], r["y"], rw, rd, ri))
         info.append((ri, r, *_edge(r, length)))
-    # corredores: fileiras que se olham (mais perto) ficam no mesmo; as demais têm o seu
+    # corredores: fileiras frente a frente ficam no mesmo; as demais têm o seu
     parent = list(range(len(rows)))
 
     def find(i):
@@ -272,23 +356,14 @@ def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
             i = parent[i]
         return i
 
-    center: dict[int, float] = {}
-    width: dict[int, float] = {}
-    for ri, r, e, a0, a1 in info:
-        best = None
-        for rj, s, e2, b0, b1 in info:
-            if rj == ri or s["orient"] != r["orient"] or s["face"] == r["face"] or min(a1, b1) - max(a0, b0) <= 0:
-                continue
-            gap = (e2 - e) if r["face"] == "+" else (e - e2)
-            if 0 <= gap <= MAX_AISLE and (best is None or gap < best[0]):
-                best = (gap, rj, e2)
-        if best:
-            center[ri], width[ri] = (e + best[2]) / 2, best[0]
-            ra, rb = find(ri), find(best[1])
-            if ra != rb:
-                parent[rb] = ra
-        else:
-            center[ri], width[ri] = e + (LONE_AISLE if r["face"] == "+" else -LONE_AISLE), 2 * LONE_AISLE
+    pair_c: dict[int, list] = {}
+    for ri, rj, gap, c, manual in _pairs(rows, info):
+        g.pairs.append((ri, rj, gap, manual))
+        pair_c.setdefault(ri, []).append((c, gap))
+        pair_c.setdefault(rj, []).append((c, gap))
+        ra, rb = find(ri), find(rj)
+        if ra != rb:
+            parent[rb] = ra
     groups: dict[int, list] = {}
     for ri, r, e, a0, a1 in info:
         groups.setdefault(find(ri), []).append((ri, a0, a1))
@@ -297,16 +372,32 @@ def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
         ivs = sorted((a0, a1) for _ri, a0, a1 in members)
         lo, hi = ivs[0][0], max(a1 for _a0, a1 in ivs)
         ends, reach = {lo - END_MARGIN, hi + END_MARGIN}, ivs[0][1]
+        covered = [[ivs[0][0], ivs[0][1]]]
         for a0, a1 in ivs[1:]:
             if a0 - reach >= MIN_PASSAGE:
                 ends.add((a0 + reach) / 2)  # passagem entre fileiras
+            if a0 > covered[-1][1]:
+                covered.append([a0, a1])
+            else:
+                covered[-1][1] = max(covered[-1][1], a1)
             reach = max(reach, a1)
-        c = sum(center[ri] for ri, *_ in members) / len(members)
-        wdt = min(width[ri] for ri, *_ in members)
-        cor = Corridor(k, rows[members[0][0]]["orient"], c, wdt, tuple(sorted(ends)), lo, hi)
+        pcs = [pc for ri, *_ in members for pc in pair_c.get(ri, [])]
+        if pcs:
+            c = sum(v for v, _g in pcs) / len(pcs)
+            wdt = min(gp for _v, gp in pcs)
+        else:  # fileira sozinha
+            ri0 = members[0][0]
+            e = info[ri0][2]
+            c = e + (LONE_AISLE if rows[ri0]["face"] == "+" else -LONE_AISLE)
+            wdt = 2 * LONE_AISLE
+        flow = next((rows[ri].get("flow") for ri, *_ in members if rows[ri].get("flow") in ("+", "-")), "")
+        cor = Corridor(k, rows[members[0][0]]["orient"], c, wdt, tuple(sorted(ends)), lo, hi,
+                       {"+": 1, "-": -1}.get(flow, 0), [ri for ri, *_ in members], [tuple(v) for v in covered])
         g.corridors.append(cor)
         for ri, *_ in members:
             row_corr[ri] = cor
+    if with_net:
+        g.net = _net(g)
     for key, p in g.placed.items():
         cor = row_corr[p.row]
         if cor.orient == "h":
@@ -314,7 +405,7 @@ def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
         else:
             tg = (lambda along, cross, w, d: (cross, along, w, d))
         g.nodes[key] = Node(key=f"{key[0]}-{key[1]}", gx=p.gx, gy=p.gy, zone=cor.index, aisle=0, along=p.along,
-                            cross=cor.center, ends=cor.ends, to_global=tg)
+                            cross=cor.center, ends=cor.ends, to_global=tg, corridor=cor.index, net=g.net)
     # estantes sem fileira
     for a, bs in bays.items():
         miss = [b for b in bs if (a, b.bay) not in g.placed]
@@ -328,11 +419,41 @@ def build(data: dict, bays: dict[str, list[Bay]]) -> Geometry:
     return g
 
 
+_NET_CACHE: dict[str, object] = {}
+
+
+def _net(g: Geometry):
+    """Rede de caminhada da planta (guardada pela geometria: a mesma planta não é recalculada a cada tela)."""
+    import json
+
+    from services.walk_net import CorridorSpec, WalkNet
+
+    d = g.data
+    blocks = [tuple(round(v, 1) for v in r[:4]) for r in g.row_rects] + \
+        [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
+    cors = [(c.index, c.orient, round(c.center, 1), round(c.width, 1), [round(e, 1) for e in c.ends], c.flow,
+             [[round(a, 1), round(b, 1)] for a, b in c.covered]) for c in g.corridors]
+    key = json.dumps([blocks, cors, d["ref"]["x"], d["ref"]["y"], d["L"], d["W"]])
+    hit = _NET_CACHE.get(key)
+    if hit is not None:
+        return hit
+    specs = {}
+    for c in g.corridors:
+        to_xy = (lambda e, cc=c.center: (e, cc)) if c.orient == "h" else (lambda e, cc=c.center: (cc, e))
+        specs[c.index] = CorridorSpec(ends=c.ends, to_xy=to_xy, flow=c.flow, covered=c.covered,
+                                      half_width=c.width / 2, orient=c.orient, center=c.center)
+    net = WalkNet(blocks, specs, (d["ref"]["x"], d["ref"]["y"]), (d["L"], d["W"]))
+    if len(_NET_CACHE) >= 8:
+        _NET_CACHE.pop(next(iter(_NET_CACHE)))
+    _NET_CACHE[key] = net
+    return net
+
+
 def geometry(db: Session, branch_id: int, warehouse_id: Optional[int]) -> Optional[Geometry]:
     lay = get_layout(db, branch_id, warehouse_id)
     if lay is None or not (lay.data or {}).get("rows"):
         return None
-    return build(clean(lay.data), scope_bays(db, branch_id, warehouse_id))
+    return build(clean(lay.data), scope_bays(db, branch_id, warehouse_id), with_net=True)
 
 
 def walk_m(g: Geometry, node: Node) -> float:
@@ -354,6 +475,7 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
         else:
             x, y, w, h = c.center - c.width / 2, c.lo, c.width, c.hi - c.lo
         out.append(f'<rect x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" fill="#e3e9ee"/>')
+        out += flow_arrows(c, fs)
     for o in d["obstacles"]:
         out.append(f'<rect x="{o["x"]:.0f}" y="{o["y"]:.0f}" width="{o["w"]:.0f}" height="{o["d"]:.0f}" fill="#2b2f33" opacity=".85">'
                    f'<title>{_esc(o["name"])}</title></rect>')
@@ -374,6 +496,24 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
                f'{_esc(ref["label"])}</title></circle>')
     out.append("</svg>")
     return "".join(out)
+
+
+def flow_arrows(c: Corridor, fs: float) -> list[str]:
+    """Setas do sentido de um corredor de mão única (SVG, cm)."""
+    if not c.flow:
+        return []
+    n = max(1, int((c.hi - c.lo) // max(300.0, fs * 8)))
+    out, a = [], fs * 0.5
+    for k in range(n):
+        t = c.lo + (c.hi - c.lo) * (k + 0.5) / n
+        tip, back = t + c.flow * a, t - c.flow * a
+        if c.orient == "h":
+            pts = [(tip, c.center), (back, c.center - a * 0.8), (back, c.center + a * 0.8)]
+        else:
+            pts = [(c.center, tip), (c.center - a * 0.8, back), (c.center + a * 0.8, back)]
+        out.append('<polygon points="' + " ".join(f"{x:.0f},{y:.0f}" for x, y in pts)
+                   + '" fill="#2f6db5" opacity=".75"><title>Mão única</title></polygon>')
+    return out
 
 
 def _esc(t) -> str:
@@ -415,7 +555,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         for lid, sku, name, q, h, w, ln in db.execute(
                 select(StockItem.location_id, Product.sku, Product.name, StockItem.quantity, Product.height, Product.width,
                        Product.length).join(Product, Product.id == StockItem.product_id)
-                .where(StockItem.location_id.in_(chunk), StockItem.quantity > 0).order_by(Product.sku)):
+                .where(StockItem.location_id.in_(chunk), StockItem.quantity >= 0).order_by(Product.sku)):
             sku_of.setdefault(lid, (sku, name))
             names[sku] = name
             uv = unit_volume_l(h, w, ln)
@@ -536,3 +676,64 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
             "aisles": aisles, "skus": names, "ref": d["ref"],
             "kpis": {"modules": len(out_mods), "bins": len(out_bins), "bin_fill": sum(allf) / len(allf) if allf else None,
                      "level_fill": None}}
+
+
+def from_plan(plan) -> dict:
+    """Planta da filial a partir do plano do projeto de filial nova (para o cadastro gerado pelo projeto): cada trecho
+    contínuo de fileira vira uma fileira com a lista fixa das estantes, na ordem; as cabeceiras (giradas 90°) viram
+    fileiras próprias; os obstáculos do imóvel entram como obstáculos (setores são áreas de trabalho, por onde se anda);
+    a referência é a do plano."""
+    from services.site_planner import ref_point
+
+    fl = plan.floor
+    rows = []
+
+    def add(x, y, w, d, orient, face, depth, bay_w, aisle, bays):
+        rows.append({"aisle": aisle, "side": "all", "bays": bays, "x": round(x, 1), "y": round(y, 1), "orient": orient,
+                     "rev": False, "face": face, "depth": round(depth, 1), "bay_w": round(bay_w, 1), "pair": 0, "flow": ""})
+
+    runs: dict[tuple, list] = {}
+    caps: dict[tuple, list] = {}
+    for m in plan.modules:
+        if m.zone is None or not m.aisle:
+            continue
+        if m.rotated:
+            caps.setdefault((m.zone.index, m.segment, round(m.x0, 1), m.aisle), []).append(m)
+        else:
+            runs.setdefault((m.zone.index, m.row.index, m.segment, m.aisle), []).append(m)
+    for ms in runs.values():
+        ms.sort(key=lambda m: m.x0)
+        chunk = [ms[0]]
+        for m in ms[1:] + [None]:
+            if m is not None and abs(m.x0 - (chunk[-1].x0 + chunk[-1].struct.width)) < 1.0:
+                chunk.append(m)
+                continue
+            zn, r = chunk[0].zone, chunk[0].row
+            x0, x1 = chunk[0].x0, chunk[-1].x0 + chunk[-1].struct.width
+            X, Y, _w, _d = zn.to_global(x0, r.y, x1 - x0, r.depth)
+            add(X, Y, _w, _d, "v" if zn.rot else "h", "+" if r.side == "L" else "-", r.depth,
+                chunk[0].struct.width, chunk[0].aisle, [c.bay for c in chunk])
+            chunk = [m] if m is not None else []
+    for ms in caps.values():
+        ms.sort(key=lambda m: m.y0 or 0.0)
+        chunk = [ms[0]]
+        for m in ms[1:] + [None]:  # cabeceiras encostadas umas nas outras = uma fileira
+            if m is not None and abs((m.y0 or 0.0) - ((chunk[-1].y0 or 0.0) + chunk[-1].struct.width)) < 1.0:
+                chunk.append(m)
+                continue
+            zn, m0 = chunk[0].zone, chunk[0]
+            seg = zn.segments[m0.segment] if m0.segment < len(zn.segments) else (zn.x_start, zn.x_end)
+            width = sum(c.struct.width for c in chunk)
+            X, Y, _w, _d = zn.to_global(m0.x0, m0.y0 or 0.0, m0.struct.depth, width)
+            add(X, Y, _w, _d, "h" if zn.rot else "v", "-" if m0.x0 <= seg[0] + 1.0 else "+", m0.struct.depth,
+                m0.struct.width, m0.aisle, [c.bay for c in chunk])
+            chunk = [m] if m is not None else []
+    rows.sort(key=lambda r: (natural_key(r["aisle"]), natural_key(r["bays"][0])))
+    for i, r in enumerate(rows):
+        r["id"] = i + 1
+    obstacles = [{"x": round(o.x_m * 100, 1), "y": round(o.y_m * 100, 1), "w": round(o.length_m * 100, 1),
+                  "d": round(o.width_m * 100, 1), "name": (o.name or "Obstáculo")[:60]}
+                 for o in (getattr(fl, "obstacles", None) or []) if getattr(o, "kind", "obstacle") == "obstacle"]
+    ref = (plan.slotting or {}).get("ref") or ref_point(plan, {})
+    return {"L": round(fl.length_cm, 1), "W": round(fl.width_cm, 1), "rows": rows, "obstacles": obstacles,
+            "ref": {"x": round(ref["x"], 1), "y": round(ref["y"], 1), "label": str(ref.get("label") or "expedição")[:60]}}

@@ -27,8 +27,15 @@ from services.bin_optimizer import BinSpec, CRITERIA, capacity, priority_list
 SCALE = 720720  # divisível por 1..16, 18, 20…: frações de bin exatas para as capacidades comuns
 CAND_PER_SKU = 30  # grupos de bins candidatos por SKU no modelo do pool (os mais promissores por critério)
 
-STATUS_TXT = {"optimal": "ótimo comprovado", "feasible": "melhor solução encontrada no tempo limite",
-              "heuristic": "heurística (solver não melhorou)", "fallback": "heurística (solver indisponível)"}
+STATUS_TXT = {"optimal": "solver: ótimo comprovado",
+              "feasible": "solver: melhor solução no tempo limite (não comprovada ótima)",
+              "heuristic": "HEURÍSTICA: o solver não achou solução melhor no tempo limite",
+              "fallback": "HEURÍSTICA: solver indisponível"}
+STATUS_HELP = {"feasible": "O tempo acabou antes de o solver provar que é a melhor solução possível. Para a solução do "
+                           "solver a qualquer custo, marque \"Sem limite de tempo\".",
+               "heuristic": "Com o tempo limite, o solver não encontrou solução melhor que a da heurística, que foi a "
+                            "usada. Para a solução do solver a qualquer custo, marque \"Sem limite de tempo\" (pode "
+                            "demorar bastante em escopos grandes)."}
 
 
 def available() -> bool:
@@ -40,14 +47,15 @@ def available() -> bool:
 
 
 class _Lex:
-    """Resolve objetivos em sequência (lexicográfico) num mesmo modelo, dividindo o tempo limite entre as etapas."""
+    """Resolve objetivos em sequência (lexicográfico) num mesmo modelo, dividindo o tempo limite entre as etapas.
+    `time_limit` None = sem limite: cada etapa vai até provar o ótimo."""
 
-    def __init__(self, model, time_limit: float):
+    def __init__(self, model, time_limit: Optional[float]):
         from ortools.sat.python import cp_model
 
         self.cp = cp_model
         self.model = model
-        self.deadline = time.monotonic() + time_limit
+        self.deadline = time.monotonic() + time_limit if time_limit else math.inf
         self.total = time_limit
         self.stages: list[dict] = []
         self.values: Optional[dict] = None
@@ -63,7 +71,8 @@ class _Lex:
             share = left * (0.5 if i == 0 and n > 1 else 1.0 / (n - i))
             self.model.Minimize(expr)
             solver = self.cp.CpSolver()
-            solver.parameters.max_time_in_seconds = max(0.2, share)
+            if share != math.inf:
+                solver.parameters.max_time_in_seconds = max(0.2, share)
             import os as _os
             solver.parameters.num_workers = max(1, min(8, _os.cpu_count() or 1))
             import os
@@ -93,6 +102,7 @@ class _Lex:
 
 def _info(engine_status: str, t0: float, stages: list, heur: dict, final: dict, note: str = "") -> dict:
     return {"engine": "or", "status": engine_status, "status_txt": STATUS_TXT.get(engine_status, engine_status),
+            "status_help": STATUS_HELP.get(engine_status, ""),
             "seconds": round(time.monotonic() - t0, 2), "stages": stages, "heuristic": heur, "final": final,
             "note": note}
 

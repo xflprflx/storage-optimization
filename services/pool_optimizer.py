@@ -96,7 +96,7 @@ class PoolParams:
     single_type: bool = False  # um único tipo de bin por SKU
     max_bins: Optional[int] = None  # máximo de bins por SKU
     engine: str = "heuristic"  # "heuristic" | "or" (pesquisa operacional)
-    time_limit: float = 15.0
+    time_limit: Optional[float] = 15.0  # None = sem limite (solução do solver a qualquer custo)
     priority: Optional[list] = None  # ordem dos critérios ("bins", "volume", "width", "changes")
     # foco nos SKUs filtrados: "free" = só bins livres (sem saldo de outros produtos); "any" = qualquer bin
     bin_source: str = "free"

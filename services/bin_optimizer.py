@@ -193,7 +193,7 @@ class Params:
     limit_inventory: bool = False
     # motor: "heuristic" (o atual) | "or" (pesquisa operacional, OR-Tools CP-SAT) e o tempo limite (s) do solver
     engine: str = "heuristic"
-    time_limit: float = 15.0
+    time_limit: Optional[float] = 15.0  # None = sem limite (solução do solver a qualquer custo)
     # ordem de prioridade dos critérios ("bins", "volume", "width", "changes"); None = padrão do motor
     priority: Optional[list] = None
     # foco nos SKUs filtrados (bins existentes): de onde vêm as bins além das dos próprios endereços —
@@ -218,8 +218,8 @@ class Params:
             raise ValueError("Máximo de bins por endereço deve ser ao menos 1.")
         if self.engine not in ("heuristic", "or"):
             raise ValueError("Motor inválido.")
-        if not (1 <= self.time_limit <= 600):
-            raise ValueError("Tempo limite deve estar entre 1 e 600 segundos.")
+        if self.time_limit is not None and not (1 <= self.time_limit <= 3600):  # None = sem limite
+            raise ValueError("Tempo limite deve estar entre 1 e 3600 segundos (ou sem limite).")
 
 
 # --------------------------------------------------------------------------- #

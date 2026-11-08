@@ -40,7 +40,7 @@
         <td><input class="form-check-input run-check" type="checkbox" name="ids" value="{{ r.id }}"></td>
         <td class="small text-nowrap">{{ r.updated_at.strftime('%d/%m/%Y %H:%M') if r.updated_at else '' }}</td>
         <td class="small"><span class="badge text-bg-light border">{{ kinds.get(r.kind, r.kind) }}</span></td>
-        <td><a href="/optimization/runs/{{ r.id }}">{{ r.title }}</a>{% if r.note %}<div class="small fw-semibold text-primary">{{ r.note }}</div>{% endif %}</td>
+        <td><a href="/optimization/runs/{{ r.id }}">{{ r.title }}</a>{% if (r.summary or {}).get('solver') %}<div class="small text-muted">{{ r.summary.solver }}</div>{% endif %}{% if r.note %}<div class="small fw-semibold text-primary">{{ r.note }}</div>{% endif %}</td>
         <td class="small text-muted">{% for k in (r.summary or {}).get('kpis', [])[:3] %}{% set v = k.get('after') if k.get('after') is not none else k.get('value') %}<div class="text-nowrap">{{ k.label }}: {% if k.get('before') is not none %}{{ k.get('before')|dec(k.places or 0) }} → {% endif %}<b>{{ v|dec(k.places or 0) if v is not none else '—' }}</b>{{ k.unit }}</div>{% endfor %}</td>
         <td class="text-end text-nowrap">
           <a class="btn btn-sm btn-outline-secondary" href="/optimization/runs/{{ r.id }}" title="Ver"><i class="bi bi-eye"></i></a>

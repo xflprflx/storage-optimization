@@ -28,10 +28,10 @@ from services.pool_service import apply_pool, run_pool
 router = APIRouter(prefix="/optimization", tags=["Otimização de bins"])
 
 PER_PAGE = 200
-ENGINE_KEYS = ("engine", "time_limit", "prio2", "prio3", "prio4", "bin_source", "orphans")
+ENGINE_KEYS = ("engine", "time_limit", "tl_unlimited", "prio2", "prio3", "prio4", "bin_source", "orphans")
 PARAM_KEYS = ENGINE_KEYS + ("focus", "staging", "bins_mode", "basis", "objective", "fill_limit", "growth", "geometry", "rotation", "weight", "mix", "single_type",
               "max_bins", "keep_space", "max_width", "max_height", "clear_empty", "levels", "other_levels", "uniform_levels", "types")
-ENGINE_DEFAULTS = {"engine": "or", "time_limit": "15", "prio2": "", "prio3": "", "prio4": "", "bin_source": "free",
+ENGINE_DEFAULTS = {"engine": "or", "time_limit": "15", "tl_unlimited": "", "prio2": "", "prio3": "", "prio4": "", "bin_source": "free",
                    "orphans": "relocate"}
 BIN_SOURCES = {"free": "Só bins livres (sem saldo)", "any": "Qualquer bin (inclusive com saldo de outros itens)"}
 ORPHAN_MODES = {"relocate": "Realocar os itens desalojados", "leave": "Deixar fora de bin (órfãos)"}
@@ -53,18 +53,20 @@ def _getlist(src, key: str) -> list[str]:
     return src.getlist(key) if hasattr(src, "getlist") else ([src[key]] if key in src else [])
 
 
-def parse_engine(raw: dict, errors: list) -> tuple[str, float, Optional[list]]:
-    """Motor (heurística ou pesquisa operacional), tempo limite (s) e ordem de prioridade dos critérios."""
+def parse_engine(raw: dict, errors: list) -> tuple[str, Optional[float], Optional[list]]:
+    """Motor (heurística ou pesquisa operacional), tempo limite (s; None = sem limite) e ordem dos critérios."""
     engine = "or" if raw.get("engine") == "or" else "heuristic"
+    prio = [raw.get(k) for k in ("prio2", "prio3", "prio4") if raw.get(k) in CRITERIA]
+    if str(raw.get("tl_unlimited") or "").lower() in {"1", "on", "true"}:
+        return engine, None, (prio or None)  # solução do solver a qualquer custo (até provar o ótimo)
     try:
         tl = float(str(raw.get("time_limit") or "15").replace(",", "."))
     except ValueError:
         errors.append("Tempo limite: número inválido.")
         tl = 15.0
-    if not (1 <= tl <= 600):
-        errors.append("Tempo limite deve estar entre 1 e 600 segundos.")
-        tl = min(max(tl, 1.0), 600.0)
-    prio = [raw.get(k) for k in ("prio2", "prio3", "prio4") if raw.get(k) in CRITERIA]
+    if not (1 <= tl <= 3600):
+        errors.append("Tempo limite deve estar entre 1 e 3600 segundos (ou marque \"Sem limite de tempo\").")
+        tl = min(max(tl, 1.0), 3600.0)
     return engine, tl, (prio or None)
 
 
@@ -435,8 +437,18 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                     {"Endereço": r.address, "Situação": r.status_label, "Bins hoje": bins_txt(r.current),
                      "Bins sugeridas": bins_txt(r.suggested) if r.suggested is not None else "",
                      "Enchimento hoje (%)": r.fill_now, "Enchimento plano (%)": r.fill_after} for r in results],
-                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips}})
+                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips},
+                                      "solver": _solver_txt([summary.solver], prm)})
     return render(request, "optimization/page.html", **ctx)
+
+
+def _solver_txt(infos: list, prm) -> str:
+    """Origem do resultado para o histórico: heurística, solver ótimo comprovado ou melhor no tempo."""
+    if getattr(prm, "engine", "heuristic") != "or":
+        return "heurística (escolhida)"
+    sts = [i.get("status_txt") or i.get("status") for i in infos if i]
+    txt = " / ".join(dict.fromkeys(s for s in sts if s)) or "pesquisa operacional"
+    return txt + (" · sem limite de tempo" if prm.time_limit is None else f" · limite {prm.time_limit:g} s")
 
 
 @router.post("/apply")
@@ -839,7 +851,8 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                      "Quantidade": m["qty"], "Bins hoje": m["bins_before"], "Bins plano": m["bins_after"],
                      "Movimentações": m["moves"], "Enchimento hoje (%)": m["fill_now"],
                      "Enchimento plano (%)": m["fill_after"]} for m in rows_all],
-                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips}})
+                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips},
+                                      "solver": _solver_txt([r.solver for r in results], prm)})
     return render(request, "optimization/page.html", **ctx)
 
 

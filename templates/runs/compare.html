@@ -13,6 +13,7 @@
       <div class="small fw-normal text-muted text-truncate" style="max-width:260px" title="{{ r.title }}">{{ r.note or r.title }}</div>
       <div class="small fw-normal text-muted">{{ r.updated_at.strftime('%d/%m %H:%M') if r.updated_at else '' }}</div></th>{% endfor %}</tr></thead>
     <tbody>
+      <tr class="table-light"><td class="small">Origem do resultado</td>{% for r in runs %}<td class="text-end small">{{ (r.summary or {}).get('solver') or '—' }}</td>{% endfor %}</tr>
     {% for row in rows %}
       <tr><td class="small">{{ row.label }}</td>
         {% for c in row.cells %}

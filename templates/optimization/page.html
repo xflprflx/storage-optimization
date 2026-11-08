@@ -179,13 +179,18 @@
           <input type="radio" class="btn-check" name="engine" id="eng_h" value="heuristic" {% if params.engine != 'or' %}checked{% endif %}>
           <label class="btn btn-outline-secondary" for="eng_h" title="Decide um item por vez (rápido)"><i class="bi bi-lightning"></i> Heurística</label>
         </div>
-        <div class="d-flex align-items-center gap-2 mb-1" id="tlBox">
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap" id="tlBox">
           <label class="small mb-0" for="time_limit">Tempo limite</label>
           <input class="form-control form-control-sm text-end" style="width:80px" name="time_limit" id="time_limit" value="{{ params.time_limit or '15' }}" inputmode="decimal">
           <span class="small text-muted">s</span>
+          <div class="form-check mb-0 small"><input class="form-check-input" type="checkbox" name="tl_unlimited" value="1" id="tl_unlimited" {% if params.tl_unlimited %}checked{% endif %}>
+            <label class="form-check-label" for="tl_unlimited"><b>Sem limite de tempo</b></label></div>
         </div>
+        <div class="alert alert-warning py-1 px-2 small mb-1" id="tlWarn"><i class="bi bi-exclamation-triangle"></i> Com tempo limite, o resultado pode vir da
+          <b>heurística</b> (se o solver não achar solução melhor a tempo) ou ser só a melhor solução encontrada, sem prova de que é a ótima.
+          Para a solução do solver a qualquer custo, marque <b>Sem limite de tempo</b> (escopos grandes podem levar muitos minutos).</div>
         <div class="form-text">Pesquisa operacional: modelo de otimização inteira resolvido para o escopo todo, critério a critério na ordem
-          acima, partindo da solução da heurística (nunca fica pior). Se o tempo acabar, vale a melhor solução encontrada.</div>
+          acima, partindo da solução da heurística (nunca fica pior). O resultado mostra de onde veio: ótimo comprovado, melhor no tempo ou heurística.</div>
       </div>
     </div>
 
@@ -338,6 +343,7 @@
           <span class="badge text-bg-{{ ok_cls }}">{{ sv.status_txt }}</span>
           <span class="text-muted">{{ sv.seconds|dec(1) }} s{% if solvers|length > 1 %} · pool {{ loop.index }}{% endif %}</span>
           {% if sv.note %}<span class="text-muted">· {{ sv.note }}</span>{% endif %}
+          {% if sv.status_help %}<div class="w-100 text-{{ 'danger' if sv.status == 'heuristic' else 'primary' }}"><i class="bi bi-info-circle"></i> {{ sv.status_help }}</div>{% endif %}
         </div>
         {% set opt = {} %}{% for st in sv.stages %}{% set _ = opt.update({st.criterion: st.optimal}) %}{% endfor %}
         <table class="table table-sm mb-0 small w-auto" data-no-resize>
@@ -597,7 +603,10 @@
     document.getElementById('orphBox').style.display = document.getElementById('bs_any').checked ? '' : 'none';
   };
   document.querySelectorAll('input[name=bins_mode], input[name=bin_source]').forEach(r => r.addEventListener('change', syncSrc)); syncSrc();
-  const tl = document.getElementById('time_limit'), syncEng = () => { tl.disabled = !document.getElementById('eng_or').checked; };
+  const tl = document.getElementById('time_limit'), tlu = document.getElementById('tl_unlimited'), tlw = document.getElementById('tlWarn');
+  const syncEng = () => { const orOn = document.getElementById('eng_or').checked; tl.disabled = !orOn || tlu.checked; tlu.disabled = !orOn;
+    tlw.style.display = orOn && !tlu.checked ? '' : 'none'; };
+  tlu.addEventListener('change', syncEng);
   document.querySelectorAll('input[name=engine]').forEach(r => r.addEventListener('change', syncEng)); syncEng();
   const geo = document.getElementById('sw_geometry'), rot = document.querySelector('select[name=rotation]');
   if (geo && rot) { const sync = () => { rot.disabled = !geo.checked; }; geo.addEventListener('change', sync); sync(); }

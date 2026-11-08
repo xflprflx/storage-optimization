@@ -143,7 +143,7 @@ class SiteParams:
     top_gap_cm: float = 5.0  # folga entre o topo da bin e o nível de cima (pegar a bin)
     side_gap_cm: float = 0.0  # folga entre bins lado a lado
     allowed_types: Optional[set] = None
-    time_limit: float = 15.0
+    time_limit: Optional[float] = 15.0  # None = sem limite (cada critério vai até provar o ótimo)
     priority: Optional[list] = None  # desempates (2º, 3º, 4º critério); None = padrão do objetivo
     # posição dos SKUs (slotting): {"on": bool, "ref": "auto"|"docks"|"sector:<nome>"|"xy", "ref_xy": (x_m, y_m),
     # "golden_m": metros de caminhada que a zona de ouro vale, "affinity": {(sku_a, sku_b): força 0–1},
@@ -1372,8 +1372,9 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
 
     solver = cp_model.CpSolver()
     solver.parameters.num_workers = 8
-    deadline = t0 + prm.time_limit
+    deadline = t0 + prm.time_limit if prm.time_limit else math.inf
     all_optimal, ok = True, False
+    skipped: list[str] = []
     sol: dict = {"qty": {}, "z": {}, "seg_mods": [], "picks": [], "caps": []}
     for i, (label, expr) in enumerate(stages):
         if isinstance(expr, int):  # critério que não depende de nenhuma decisão (ex.: bins já definidas)
@@ -1383,15 +1384,26 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
             continue
         left = deadline - time.monotonic()
         if left <= 0.05:
+            skipped += [SITE_CRITERIA.get(lb, lb) for lb, _e in stages[i:]]
+            all_optimal = False
             break
         m.Minimize(expr)
-        solver.parameters.max_time_in_seconds = max(0.1, left / (len(stages) - i) if i < len(stages) - 1 else left)
+        if left != math.inf:
+            solver.parameters.max_time_in_seconds = max(0.1, left / (len(stages) - i) if i < len(stages) - 1 else left)
+        else:
+            solver.parameters.max_time_in_seconds = 10 ** 9  # sem limite
         st = solver.Solve(m)
         if st not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
             if not ok:
+                if st == cp_model.UNKNOWN:  # não provou inviável: o tempo acabou antes de achar uma solução
+                    return {"info": {**info, "status": "sem solução no tempo limite", "time": time.monotonic() - t0},
+                            "error": "O solver não encontrou nenhum plano no tempo limite. Aumente o tempo ou marque "
+                                     "\"Sem limite de tempo\" (etapa Objetivo)."}
                 return {"info": {**info, "status": "inviável", "time": time.monotonic() - t0},
                         "error": "Não foi possível montar um plano com essas restrições (confira as quantidades "
                                  "fixas/mínimas e o tamanho do imóvel)."}
+            skipped += [SITE_CRITERIA.get(lb, lb) for lb, _e in stages[i:]]
+            all_optimal = False
             break
         ok = True
         val = int(round(solver.ObjectiveValue()))
@@ -1419,7 +1431,10 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
         for vs, k in zip(y, sol["picks"]):
             for j, v in enumerate(vs):
                 m.AddHint(v, 1 if j == k else 0)
-    info["status"] = "ótimo comprovado" if all_optimal else "melhor solução no tempo limite"
+    info["status"] = "ótimo comprovado" if all_optimal else "melhor solução no tempo limite (não comprovada ótima)"
+    info["optimal"] = all_optimal
+    info["unlimited"] = not prm.time_limit
+    info["skipped"] = skipped  # critérios que não chegaram a ser otimizados (o tempo acabou antes)
     info["time"] = time.monotonic() - t0
     sol["seg_mods"] = list(zip(segs, sol["seg_mods"])) if sol["seg_mods"] else []
     return {"info": info, **sol}

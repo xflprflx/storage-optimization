@@ -28,6 +28,7 @@
             <td class="text-end text-muted">{{ (k.get('before')|dec(k.places or 0) ~ (k.unit or '')) if k.get('before') is not none else '' }}</td>
             <td class="text-end fw-semibold">{{ (v|dec(k.places or 0) ~ (k.unit or '')) if v is not none else '—' }}</td></tr>{% endfor %}</tbody>
       </table>
+      {% if (run.summary or {}).get('solver') %}<div class="card-body small border-top"><b>Origem do resultado:</b> {{ run.summary.solver }}</div>{% endif %}
       {% if (run.summary or {}).get('status') %}<div class="card-body small border-top">{% for lbl, n in run.summary.status.items() %}<span class="badge text-bg-light border me-1">{{ n }} {{ lbl }}</span>{% endfor %}</div>{% endif %}
       {% if (run.summary or {}).get('notes') %}<div class="card-body small border-top text-muted">{% for n in run.summary.notes %}<div>{{ n }}</div>{% endfor %}</div>{% endif %}
     </div>

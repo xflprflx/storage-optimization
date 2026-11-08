@@ -63,7 +63,7 @@ DEFAULT_CONFIG = {
                "factor": "100"},
     "params": {"objective": "modules", "bin_objective": "min_volume", "fill_limit": "85", "rotation": "upright",
                "single_type": "1", "weight": "1", "level_fill": "100", "top_gap_cm": "5", "side_gap_cm": "0",
-               "types": [], "time_limit": "15", "priority": ["", "", ""]},
+               "types": [], "time_limit": "15", "tl_unlimited": "", "priority": ["", "", ""]},
     # posição dos SKUs: popularidade (auto = pedidos > coluna Saída), medida, ponto de referência, peso da zona de
     # ouro (metros de caminhada que ela vale) e itens que saem juntos lado a lado
     "slotting": {"on": "1", "source": "auto", "metric": "lines", "ref": "auto", "ref_x": "", "ref_y": "",
@@ -177,6 +177,7 @@ def config_from_form(form: Mapping) -> dict:
     for k in ("fill_limit", "level_fill", "top_gap_cm", "side_gap_cm", "time_limit"):
         p[k] = str(form.get(f"p_{k}") or "").strip()
     p["single_type"], p["weight"] = on("p_single_type"), on("p_weight")
+    p["tl_unlimited"] = on("p_tl_unlimited")
     types = form.getlist("p_types") if hasattr(form, "getlist") else []
     p["types"] = [t for t in types if str(t).isdigit()]
     return cfg
@@ -303,7 +304,8 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
         top_gap_cm=_num(p.get("top_gap_cm"), "Folga acima da bin", errors, 5, 0) or 0,
         side_gap_cm=_num(p.get("side_gap_cm"), "Folga entre bins", errors, 0, 0) or 0,
         allowed_types={int(t) for t in p.get("types") or [] if str(t).isdigit()} or None,
-        time_limit=_num(p.get("time_limit"), "Tempo limite", errors, 15, 1, 600) or 15,
+        # sem limite (None): a solução do solver a qualquer custo — cada critério vai até provar o ótimo
+        time_limit=None if p.get("tl_unlimited") else (_num(p.get("time_limit"), "Tempo limite", errors, 15, 1, 3600) or 15),
     )
     if b.length_m and b.width_m and b.front_reserved_m + b.back_reserved_m >= max(b.length_m, b.width_m):
         errors.append("As faixas reservadas ocupam todo o imóvel.")
@@ -567,6 +569,7 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
         c2["demand"]["factor"] = f"{f0 * mid:.4f}"
         c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15),
                                              per_run_s))
+        c2["params"]["tl_unlimited"] = ""  # a busca do fator roda várias vezes: sempre com tempo curto
         plan, errs = run_project(db, c2)
         if plan is not None and not errs and not plan.errors and plan.shortage == 0:
             lo = mid

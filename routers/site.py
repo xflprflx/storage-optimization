@@ -188,8 +188,12 @@ def _save_site_run(db: Session, pr: SiteProject, cfg: dict, plan) -> Optional[in
         params = {"projeto": pr.name, "imóvel": f"{b.length_m:g} × {b.width_m:g} × {b.clear_height_m:g} m",
                   "building": cfg.get("building"), "structures": cfg.get("structures"), "demand": cfg.get("demand"),
                   "params": cfg.get("params"), "slotting": cfg.get("slotting")}
+        sv = plan.solver or {}
+        solver_txt = (sv.get("status") or "") + (" · sem limite de tempo" if sv.get("unlimited") else "") \
+            + (f" · {sv.get('time', 0):.1f} s" if sv.get("time") is not None else "")
         run = save_run(db, "site", f"Projeto {pr.name} · {b.length_m:g} × {b.width_m:g} m", params,
-                       {"kpis": kpis, "notes": list(plan.notes)[:20]}, details, f"/optimization/site/{pr.id}?run=1",
+                       {"kpis": kpis, "notes": list(plan.notes)[:20], "solver": solver_txt}, details,
+                       f"/optimization/site/{pr.id}?run=1",
                        fingerprint=_cfg_key(db, cfg), project_id=pr.id)
         return run.id
     except Exception:  # noqa: BLE001

@@ -272,6 +272,17 @@ flowchart TD
 
 ---
 
+## 5.1 Tempo limite × solução do solver a qualquer custo
+
+No projeto (etapa Objetivo) e nos modos Por endereço e Pool (motor *Pesquisa operacional*) há a opção **Sem limite de tempo**. Com ela, o solver vai até **provar o ótimo** em cada critério, o que pode levar muitos minutos em escopos grandes.
+
+Com tempo limite, a tela avisa que o resultado pode ser só a melhor solução encontrada ou vir da **heurística**, e o resultado mostra a origem:
+- **ótimo comprovado;**
+- **melhor no tempo limite (não comprovada ótima),** com os critérios que não chegaram a ser otimizados;
+- **heurística:** o solver não achou solução melhor no tempo.
+
+A origem também fica nos resultados salvos (lista, detalhe e comparação). O limite numérico vai de 1 a 3.600 s.
+
 ## 6. Telas em passo a passo
 
 As telas de otimização (Por endereço, Pool e Projeto de filial nova) mostram uma etapa por vez:

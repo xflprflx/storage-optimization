@@ -387,6 +387,7 @@
                     <span class="badge text-bg-light border">{{ orders.pairs|length }} pares</span>
                     {% if orders.dates %}<span class="badge text-bg-light border">{{ orders.dates[0] }} a {{ orders.dates[1] }}</span>{% endif %}
                     {% if orders.neg %}<span class="badge text-bg-light border">{{ orders.neg }} negativas {{ 'convertidas' if orders.abs else 'ignoradas' }}</span>{% endif %}
+                    <a class="small ms-1" href="/optimization/site/{{ project.id }}/skus"><i class="bi bi-bar-chart-line"></i> relatório de SKUs</a>
                     <button class="btn btn-link btn-sm text-danger p-0 ms-1" name="clear_orders" value="1" onclick="return confirm('Remover o histórico de pedidos deste projeto?')">remover</button></div>
                 {% else %}<span class="text-muted">não enviado</span>{% endif %}</div>
               <div class="text-muted mt-1">Use <i>Importar planilha</i> (no topo) para enviar a coluna ou a aba. Sem nenhum dos dois, dá para usar o max level como aproximação.</div>
@@ -550,7 +551,7 @@
 {% if k.get('avg_dist') is not none or k.get('random_dist') is not none %}
 <div class="card mb-3">
   <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2">
-    <strong><i class="bi bi-signpost-split"></i> Posição dos SKUs</strong>
+    <strong><i class="bi bi-signpost-split"></i> Posição dos SKUs <a class="small fw-normal ms-2" href="/optimization/site/{{ project.id }}/skus"><i class="bi bi-bar-chart-line"></i> Relatório de SKUs</a></strong>
     <span class="small text-muted">referência: {{ k.ref.label }}{% if k.source %} · popularidade: {{ k.source }}{% endif %}
       {% if k.used %}<span class="badge text-bg-success">priorizado</span>{% elif k.get('avg_dist') is not none %}<span class="badge text-bg-secondary">sem priorizar (desligado)</span>{% endif %}</span>
   </div>

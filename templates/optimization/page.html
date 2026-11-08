@@ -201,6 +201,7 @@
           {% if slot_info.history %}
             <div><span class="badge text-bg-success">{{ slot_info.summary }}</span></div>
             <div class="text-muted">{{ slot_info.history.filename }}</div>
+            <a class="small" href="/optimization/slotting/skus?{{ request.query_params }}"><i class="bi bi-bar-chart-line"></i> Relatório de SKUs (popularidade e afinidade)</a><br>
             <button class="btn btn-link btn-sm text-danger p-0" form="slotDelete" onclick="return confirm('Remover o histórico de saídas desta filial?')">remover</button>
           {% elif filters.branch_id %}<div class="text-muted">Nenhum histórico para a filial selecionada.</div>
           {% else %}<div class="text-muted">Escolha a filial no escopo.</div>{% endif %}

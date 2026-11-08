@@ -280,6 +280,18 @@ As telas de otimização (Por endereço, Pool e Projeto de filial nova) mostram 
 
 A barra de etapas é clicável, há botões Anterior/Próximo e a etapa atual é lembrada durante a sessão. Se faltar um campo obrigatório numa etapa escondida, a tela abre essa etapa. Depois de rodar, a tela abre na última etapa, com o resultado logo abaixo. O componente é genérico (`data-stepper` + `.nk-step` em `templates/base.html`).
 
+## 6.0 Relatório de SKUs: popularidade e afinidade
+
+Fica em `/optimization/site/{id}/skus` no projeto (link no cartão *Posição dos SKUs* e na etapa) e em `/optimization/slotting/skus?branch_id=…` nas filiais existentes (link no histórico de saídas). Também sai em **Excel**, com as abas SKUs, Pares e Resumo.
+
+- **Por SKU:**
+  - linhas de pedido (visitas ao endereço), unidades, % das saídas e % acumulado, curva ABC e % dos pedidos;
+  - **onde está:** endereço, caminhada até a referência, zona de ouro da pega e da caminhada;
+  - **sai junto com:** os parceiros mais frequentes, com pedidos juntos, força e lift.
+- **Pares que mais saem juntos:**
+  - **força:** fração dos pedidos do menos vendido em que os dois aparecem juntos;
+  - **lift:** quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso).
+
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 
 A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.

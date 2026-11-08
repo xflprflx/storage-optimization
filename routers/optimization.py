@@ -1023,6 +1023,61 @@ async def upload_history(request: Request, db: Session = Depends(get_db)):
     return redirect(back, f"Histórico de saídas salvo para a filial: {summary_text(data)}.{neg}", "success")
 
 
+def _branch_sku_report(db: Session, branch_id: int, raw: Mapping):
+    """Relatório de SKUs de uma filial existente: histórico de saídas + onde cada SKU está hoje (saldo), com a
+    caminhada estimada pelo endereço e as duas zonas de ouro (parâmetros da posição pela saída da tela)."""
+    from models import PickHistory, Product
+    from services.slotting import SLOT_DEFAULTS, address_geo, sku_report, slot_spec
+
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == branch_id))
+    data = h.data if h else {}
+    spec = slot_spec({**SLOT_DEFAULTS, **{k: raw.get(k) for k in SLOT_DEFAULTS if raw.get(k) is not None}, "slot": "1"})
+    names, where = {}, {}
+    skus = list((data or {}).get("skus") or {})
+    for i in range(0, len(skus), 900):
+        for sku, name in db.execute(select(Product.sku, Product.name).where(Product.sku.in_(skus[i:i + 900]))).all():
+            names[sku] = name
+    rows = list(db.execute(select(Product.sku, StorageLocation.id, StorageLocation.address)
+                           .join(StockItem, StockItem.product_id == Product.id)
+                           .join(StorageLocation, StorageLocation.id == StockItem.location_id)
+                           .where(StorageLocation.branch_id == branch_id, StockItem.quantity > 0)))
+    geo, _ref = address_geo(db, sorted({r[1] for r in rows}), spec) if rows else ({}, "")
+    for sku, lid, addr in rows:
+        g = geo.get(lid)
+        where.setdefault(sku, []).append({"address": addr, "dist": g.walk_m if g else None,
+                                          "golden": bool(g and g.golden), "walk": bool(g and g.walk_golden)})
+    for lst in where.values():
+        lst.sort(key=lambda w: (w["dist"] is None, w["dist"] or 0))
+    return sku_report(data, names, where, spec["metric"])
+
+
+@router.get("/slotting/skus")
+def branch_sku_report(request: Request, db: Session = Depends(get_db)):
+    qp = request.query_params
+    bid = to_int(qp.get("branch_id"))
+    br = db.get(Branch, bid) if bid else None
+    if br is None:
+        return redirect("/optimization", "Escolha a filial para ver o relatório de SKUs.", "warning")
+    q = urlencode([(k, v) for k, v in qp.multi_items()])
+    return render(request, "slotting/skus.html", rep=_branch_sku_report(db, bid, qp), title=f"Filial {br.code} - {br.name}",
+                  back=f"/optimization/pool?{q}", xlsx=f"/optimization/slotting/skus.xlsx?{q}")
+
+
+@router.get("/slotting/skus.xlsx")
+def branch_sku_report_xlsx(request: Request, db: Session = Depends(get_db)):
+    from routers.site import _attachment
+    from services.slotting import sku_report_xlsx
+
+    qp = request.query_params
+    bid = to_int(qp.get("branch_id"))
+    br = db.get(Branch, bid) if bid else None
+    if br is None:
+        return redirect("/optimization", "Escolha a filial.", "warning")
+    return Response(sku_report_xlsx(_branch_sku_report(db, bid, qp), f"Filial {br.code} - {br.name}"),
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": _attachment(f"skus_popularidade_{br.code}.xlsx")})
+
+
 @router.post("/slotting/history/delete")
 def delete_history(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     from models import PickHistory

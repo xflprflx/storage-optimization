@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import FormData
 
 from database import get_db
-from models import BinType, Branch, SiteProject, StructureType, Warehouse
+from models import BinType, Branch, Product, SiteProject, StructureType, Warehouse
 from routers.common import form_data, redirect, render
 from services.addressing import normalize_code
 from services.bin_optimizer import BASES, OBJECTIVES
@@ -349,6 +349,54 @@ def plan_3d_json(pid: int, db: Session = Depends(get_db)):
     data = plan_3d(plan)
     data["building"]["name"] = pr.name
     return JSONResponse(data)
+
+
+def _sku_report(db: Session, pr: SiteProject):
+    """Relatório de SKUs do projeto: popularidade e afinidade (histórico de pedidos ou coluna Saída) e onde cada SKU
+    ficou no plano exibido (endereço, caminhada e zonas de ouro)."""
+    from services.slotting import sku_report
+
+    cfg = merged(copy.deepcopy(pr.config))
+    data = cfg.get("orders") or {}
+    items = cfg.get("items") or []
+    if not data.get("skus"):
+        col = {it["sku"]: [it["out"], it["out"]] for it in items if it.get("out")}
+        data = {"kind": "column", "skus": col, "orders": 0, "pairs": []} if col else {}
+    names = {it["sku"]: it.get("name") or "" for it in items}
+    if data.get("skus"):
+        missing = [s_ for s_ in data["skus"] if not names.get(s_)]
+        for i in range(0, len(missing), 900):
+            for sku, name in db.execute(select(Product.sku, Product.name).where(Product.sku.in_(missing[i:i + 900]))):
+                names[sku] = name
+    where: dict[str, list] = {}
+    hit = _PLAN_CACHE.get(pr.id)
+    if hit and hit[0] == _cfg_key(db, cfg):  # só o plano já exibido (não roda a otimização de novo)
+        for p in hit[1].positions:
+            where.setdefault(p.sku, []).append({"address": p.address, "dist": p.dist_m, "golden": p.golden,
+                                                "walk": p.walk_golden})
+    metric = (cfg.get("slotting") or {}).get("metric") or "lines"
+    return sku_report(data, names, where, metric)
+
+
+@router.get("/{pid}/skus")
+def sku_report_page(pid: int, request: Request, db: Session = Depends(get_db)):
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    return render(request, "slotting/skus.html", rep=_sku_report(db, pr), title=f"Projeto {pr.name}",
+                  back=f"/optimization/site/{pid}?run=1#resultado", xlsx=f"/optimization/site/{pid}/skus.xlsx")
+
+
+@router.get("/{pid}/skus.xlsx")
+def sku_report_xlsx(pid: int, db: Session = Depends(get_db)):
+    from services.slotting import sku_report_xlsx as to_xlsx
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    return Response(to_xlsx(_sku_report(db, pr), f"Projeto {pr.name}"),
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": _attachment(f"skus_popularidade_{pr.name[:60]}.xlsx")})
 
 
 @router.get("/{pid}/plan")

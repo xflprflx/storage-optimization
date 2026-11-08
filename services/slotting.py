@@ -320,3 +320,96 @@ def summary_text(data: Optional[dict]) -> str:
         txt += f", {data['dates'][0]} a {data['dates'][1]}"
     return txt
 
+
+
+# --------------------------------------------------------------------------- #
+# Relatório de SKUs: popularidade e afinidade
+# --------------------------------------------------------------------------- #
+def sku_report(data: Optional[dict], names: Optional[dict] = None, where: Optional[dict] = None,
+               metric: str = "lines", top_partners: int = 5) -> dict:
+    """Popularidade (linhas de pedido, unidades, % e % acumulado das saídas, curva ABC) e afinidade (com quem cada
+    SKU sai junto) a partir do resumo do histórico. `where` = SKU -> [{"address", "dist", "golden", "walk"}].
+    Afinidade de um par: pedidos juntos, força (fração dos pedidos do menos vendido em que saem juntos) e lift
+    (quantas vezes saem juntos mais do que sairiam por acaso: juntos × pedidos ÷ (pedidos de A × pedidos de B))."""
+    names, where = names or {}, where or {}
+    skus = (data or {}).get("skus") or {}
+    n_orders = int((data or {}).get("orders") or 0)
+    pop = popularity(data, metric)
+    abc = classify_abc(pop)
+    total = sum(pop.values()) or 1.0
+    partners: dict[str, list] = {}
+    pairs = []
+    for a, b, c in (data or {}).get("pairs") or []:
+        la, lb = skus.get(a, [0])[0], skus.get(b, [0])[0]
+        st = c / max(1, min(la, lb))
+        lift = c * n_orders / (la * lb) if n_orders and la and lb else None
+        pr = {"a": a, "b": b, "count": c, "strength": min(1.0, st), "lift": lift,
+              "name_a": names.get(a, ""), "name_b": names.get(b, "")}
+        pairs.append(pr)
+        partners.setdefault(a, []).append({"sku": b, "count": c, "strength": min(1.0, st), "lift": lift})
+        partners.setdefault(b, []).append({"sku": a, "count": c, "strength": min(1.0, st), "lift": lift})
+    rows, acc = [], 0.0
+    for s, v in sorted(pop.items(), key=lambda kv: (-kv[1], kv[0])):
+        acc += v
+        lines, units = skus.get(s, [0, 0])[:2]
+        ps = sorted(partners.get(s, []), key=lambda x: (-x["count"], x["sku"]))
+        rows.append({"sku": s, "name": names.get(s, ""), "lines": lines, "units": units, "share": v / total * 100,
+                     "cum": acc / total * 100, "abc": abc.get(s, ""), "partners": ps[:top_partners],
+                     "n_partners": len(ps), "per_order": (lines / n_orders * 100) if n_orders else None,
+                     "where": where.get(s, [])})
+    pairs.sort(key=lambda x: (-x["count"], x["a"], x["b"]))
+    lines_total = sum(v[0] for v in skus.values())
+    return {"rows": rows, "pairs": pairs, "orders": n_orders, "lines": lines_total, "skus": len(skus),
+            "abc": {c: sum(1 for r in rows if r["abc"] == c) for c in "ABC"},
+            "lines_per_order": (lines_total / n_orders) if n_orders else None, "metric": metric,
+            "kind": (data or {}).get("kind") or "orders", "dates": (data or {}).get("dates")}
+
+
+def sku_report_xlsx(rep: dict, title: str) -> bytes:
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    wb = Workbook()
+    head = (Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="0F2A2A"))
+
+    def sheet(ws, cols, rows, widths=None):
+        ws.append(cols)
+        for c in ws[1]:
+            c.font, c.fill = head
+        for r in rows:
+            ws.append(list(r))
+        for i, w in (widths or {}).items():
+            ws.column_dimensions[chr(64 + i)].width = w
+        ws.freeze_panes = "A2"
+
+    ws = wb.active
+    ws.title = "SKUs"
+    rnd = lambda v, n=1: round(v, n) if v is not None else None  # noqa: E731
+    sheet(ws, ["SKU", "Produto", "Linhas de pedido", "Unidades", "% das saídas", "% acumulado", "Curva ABC",
+               "% dos pedidos", "Endereço(s)", "Caminhada (m)", "Zona de ouro da pega", "Zona de ouro da caminhada",
+               "Sai junto com (pedidos juntos · força · lift)"],
+          [(r["sku"], r["name"], r["lines"], r["units"], rnd(r["share"], 2), rnd(r["cum"], 2), r["abc"],
+            rnd(r["per_order"], 2), ", ".join(w["address"] for w in r["where"][:5]) or None,
+            rnd(min((w["dist"] for w in r["where"] if w.get("dist") is not None), default=None)),
+            "sim" if any(w.get("golden") for w in r["where"]) else "",
+            "sim" if any(w.get("walk") for w in r["where"]) else "",
+            "; ".join(f"{p['sku']} ({p['count']} · {p['strength'] * 100:.0f}%"
+                      + (f" · {p['lift']:.1f}x" if p["lift"] else "") + ")" for p in r["partners"]) or None)
+           for r in rep["rows"]], {1: 16, 2: 36, 9: 30, 13: 60})
+    sheet(wb.create_sheet("Pares"), ["SKU", "Produto", "SKU", "Produto", "Pedidos juntos", "Força (%)", "Lift"],
+          [(p["a"], p["name_a"], p["b"], p["name_b"], p["count"], rnd(p["strength"] * 100), rnd(p["lift"], 2))
+           for p in rep["pairs"]], {1: 16, 2: 32, 3: 16, 4: 32})
+    info = wb.create_sheet("Resumo")
+    for k, v in (("Relatório", title), ("Pedidos", rep["orders"]), ("Linhas de pedido", rep["lines"]),
+                 ("SKUs com saída", rep["skus"]), ("Linhas por pedido", rnd(rep["lines_per_order"], 2)),
+                 ("Curva ABC (A/B/C)", f"{rep['abc']['A']} / {rep['abc']['B']} / {rep['abc']['C']}"),
+                 ("Período", " a ".join(rep["dates"]) if rep.get("dates") else None),
+                 ("Força", "em que fração dos pedidos do menos vendido do par os dois saem juntos"),
+                 ("Lift", "quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso)")):
+        info.append([k, v])
+    info.column_dimensions["A"].width, info.column_dimensions["B"].width = 22, 80
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

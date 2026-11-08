@@ -210,6 +210,7 @@ flowchart TD
   - **Filtros e cortes:** filtro por corredor e corte por altura, para ver os níveis de dentro.
   - **Busca e seleção:** busca por SKU ou endereço (destaca as bins). Clicar numa bin mostra o endereço, o SKU, o tipo de bin, a ocupação e a estante.
   - **Exibição:** liga/desliga bins, estruturas e paredes, e vistas 3D, de cima e de frente.
+  - **Navegação:** a roda aproxima em direção ao ponto sob o mouse. Perto do alvo, o zoom continua avançando dentro do imóvel, e a câmera não atravessa o piso. O duplo clique centraliza a câmera no ponto clicado.
 
   Usa Three.js (CDN jsdelivr, versão fixa). Lógica da geometria em `services/site_3d.py`.
 - **Cenários**: duplique o projeto para comparar alternativas (outro imóvel, outras estruturas, outro fator de demanda).

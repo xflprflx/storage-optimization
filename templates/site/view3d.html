@@ -49,7 +49,7 @@
 </div></div>
 
 <div class="nk3d-wrap" id="nk3d">
-  <div class="nk3d-panel nk3d-help">Arraste para girar · botão direito para mover · roda para aproximar · clique numa bin para ver o endereço</div>
+  <div class="nk3d-panel nk3d-help">Arraste para girar · botão direito para mover · roda para aproximar (em direção ao mouse) · duplo clique centraliza no ponto · clique numa bin para ver o endereço</div>
   <div class="nk3d-panel nk3d-legend" id="nkLegend"></div>
   <div class="nk3d-panel nk3d-info" id="nkInfo"></div>
   <div class="nk3d-msg" id="nkMsg">Carregando…</div>
@@ -94,12 +94,29 @@ scene.background = new THREE.Color('#eef2f5');
 const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 2000);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+// zoom em direção ao ponto sob o mouse (o alvo acompanha): sem isso o zoom "trava" ao chegar perto do alvo da câmera
+controls.zoomToCursor = true;
+controls.minDistance = 0.3;
+controls.maxDistance = 2000;
+controls.screenSpacePanning = true;
+// perto demais do alvo, a roda continua avançando: o alvo é empurrado para a frente (atravessa a cena)
+renderer.domElement.addEventListener('wheel', e => {
+  if (e.deltaY >= 0) return;
+  const dist = camera.position.distanceTo(controls.target), step = 1.5;
+  if (dist > step) return;
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const t = controls.target.clone().addScaledVector(dir, step);
+  // só dentro do imóvel (acima do piso): fora dele não há o que ver
+  if (t.x < 0 || t.x > M(B.L) || t.z < 0 || t.z > M(B.W) || t.y < 0 || t.y > Math.max(M(B.H), 1)) return;
+  controls.target.copy(t);
+}, { capture: true, passive: true });
 scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa5ad, 1.1));
 const sun = new THREE.DirectionalLight(0xffffff, 1.2);
 sun.position.set(M(B.L) * 0.3, Math.max(M(B.L), M(B.W)), M(B.W) * 1.2);
 scene.add(sun);
 
 const L = M(B.L), W = M(B.W), H = M(B.H);
+const LBL = Math.max(0.6, Math.max(M(B.L), M(B.W)) / 45);  // altura dos rótulos (m), proporcional ao imóvel
 // piso, áreas e paredes
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W), new THREE.MeshLambertMaterial({ color: '#fbfcfd' }));
 floor.rotation.x = -Math.PI / 2; floor.position.set(L / 2, 0, W / 2); scene.add(floor);
@@ -127,7 +144,6 @@ data.obstacles.forEach(o => {
   m.position.set(M(o.x + o.w / 2), M(o.h) / 2, M(o.y + o.d / 2)); scene.add(m);
   scene.add(label(o.name, M(o.x + o.w / 2), M(o.h) + 0.4, M(o.y + o.d / 2), '#2b2f33'));
 });
-const LBL = Math.max(0.6, Math.max(M(B.L), M(B.W)) / 45);  // altura dos rótulos (m), proporcional ao imóvel
 function label(text, x, y, z, color = '#5b6770', size = LBL) {
   const c = document.createElement('canvas'), ctx = c.getContext('2d');
   ctx.font = 'bold 44px system-ui, sans-serif';
@@ -298,7 +314,19 @@ $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3
 rebuild();
 resize();
 view('persp');
-renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-window.nk3d = { scene, camera, controls, bins, data, select, view, rebuild };  // para testes e depuração
+renderer.setAnimationLoop(() => {
+  controls.update();
+  if (camera.position.y < 0.15) camera.position.y = 0.15;  // a câmera não atravessa o piso
+  renderer.render(scene, camera);
+});
+// duplo clique: centraliza (alvo da câmera) no ponto clicado, para aproximar dali
+renderer.domElement.addEventListener('dblclick', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObjects([bins, plates, posts, floor].filter(o => o.visible))[0];
+  if (hit) { controls.target.copy(hit.point); controls.update(); }
+});
+window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild };  // para testes e depuração
 </script>
 {% endblock %}

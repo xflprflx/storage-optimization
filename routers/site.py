@@ -387,6 +387,56 @@ def sku_report_page(pid: int, request: Request, db: Session = Depends(get_db)):
                   back=f"/optimization/site/{pid}?run=1#resultado", xlsx=f"/optimization/site/{pid}/skus.xlsx")
 
 
+@router.get("/{pid}/routes")
+def route_simulator(pid: int, request: Request, order: str = "", db: Session = Depends(get_db)):
+    """Simulador de trajeto: a amostra de pedidos percorrida no plano (lista de separação × rota otimizada)."""
+    from services.route_sim import path_points, plan_nodes, ref_node, simulate
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    ctx = dict(title=f"Projeto {pr.name}", back=f"/optimization/site/{pid}?run=1#resultado", svg="", rows=[], sel=None,
+               link=f"/optimization/site/{pid}/routes?", ref_label="", how="",
+               dist_note="Distância pelos corredores: sai pela ponta do corredor ou por um transversal para trocar de corredor.")
+    cfg = merged(copy.deepcopy(pr.config))
+    sample = (cfg.get("orders") or {}).get("sample")
+    if not sample:
+        return render(request, "slotting/routes.html", **ctx, sim={}, error=(
+            "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a "
+            "aba Pedidos — se ela já foi importada antes desta versão, importe de novo."))
+    plan, errors, _cfg = _plan_for(db, pr)
+    if errors or plan is None or not plan.modules:
+        return render(request, "slotting/routes.html", **ctx, sim={}, error=" ".join(errors) or "Rode a otimização primeiro.")
+    nodes, ref = plan_nodes(plan)
+    start = ref_node(ref)
+    rows_first = simulate(sample, nodes, start)
+    rows = sorted(rows_first["rows"], key=lambda r: -r["list_m"])
+    chosen = order or (rows[0]["order"] if rows else "")
+    sim = simulate([o for o in sample if o[0] == chosen], nodes, start, keep_routes={chosen}) if chosen else {}
+    svg, sel = "", next((r for r in rows if r["order"] == chosen), None)
+    if sel and sim.get("routes", {}).get(chosen):
+        base = floor_svg(plan)
+        sc = 1000 / plan.floor.length_cm
+        overlay = []
+        for kind, color, dash in (("list", "#d62728", ""), ("s", "#2f6db5", "2 3"), ("opt", "#1a9850", "6 4")):
+            pts = path_points(sim["routes"][chosen][kind], start)
+            overlay.append(f'<polyline points="{" ".join(f"{x * sc:.1f},{y * sc:.1f}" for x, y in pts)}" fill="none" '
+                           f'stroke="{color}" stroke-width="{3 if kind == "list" else 2.5}" stroke-linejoin="round" '
+                           f'opacity=".85"' + (f' stroke-dasharray="{dash}"' if dash else "") + '/>')
+        for i, n in enumerate(sim["routes"][chosen]["list"], start=1):
+            overlay.append(f'<circle cx="{n.gx * sc:.1f}" cy="{n.gy * sc:.1f}" r="7" fill="#d62728" stroke="#fff"/>'
+                           f'<text x="{n.gx * sc:.1f}" y="{n.gy * sc + 3.5:.1f}" font-size="9" fill="#fff" '
+                           f'text-anchor="middle" font-weight="bold">{i}<title>{n.key}</title></text>')
+        overlay.append(f'<circle cx="{start.gx * sc:.1f}" cy="{start.gy * sc:.1f}" r="8" fill="#111" stroke="#fff" stroke-width="2">'
+                       f'<title>Saída e volta: {ref["label"]}</title></circle>')
+        svg = base.replace("</svg>", "".join(overlay) + "</svg>")
+    how = ("ruas em serpentina" if plan.building.serpentine else "ruas na mesma direção") \
+        if plan.building.address_mode == "row" else "uma letra por corredor (ímpares/pares)"
+    return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
+                                                      "ref_label": ref["label"], "how": how},
+                  sim=rows_first, error="")
+
+
 @router.get("/{pid}/skus.xlsx")
 def sku_report_xlsx(pid: int, db: Session = Depends(get_db)):
     from services.slotting import sku_report_xlsx as to_xlsx

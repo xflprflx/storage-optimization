@@ -292,6 +292,21 @@ Fica em `/optimization/site/{id}/skus` no projeto (link no cartão *Posição do
   - **força:** fração dos pedidos do menos vendido em que os dois aparecem juntos;
   - **lift:** quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso).
 
+## 6.0.1 Simulador de trajeto pelos pedidos
+
+Fica em `/optimization/site/{id}/routes` no projeto (link no cartão *Posição dos SKUs*) e em `/optimization/slotting/routes?branch_id=…` nas filiais existentes (link no histórico de saídas). Usa uma **amostra de até 3.000 pedidos**, guardada ao importar a aba Pedidos. Históricos enviados antes desta versão precisam ser importados de novo.
+
+Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o mais perto da referência) e volta. São três rotas no mesmo plano:
+- **Lista:** na ordem dos endereços, como a lista de separação costuma sair. Mostra o efeito da numeração (por exemplo, a serpentina).
+- **Serpentina:** rota em S, com os corredores em ordem e alternando o sentido.
+- **Otimizada:** a melhor entre vizinho mais próximo + 2-opt e as outras duas.
+
+**Distância:**
+- **No projeto:** pelos corredores. Para trocar de corredor, sai pela ponta ou por um transversal.
+- **Nas filiais existentes:** a estimada pelo endereço.
+
+**Resultado:** caminhada média por pedido e por linha, mediana e 90º percentil, total, e quanto a rota otimizada economizaria. No projeto, a planta desenha as três rotas do pedido escolhido, com as paradas numeradas. No exemplo de galpão médio com letra por rua, a lista sem serpentina anda cerca de 4% mais que a rota em S; com serpentina, a lista praticamente coincide com ela.
+
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 
 A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.

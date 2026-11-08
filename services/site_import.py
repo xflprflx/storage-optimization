@@ -49,6 +49,7 @@ ORDER_COLS = {
 }
 MAX_PAIR_LINES = 40  # pedidos com mais SKUs que isso não entram na contagem de pares (combinações demais)
 MAX_PAIRS = 5000  # pares guardados (os que mais saem juntos)
+MAX_SAMPLE = 3000  # pedidos guardados (amostra) para o simulador de trajeto
 STRUCT_COLS = {
     "code": ["codigo", "cod", "code"],
     "name": ["nome", "descricao"],
@@ -656,7 +657,13 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
         for a, b in combinations(sorted(ss), 2):
             pairs[(a, b)] += 1
     top = [[a, b, c] for (a, b), c in pairs.most_common(MAX_PAIRS) if c >= 2]
-    return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3),
+    # amostra de pedidos (SKUs de cada um) para o simulador de trajeto
+    import random
+
+    ids = sorted(orders)
+    pick = random.Random(1).sample(ids, min(MAX_SAMPLE, len(ids)))
+    sample = [[o, sorted(set(orders[o]))] for o in sorted(pick)]
+    return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3), "sample": sample,
             "skus": {s: [n, round(u, 3)] for s, (n, u) in skus.items()}, "pairs": top, "neg": neg, "abs": to_abs,
             "ignored": ignored, "bad": bad, "big_orders": big,
             "dates": [min(dates), max(dates)] if dates else None}

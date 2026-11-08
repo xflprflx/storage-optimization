@@ -551,7 +551,8 @@
 {% if k.get('avg_dist') is not none or k.get('random_dist') is not none %}
 <div class="card mb-3">
   <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2">
-    <strong><i class="bi bi-signpost-split"></i> Posição dos SKUs <a class="small fw-normal ms-2" href="/optimization/site/{{ project.id }}/skus"><i class="bi bi-bar-chart-line"></i> Relatório de SKUs</a></strong>
+    <strong><i class="bi bi-signpost-split"></i> Posição dos SKUs <a class="small fw-normal ms-2" href="/optimization/site/{{ project.id }}/skus"><i class="bi bi-bar-chart-line"></i> Relatório de SKUs</a>
+      <a class="small fw-normal ms-2" href="/optimization/site/{{ project.id }}/routes"><i class="bi bi-signpost-2"></i> Simulador de trajeto</a></strong>
     <span class="small text-muted">referência: {{ k.ref.label }}{% if k.source %} · popularidade: {{ k.source }}{% endif %}
       {% if k.used %}<span class="badge text-bg-success">priorizado</span>{% elif k.get('avg_dist') is not none %}<span class="badge text-bg-secondary">sem priorizar (desligado)</span>{% endif %}</span>
   </div>

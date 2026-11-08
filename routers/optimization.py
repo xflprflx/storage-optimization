@@ -1063,6 +1063,61 @@ def branch_sku_report(request: Request, db: Session = Depends(get_db)):
                   back=f"/optimization/pool?{q}", xlsx=f"/optimization/slotting/skus.xlsx?{q}")
 
 
+@router.get("/slotting/routes")
+def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
+    """Simulador de trajeto numa filial existente: a amostra de pedidos do histórico, com a caminhada estimada pelo
+    endereço (sem planta). Cada SKU é buscado no endereço dele (saldo) mais perto da referência."""
+    from models import PickHistory, Product
+    from services.route_sim import Node, simulate
+    from services.slotting import SLOT_DEFAULTS, address_geo, geo_dist, slot_spec
+
+    qp = request.query_params
+    bid = to_int(qp.get("branch_id"))
+    br = db.get(Branch, bid) if bid else None
+    if br is None:
+        return redirect("/optimization", "Escolha a filial para simular os trajetos.", "warning")
+    q = urlencode([(k, v) for k, v in qp.multi_items()])
+    ctx = dict(title=f"Filial {br.code} - {br.name}", back=f"/optimization/pool?{q}", svg="", rows=[], sel=None, link="",
+               ref_label="", how="", dist_note="Distância estimada pelo endereço (corredores × distância entre corredores + "
+                                               "estantes × frente), como na posição pela saída.")
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid))
+    sample = (h.data or {}).get("sample") if h else None
+    if not sample:
+        return render(request, "slotting/routes.html", **ctx, sim={}, error=(
+            "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se "
+            "ele foi enviado antes desta versão, envie de novo."))
+    spec = slot_spec({**SLOT_DEFAULTS, **{k: qp.get(k) for k in SLOT_DEFAULTS if qp.get(k) is not None}, "slot": "1"})
+    rows = list(db.execute(select(Product.sku, StorageLocation.id, StorageLocation.address)
+                           .join(StockItem, StockItem.product_id == Product.id)
+                           .join(StorageLocation, StorageLocation.id == StockItem.location_id)
+                           .where(StorageLocation.branch_id == bid, StockItem.quantity > 0)))
+    geo, ref = address_geo(db, sorted({r[1] for r in rows}), spec) if rows else ({}, "")
+    by_addr = {}
+    nodes: dict[str, list] = {}
+    for sku, lid, addr in rows:
+        g = geo.get(lid)
+        if g is None:
+            continue
+        by_addr[addr] = g
+        nodes.setdefault(sku, []).append(Node(key=addr, gx=0, gy=0, zone=0, aisle=g.aisle_idx, along=g.x_m * 100,
+                                              cross=g.y_m * 100))
+    start = Node(key="REF", gx=0, gy=0)
+
+    def d(a, b):  # cm
+        if a.key == "REF" and b.key == "REF":
+            return 0.0
+        if a.key == "REF" or b.key == "REF":
+            return by_addr[(b if a.key == "REF" else a).key].walk_m * 100
+        return geo_dist(by_addr[a.key], by_addr[b.key]) * 100
+
+    sim = simulate(sample, nodes, start, d)
+    ctx.update(rows=sorted(sim["rows"], key=lambda r: -r["list_m"])[:500], ref_label=f"ponta do corredor {ref}",
+               how="letras por rua" + (" em serpentina" if spec.get("serpentine") else "") if spec.get("rows")
+               else "uma letra por corredor")
+    return render(request, "slotting/routes.html", **ctx, sim=sim, error="" if sim["orders"] else
+                  "Nenhum pedido da amostra tem SKUs com saldo nesta filial.")
+
+
 @router.get("/slotting/skus.xlsx")
 def branch_sku_report_xlsx(request: Request, db: Session = Depends(get_db)):
     from routers.site import _attachment

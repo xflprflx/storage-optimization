@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Simulador de trajeto — {{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-signpost-2"></i> Simulador de trajeto</h1>
+    <div class="small text-muted">{{ title }} · saída e volta: {{ ref_label }} · {{ how }}</div>
+  </div>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+</div>
+{% if error %}<div class="alert alert-warning">{{ error }}</div>{% else %}
+<div class="row g-2 mb-3">
+  {% macro card(label, a, b, unit, sub='', c=none) %}
+  <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
+    <div class="small text-muted">{{ label }}</div>
+    <div class="fs-6 fw-semibold"><span title="Na ordem da lista de separação (endereços)">{{ a|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">lista</span>
+      {% if c is not none %}· <span class="text-primary" title="Rota em S (serpentina)">{{ c|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">serpentina</span>{% endif %}
+      · <span class="text-success" title="Rota otimizada">{{ b|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">otimizada</span></div>
+    {% if sub %}<div class="small text-muted">{{ sub }}</div>{% endif %}
+  </div></div></div>
+  {% endmacro %}
+  {{ card('Caminhada média por pedido', sim.list_avg, sim.opt_avg, ' m', 'medianas ' ~ (sim.list_p50|dec(1)) ~ ' · ' ~ (sim.get('s_p50')|dec(1)) ~ ' · ' ~ (sim.opt_p50|dec(1)) ~ ' m', sim.get('s_avg')) }}
+  {{ card('Por linha de pedido', sim.list_per_line, sim.opt_per_line, ' m', (sim.lines / sim.orders)|dec(1) ~ ' linhas por pedido', sim.get('s_per_line')) }}
+  {{ card('90% dos pedidos até', sim.list_p90, sim.opt_p90, ' m', '', sim.get('s_p90')) }}
+  <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
+    <div class="small text-muted">Pedidos simulados</div><div class="fs-5 fw-semibold">{{ sim.orders }}</div>
+    <div class="small text-muted">total {{ (sim.list_total / 1000)|dec(1) }} km na lista · a rota otimizada economizaria <b>{{ sim.gain_pct|dec(0) }}%</b>{% if sim.skipped_lines %} · {{ sim.skipped_lines }} linha(s) de SKUs fora do plano ignoradas{% endif %}</div>
+  </div></div></div>
+</div>
+<div class="small text-muted mb-2"><b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas
+  (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a
+  numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). Cada SKU é buscado na posição dele mais
+  perto da referência. {{ dist_note }}</div>
+<div class="row g-3">
+  {% if svg %}
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Pedido {{ sel.order if sel else '' }}</strong>
+        {% if sel %}<span class="small"><span style="color:#d62728">━</span> lista {{ sel.list_m|dec(1) }} m · <span style="color:#2f6db5">━</span> serpentina {{ sel.s_m|dec(1) }} m · <span style="color:#1a9850">━</span> otimizada {{ sel.opt_m|dec(1) }} m · {{ sel.stops }} parada(s)</span>{% endif %}</div>
+      <div class="card-body">{{ svg|safe }}</div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="{{ 'col-xl-4' if svg else 'col-12' }}">
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>Pedidos</strong>
+        <input class="form-control form-control-sm" style="max-width:180px" type="search" placeholder="Filtrar" id="ordFilter"></div>
+      <div class="table-responsive" style="max-height:620px"><table class="table table-sm table-hover mb-0 small" id="ordTable" data-no-resize>
+        <thead class="sticky-top bg-white"><tr><th>Pedido</th><th class="text-end">Linhas</th><th class="text-end">Lista (m)</th><th class="text-end">Serp. (m)</th><th class="text-end">Otim. (m)</th></tr></thead>
+        <tbody>{% for r in rows %}<tr class="{{ 'table-active' if sel and r.order == sel.order }}">
+          <td>{% if svg %}<a href="{{ link }}order={{ r.order|urlencode }}">{{ r.order }}</a>{% else %}{{ r.order }}{% endif %}</td><td class="text-end">{{ r.lines }}</td>
+          <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <div class="card-footer bg-white small text-muted">Ordenados pela caminhada na lista (maiores primeiro){% if rows|length < sim.orders %} · {{ rows|length }} de {{ sim.orders }}{% endif %}.</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const f = document.getElementById('ordFilter');
+  if (f) f.addEventListener('input', () => { const q = f.value.trim().toLowerCase();
+    document.querySelectorAll('#ordTable tbody tr').forEach(tr => { tr.style.display = !q || tr.textContent.toLowerCase().includes(q) ? '' : 'none'; }); });
+})();
+</script>
+{% endblock %}

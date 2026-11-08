@@ -553,3 +553,26 @@ class PickHistory(TimestampMixin, Base):
     filename: Mapped[str] = mapped_column(String(200), nullable=False, default="")
     data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
+
+class OptimizationRun(TimestampMixin, Base):
+    """Resultado de uma otimização guardado para consulta e comparação: modo ("address" | "pool" | "site"), os
+    parâmetros usados, os indicadores e os detalhes (linhas da tabela, limitadas). Gravado automaticamente a cada
+    execução; a mesma execução (mesmos parâmetros e mesmos dados, `key`) não é duplicada."""
+
+    __tablename__ = "optimization_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    note: Mapped[str] = mapped_column(String(300), nullable=False, default="", server_default="")
+    branch_id: Mapped[Optional[int]] = mapped_column(ForeignKey("branches.id", ondelete="SET NULL"), nullable=True, index=True)
+    project_id: Mapped[Optional[int]] = mapped_column(ForeignKey("site_projects.id", ondelete="SET NULL"), nullable=True,
+                                                      index=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    url: Mapped[str] = mapped_column(String(2000), nullable=False, default="")  # para reabrir com os mesmos parâmetros
+    params: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    summary: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    details: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    branch: Mapped[Optional[Branch]] = relationship()
+

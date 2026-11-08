@@ -237,6 +237,7 @@ class PoolResult:
     width_before: float = 0.0  # cm de frente das bins usadas hoje
     width_after: float = 0.0
     units_volume: float = 0.0  # L ocupados pelas unidades (saldo físico)
+    units_volume_after: float = 0.0  # L das unidades que o plano guarda em bins (sem as que ficaram sem bin)
     orphans: list = field(default_factory=list)  # [(sku, endereço, PoolBin, unidades)] que ficam fora de bin
     displaced: dict = field(default_factory=dict)  # sku -> unidades desalojadas (realocadas)
     fixed_pids: dict = field(default_factory=dict)  # SKUs fora do foco que ficam nas suas bins: sku -> produto
@@ -665,6 +666,9 @@ def finish_pool_result(res: PoolResult, bins, pool_all, pool, virtual, plans, pr
     res.volume_before = sum(vol[b.type_id] for b in used_before) / 1000.0
     res.width_before = sum(wid[b.type_id] for b in used_before)
     res.units_volume = sum(p.unit_vol * sum(p.current.values()) for p in plans) / 1000.0
+    # ocupação depois: só as unidades que ficaram em bins (SKU sem bin não entra, senão passaria de 100%)
+    res.units_volume_after = sum(p.unit_vol * min(sum(p.current.values()), sum(m for _b, m in p.allocations))
+                                 for p in plans) / 1000.0
     if prm.unlimited:
         for b in virtual:
             res.by_type.setdefault(b.type_id, {"existing": 0, "needed": 0})["needed"] += 1

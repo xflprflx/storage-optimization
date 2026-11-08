@@ -61,6 +61,7 @@
   <li class="nav-item"><a class="nav-link {{ 'active' if not POOL }}" href="/optimization">Por endereço <small class="text-muted">(troca as bins de cada endereço)</small></a></li>
   <li class="nav-item"><a class="nav-link {{ 'active' if POOL }}" href="/optimization/pool">Pool de bins <small class="text-muted">(bins fixas, produtos mudam de lugar)</small></a></li>
   <li class="nav-item"><a class="nav-link" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova <small class="text-muted">(imóvel e estruturas do zero)</small></a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/runs"><i class="bi bi-clock-history"></i> Resultados salvos</a></li>
 </ul>
 
 {% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
@@ -355,6 +356,8 @@
     </div>
     {% endif %}{% endfor %}
 
+    {% if run_id %}<div class="small text-muted mb-2"><i class="bi bi-clock-history"></i> Resultado salvo como <a href="/optimization/runs/{{ run_id }}">nº {{ run_id }}</a> ·
+      <a href="/optimization/runs?kind={{ mode }}">comparar com outros</a></div>{% endif %}
     {# ---- indicadores (mesmos cartões nos dois modos) ---- #}
     <div class="row g-2 mb-3">
       {% for k in kpis %}

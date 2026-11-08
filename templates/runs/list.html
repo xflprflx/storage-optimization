@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}Resultados salvos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-clock-history"></i> Resultados de otimização</h1>
+    <div class="small text-muted">Cada execução (Por endereço, Pool, Projeto de filial nova) fica guardada com os parâmetros, os indicadores e os detalhes.
+      A mesma execução (mesmos parâmetros e mesmos dados) não é repetida. Marque dois ou mais para comparar.</div>
+  </div>
+</div>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link" href="/optimization">Por endereço</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/pool">Pool de bins</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova</a></li>
+  <li class="nav-item"><a class="nav-link active" href="/optimization/runs"><i class="bi bi-clock-history"></i> Resultados salvos</a></li>
+</ul>
+<form class="row g-2 align-items-end mb-3" method="get">
+  <div class="col-auto"><label class="form-label small mb-0">Modo</label>
+    <select class="form-select form-select-sm" name="kind" onchange="this.form.submit()"><option value="">Todos</option>
+      {% for k, v in kinds.items() %}<option value="{{ k }}" {% if kind == k %}selected{% endif %}>{{ v }} ({{ counts.get(k, 0) }})</option>{% endfor %}</select></div>
+  <div class="col-auto"><label class="form-label small mb-0">Filial</label>
+    <select class="form-select form-select-sm" name="branch_id" onchange="this.form.submit()"><option value="">Todas</option>
+      {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id|string %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><label class="form-label small mb-0">Busca</label>
+    <input class="form-control form-control-sm" name="q" value="{{ q }}" placeholder="título ou observação"></div>
+  <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Filtrar</button></div>
+</form>
+<form method="get" action="/optimization/runs/compare" id="cmpForm">
+<div class="card">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <strong>{{ page.total }} resultado(s)</strong>
+    <button class="btn btn-sm btn-primary" id="cmpBtn" disabled><i class="bi bi-layout-three-columns"></i> Comparar selecionados</button>
+  </div>
+  <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+    <thead class="small"><tr><th style="width:32px"></th><th>Quando</th><th>Modo</th><th>Resultado</th><th>Indicadores</th><th class="text-end">Ações</th></tr></thead>
+    <tbody>
+    {% for r in page.items %}
+      <tr>
+        <td><input class="form-check-input run-check" type="checkbox" name="ids" value="{{ r.id }}"></td>
+        <td class="small text-nowrap">{{ r.updated_at.strftime('%d/%m/%Y %H:%M') if r.updated_at else '' }}</td>
+        <td class="small"><span class="badge text-bg-light border">{{ kinds.get(r.kind, r.kind) }}</span></td>
+        <td><a href="/optimization/runs/{{ r.id }}">{{ r.title }}</a>{% if r.note %}<div class="small fw-semibold text-primary">{{ r.note }}</div>{% endif %}</td>
+        <td class="small text-muted">{% for k in (r.summary or {}).get('kpis', [])[:3] %}{% set v = k.get('after') if k.get('after') is not none else k.get('value') %}<div class="text-nowrap">{{ k.label }}: {% if k.get('before') is not none %}{{ k.get('before')|dec(k.places or 0) }} → {% endif %}<b>{{ v|dec(k.places or 0) if v is not none else '—' }}</b>{{ k.unit }}</div>{% endfor %}</td>
+        <td class="text-end text-nowrap">
+          <a class="btn btn-sm btn-outline-secondary" href="/optimization/runs/{{ r.id }}" title="Ver"><i class="bi bi-eye"></i></a>
+          {% if r.url %}<a class="btn btn-sm btn-outline-primary" href="{{ r.url }}" title="Reabrir com os mesmos parâmetros"><i class="bi bi-arrow-repeat"></i></a>{% endif %}
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="6" class="text-muted text-center py-4">Nenhum resultado salvo ainda: rode uma otimização.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</div>
+</form>
+{{ pagination(request, page) }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const btn = document.getElementById('cmpBtn');
+  const upd = () => { const n = document.querySelectorAll('.run-check:checked').length; btn.disabled = n < 2; btn.innerHTML = '<i class="bi bi-layout-three-columns"></i> Comparar selecionados' + (n ? ` (${n})` : ''); };
+  document.querySelectorAll('.run-check').forEach(c => c.addEventListener('change', upd)); upd();
+})();
+</script>
+{% endblock %}

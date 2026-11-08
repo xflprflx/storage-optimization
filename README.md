@@ -258,7 +258,7 @@ flowchart TD
   - por SKU e por endereço;
   - no plano detalhado, no Excel e no PDF.
 
-  Nos modos *Por endereço* e *Pool*, o indicador "Enchimento médio" passou a se chamar **Ocupação das bins** (mesma conta, antes → depois).
+  Nos modos *Por endereço* e *Pool*, o indicador "Enchimento médio" passou a se chamar **Ocupação das bins** (antes → depois). No Pool, o "depois" conta só as unidades que o plano guarda em bins; SKUs sem bin não entram, e antes faziam a ocupação passar de 100%.
 - **Arranjo 3D** (botão *Ver em 3D* no resultado e no plano detalhado; `/optimization/site/{id}/3d`): mostra a filial em 3D, com piso, corredores, zonas, obstáculos, estantes com os níveis e **cada bin no seu lugar**. Os dados vêm do mesmo plano exibido na tela (`plan3d.json`).
   - **Cores:** por tipo de bin, por ocupação das bins (vermelho → verde), por estrutura ou por SKU.
   - **Filtros e cortes:** filtro por corredor e corte por altura, para ver os níveis de dentro.
@@ -306,6 +306,17 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Nas filiais existentes:** a estimada pelo endereço.
 
 **Resultado:** caminhada média por pedido e por linha, mediana e 90º percentil, total, e quanto a rota otimizada economizaria. No projeto, a planta desenha as três rotas do pedido escolhido, com as paradas numeradas. No exemplo de galpão médio com letra por rua, a lista sem serpentina anda cerca de 4% mais que a rota em S; com serpentina, a lista praticamente coincide com ela.
+
+## 6.0.2 Resultados salvos e comparação
+
+Cada execução de otimização fica guardada (tabela `optimization_runs`): Por endereço, Pool e Projeto de filial nova. Ficam os parâmetros, os indicadores (antes → depois, ou o valor no projeto), as situações e os detalhes (linhas da tabela, até 3.000; no projeto também estruturas e bins).
+- **Sem duplicar:** a mesma execução (mesmos parâmetros e os mesmos dados de entrada) não é repetida; paginar ou ordenar a tela não cria outro registro.
+- **Aba Resultados salvos** (`/optimization/runs`):
+  - filtro por modo, filial e texto;
+  - nome/observação em cada resultado;
+  - Excel (indicadores, detalhes e parâmetros), reabrir com os mesmos parâmetros e excluir.
+- **Comparar:** marque dois ou mais resultados. A tela mostra os indicadores lado a lado, com a diferença em relação ao 1º (verde = melhor, vermelho = pior), e a tabela dos parâmetros que mudaram.
+- **Após rodar:** a própria tela do resultado mostra "Resultado salvo como nº …" com o link para comparar.
 
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 

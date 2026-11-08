@@ -288,6 +288,42 @@ def _address_slotting(db: Session, slot: dict, location_ids: list[int], results)
             "mono": sum(len(g) for g in groups.values())}
 
 
+def _save_run(db: Session, request: Request, kind: str, filters: dict, kpis: list, rows: list, slot: Optional[dict],
+              extra: Optional[dict] = None) -> Optional[int]:
+    """Guarda o resultado (indicadores + linhas) para consulta e comparação; a mesma execução não é duplicada."""
+    from services.run_history import data_fingerprint, kpi_from_card, save_run
+
+    try:
+        bid = to_int(filters.get("branch_id"))
+        br = db.get(Branch, bid) if bid else None
+        params = {k: (v if len(vs := request.query_params.getlist(k)) <= 1 else vs)
+                  for k, v in request.query_params.items()}
+        ks = [kpi_from_card(k) for k in kpis]
+        if slot:
+            a, z = slot.get("before") or {}, slot.get("after") or {}
+            for label, key, unit, better in (("Caminhada média por saída", "avg_dist", " m", "low"),
+                                             ("Saídas na zona de ouro da pega", "golden_picks", "%", "high"),
+                                             ("Saídas na zona de ouro da caminhada", "walk_picks", "%", "high"),
+                                             ("Distância entre itens que saem juntos", "pairs_avg", " m", "low")):
+                if a.get(key) is not None or z.get(key) is not None:
+                    ks.append({"label": label, "before": a.get(key), "after": z.get(key), "unit": unit, "places": 1,
+                               "better": better})
+        scope = " · ".join(x for x in (br.code if br else "", filters.get("warehouse_id") and f"armazém {filters['warehouse_id']}",
+                                       filters.get("sku") and f"SKU {filters['sku']}") if x)
+        from services.run_history import KINDS
+
+        run = save_run(db, kind, f"{KINDS[kind]} · {scope or 'todas as filiais'} · objetivo {params.get('objective', 'padrão')}",
+                       params, {"kpis": ks, **(extra or {})}, {"rows": rows}, str(request.url.path) + "?" + str(request.query_params),
+                       fingerprint=data_fingerprint(db), branch_id=bid if br else None)
+        return run.id
+    except Exception:  # noqa: BLE001  (guardar o histórico nunca impede de ver o resultado)
+        import logging
+
+        db.rollback()
+        logging.getLogger("neokioski").exception("Não foi possível guardar o resultado da otimização")
+        return None
+
+
 def _common_ctx(db: Session, mode: str, filters: dict, raw: dict, errors: list, objectives: dict, unlimited: bool) -> dict:
     return {"mode": mode, "criteria": CRITERIA, "crit_labels": CRIT_LABELS, "solvers": [], "bin_sources": BIN_SOURCES,
             "orphan_modes": ORPHAN_MODES, "orphans": [], "displaced": 0, "filters": filters, "params": raw, "errors": errors, "objectives": objectives, "bases": BASES,
@@ -393,6 +429,13 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                            solvers=[_solver_view(summary.solver, prm.objective, prm.priority)],
                            n_applicable=sum(1 for r in results if r.applicable),
                            can_apply=True, filter_query=urlencode({k: v for k, v in filters.items() if v}))
+                code = lambda t: types[t].code if t in types else str(t)  # noqa: E731
+                bins_txt = lambda d: " + ".join(f"{n}× {code(t)}" for t, n in sorted((d or {}).items()))  # noqa: E731
+                ctx["run_id"] = _save_run(db, request, "address", filters, kpis, [
+                    {"Endereço": r.address, "Situação": r.status_label, "Bins hoje": bins_txt(r.current),
+                     "Bins sugeridas": bins_txt(r.suggested) if r.suggested is not None else "",
+                     "Enchimento hoje (%)": r.fill_now, "Enchimento plano (%)": r.fill_after} for r in results],
+                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips}})
     return render(request, "optimization/page.html", **ctx)
 
 
@@ -761,11 +804,12 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                 vb = sum(r.volume_before for r in results)
                 va = sum(r.volume_after for r in results)
                 uv = sum(r.units_volume for r in results)
+                uva = sum(r.units_volume_after for r in results)
                 kpis = [kpi("Bins ocupadas", tot["before"], tot["after"],
                             hint=("bins novas necessárias" if prm.unlimited else f"de {tot['bins']} bins no pool")),
                         kpi("Volume de bins", vb, va, " L"),
                         kpi("Largura de frente", sum(r.width_before for r in results), sum(r.width_after for r in results), " cm"),
-                        kpi("Ocupação das bins", uv / vb * 100 if vb else None, uv / va * 100 if va else None, "%",
+                        kpi("Ocupação das bins", uv / vb * 100 if vb else None, uva / va * 100 if va else None, "%",
                             good_negative=False, pct=True, hint="volume dos produtos ÷ volume das bins"),
                         kpi("Endereços com bins", tot["addr_before"], None if prm.unlimited else tot["addr_after"]),
                         {"label": "Dimensionados" if prm.unlimited else "Movimentações",
@@ -790,6 +834,12 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                                        if any(r.focus for r in results) else None), types=types, notes=notes, freed_addr=freed_addr, shortage=shortage, tot=tot,
                            n_applicable=0 if prm.unlimited else sum(1 for m in rows_all if m["status"] == "mover"),
                            can_apply=not prm.unlimited)
+                ctx["run_id"] = _save_run(db, request, "pool", filters, kpis, [
+                    {"SKU": m["sku"], "Situação": POOL_STATUS.get(m["status"], (m["status"], ""))[0],
+                     "Quantidade": m["qty"], "Bins hoje": m["bins_before"], "Bins plano": m["bins_after"],
+                     "Movimentações": m["moves"], "Enchimento hoje (%)": m["fill_now"],
+                     "Enchimento plano (%)": m["fill_after"]} for m in rows_all],
+                    ctx.get("slot"), {"status": {lbl: n for _k, lbl, _c, n in chips}})
     return render(request, "optimization/page.html", **ctx)
 
 

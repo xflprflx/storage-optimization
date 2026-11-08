@@ -3,6 +3,7 @@ estruturas/bins, exportação e geração do cadastro da filial."""
 from __future__ import annotations
 
 import copy
+from typing import Optional
 import shutil
 import uuid
 from pathlib import Path
@@ -154,6 +155,51 @@ def download_seed():
     return download_example(DEFAULT)
 
 
+def _save_site_run(db: Session, pr: SiteProject, cfg: dict, plan) -> Optional[int]:
+    """Guarda o plano do projeto (indicadores, estruturas, bins e SKUs) para consulta e comparação."""
+    from services.run_history import save_run
+
+    try:
+        k = plan.slotting or {}
+        num = lambda label, v, unit="", places=0, better=None: {"label": label, "value": v, "unit": unit,  # noqa: E731
+                                                               "places": places, "better": better}
+        kpis = [num("Módulos de estrutura", plan.total_modules, "", 0, "low"),
+                num("Custo total", plan.total_cost, " R$", 2, "low"),
+                num("Custo das estruturas", plan.structures_cost, " R$", 2, "low"),
+                num("Custo das bins", plan.bins_cost, " R$", 2, "low"),
+                num("Bins alocadas", plan.bins_placed, "", 0, "high"),
+                num("Bins sem lugar", plan.shortage, "", 0, "low"),
+                num("Ocupação dos níveis", plan.fill, "%", 1, "high"),
+                num("Ocupação das bins", plan.bin_fill, "%", 1, "high"),
+                num("Uso das fileiras", plan.row_use, "%", 1, "high"),
+                num("Área das estruturas", plan.footprint_m2, " m²", 1, "low"),
+                num("Caminhada média por saída", k.get("avg_dist"), " m", 1, "low"),
+                num("Saídas na zona de ouro da pega", k.get("golden_picks"), "%", 1, "high"),
+                num("Saídas na zona de ouro da caminhada", k.get("walk_picks"), "%", 1, "high"),
+                num("Distância entre itens que saem juntos", k.get("pairs_avg"), " m", 1, "low")]
+        kpis = [x for x in kpis if x["value"] is not None]
+        b = plan.building
+        details = {
+            "structs": [{"Estrutura": s.struct.code, "Qtd.": s.qty, "Níveis": s.levels, "Custo": s.cost} for s in plan.structs if s.qty],
+            "types": [{"Tipo de bin": t.spec.code, "Necessárias": t.needed, "Alocadas": t.placed,
+                       "Ocupação das bins (%)": t.bin_fill, "Custo": t.cost} for t in plan.types if t.needed],
+            "rows": [{"SKU": d.sku, "Produto": d.name, "Quantidade": d.units, "Bins": d.total_bins, "Situação": d.status_label,
+                      "ABC": d.abc, "Saída": d.pop} for d in plan.demands]}
+        params = {"projeto": pr.name, "imóvel": f"{b.length_m:g} × {b.width_m:g} × {b.clear_height_m:g} m",
+                  "building": cfg.get("building"), "structures": cfg.get("structures"), "demand": cfg.get("demand"),
+                  "params": cfg.get("params"), "slotting": cfg.get("slotting")}
+        run = save_run(db, "site", f"Projeto {pr.name} · {b.length_m:g} × {b.width_m:g} m", params,
+                       {"kpis": kpis, "notes": list(plan.notes)[:20]}, details, f"/optimization/site/{pr.id}?run=1",
+                       fingerprint=_cfg_key(db, cfg), project_id=pr.id)
+        return run.id
+    except Exception:  # noqa: BLE001
+        import logging
+
+        db.rollback()
+        logging.getLogger("neokioski").exception("Não foi possível guardar o resultado do projeto")
+        return None
+
+
 def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
     structs = list(db.scalars(select(StructureType).order_by(StructureType.code)))
     for st in structs:  # estrutura cadastrada depois do projeto: entra desligada
@@ -179,9 +225,10 @@ def show_project(pid: int, request: Request, run: str = "", db: Session = Depend
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
     plan, errors, _ = _plan_for(db, pr, fresh=True) if run else (None, [], None)
     cfg = merged(copy.deepcopy(pr.config))
+    run_id = _save_site_run(db, pr, cfg, plan) if plan is not None and not errors and plan.modules else None
     ctx = _context(db, pr, cfg)
     types = {t.id: t for t in ctx["bin_types"]}
-    return render(request, "site/project.html", **ctx, plan=plan, errors=errors, types=types,
+    return render(request, "site/project.html", **ctx, plan=plan, errors=errors, types=types, run_id=run_id,
                   svg=floor_svg(plan) if plan else "", colors=struct_colors(plan) if plan else {})
 
 

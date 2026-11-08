@@ -36,6 +36,7 @@
   <div class="col-xl-8">
     <div class="card">
       <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Pedido {{ sel.order if sel else '' }}</strong>
+        {% if sel and walk3d is defined %}<a class="btn btn-sm btn-success" href="{{ walk3d }}order={{ sel.order|urlencode }}" title="Mostra o separador andando pelas três rotas no arranjo 3D e grava em vídeo"><i class="bi bi-person-walking"></i> Ver caminhada em 3D / gravar vídeo</a>{% endif %}
         {% if sel %}<span class="small"><span style="color:#d62728">━</span> lista {{ sel.list_m|dec(1) }} m · <span style="color:#2f6db5">━</span> serpentina {{ sel.s_m|dec(1) }} m · <span style="color:#1a9850">━</span> otimizada {{ sel.opt_m|dec(1) }} m · {{ sel.stops }} parada(s)</span>{% endif %}</div>
       <div class="card-body">{{ svg|safe }}</div>
     </div>

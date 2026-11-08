@@ -264,6 +264,7 @@ flowchart TD
   - **Filtros e cortes:** filtro por corredor e corte por altura, para ver os níveis de dentro.
   - **Busca e seleção:** busca por SKU ou endereço (destaca as bins). Clicar numa bin mostra o endereço, o SKU, o tipo de bin, a ocupação e a estante.
   - **Exibição:** liga/desliga bins, estruturas e paredes, e vistas 3D, de cima e de frente.
+  - **Simular caminhada:** anima a separação de um pedido da aba Pedidos (ver 6.0.1) e grava em vídeo. **Tela cheia** no canto da vista.
   - **Navegação:** a roda aproxima em direção ao ponto sob o mouse. Perto do alvo, o zoom continua avançando dentro do imóvel, e a câmera não atravessa o piso. O duplo clique centraliza a câmera no ponto clicado.
 
   Usa Three.js (CDN jsdelivr, versão fixa). Lógica da geometria em `services/site_3d.py`.
@@ -328,6 +329,16 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Nas filiais existentes:** a estimada pelo endereço.
 
 **Resultado:** caminhada média por pedido e por linha, mediana e 90º percentil, total, e quanto a rota otimizada economizaria. No projeto, a planta desenha as três rotas do pedido escolhido, com as paradas numeradas. No exemplo de galpão médio com letra por rua, a lista sem serpentina anda cerca de 4% mais que a rota em S; com serpentina, a lista praticamente coincide com ela.
+
+**Caminhada em 3D e vídeo** (botão *Ver caminhada em 3D / gravar vídeo* no simulador ou *Simular caminhada* no Arranjo 3D; dados em `/optimization/site/{id}/routes3d.json`):
+- **Separadores animados:** um boneco com carrinho anda pelos corredores, para em cada endereço e pega o produto. As bins do endereço se acendem na cor de quem pegou.
+- **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
+- **Painel:** distância percorrida, paradas feitas e tempo de cada rota. A lista de paradas risca as já feitas.
+- **Tempo estimado:** caminhada (m/s) + tempo por parada (s), ambos editáveis.
+- **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).
+- **Câmera:** seguir os separadores (afasta para caberem todos), primeira pessoa, de cima (a rota toda) ou livre.
+- **Tela cheia:** botão no canto da vista 3D (Esc volta).
+- **Gravar vídeo:** grava do início ao fim, com o painel de distâncias na imagem, e baixa um `.webm` (Chrome, Edge ou Firefox).
 
 ## 6.0.2 Resultados salvos e comparação
 

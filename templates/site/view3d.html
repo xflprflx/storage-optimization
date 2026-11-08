@@ -7,7 +7,16 @@
   .nk3d-panel { position: absolute; background: rgba(255, 255, 255, .94); border: 1px solid #d9e0e5; border-radius: .4rem;
     padding: .5rem .65rem; font-size: .8rem; box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
   .nk3d-legend { left: .6rem; bottom: .6rem; max-width: 280px; max-height: 45%; overflow: auto; }
-  .nk3d-info { right: .6rem; top: .6rem; width: 280px; display: none; }
+  .nk3d-info { right: .6rem; top: 3rem; width: 280px; display: none; }
+  .nk3d-tools { position: absolute; right: .6rem; top: .6rem; display: flex; gap: .35rem; }
+  .nk3d-walk { right: .6rem; bottom: .6rem; width: 340px; max-height: calc(100% - 4rem); overflow: auto; display: none; }
+  .nk3d-hud { left: 50%; top: .6rem; transform: translateX(-50%); display: none; min-width: 300px; font-size: .82rem; }
+  .nk3d-hud .row-w { display: flex; gap: .5rem; align-items: center; white-space: nowrap; }
+  .nk3d-stops { max-height: 160px; overflow: auto; font-size: .76rem; }
+  .nk3d-stops .done { color: #8a96a0; text-decoration: line-through; }
+  .nk3d-stops .now { font-weight: 700; }
+  .nk3d-wrap.nk3d-max { position: fixed; inset: 0; z-index: 1080; height: 100vh; border-radius: 0; }
+  .nk3d-wrap:fullscreen { height: 100vh; border-radius: 0; }
   .nk3d-help { left: .6rem; top: .6rem; color: #5b6770; }
   .nk3d-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: .35rem; }
   .nk3d-grad { height: 10px; border-radius: 3px; background: linear-gradient(90deg, #d73027, #fee08b, #1a9850); }
@@ -55,6 +64,48 @@
   <div class="nk3d-panel nk3d-help">Arraste para girar · botão direito para mover · roda para aproximar (em direção ao mouse) · duplo clique centraliza no ponto · clique numa bin para ver o endereço</div>
   <div class="nk3d-panel nk3d-legend" id="nkLegend"></div>
   <div class="nk3d-panel nk3d-info" id="nkInfo"></div>
+  <div class="nk3d-tools">
+    <button type="button" class="btn btn-sm btn-success" id="nkWalkBtn" title="Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)"><i class="bi bi-person-walking"></i> Simular caminhada</button>
+    <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="Maximiza a vista 3D (Esc volta)"><i class="bi bi-arrows-fullscreen"></i></button>
+  </div>
+  <div class="nk3d-panel nk3d-hud" id="nkHud"></div>
+  <div class="nk3d-panel nk3d-walk" id="nkWalk">
+    <div class="d-flex justify-content-between align-items-center mb-1"><b><i class="bi bi-person-walking"></i> Simulação de caminhada</b>
+      <button type="button" class="btn-close btn-sm" id="nkWalkClose" aria-label="Fechar"></button></div>
+    <div class="text-muted mb-1" id="nkWalkMsg"></div>
+    <label class="form-label small mb-0" for="nkOrder">Pedido <span class="text-muted">(maiores caminhadas primeiro)</span></label>
+    <select class="form-select form-select-sm mb-1" id="nkOrder"></select>
+    <label class="form-label small mb-0" for="nkRoute">Rota</label>
+    <select class="form-select form-select-sm mb-1" id="nkRoute">
+      <option value="all">Comparar as 3 ao mesmo tempo</option>
+      <option value="list">Lista de separação (ordem dos endereços)</option>
+      <option value="s">Serpentina (rota em S)</option>
+      <option value="opt">Otimizada</option>
+    </select>
+    <div class="d-flex gap-1 align-items-center mb-1">
+      <button type="button" class="btn btn-sm btn-primary" id="nkPlay" title="Iniciar / pausar (barra de espaço)"><i class="bi bi-play-fill"></i></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="nkRestart" title="Do início"><i class="bi bi-skip-start-fill"></i></button>
+      <input type="range" class="form-range flex-grow-1" id="nkProg" min="0" max="1000" value="0" title="Arraste para avançar ou voltar">
+    </div>
+    <div class="row g-1 mb-1">
+      <div class="col-6"><label class="form-label small mb-0" for="nkSpeed">Velocidade do vídeo</label>
+        <select class="form-select form-select-sm" id="nkSpeed"><option value="1">tempo real</option><option value="2">2×</option><option value="5">5×</option>
+          <option value="10" selected>10×</option><option value="20">20×</option><option value="50">50×</option></select></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkCam">Câmera</label>
+        <select class="form-select form-select-sm" id="nkCam"><option value="follow">Seguir o separador</option><option value="fp">Primeira pessoa</option>
+          <option value="top">De cima (rota toda)</option><option value="free">Livre (mouse)</option></select></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="Velocidade de caminhada do separador">Caminhada (m/s)</label>
+        <input class="form-control form-control-sm" type="number" id="nkWalkV" min="0.2" max="3" step="0.1" value="1.0"></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="Tempo parado em cada endereço para pegar o produto">Tempo por parada (s)</label>
+        <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="10"></div>
+    </div>
+    <div class="d-flex gap-1 align-items-center mb-1">
+      <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="Grava a simulação do início ao fim e baixa o vídeo (.webm)"><i class="bi bi-record-circle"></i> Gravar vídeo</button>
+      <span class="small text-muted" id="nkRecMsg"></span>
+    </div>
+    <div class="small" id="nkWalkInfo"></div>
+    <div class="nk3d-stops mt-1" id="nkStops"></div>
+  </div>
   <div class="nk3d-msg" id="nkMsg">Carregando…</div>
 </div>
 {% endblock %}
@@ -163,10 +214,12 @@ function label(text, x, y, z, color = '#5b6770', size = LBL) {
   outline(o.x, o.y, o.w, o.d, '#3b8c5a', true, 0.045);
   scene.add(label(`${o.name} · ${fmt(o.w * o.d / 10000)} m²`, M(o.x + o.w / 2), 0.6, M(o.y + o.d / 2), '#24613a'));
 });
+let refLabel = null;
 if (data.ref) {  // ponto de referência da separação (expedição): marcador
   const pin = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 16), new THREE.MeshLambertMaterial({ color: '#d62728' }));
   pin.rotation.x = Math.PI; pin.position.set(M(data.ref.x), 0.6, M(data.ref.y)); scene.add(pin);
-  scene.add(label(`Referência: ${data.ref.label}`, M(data.ref.x), 1.6, M(data.ref.y), '#d62728'));
+  refLabel = label(`Referência: ${data.ref.label}`, M(data.ref.x), 1.6, M(data.ref.y), '#d62728');
+  scene.add(refLabel);
 }
 const aisleLabels = new THREE.Group();
 data.aisles.forEach(a => aisleLabels.add(label(a.label.replace(/^Corredor\s*/i, ''), M(a.x), 0.5, M(a.y), '#24548c', LBL * 0.8)));
@@ -351,13 +404,354 @@ $('nkFind').addEventListener('input', () => {
 try { const c = localStorage.getItem('nk-3d-color'); if (c) $('nkColor').value = c; } catch (e) { /* sem armazenamento */ }
 $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3d-color', $('nkColor').value); } catch (e) { /* idem */ } });
 
+// ------------------------------------------------------------------ simulação de caminhada (um pedido percorrido em 3D)
+const PID = {{ project.id }};
+const WK = { list: null, data: null, walkers: [], stops: {}, t: 0, T: 0, playing: false, group: new THREE.Group(), rec: null, hudAt: 0 };
+scene.add(WK.group);
+const segGeo = new THREE.BoxGeometry(1, 0.03, 0.16); segGeo.translate(0.5, 0, 0);  // faixa do trajeto no piso
+const pinGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.6, 12); pinGeo.translate(0, 0.3, 0);
+const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const walkV = () => Math.min(3, Math.max(0.2, +$('nkWalkV').value || 1));
+const pickS = () => Math.min(300, Math.max(0, +$('nkPick').value || 0));
+const speed = () => +$('nkSpeed').value || 1;
+
+function setPlayIcon() { $('nkPlay').innerHTML = WK.playing ? '<i class="bi bi-pause-fill"></i>' : '<i class="bi bi-play-fill"></i>'; }
+function openWalk(show = true, order = '') {
+  $('nkWalk').style.display = show ? 'block' : 'none';
+  document.querySelector('.nk3d-help').style.display = show ? 'none' : '';
+  aisleLabels.visible = !show;  // os rótulos grandes atrapalham a câmera perto do separador
+  if (refLabel) refLabel.visible = !show;
+  if (!show) {
+    if (WK.rec) stopRec(true);
+    WK.playing = false; setPlayIcon(); clearWalk(); controls.enabled = true; $('nkHud').style.display = 'none'; return;
+  }
+  loadOrders(order);
+}
+async function loadOrders(order) {
+  if (!WK.list) {
+    $('nkWalkMsg').textContent = 'Carregando os pedidos…';
+    try { WK.list = await (await fetch(`/optimization/site/${PID}/routes3d.json`)).json(); } catch (e) { WK.list = { error: 'Falha ao carregar os pedidos.' }; }
+    if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
+    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m</option>`).join('');
+    const s = WK.list.summary;
+    $('nkWalkMsg').innerHTML = `${s.orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista ${fmt(s.list_avg)} m</span> · ` +
+      `<span style="color:#2f6db5">serpentina ${fmt(s.s_avg)} m</span> · <span style="color:#1a9850">otimizada ${fmt(s.opt_avg)} m</span>`;
+  }
+  if (!WK.list.orders.length) { $('nkWalkInfo').textContent = 'Nenhum pedido da amostra tem SKUs no plano.'; return; }
+  if (order && WK.list.orders.some(o => o.order === order)) $('nkOrder').value = order;
+  if (!WK.data || WK.data.order !== $('nkOrder').value) await loadOrder($('nkOrder').value);
+  else build();
+}
+async function loadOrder(order, autoplay = true) {
+  $('nkWalkInfo').textContent = 'Calculando as rotas…';
+  let d;
+  try { d = await (await fetch(`/optimization/site/${PID}/routes3d.json?order=${encodeURIComponent(order)}`)).json(); } catch (e) { d = { error: 'Falha ao carregar o pedido.' }; }
+  if (d.error) { $('nkWalkInfo').textContent = d.error; return; }
+  WK.data = d; build();
+  if (autoplay) play(true);
+}
+function clearWalk() {
+  WK.group.traverse(o => { if (o.isSprite) { o.material.map?.dispose(); o.material.dispose(); } });
+  WK.group.clear(); WK.walkers = []; WK.stops = {};
+}
+
+function pointAt(w, d) {  // posição (m) a `d` metros do início e o segmento em que está
+  const c = w.cum; let lo = 0, hi = c.length - 1;
+  if (d >= c[hi]) return [w.P[hi].clone(), Math.max(0, hi - 1)];
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (c[mid] <= d) lo = mid; else hi = mid; }
+  const f = c[hi] > c[lo] ? (d - c[lo]) / (c[hi] - c[lo]) : 0;
+  return [w.P[lo].clone().lerp(w.P[hi], f), lo];
+}
+
+function build() {
+  clearWalk();
+  const d = WK.data, mode = $('nkRoute').value;
+  const kinds = (mode === 'all' ? ['list', 's', 'opt'] : [mode]).filter(k => d.routes[k]);
+  if (!kinds.length) { $('nkWalkInfo').textContent = 'Rota indisponível para este pedido.'; return; }
+  const single = kinds.length === 1;
+  // paradas: pino no piso e contorno das bins do endereço; ficam na cor de quem pegou primeiro
+  const first = d.routes[kinds[0]];
+  first.keys.forEach((key, j) => {
+    const [x, y] = first.pts[first.stops[j]];
+    const pin = new THREE.Mesh(pinGeo, new THREE.MeshLambertMaterial({ color: '#4b5560' }));
+    pin.position.set(M(x), 0, M(y)); WK.group.add(pin);
+    const bs = data.bins.filter(b => b[9] === key), edges = [], fills = [];
+    let top = 1.8;
+    bs.forEach(b => {
+      const e = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: '#1f2d33', depthTest: false, transparent: true, opacity: 0.8 }));
+      e.scale.set(M(b[3]), M(b[5]), M(b[4])); e.position.set(M(b[0] + b[3] / 2), M(b[2] + b[5] / 2), M(b[1] + b[4] / 2)); e.renderOrder = 15;
+      const f = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color: '#e11d48', transparent: true, opacity: 0.75, depthTest: false }));
+      f.scale.set(M(b[3]) + 0.02, M(b[5]) + 0.02, M(b[4]) + 0.02); f.position.set(M(b[0]) - 0.01, M(b[2]) - 0.01, M(b[1]) - 0.01);
+      f.visible = false; f.renderOrder = 14;
+      WK.group.add(e, f); edges.push(e); fills.push(f);
+      top = Math.max(top, M(b[2] + b[5]) + 0.5);
+    });
+    if (single) WK.group.add(label(String(j + 1), M(x), top, M(y), '#1f2d33', Math.min(LBL * 0.6, 0.5)));
+    WK.stops[key] = { pin, edges, fills, by: undefined };
+  });
+  WK.walkers = kinds.map((k, i) => {
+    const R = d.routes[k], off = single ? 0 : (i - 1) * 0.3;  // lado a lado, para não se sobreporem
+    const P = R.pts.map(([x, y]) => new THREE.Vector3(M(x) + off, 0, M(y) + off));
+    const cum = [0];
+    for (let j = 1; j < P.length; j++) cum.push(cum[j - 1] + P[j].distanceTo(P[j - 1]));
+    const total = Math.max(cum[cum.length - 1], 1e-6);
+    // trajeto: faixa clara (a percorrer) e faixa cheia (já percorrida), segmento a segmento
+    const mFaint = new THREE.MeshBasicMaterial({ color: R.color, transparent: true, opacity: 0.25, depthWrite: false });
+    const mDone = new THREE.MeshBasicMaterial({ color: R.color });
+    const segs = [];
+    for (let j = 1; j < P.length; j++) {
+      const a = P[j - 1], b = P[j], len = cum[j] - cum[j - 1];
+      if (len < 1e-4) continue;
+      const rot = -Math.atan2(b.z - a.z, b.x - a.x), yy = 0.02 + i * 0.006;
+      const f = new THREE.Mesh(segGeo, mFaint); f.position.set(a.x, yy, a.z); f.rotation.y = rot; f.scale.set(len, 1, 1);
+      const dn = new THREE.Mesh(segGeo, mDone); dn.position.set(a.x, yy + 0.004, a.z); dn.rotation.y = rot; dn.visible = false;
+      WK.group.add(f, dn); segs.push({ d0: cum[j - 1], len, dn });
+    }
+    // linha do tempo: anda até cada parada, para (pega o produto) e segue; no fim volta à referência
+    const ev = [], arrive = {};
+    let t = 0, dPrev = 0;
+    R.stops.forEach((pi, s) => {
+      const dd = cum[pi];
+      ev.push({ t0: t, t1: (t += (dd - dPrev) / walkV()), d0: dPrev, d1: dd });
+      arrive[R.keys[s]] = t;
+      ev.push({ t0: t, t1: (t += pickS()), d0: dd, d1: dd, stop: s });
+      dPrev = dd;
+    });
+    ev.push({ t0: t, t1: (t += (total - dPrev) / walkV()), d0: dPrev, d1: total });
+    // o separador: corpo, cabeça e carrinho (aponta o sentido) e um anel no piso
+    const fig = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.85, 4, 12), new THREE.MeshLambertMaterial({ color: R.color })); body.position.y = 0.65;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 12), new THREE.MeshLambertMaterial({ color: '#f1c9a5' })); head.position.y = 1.42;
+    const cart = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.45), new THREE.MeshLambertMaterial({ color: '#8a96a0' })); cart.position.set(0.62, 0.55, 0);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.55, 32), new THREE.MeshBasicMaterial({ color: R.color, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.035;
+    fig.add(body, head, cart, ring, label(R.name.split(' ')[0], 0, 2.1, 0, R.color, Math.min(LBL * 0.6, 0.45)));
+    WK.group.add(fig);
+    return { k, R, P, cum, total, segs, ev, arrive, T: t, fig, body, ring, d: 0, picked: 0, pick: null, rot: null };
+  });
+  WK.T = Math.max(...WK.walkers.map(w => w.T));
+  const R0 = d.routes;
+  const gain = R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
+  $('nkWalkInfo').innerHTML = `<b>Pedido ${esc(d.order)}</b> · ${d.lines} linha(s) · ${d.stops} parada(s)<br>` +
+    kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>') +
+    (gain != null ? `<br>A rota otimizada anda <b>${fmt(gain, 0)}%</b> menos que a lista.` : '') +
+    `<br><span class="text-muted">Vídeo ≈ ${mmss(WK.T / speed())} na velocidade escolhida.</span>`;
+  $('nkStops').innerHTML = `<div class="text-muted">Paradas — ${esc(first.name)}:</div>` + first.keys.map((k, j) =>
+    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(k)}</span> · ${esc(first.skus[j])} ${esc(data.skus[first.skus[j]] || '')}</div>`).join('');
+  WK.t = 0; update(); camMode(true);
+  $('nkHud').style.display = 'block';
+}
+
+function update() {
+  const t = WK.t;
+  WK.walkers.forEach(w => {
+    const tt = Math.min(Math.max(t, 0), w.T);
+    const e = w.ev.find(x => tt <= x.t1) || w.ev[w.ev.length - 1];
+    const f = e.t1 > e.t0 ? (tt - e.t0) / (e.t1 - e.t0) : 1;
+    w.d = e.d0 + (e.d1 - e.d0) * f;
+    w.pick = e.stop != null && t < w.T ? e.stop : null;
+    w.picked = w.R.keys.filter(k => w.arrive[k] <= tt + 1e-9).length;
+    const [p, j] = pointAt(w, w.d);
+    w.fig.position.copy(p);
+    let a = w.P[j], b = w.P[j + 1];  // sentido: o segmento atual (ou o próximo com comprimento)
+    for (let jj = j; jj < w.P.length - 1 && a.distanceTo(b) < 1e-4; jj++) { a = w.P[jj]; b = w.P[jj + 1]; }
+    if (b && a.distanceTo(b) > 1e-4) {
+      const want = -Math.atan2(b.z - a.z, b.x - a.x);
+      if (w.rot == null) w.rot = want;
+      let da = want - w.rot; da = Math.atan2(Math.sin(da), Math.cos(da));
+      w.rot += da * (WK.playing ? 0.25 : 1);
+      w.fig.rotation.y = w.rot;
+    }
+    const walking = WK.playing && w.pick == null && t < w.T;
+    w.body.position.y = 0.65 + (walking ? Math.abs(Math.sin(t * 6)) * 0.05 : 0);
+    const s = w.pick != null ? 1 + 0.35 * Math.abs(Math.sin(performance.now() / 180)) : 1;
+    w.ring.scale.set(s, s, s);
+    w.segs.forEach(g => { const v = w.d - g.d0; g.dn.visible = v > 1e-4; if (v > 1e-4) g.dn.scale.set(Math.min(v, g.len), 1, 1); });
+  });
+  Object.entries(WK.stops).forEach(([key, st]) => {  // quem pegou primeiro (até o tempo atual)
+    let by = null;
+    WK.walkers.forEach(w => { if (w.arrive[key] != null && w.arrive[key] <= t + 1e-9 && (!by || w.arrive[key] < by.arrive[key])) by = w; });
+    if (by === st.by) return;
+    st.by = by;
+    st.pin.material.color.set(by ? by.R.color : '#4b5560');
+    st.fills.forEach(f => { f.visible = !!by; if (by) f.material.color.set(by.R.color); });
+    st.edges.forEach(e => { e.visible = !by; });
+  });
+  if (!WK.scrubbing) $('nkProg').value = WK.T ? Math.round(t / WK.T * 1000) : 0;
+}
+
+function hudLines() {
+  const d = WK.data;
+  const out = [{ text: `Pedido ${d.order} · ${d.lines} linha(s) · ${d.stops} parada(s) · ${mmss(Math.min(WK.t, WK.T))}`, bold: true }];
+  WK.walkers.forEach(w => {
+    const dm = w.R.m * w.d / w.total, done = WK.t >= w.T;
+    out.push({ color: w.R.color, text: `${w.R.name.split(' ')[0]}: ${fmt(dm)} de ${fmt(w.R.m)} m · paradas ${w.picked}/${w.R.keys.length} · ` +
+      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${w.R.keys[w.pick]}` : mmss(WK.t)) });
+  });
+  return out;
+}
+function hud() {
+  if (!WK.walkers.length) return;
+  $('nkHud').innerHTML = hudLines().map(l => `<div class="row-w">${l.color ? `<span class="nk3d-sw" style="background:${l.color}"></span>` : ''}` +
+    `<span${l.bold ? ' class="fw-semibold"' : ''}>${esc(l.text)}</span></div>`).join('');
+  const w0 = WK.walkers[0];
+  document.querySelectorAll('#nkStops [data-j]').forEach(el => {
+    const j = +el.dataset.j, key = w0.R.keys[j];
+    el.className = w0.arrive[key] + pickS() <= WK.t + 1e-9 ? 'done' : w0.pick === j ? 'now' : '';
+  });
+}
+
+function play(restart = false) {
+  if (!WK.walkers.length) return;
+  if (restart || WK.t >= WK.T) { WK.t = 0; WK.walkers.forEach(w => { w.rot = null; }); }
+  WK.playing = true; setPlayIcon(); camMode(true);
+}
+function pause() { WK.playing = false; setPlayIcon(); }
+
+// câmera: seguir (atrás e acima), primeira pessoa (olhos do separador da 1ª rota), de cima (a rota toda) ou livre
+function camMode(reset = false) {
+  const mode = $('nkCam').value;
+  controls.enabled = mode !== 'fp';
+  if (!WK.walkers.length || !reset) return;
+  if (mode === 'follow') {
+    const c = centroid();
+    controls.target.copy(c); camera.position.copy(c).add(new THREE.Vector3(-5, 6, 7)); controls.update();
+  } else if (mode === 'top') {
+    const bb = new THREE.Box3(); WK.walkers.forEach(w => w.P.forEach(p => bb.expandByPoint(p)));
+    const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+    controls.target.copy(c);
+    camera.position.set(c.x, Math.max(sz.x, sz.z, 8) * 1.15, c.z + 0.001); controls.update();
+  }
+}
+function centroid() {
+  const c = new THREE.Vector3(); WK.walkers.forEach(w => c.add(w.fig.position)); return c.divideScalar(WK.walkers.length || 1);
+}
+function camTick(dt = 1 / 60) {
+  const mode = $('nkCam').value, k = 1 - Math.exp(-dt * 6);  // suavização independente da taxa de quadros
+  if (!WK.walkers.length || !WK.playing && !WK.scrubbing) return;
+  if (mode === 'follow') {
+    const c = centroid(), delta = c.clone().sub(controls.target); delta.y = 0;
+    delta.multiplyScalar(WK.scrubbing ? 1 : k); controls.target.add(delta); camera.position.add(delta);
+    // afasta a câmera para caberem todos os separadores (comparando as 3 rotas eles se separam)
+    const spread = Math.max(...WK.walkers.map(w => w.fig.position.distanceTo(c)));
+    const off = camera.position.clone().sub(controls.target), want = Math.max(9, spread * 2.4);
+    off.setLength(off.length() + (want - off.length()) * (WK.scrubbing ? 1 : k * 0.5));
+    camera.position.copy(controls.target).add(off);
+  } else if (mode === 'fp') {
+    const w = WK.walkers[0];
+    const eye = w.fig.position.clone(); eye.y = 1.6;
+    const [ahead] = pointAt(w, Math.min(w.d + 3, w.total)); ahead.y = 1.3;
+    if (ahead.distanceTo(eye) < 0.5) { const dir = new THREE.Vector3(Math.cos(-w.rot), 0, Math.sin(-w.rot)); ahead.copy(eye).addScaledVector(dir, 2); ahead.y = 1.3; }
+    camera.position.lerp(eye, WK.scrubbing ? 1 : Math.min(1, k * 2)); controls.target.lerp(ahead, WK.scrubbing ? 1 : k);
+  }
+}
+
+// gravação: a imagem 3D + o painel com as distâncias, num canvas gravado com MediaRecorder (.webm)
+function startRec() {
+  if (!WK.walkers.length) return;
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+    $('nkRecMsg').textContent = 'Este navegador não grava vídeo (use Chrome, Edge ou Firefox).'; return;
+  }
+  const src = renderer.domElement, c = document.createElement('canvas');
+  c.width = src.width - (src.width % 2); c.height = src.height - (src.height % 2);
+  const type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(x => MediaRecorder.isTypeSupported(x)) || '';
+  let rec;
+  try { rec = new MediaRecorder(c.captureStream(30), type ? { mimeType: type, videoBitsPerSecond: 8e6 } : {}); } catch (e) {
+    $('nkRecMsg').textContent = 'Não foi possível iniciar a gravação.'; return;
+  }
+  const chunks = [], order = WK.data.order, mode = $('nkRoute').value;
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    if (WK.recCancel) { WK.recCancel = false; return; }
+    const blob = new Blob(chunks, { type: rec.mimeType || 'video/webm' }), ext = /mp4/.test(blob.type) ? 'mp4' : 'webm';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `caminhada_pedido_${String(order).replace(/[^\w.-]+/g, '_')}_${mode}.${ext}`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    $('nkRecMsg').textContent = `Vídeo salvo (${fmt(blob.size / 1048576)} MB).`;
+  };
+  WK.rec = { rec, c, ctx: c.getContext('2d') };
+  rec.start(500);
+  $('nkRec').innerHTML = '<i class="bi bi-stop-fill"></i> Parar e salvar'; $('nkRecMsg').textContent = 'Gravando…';
+  play(true);
+}
+function stopRec(cancel = false) {
+  if (!WK.rec) return;
+  WK.recCancel = cancel;
+  WK.rec.rec.stop(); WK.rec = null;
+  $('nkRec').innerHTML = '<i class="bi bi-record-circle"></i> Gravar vídeo';
+  if (cancel) $('nkRecMsg').textContent = '';
+}
+function recFrame() {
+  const { c, ctx } = WK.rec, src = renderer.domElement;
+  ctx.drawImage(src, 0, 0, c.width, c.height);
+  const px = Math.max(14, Math.round(c.height / 42)), lines = hudLines(), pad = px * 0.6;
+  ctx.font = `600 ${px}px system-ui, sans-serif`;
+  const wmax = Math.max(...lines.map(l => ctx.measureText(l.text).width)) + px * 1.6;
+  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(pad, pad, wmax + pad, lines.length * px * 1.45 + pad);
+  lines.forEach((l, i) => {
+    const y = pad * 1.5 + i * px * 1.45 + px * 0.8;
+    if (l.color) { ctx.fillStyle = l.color; ctx.fillRect(pad * 2, y - px * 0.75, px * 0.8, px * 0.8); }
+    ctx.fillStyle = '#1f2d33'; ctx.font = `${l.bold ? 700 : 500} ${px}px system-ui, sans-serif`;
+    ctx.fillText(l.text, pad * 2 + (l.color ? px * 1.2 : 0), y);
+  });
+  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada · vídeo ${speed()}×`;
+  ctx.font = `500 ${Math.round(px * 0.8)}px system-ui, sans-serif`;
+  const fw = ctx.measureText(foot).width;
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c.width - fw - pad * 3, c.height - px * 1.8, fw + pad * 2, px * 1.4);
+  ctx.fillStyle = '#5b6770'; ctx.fillText(foot, c.width - fw - pad * 2, c.height - px * 0.75);
+}
+
+function walkTick(dt) {
+  if (!WK.walkers.length) return;
+  if (WK.playing) {
+    WK.t += dt * speed();
+    if (WK.t >= WK.T) {
+      WK.t = WK.T; pause();
+      if (WK.rec) setTimeout(() => stopRec(), 1500);  // segura a imagem final um pouco
+    }
+  }
+  update(); camTick(dt);
+  if (performance.now() - WK.hudAt > 120) { WK.hudAt = performance.now(); hud(); }
+}
+
+$('nkWalkBtn').addEventListener('click', () => openWalk($('nkWalk').style.display !== 'block'));
+$('nkWalkClose').addEventListener('click', () => openWalk(false));
+$('nkOrder').addEventListener('change', () => { if (WK.rec) stopRec(true); loadOrder($('nkOrder').value); });
+['nkRoute', 'nkWalkV', 'nkPick'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
+$('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
+$('nkCam').addEventListener('change', () => camMode(true));
+$('nkPlay').addEventListener('click', () => (WK.playing ? pause() : play()));
+$('nkRestart').addEventListener('click', () => { WK.t = 0; WK.walkers.forEach(w => { w.rot = null; }); update(); hud(); camMode(true); });
+$('nkProg').addEventListener('input', e => { WK.scrubbing = true; WK.t = e.target.value / 1000 * WK.T; update(); hud(); camTick(); WK.scrubbing = false; });
+$('nkRec').addEventListener('click', () => (WK.rec ? stopRec() : startRec()));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && host.classList.contains('nk3d-max')) host.classList.remove('nk3d-max');
+  if (e.code === 'Space' && $('nkWalk').style.display === 'block' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) {
+    e.preventDefault(); WK.playing ? pause() : play();
+  }
+});
+// tela cheia (ou, sem a API, maximizada na janela)
+$('nkFull').addEventListener('click', () => {
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (host.classList.contains('nk3d-max')) { host.classList.remove('nk3d-max'); return; }
+  if (host.requestFullscreen) host.requestFullscreen().catch(() => host.classList.add('nk3d-max'));
+  else host.classList.add('nk3d-max');
+});
+const qs = new URLSearchParams(location.search);
+if (qs.get('walk')) openWalk(true, qs.get('order') || '');
+
 rebuild();
 resize();
 view('persp');
+const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
+  walkTick(Math.min(clock.getDelta(), 0.1));
   controls.update();
   if (camera.position.y < 0.15) camera.position.y = 0.15;  // a câmera não atravessa o piso
   renderer.render(scene, camera);
+  if (WK.rec) recFrame();
 });
 // duplo clique: centraliza (alvo da câmera) no ponto clicado, para aproximar dali
 renderer.domElement.addEventListener('dblclick', e => {
@@ -367,6 +761,6 @@ renderer.domElement.addEventListener('dblclick', e => {
   const hit = ray.intersectObjects([bins, plates, posts, floor].filter(o => o.visible))[0];
   if (hit) { controls.target.copy(hit.point); controls.update(); }
 });
-window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild };  // para testes e depuração
+window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild, walk: WK, openWalk, play, pause };  // para testes e depuração
 </script>
 {% endblock %}

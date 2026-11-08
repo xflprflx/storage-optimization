@@ -181,13 +181,16 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
             "gain_pct": (1 - sum(O) / sum(L)) * 100 if sum(L) else None}
 
 
-def path_points(route: list[Node], start: Node) -> list[tuple[float, float]]:
-    """Pontos (cm, planta) do trajeto para desenhar: pelos corredores (sai pela ponta usada) e em L entre eles."""
+def path_points(route: list[Node], start: Node, stops: Optional[list] = None) -> list[tuple[float, float]]:
+    """Pontos (cm, planta) do trajeto para desenhar: pelos corredores (sai pela ponta usada) e em L entre eles.
+    Se `stops` for uma lista, recebe o índice (em pts) de cada parada, na ordem da rota (o último = a volta)."""
     pts = [(start.gx, start.gy)]
     seq = [start] + route + [start]
     for a, b in zip(seq, seq[1:]):
         if a.aisle >= 0 and b.aisle >= 0 and a.zone == b.zone and a.aisle == b.aisle:
             pts += [_glob(a, a.along), _glob(b, b.along), (b.gx, b.gy)]  # pelo meio do corredor
+            if stops is not None:
+                stops.append(len(pts) - 1)
             continue
         best = None
         for e1 in (a.ends if a.aisle >= 0 else (None,)):
@@ -206,4 +209,6 @@ def path_points(route: list[Node], start: Node) -> list[tuple[float, float]]:
         if b.aisle >= 0:
             pts.append(_glob(b, b.along))
         pts.append((b.gx, b.gy))
+        if stops is not None:
+            stops.append(len(pts) - 1)
     return pts

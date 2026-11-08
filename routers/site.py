@@ -438,28 +438,41 @@ def sku_report_page(pid: int, request: Request, db: Session = Depends(get_db)):
                   back=f"/optimization/site/{pid}?run=1#resultado", xlsx=f"/optimization/site/{pid}/skus.xlsx")
 
 
+def _route_setup(db: Session, pr: SiteProject):
+    """Amostra de pedidos + plano exibido → (sample, plan, nodes, start, ref, erro)."""
+    from services.route_sim import plan_nodes, ref_node
+
+    cfg = merged(copy.deepcopy(pr.config))
+    sample = (cfg.get("orders") or {}).get("sample")
+    if not sample:
+        return None, None, None, None, None, (
+            "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a "
+            "aba Pedidos — se ela já foi importada antes desta versão, importe de novo.")
+    plan, errors, _cfg = _plan_for(db, pr)
+    if errors or plan is None or not plan.modules:
+        return None, None, None, None, None, " ".join(errors) or "Rode a otimização primeiro."
+    nodes, ref = plan_nodes(plan)
+    return sample, plan, nodes, ref_node(ref), ref, ""
+
+
+ROUTE_KINDS = (("list", "Lista de separação", "#d62728"), ("s", "Serpentina (rota em S)", "#2f6db5"),
+               ("opt", "Otimizada", "#1a9850"))
+
+
 @router.get("/{pid}/routes")
 def route_simulator(pid: int, request: Request, order: str = "", db: Session = Depends(get_db)):
     """Simulador de trajeto: a amostra de pedidos percorrida no plano (lista de separação × rota otimizada)."""
-    from services.route_sim import path_points, plan_nodes, ref_node, simulate
+    from services.route_sim import path_points, simulate
 
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
     ctx = dict(title=f"Projeto {pr.name}", back=f"/optimization/site/{pid}?run=1#resultado", svg="", rows=[], sel=None,
-               link=f"/optimization/site/{pid}/routes?", ref_label="", how="",
+               link=f"/optimization/site/{pid}/routes?", ref_label="", how="", walk3d=f"/optimization/site/{pid}/3d?walk=1&",
                dist_note="Distância pelos corredores: sai pela ponta do corredor ou por um transversal para trocar de corredor.")
-    cfg = merged(copy.deepcopy(pr.config))
-    sample = (cfg.get("orders") or {}).get("sample")
-    if not sample:
-        return render(request, "slotting/routes.html", **ctx, sim={}, error=(
-            "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a "
-            "aba Pedidos — se ela já foi importada antes desta versão, importe de novo."))
-    plan, errors, _cfg = _plan_for(db, pr)
-    if errors or plan is None or not plan.modules:
-        return render(request, "slotting/routes.html", **ctx, sim={}, error=" ".join(errors) or "Rode a otimização primeiro.")
-    nodes, ref = plan_nodes(plan)
-    start = ref_node(ref)
+    sample, plan, nodes, start, ref, error = _route_setup(db, pr)
+    if error:
+        return render(request, "slotting/routes.html", **ctx, sim={}, error=error)
     rows_first = simulate(sample, nodes, start)
     rows = sorted(rows_first["rows"], key=lambda r: -r["list_m"])
     chosen = order or (rows[0]["order"] if rows else "")
@@ -486,6 +499,49 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
     return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
                                                       "ref_label": ref["label"], "how": how},
                   sim=rows_first, error="")
+
+
+@router.get("/{pid}/routes3d.json")
+def routes_3d_json(pid: int, order: str = "", db: Session = Depends(get_db)):
+    """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias).
+    Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
+    from fastapi.responses import JSONResponse
+
+    from services.route_sim import path_points, simulate
+
+    pr = _get(db, pid)
+    if not pr:
+        return JSONResponse({"error": "Projeto não encontrado."}, status_code=404)
+    sample, _plan, nodes, start, ref, error = _route_setup(db, pr)
+    if error:
+        return JSONResponse({"error": error})
+    if not order:
+        sim = simulate(sample, nodes, start)
+        rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
+        r2 = lambda v: round(v, 2) if v is not None else None  # noqa: E731
+        return JSONResponse({"ref": ref, "kinds": [{"key": k, "name": n, "color": c} for k, n, c in ROUTE_KINDS],
+                             "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"]},
+                             "orders": [{"order": r["order"], "lines": r["lines"], "stops": r["stops"], "list_m": r2(r["list_m"]),
+                                         "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"])} for r in rows]})
+    lines = [o for o in sample if o[0] == order]
+    if not lines:
+        return JSONResponse({"error": f"Pedido {order} não está na amostra."})
+    sim = simulate(lines, nodes, start, keep_routes={order})
+    rt = sim["routes"].get(order)
+    if not rt:
+        return JSONResponse({"error": f"Os SKUs do pedido {order} não estão no plano."})
+    sku_of = {n.key: s for s, ns in nodes.items() for n in ns}
+    row = sim["rows"][0]
+    routes = {}
+    for kind, name, color in ROUTE_KINDS:
+        if rt.get(kind) is None:
+            continue
+        idx: list = []
+        pts = path_points(rt[kind], start, idx)
+        routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
+                        "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "skus": [sku_of.get(n.key, "") for n in rt[kind]],
+                        "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
+    return JSONResponse({"order": order, "lines": row["lines"], "stops": row["stops"], "ref": ref, "routes": routes})
 
 
 @router.get("/{pid}/skus.xlsx")

@@ -14,6 +14,11 @@ from models import StockPolicy, StorageLocation
 
 
 def get_policy(db: Session, branch_id: int, product_id: int, create: bool = False) -> Optional[StockPolicy]:
+    """Política da filial para o produto (criada se `create`). A sessão não descarrega sozinha (autoflush=False):
+    a política criada antes no mesmo lote ainda não está no banco, então procura também nas pendentes."""
+    for obj in db.new:
+        if isinstance(obj, StockPolicy) and obj.branch_id == branch_id and obj.product_id == product_id:
+            return obj
     pol = db.scalar(select(StockPolicy).where(StockPolicy.branch_id == branch_id, StockPolicy.product_id == product_id))
     if pol is None and create:
         pol = StockPolicy(branch_id=branch_id, product_id=product_id)

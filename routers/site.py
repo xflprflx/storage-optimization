@@ -320,6 +320,32 @@ def _report_response(request: Request, pid: int, fmt: str, db: Session):
                   colors=struct_colors(rep.plan))
 
 
+@router.get("/{pid}/3d")
+def view_3d(pid: int, request: Request, db: Session = Depends(get_db)):
+    """Arranjo 3D da filial (o plano exibido na tela; os dados vêm de plan3d.json)."""
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    return render(request, "site/view3d.html", project=pr)
+
+
+@router.get("/{pid}/plan3d.json")
+def plan_3d_json(pid: int, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse
+
+    from services.site_3d import plan_3d
+
+    pr = _get(db, pid)
+    if not pr:
+        return JSONResponse({"error": "Projeto não encontrado."}, status_code=404)
+    plan, errors, _cfg = _plan_for(db, pr)
+    if errors or plan is None or not plan.modules:
+        return JSONResponse({"error": " ".join(errors) or "O plano não tem estruturas para mostrar. Rode a otimização."})
+    data = plan_3d(plan)
+    data["building"]["name"] = pr.name
+    return JSONResponse(data)
+
+
 @router.get("/{pid}/plan")
 def plan_page(pid: int, request: Request, db: Session = Depends(get_db)):
     return _report_response(request, pid, "html", db)

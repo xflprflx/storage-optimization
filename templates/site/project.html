@@ -354,6 +354,7 @@
     <button class="btn {{ 'btn-warning' if plan.shortage else 'btn-outline-secondary' }}" type="submit" form="suggestForm"
             title="Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-funnel"></i> Sugerir redução da demanda</button>
     <a class="btn btn-primary" href="/optimization/site/{{ project.id }}/plan"><i class="bi bi-list-check"></i> Plano detalhado</a>
+    {% if plan.modules %}<a class="btn btn-outline-primary" href="/optimization/site/{{ project.id }}/3d"><i class="bi bi-box"></i> Ver em 3D</a>{% endif %}
     <a class="btn btn-outline-success" href="/optimization/site/{{ project.id }}/plan.xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>
     <a class="btn btn-outline-danger" href="/optimization/site/{{ project.id }}/plan.pdf" data-dims-link><i class="bi bi-file-earmark-pdf"></i> PDF</a>
     {% if plan.modules and not plan.errors %}
@@ -410,11 +411,12 @@
     ('Custo total', money(plan.total_cost), 'estruturas ' ~ money(plan.structures_cost)|striptags ~ ' + bins ' ~ money(plan.bins_cost)|striptags),
     ('Bins', plan.bins_placed ~ ' / ' ~ plan.bins_needed, 'alocadas / necessárias'),
     ('Ocupação dos níveis', pct(plan.fill), plan.levels_used ~ ' de ' ~ plan.levels_total ~ ' níveis em uso'),
+    ('Ocupação das bins', pct(plan.bin_fill), 'volume dos produtos ÷ volume útil das bins'),
     ('Uso das fileiras', pct(plan.row_use), plan.front_m|dec(1) ~ ' de ' ~ plan.floor.total_row_m|dec(1) ~ ' m'),
     ('Área das estruturas', plan.footprint_m2|dec(1) ~ ' m²', 'de ' ~ plan.building.area_m2|dec(0) ~ ' m² do imóvel'),
   ] %}
   {% for label, val, sub in kpis %}
-  <div class="col-xl-2 col-md-4 col-6"><div class="card h-100"><div class="card-body py-2">
+  <div class="col-xxl col-xl-3 col-md-4 col-6"><div class="card h-100"><div class="card-body py-2">
     <div class="small text-muted">{{ label }}</div><div class="fs-4 fw-semibold">{{ val }}</div><div class="small text-muted text-truncate" title="{{ sub }}">{{ sub }}</div>
   </div></div></div>
   {% endfor %}
@@ -456,14 +458,14 @@
     <div class="card h-100">
       <div class="card-header bg-white"><strong>Bins — quantidades</strong></div>
       <div class="table-responsive"><table class="table table-sm mb-0">
-        <thead class="small"><tr><th>Tipo</th><th class="text-end">Necessárias</th><th class="text-end">Capacidade</th><th class="text-end">Ocupação</th><th class="text-end">Falta</th><th class="text-end">Custo</th></tr></thead>
+        <thead class="small"><tr><th>Tipo</th><th class="text-end">Necessárias</th><th class="text-end">Capacidade</th><th class="text-end" title="Bins alocadas ÷ posições reservadas para o tipo nos níveis">Uso das posições</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins alocadas">Ocupação das bins</th><th class="text-end">Falta</th><th class="text-end">Custo</th></tr></thead>
         <tbody>
         {% for t in plan.types %}
           <tr><td class="mono">{{ t.spec.code }}{% if t.parent_code %} <span class="small text-muted" title="Compartimento: comprar {{ t.parents }} bin(s) {{ t.parent_code }}">({{ t.parents }}× {{ t.parent_code }})</span>{% endif %}</td>
-            <td class="text-end">{{ t.needed }}</td><td class="text-end">{{ t.capacity }}</td><td class="text-end">{{ pct(t.fill) }}</td>
+            <td class="text-end">{{ t.needed }}</td><td class="text-end">{{ t.capacity }}</td><td class="text-end">{{ pct(t.fill) }}</td><td class="text-end">{{ pct(t.bin_fill) }}</td>
             <td class="text-end {{ 'text-danger fw-semibold' if t.shortage else 'text-muted' }}">{{ t.shortage }}</td>
             <td class="text-end" title="{% if t.unit_cost is not none %}R$ {{ t.unit_cost|dec(2) }} por bin{% endif %}">{{ money(t.cost) }}</td></tr>
-        {% else %}<tr><td colspan="6" class="text-muted text-center py-3">Nenhuma bin.</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="7" class="text-muted text-center py-3">Nenhuma bin.</td></tr>{% endfor %}
         </tbody>
       </table></div>
       {% if plan.solver.stages %}
@@ -485,11 +487,12 @@
     <span class="small">{% for k, n in st.items() %}<span class="badge {{ 'text-bg-success' if k == 'ok' else 'text-bg-warning' }} me-1">{{ n }} {{ {'ok': 'alocados', 'sem_dados': 'sem dimensões', 'nao_cabe': 'não cabem', 'falta': 'sem espaço', 'sem_qtd': 'sem quantidade'}.get(k, k) }}</span>{% endfor %}</span></div>
   <div class="table-responsive" style="max-height:420px">
     <table class="table table-sm table-hover mb-0" data-no-resize>
-      <thead class="small sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">Qtd.</th><th>Bins</th><th>Situação</th><th>Observação</th></tr></thead>
+      <thead class="small sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">Qtd.</th><th>Bins</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins do SKU">Ocupação das bins</th><th>Situação</th><th>Observação</th></tr></thead>
       <tbody class="small">
       {% for dm in plan.demands|sort(attribute='status', reverse=true) %}
         <tr><td class="mono">{{ dm.sku }}</td><td>{{ dm.name }}</td><td>{{ dm.material }}</td><td class="text-end">{{ dm.units }}</td>
           <td>{% for t, n in (dm.bins or {}).items() %}<span class="badge text-bg-light border mono">{{ n }}× {{ types[t].code if t in types else '?' }}</span>{% endfor %}</td>
+          <td class="text-end">{{ pct(dm.bin_fill) }}</td>
           <td><span class="badge {{ 'text-bg-success' if dm.status == 'ok' else 'text-bg-warning' }}">{{ dm.status_label }}</span></td><td>{{ dm.note }}</td></tr>
       {% endfor %}
       </tbody>
@@ -503,13 +506,13 @@
     <input class="form-control form-control-sm" style="max-width:240px" type="search" placeholder="Filtrar endereço/SKU" id="posFilter"></div>
   <div class="table-responsive" style="max-height:480px">
     <table class="table table-sm table-hover mb-0" id="posTable" data-no-resize>
-      <thead class="small sticky-top bg-white"><tr><th>Endereço</th><th>Estrutura</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unidades</th><th class="text-end">Peso (kg)</th></tr></thead>
+      <thead class="small sticky-top bg-white"><tr><th>Endereço</th><th>Estrutura</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unidades</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins">Ocupação das bins</th><th class="text-end">Peso (kg)</th></tr></thead>
       <tbody class="small">
       {% for ps in positions[:3000] %}
         <tr><td class="mono">{{ ps.address }}</td><td class="mono">{{ ps.struct_code }}</td><td class="mono">{{ types[ps.type_id].code if ps.type_id in types else '?' }}</td>
-          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
+          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ pct(ps.fill) }}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
       {% endfor %}
-      {% if positions|length > 3000 %}<tr><td colspan="8" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
+      {% if positions|length > 3000 %}<tr><td colspan="9" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
       </tbody>
     </table>
   </div>

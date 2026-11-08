@@ -143,6 +143,8 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
          + (f" ({plan.end_caps} cabeceiras)" if plan.end_caps else "")),
         ("Ocupação dos níveis", (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
          f"{plan.levels_used} de {plan.levels_total} níveis em uso"),
+        ("Ocupação das bins", (_fmt(plan.bin_fill, 1) + "%") if plan.bin_fill is not None else "—",
+         "volume dos produtos ÷ volume útil das bins"),
         ("Uso das fileiras", (_fmt(plan.row_use, 1) + "%") if plan.row_use is not None else "—",
          f"{_fmt(plan.front_m, 1)} de {_fmt(fl.total_row_m, 1)} m · {_fmt(plan.footprint_m2, 1)} m² de estruturas"),
     ]
@@ -194,11 +196,12 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     for pos in plan.positions:
         rep.addresses.append({"address": pos.address, "struct": pos.struct_code, "type": code(pos.type_id),
                               "bins": pos.bins, "sku": pos.sku, "name": pos.name, "units": pos.units,
-                              "weight": pos.weight})
+                              "weight": pos.weight, "fill": pos.fill})
     for dm in plan.demands:
         rep.skus.append({"sku": dm.sku, "name": dm.name, "material": dm.material, "units": dm.units,
                          "bins": ", ".join(f"{n}× {code(t)}" for t, n in (dm.bins or {}).items()),
-                         "status": dm.status_label, "note": dm.note, "ok": dm.status == "ok"})
+                         "status": dm.status_label, "note": dm.note, "ok": dm.status == "ok",
+                         "fill": dm.bin_fill})
     rep.warnings = list(plan.errors) + list(plan.notes)
 
     # ---- passo a passo ----
@@ -333,13 +336,17 @@ def to_xlsx(rep: SiteReport) -> bytes:
           [(r["bay"], r["level"], r["struct"], r["type"], r["cap"], r["used"], r["positions"], round(r["load"], 1),
             r["max_load"]) for r in rep.levels])
     ws = wb.create_sheet("Endereços")
-    table(ws, ["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Peso (kg)"],
-          [(r["address"], r["struct"], r["type"], r["bins"], r["sku"], r["name"], r["units"], round(r["weight"], 2))
+    pc = lambda v: round(v, 1) if v is not None else None  # noqa: E731
+    table(ws, ["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocupação das bins (%)",
+               "Peso (kg)"],
+          [(r["address"], r["struct"], r["type"], r["bins"], r["sku"], r["name"], r["units"], pc(r["fill"]),
+            round(r["weight"], 2))
            for r in rep.addresses], {6: 40})
     ws = wb.create_sheet("SKUs")
-    table(ws, ["SKU", "Produto", "Material", "Quantidade", "Bins", "Situação", "Observação"],
-          [(r["sku"], r["name"], r["material"], r["units"], r["bins"], r["status"], r["note"]) for r in rep.skus],
-          {2: 40, 7: 40})
+    table(ws, ["SKU", "Produto", "Material", "Quantidade", "Bins", "Ocupação das bins (%)", "Situação", "Observação"],
+          [(r["sku"], r["name"], r["material"], r["units"], r["bins"], pc(r["fill"]), r["status"], r["note"])
+           for r in rep.skus],
+          {2: 40, 8: 40})
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -574,12 +581,12 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
     story.append(Paragraph("X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo).", small))
     story.append(PageBreak())
     story.append(Paragraph("Endereços", h2))
-    ad = [["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Peso (kg)"]]
+    ad = [["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocup. bins", "Peso (kg)"]]
     for r in rep.addresses:
         ad.append([r["address"], r["struct"], r["type"], str(r["bins"]), r["sku"], P(r["name"]), _fmt(r["units"]),
-                   _fmt(r["weight"], 1)])
-    story.append(table(ad, [26 * mm, 24 * mm, 22 * mm, 12 * mm, 26 * mm, width - 172 * mm, 20 * mm, 18 * mm],
-                       extra=[("ALIGN", (6, 1), (7, -1), "RIGHT")]))
+                   (_fmt(r["fill"], 0) + "%") if r["fill"] is not None else "—", _fmt(r["weight"], 1)])
+    story.append(table(ad, [26 * mm, 24 * mm, 22 * mm, 12 * mm, 26 * mm, width - 190 * mm, 20 * mm, 18 * mm, 18 * mm],
+                       extra=[("ALIGN", (6, 1), (8, -1), "RIGHT")]))
     pend = [r for r in rep.skus if not r["ok"]]
     if pend:
         story.append(Paragraph("SKUs não alocados", h2))

@@ -147,6 +147,7 @@ class Demand:
     note: str = ""
     placed_bins: int = 0
     cap: Optional[int] = None  # limite de unidades definido pelo usuário (sugestão de redução da demanda)
+    bin_fill: Optional[float] = None  # ocupação das bins do SKU (%, volume), depois de alocado
 
     @property
     def status_label(self) -> str:
@@ -691,6 +692,7 @@ class Position:
     name: str
     units: int
     weight: float = 0.0
+    fill: Optional[float] = None  # ocupação das bins (%): volume das unidades ÷ volume útil das bins
 
 
 @dataclass
@@ -774,6 +776,7 @@ class TypeLine:
     parent_code: str = ""
     parents: int = 0  # bins inteiras (pai) a comprar quando o tipo é compartimento
     parent_cost: Optional[float] = None
+    bin_fill: Optional[float] = None  # ocupação das bins alocadas desse tipo (%, volume)
 
     @property
     def unit_cost(self) -> Optional[float]:
@@ -807,6 +810,11 @@ class SitePlan:
     notes: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     aisle_codes: dict = field(default_factory=dict)  # (zona, corredor) -> letra
+    bin_fill: Optional[float] = None  # ocupação média das bins alocadas (%, volume das unidades ÷ volume das bins)
+    # entradas do cálculo, para as vistas (3D): tipos de bin, compartimentos (tipo -> (bin pai, nº por pai)) e regras
+    specs: dict = field(default_factory=dict, repr=False)
+    parents: dict = field(default_factory=dict, repr=False)
+    params: Optional[SiteParams] = field(default=None, repr=False)
 
     @property
     def positions(self) -> list[Position]:
@@ -902,7 +910,8 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
               prm: SiteParams, parents: Optional[dict] = None) -> SitePlan:
     parents = parents or {}
     active = [s for s in structs if s.mode != "off"]
-    plan = SitePlan(building=b, floor=Layout(b.length_m * 100.0, b.width_m * 100.0))
+    plan = SitePlan(building=b, floor=Layout(b.length_m * 100.0, b.width_m * 100.0), specs=types, parents=parents,
+                    params=prm)
     too_tall = [s for s in active if s.height > b.clear_height_m * 100.0 + EPS]
     for s in too_tall:
         plan.notes.append(f"Estrutura {s.code} ({s.height:g} cm) é mais alta que o pé-direito útil "
@@ -981,10 +990,38 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parents)
         if not plan.shortage or sol.get("error") or stat != "mean":
             break
+    compute_bin_fill(plan, types, demands)
     if plan.shortage:
         plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
                           "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
     return plan
+
+
+def compute_bin_fill(plan: SitePlan, types: dict, demands: list) -> None:
+    """Ocupação das bins por volume (unidades × volume da unidade ÷ bins × volume útil da bin), em cada endereço, por
+    SKU, por tipo de bin e no total. É o "enchimento" dos outros modos de otimização: mostra quanto do espaço
+    comprado em bins fica de fato ocupado (a ocupação dos níveis diz quanto das posições das estruturas tem bin)."""
+    uvol = {d.sku: d.unit.volume_cm3 for d in demands if d.unit is not None}
+    acc: dict = {"sku": {}, "type": {}, "all": [0.0, 0.0]}
+    for pos in plan.positions:
+        uv, spec = uvol.get(pos.sku), types.get(pos.type_id)
+        bv = spec.volume_cm3 if spec is not None else None
+        if not uv or not bv or not pos.bins:
+            continue
+        num, den = pos.units * uv, pos.bins * bv
+        pos.fill = num / den * 100
+        for key, k in (("sku", pos.sku), ("type", pos.type_id)):
+            a = acc[key].setdefault(k, [0.0, 0.0])
+            a[0] += num
+            a[1] += den
+        acc["all"][0] += num
+        acc["all"][1] += den
+    pct = lambda a: a[0] / a[1] * 100 if a and a[1] else None  # noqa: E731
+    for d in demands:
+        d.bin_fill = pct(acc["sku"].get(d.sku))
+    for t in plan.types:
+        t.bin_fill = pct(acc["type"].get(t.spec.id))
+    plan.bin_fill = pct(acc["all"])
 
 
 def _weight_caps(caps: dict, demands: list, choices: list, active: list, stat: str) -> dict:

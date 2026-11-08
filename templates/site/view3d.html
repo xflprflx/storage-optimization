@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}3D — {{ project.name }}{% endblock %}
+{% block head %}
+<style>
+  .nk3d-wrap { position: relative; height: calc(100vh - 190px); min-height: 460px; background: #eef2f5; border-radius: .4rem; overflow: hidden; }
+  .nk3d-wrap canvas { display: block; width: 100%; height: 100%; }
+  .nk3d-panel { position: absolute; background: rgba(255, 255, 255, .94); border: 1px solid #d9e0e5; border-radius: .4rem;
+    padding: .5rem .65rem; font-size: .8rem; box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
+  .nk3d-legend { left: .6rem; bottom: .6rem; max-width: 280px; max-height: 45%; overflow: auto; }
+  .nk3d-info { right: .6rem; top: .6rem; width: 280px; display: none; }
+  .nk3d-help { left: .6rem; top: .6rem; color: #5b6770; }
+  .nk3d-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: .35rem; }
+  .nk3d-grad { height: 10px; border-radius: 3px; background: linear-gradient(90deg, #d73027, #fee08b, #1a9850); }
+  .nk3d-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5b6770; text-align: center; padding: 2rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+  <div>
+    <a href="/optimization/site/{{ project.id }}?run=1" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+    <h5 class="mb-0"><i class="bi bi-box"></i> Arranjo 3D — {{ project.name }}</h5>
+    <div class="small text-muted" id="nk3dSummary">Carregando o plano…</div>
+  </div>
+  <a href="/optimization/site/{{ project.id }}/plan" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-check"></i> Plano detalhado</a>
+</div>
+
+<div class="card mb-2"><div class="card-body py-2 d-flex flex-wrap align-items-center gap-3 small">
+  <div class="d-flex align-items-center gap-1"><span class="text-muted">Cor das bins:</span>
+    <select class="form-select form-select-sm w-auto" id="nkColor">
+      <option value="type">Tipo de bin</option>
+      <option value="fill">Ocupação das bins (%)</option>
+      <option value="struct">Estrutura</option>
+      <option value="sku">SKU</option>
+    </select></div>
+  <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
+    <select class="form-select form-select-sm w-auto" id="nkAisle"><option value="">Todos</option></select></div>
+  <div class="d-flex align-items-center gap-1" title="Esconde o que fica acima desta altura, para ver os níveis de dentro">
+    <span class="text-muted">Altura até</span><input type="range" class="form-range" style="width:130px" id="nkCut" min="10" max="1000" step="5">
+    <span id="nkCutV" class="mono"></span></div>
+  <input class="form-control form-control-sm" style="max-width:210px" type="search" id="nkFind" placeholder="Buscar SKU ou endereço">
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">Bins</label></div>
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">Estruturas</label></div>
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">Paredes</label></div>
+  <div class="btn-group btn-group-sm" role="group">
+    <button type="button" class="btn btn-outline-secondary" data-view="persp" title="Vista em perspectiva"><i class="bi bi-box"></i> 3D</button>
+    <button type="button" class="btn btn-outline-secondary" data-view="top" title="Vista de cima"><i class="bi bi-grid-3x3"></i> Topo</button>
+    <button type="button" class="btn btn-outline-secondary" data-view="front" title="Vista de frente (pelas docas)"><i class="bi bi-layout-split"></i> Frente</button>
+  </div>
+</div></div>
+
+<div class="nk3d-wrap" id="nk3d">
+  <div class="nk3d-panel nk3d-help">Arraste para girar · botão direito para mover · roda para aproximar · clique numa bin para ver o endereço</div>
+  <div class="nk3d-panel nk3d-legend" id="nkLegend"></div>
+  <div class="nk3d-panel nk3d-info" id="nkInfo"></div>
+  <div class="nk3d-msg" id="nkMsg">Carregando…</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const host = document.getElementById('nk3d'), msg = document.getElementById('nkMsg');
+const $ = id => document.getElementById(id);
+const fmt = (v, d = 1) => v == null ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const M = v => v / 100;  // cm -> m (cena em metros)
+
+let data;
+try {
+  data = await (await fetch('/optimization/site/{{ project.id }}/plan3d.json')).json();
+} catch (e) { data = { error: 'Falha ao carregar o plano.' }; }
+if (data.error) {
+  msg.innerHTML = `<div><i class="bi bi-info-circle fs-4"></i><br>${esc(data.error)}<br><a href="/optimization/site/{{ project.id }}">Abrir o projeto</a></div>`;
+  $('nk3dSummary').textContent = '';
+  throw new Error(data.error);
+}
+msg.remove();
+const B = data.building;
+$('nk3dSummary').textContent = `${fmt(B.L / 100, 2)} × ${fmt(B.W / 100, 2)} m · pé-direito ${fmt(B.H / 100, 2)} m · ` +
+  `${data.kpis.modules} estantes · ${data.bins.length} bins · ocupação das bins ${fmt(data.kpis.bin_fill)}% · ocupação dos níveis ${fmt(data.kpis.level_fill)}%`;
+
+// ------------------------------------------------------------------ cena
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+host.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#eef2f5');
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa5ad, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(M(B.L) * 0.3, Math.max(M(B.L), M(B.W)), M(B.W) * 1.2);
+scene.add(sun);
+
+const L = M(B.L), W = M(B.W), H = M(B.H);
+// piso, áreas e paredes
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W), new THREE.MeshLambertMaterial({ color: '#fbfcfd' }));
+floor.rotation.x = -Math.PI / 2; floor.position.set(L / 2, 0, W / 2); scene.add(floor);
+const areaColor = { aisle: '#e3e9ee', cross: '#e3e9ee', reserved: '#fff3cd', avenue: '#dbe7f5' };
+data.areas.forEach(a => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(M(a.w), M(a.d)), new THREE.MeshLambertMaterial({ color: areaColor[a.kind] || '#eee' }));
+  m.rotation.x = -Math.PI / 2; m.position.set(M(a.x + a.w / 2), 0.002, M(a.y + a.d / 2)); scene.add(m);
+});
+const outline = (x, y, w, d, color, dashed, yy = 0.004) => {
+  const pts = [[x, y], [x + w, y], [x + w, y + d], [x, y + d], [x, y]].map(([a, b]) => new THREE.Vector3(M(a), yy, M(b)));
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = dashed ? new THREE.LineDashedMaterial({ color, dashSize: 0.4, gapSize: 0.25 }) : new THREE.LineBasicMaterial({ color });
+  const ln = new THREE.Line(g, mat); if (dashed) ln.computeLineDistances(); scene.add(ln); return ln;
+};
+outline(0, 0, B.L, B.W, '#1f2d33', false);
+data.zones.forEach(z => outline(z.x, z.y, z.w, z.d, '#2f6db5', true));
+const walls = new THREE.Group();
+[[L / 2, 0, L, 0.1], [L / 2, W, L, 0.1], [0, W / 2, 0.1, W], [L, W / 2, 0.1, W]].forEach(([x, z, w, d]) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, d), new THREE.MeshLambertMaterial({ color: '#c9d1d6', transparent: true, opacity: 0.25 }));
+  m.position.set(x, H / 2, z); walls.add(m);
+});
+walls.visible = false; scene.add(walls);
+data.obstacles.forEach(o => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(M(o.w), M(o.h), M(o.d)), new THREE.MeshLambertMaterial({ color: '#2b2f33' }));
+  m.position.set(M(o.x + o.w / 2), M(o.h) / 2, M(o.y + o.d / 2)); scene.add(m);
+  scene.add(label(o.name, M(o.x + o.w / 2), M(o.h) + 0.4, M(o.y + o.d / 2), '#2b2f33'));
+});
+const LBL = Math.max(0.6, Math.max(M(B.L), M(B.W)) / 45);  // altura dos rótulos (m), proporcional ao imóvel
+function label(text, x, y, z, color = '#5b6770', size = LBL) {
+  const c = document.createElement('canvas'), ctx = c.getContext('2d');
+  ctx.font = 'bold 44px system-ui, sans-serif';
+  c.width = Math.ceil(ctx.measureText(text).width) + 24; c.height = 60;
+  ctx.font = 'bold 44px system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = color; ctx.textBaseline = 'middle'; ctx.fillText(text, 12, 32);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  sp.scale.set(size * c.width / c.height, size, 1); sp.position.set(x, y, z); sp.renderOrder = 10;
+  return sp;
+}
+const aisleLabels = new THREE.Group();
+data.aisles.forEach(a => aisleLabels.add(label(a.label.replace(/^Corredor\s*/i, ''), M(a.x), 0.5, M(a.y), '#24548c', LBL * 0.8)));
+scene.add(aisleLabels);
+
+// ------------------------------------------------------------------ estruturas (montantes e níveis) e bins
+const structById = Object.fromEntries(data.structs.map(s => [s.id, s]));
+const mods = data.modules;
+const aisleOf = m => m.code.split('-')[0];
+[...new Set(mods.map(aisleOf))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+  .forEach(a => $('nkAisle').insertAdjacentHTML('beforeend', `<option value="${esc(a)}">${esc(a)}</option>`));
+const maxH = Math.max(B.H, ...mods.map(m => m.h));
+$('nkCut').max = Math.ceil(maxH / 5) * 5; $('nkCut').value = $('nkCut').max;
+
+const box = new THREE.BoxGeometry(1, 1, 1);
+box.translate(0.5, 0.5, 0.5);  // origem no canto: escala = tamanho
+const POST = 4, PLATE = 2.5;  // cm
+const nPosts = mods.length * 4, nPlates = mods.reduce((s, m) => s + m.levels.length, 0);
+const posts = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), nPosts);
+const plates = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.85 }), nPlates);
+const bins = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), Math.max(1, data.bins.length));
+scene.add(posts, plates, bins);
+const tmp = new THREE.Object3D(), col = new THREE.Color();
+const setBox = (mesh, i, x, y, z, w, d, h, show) => {  // x,y = planta (cm); z = altura (cm)
+  tmp.position.set(M(x), M(z), M(y));
+  tmp.scale.set(show ? Math.max(M(w), 1e-4) : 1e-6, show ? Math.max(M(h), 1e-4) : 1e-6, show ? Math.max(M(d), 1e-4) : 1e-6);
+  tmp.updateMatrix(); mesh.setMatrixAt(i, tmp.matrix);
+};
+let selected = null, findSet = null;
+const selBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: '#e11d48', depthTest: false }));
+selBox.visible = false; selBox.renderOrder = 20; scene.add(selBox);
+
+const fillColor = f => {
+  if (f == null) return col.set('#b8c0c6');
+  const t = Math.max(0, Math.min(1, f / 100));
+  const a = new THREE.Color('#d73027'), b = new THREE.Color('#fee08b'), c = new THREE.Color('#1a9850');
+  return t < 0.5 ? col.copy(a).lerp(b, t / 0.5) : col.copy(b).lerp(c, (t - 0.5) / 0.5);
+};
+const skuColor = sku => { let h = 0; for (const ch of sku) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return col.setHSL((h % 360) / 360, 0.55, 0.55); };
+function binColor(b, mode) {
+  if (findSet) return findSet.has(b) ? col.set('#e11d48') : col.set('#d5dade');
+  if (mode === 'fill') return fillColor(b[7]);
+  if (mode === 'struct') return col.set(structById[mods[b[8]].s]?.color || '#888');
+  if (mode === 'sku') return skuColor(b[10]);
+  return col.set(data.types[b[6]]?.color || '#888');
+}
+
+function rebuild() {
+  const aisle = $('nkAisle').value, cut = +$('nkCut').value, mode = $('nkColor').value;
+  $('nkCutV').textContent = `${fmt(cut / 100, 2)} m`;
+  const showMod = m => !aisle || aisleOf(m) === aisle;
+  let ip = 0, il = 0;
+  mods.forEach(m => {
+    const s = structById[m.s], show = showMod(m), color = s?.color || '#888';
+    const hh = Math.min(m.h, cut);
+    [[0, 0], [m.w - POST, 0], [0, m.d - POST], [m.w - POST, m.d - POST]].forEach(([dx, dy]) => {
+      setBox(posts, ip, m.x + dx, m.y + dy, 0, POST, POST, hh, show);
+      posts.setColorAt(ip++, col.set(color).multiplyScalar(0.8));
+    });
+    m.levels.forEach(l => {  // bandeja de cada nível (sem tampo: de cima se veem as bins do último nível)
+      setBox(plates, il, m.x, m.y, l.z, m.w, m.d, PLATE, show && l.z <= cut);
+      plates.setColorAt(il++, col.set(color).lerp(new THREE.Color('#ffffff'), 0.45));
+    });
+  });
+  data.bins.forEach((b, i) => {
+    const m = mods[b[8]];
+    setBox(bins, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], showMod(m) && b[2] + b[5] <= cut + 0.1);
+    bins.setColorAt(i, binColor(b, mode));
+  });
+  [posts, plates, bins].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; });
+  bins.computeBoundingSphere(); posts.computeBoundingSphere(); plates.computeBoundingSphere();
+  legend(mode);
+}
+
+function legend(mode) {
+  const el = $('nkLegend');
+  if (findSet) { el.innerHTML = `<b>Busca:</b> ${findSet.size} bin(s) encontradas <span class="nk3d-sw" style="background:#e11d48"></span>`; return; }
+  if (mode === 'fill') {
+    el.innerHTML = `<b>Ocupação das bins</b> <span class="text-muted">(volume dos produtos ÷ volume da bin)</span>
+      <div class="nk3d-grad my-1"></div><div class="d-flex justify-content-between"><span>0%</span><span>50%</span><span>100%</span></div>
+      <div class="mt-1"><span class="nk3d-sw" style="background:#b8c0c6"></span>sem dimensões · média ${fmt(data.kpis.bin_fill)}%</div>`;
+  } else if (mode === 'struct') {
+    el.innerHTML = '<b>Estruturas</b>' + data.structs.map(s => `<div><span class="nk3d-sw" style="background:${s.color}"></span>${esc(s.code)} (${s.qty})</div>`).join('');
+  } else if (mode === 'sku') {
+    el.innerHTML = `<b>SKU</b> <span class="text-muted">uma cor por SKU · ${Object.keys(data.skus).length} SKUs</span>`;
+  } else {
+    el.innerHTML = '<b>Tipos de bin</b>' + data.types.map(t => `<div><span class="nk3d-sw" style="background:${t.color}"></span>${esc(t.code)} · ${t.placed} bins · ocupação ${fmt(t.fill)}%</div>`).join('');
+  }
+}
+
+// ------------------------------------------------------------------ câmera
+function view(kind) {
+  const c = new THREE.Vector3(L / 2, 0, W / 2), span = Math.max(L, W);
+  controls.target.copy(c);
+  if (kind === 'top') camera.position.set(L / 2, span * 1.25, W / 2 + 0.001);
+  else if (kind === 'front') camera.position.set(-span * 0.75, Math.max(H, 3) * 0.6, W / 2);
+  else camera.position.set(L / 2 - span * 0.55, span * 0.65, W + span * 0.55);
+  controls.update();
+}
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => view(b.dataset.view)));
+function resize() {
+  const w = host.clientWidth, h = host.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host);
+
+// ------------------------------------------------------------------ seleção (clique numa bin)
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;  // foi arraste, não clique
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  const hit = bins.visible ? ray.intersectObject(bins)[0] : null;
+  select(hit ? hit.instanceId : null);
+});
+function select(i) {
+  const info = $('nkInfo');
+  if (i == null || !data.bins[i]) { selBox.visible = false; info.style.display = 'none'; selected = null; return; }
+  selected = i;
+  const b = data.bins[i], m = mods[b[8]], t = data.types[b[6]], s = structById[m.s];
+  selBox.scale.set(M(b[3]), M(b[5]), M(b[4])); selBox.position.set(M(b[0] + b[3] / 2), M(b[2] + b[5] / 2), M(b[1] + b[4] / 2)); selBox.visible = true;
+  const same = data.bins.filter(x => x[9] === b[9]).length;
+  info.innerHTML = `<div class="d-flex justify-content-between"><b class="mono">${esc(b[9])}</b><button type="button" class="btn-close btn-sm" aria-label="Fechar"></button></div>
+    <div><span class="mono">${esc(b[10])}</span> — ${esc(data.skus[b[10]] || '')}</div>
+    <div class="mt-1">Bin <span class="mono">${esc(t?.code)}</span> · ${same} bin(s) no endereço</div>
+    <div>Ocupação das bins: <b>${fmt(b[7])}%</b></div>
+    <div class="text-muted">Estante ${esc(m.code)} · ${esc(s?.code)}${m.cap ? ' · cabeceira' : ''} · altura ${fmt(b[2] / 100, 2)} m</div>`;
+  info.style.display = 'block';
+  info.querySelector('.btn-close').addEventListener('click', () => select(null));
+}
+
+// ------------------------------------------------------------------ controles
+$('nkColor').addEventListener('change', rebuild);
+$('nkAisle').addEventListener('change', rebuild);
+$('nkCut').addEventListener('input', rebuild);
+$('nkBins').addEventListener('change', e => { bins.visible = e.target.checked; if (!e.target.checked) select(null); });
+$('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = e.target.checked; });
+$('nkWalls').addEventListener('change', e => { walls.visible = e.target.checked; });
+let findTimer = null;
+$('nkFind').addEventListener('input', () => {
+  clearTimeout(findTimer);
+  findTimer = setTimeout(() => {
+    const q = $('nkFind').value.trim().toUpperCase();
+    findSet = q ? new Set(data.bins.filter(b => b[10].toUpperCase().includes(q) || b[9].toUpperCase().includes(q))) : null;
+    rebuild();
+    if (findSet && findSet.size) {  // aproxima da primeira bin encontrada
+      const b = [...findSet][0];
+      controls.target.set(M(b[0]), M(b[2]), M(b[1]));
+      controls.update();
+    }
+  }, 250);
+});
+try { const c = localStorage.getItem('nk-3d-color'); if (c) $('nkColor').value = c; } catch (e) { /* sem armazenamento */ }
+$('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3d-color', $('nkColor').value); } catch (e) { /* idem */ } });
+
+rebuild();
+resize();
+view('persp');
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+window.nk3d = { scene, camera, controls, bins, data, select, view, rebuild };  // para testes e depuração
+</script>
+{% endblock %}

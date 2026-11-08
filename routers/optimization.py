@@ -247,7 +247,8 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                 kpis = [kpi("Bins ocupadas", summary.bins_before, summary.bins_after, hint="bins dos endereços do escopo"),
                         kpi("Volume de bins", summary.volume_before, summary.volume_after, " L"),
                         kpi("Largura de frente", summary.width_before, summary.width_after, " cm"),
-                        kpi("Enchimento médio", summary.fill_before, summary.fill_after, "%", good_negative=False, pct=True),
+                        kpi("Ocupação das bins", summary.fill_before, summary.fill_after, "%", good_negative=False, pct=True,
+                            hint="volume dos produtos ÷ volume das bins"),
                         kpi("Endereços com bins", addr_before, addr_after),
                         {"label": "Endereços a alterar", "value": len(changed), "hint": "trocas de bins"}]
                 by_type: dict[int, dict] = {}
@@ -632,8 +633,8 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                             hint=("bins novas necessárias" if prm.unlimited else f"de {tot['bins']} bins no pool")),
                         kpi("Volume de bins", vb, va, " L"),
                         kpi("Largura de frente", sum(r.width_before for r in results), sum(r.width_after for r in results), " cm"),
-                        kpi("Enchimento médio", uv / vb * 100 if vb else None, uv / va * 100 if va else None, "%",
-                            good_negative=False, pct=True),
+                        kpi("Ocupação das bins", uv / vb * 100 if vb else None, uv / va * 100 if va else None, "%",
+                            good_negative=False, pct=True, hint="volume dos produtos ÷ volume das bins"),
                         kpi("Endereços com bins", tot["addr_before"], None if prm.unlimited else tot["addr_after"]),
                         {"label": "Dimensionados" if prm.unlimited else "Movimentações",
                          "value": len(rows_all) if prm.unlimited else tot["moves"],

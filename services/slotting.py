@@ -28,7 +28,7 @@ from typing import Optional
 
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
-                 "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1", "slot_rows": ""}
+                 "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1", "slot_rows": "", "slot_serp": "", "slot_walk_m": ""}
 AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" (fração dos pedidos do menos vendido)
 
 
@@ -136,9 +136,10 @@ class Geo:
     aisle_idx: int
     x_m: float  # posição ao longo do corredor (m, a partir da ponta da expedição)
     y_m: float  # deslocamento entre corredores (m)
-    golden: Optional[bool]  # None = sem zona de ouro definida para o nível
+    golden: Optional[bool]  # zona de ouro da PEGA (altura); None = sem zona de ouro definida para o nível
     walk_m: float  # caminhada estimada desde a referência
-    ease: float  # caminhada + penalidade fora da zona de ouro (menor = melhor)
+    ease: float  # caminhada + penalidade fora da zona de ouro da pega (menor = melhor)
+    walk_golden: bool = False  # zona de ouro da CAMINHADA: entre as posições mais perto da referência
 
 
 def slot_spec(raw: dict) -> Optional[dict]:
@@ -152,7 +153,10 @@ def slot_spec(raw: dict) -> Optional[dict]:
             "golden_m": max(0.0, _num(raw.get("slot_golden_m"), 5.0)), "golden_levels": levels,
             "affinity": str(raw.get("slot_aff") or "").lower() in {"1", "on", "true"},
             # letra por rua: duas letras por corredor (A|B, C|D… — a 1ª rua encostada na parede) e estantes 01, 02…
-            "rows": str(raw.get("slot_rows") or "").lower() in {"1", "on", "true"}}
+            "rows": str(raw.get("slot_rows") or "").lower() in {"1", "on", "true"},
+            # serpentina: a 2ª rua de cada corredor (B, D…) é numerada a partir da ponta oposta
+            "serpentine": str(raw.get("slot_serp") or "").lower() in {"1", "on", "true"},
+            "walk_golden_m": _num(raw.get("slot_walk_m"), 0.0) or None}
 
 
 def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo], str]:
@@ -181,12 +185,15 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     for _i, _b, _w, a, bay, _l in locs:
         bays_by_aisle.setdefault((a or "").upper(), set()).add((bay or "").upper())
     rank = {a: {b: k for k, b in enumerate(sorted(bs, key=_natural))} for a, bs in bays_by_aisle.items()}
+    max_pos = {a: max([int(re.sub(r"\D", "", b) or 0) for b in bs] + [len(bs)]) for a, bs in bays_by_aisle.items()}
     out = {}
     for lid, br, wh, a, bay, lvl in locs:
         a, bay = (a or "").upper(), (bay or "").upper()
         digits = re.sub(r"\D", "", bay)
         if spec.get("rows"):  # letra por rua: estantes numeradas em sequência ao longo da rua
             pos = int(digits) if digits else rank[a].get(bay, 0) + 1
+            if spec.get("serpentine") and aisles.index(a) % 2 == 1:  # começa na ponta oposta do corredor
+                pos = max(1, max_pos.get(a, pos) - pos + 1)
         else:  # letra por corredor: ímpares de um lado, pares do outro
             pos = (int(digits) + 1) // 2 if digits else rank[a].get(bay, 0) // 2 + 1
         n = int(re.sub(r"\D", "", lvl or "") or 0)
@@ -207,6 +214,14 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         x = max(0, pos - 1) * spec["bay_m"] + spec["bay_m"] / 2
         walk = x + y
         out[lid] = Geo(ai, x, y, golden, walk, walk + (spec["golden_m"] if golden is False else 0.0))
+    # zona de ouro da caminhada: até X m (informado) ou os 20% de endereços mais perto da referência
+    lim = spec.get("walk_golden_m")
+    if not lim and out:
+        ws = sorted(g.walk_m for g in out.values())
+        lim = ws[max(0, int(math.ceil(len(ws) * 0.2)) - 1)]
+    for g in out.values():
+        g.walk_golden = g.walk_m <= (lim or 0) + EPS
+    spec["walk_limit"] = lim
     return out, ref
 
 
@@ -265,9 +280,19 @@ def kpis(assign: dict[str, list[tuple[int, float]]], pop: dict[str, float], geo:
             per[s] = (sum(geo[l].walk_m * w for l, w in lst) / sw, sum(w for l, w in lst if geo[l].golden) / sw)
     pp = {s: pop[s] for s in per if pop.get(s)}
     tot = sum(pp.values())
+    walk = {}
+    for s, lst in assign.items():
+        lst = [(l, w) for l, w in lst if l in geo and w > 0]
+        sw = sum(w for _l, w in lst)
+        if sw:
+            walk[s] = (sum(w for l, w in lst if geo[l].walk_golden) / sw,
+                       sum(w for l, w in lst if geo[l].walk_golden and geo[l].golden) / sw)
+    out["walk_positions"] = sum(w for l, w in used if geo[l].walk_golden) / tw * 100 if tw else None
     if tot:
         out["avg_dist"] = sum(pp[s] * per[s][0] for s in pp) / tot
         out["golden_picks"] = sum(pp[s] * per[s][1] for s in pp) / tot * 100 if has_gold else None
+        out["walk_picks"] = sum(pp[s] * walk.get(s, (0, 0))[0] for s in pp) / tot * 100
+        out["both_picks"] = sum(pp[s] * walk.get(s, (0, 0))[1] for s in pp) / tot * 100 if has_gold else None
     pairs = []
     for (a, b), c in sorted(counts.items(), key=lambda kv: -kv[1])[:30]:
         la = [l for l, w in assign.get(a, []) if l in geo and w > 0]

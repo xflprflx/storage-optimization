@@ -106,7 +106,7 @@ def plan_3d(plan: SitePlan) -> dict:
                         bx, by, bwx, bdy = X + across, Y + along, bl, cw
                     out["bins"].append([_r(bx), _r(by), _r(z0 + 2.0), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
                                         None if pos.fill is None else round(pos.fill, 1), mi, pos.address, pos.sku,
-                                        golden, abc.get(pos.sku, "")])
+                                        golden, abc.get(pos.sku, ""), bool(pos.walk_golden)])
                     k += 1
         out["modules"].append(mod)
     out["skus"] = skus

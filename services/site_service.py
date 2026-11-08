@@ -56,7 +56,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("avenue_m", "Largura das avenidas entre zonas (m)", "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle",
+    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle", "serpentine": "",
                                                           "zones": [], "obstacles": [], "sectors": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
@@ -67,7 +67,7 @@ DEFAULT_CONFIG = {
     # posição dos SKUs: popularidade (auto = pedidos > coluna Saída), medida, ponto de referência, peso da zona de
     # ouro (metros de caminhada que ela vale) e itens que saem juntos lado a lado
     "slotting": {"on": "1", "source": "auto", "metric": "lines", "ref": "auto", "ref_x": "", "ref_y": "",
-                 "golden_m": "5", "affinity": "1"},
+                 "golden_m": "5", "affinity": "1", "walk_m": ""},
 }
 SLOT_SOURCES = {"auto": "Automático (histórico de pedidos; senão a coluna Saída)", "orders": "Histórico de pedidos",
                 "column": "Coluna Saída da aba SKUs", "max": "Quantidade planejada (max level) — aproximação"}
@@ -118,6 +118,7 @@ def config_from_form(form: Mapping) -> dict:
     cfg["building"]["end_caps"] = on("b_end_caps")
     cfg["building"]["cap_align"] = form.get("b_cap_align") if form.get("b_cap_align") in CAP_ALIGN else "row"
     cfg["building"]["address_mode"] = "row" if form.get("b_address_mode") == "row" else "aisle"
+    cfg["building"]["serpentine"] = on("b_serpentine")
     zones = []
     for zi in (form.getlist("z_idx") if hasattr(form, "getlist") else []):
         ori = form.get(f"z_ori_{zi}")
@@ -153,7 +154,8 @@ def config_from_form(form: Mapping) -> dict:
                        "metric": met if met in SLOT_METRICS else "lines",
                        "ref": str(form.get("slot_ref") or "auto")[:60],
                        "ref_x": str(form.get("slot_ref_x") or "").strip(), "ref_y": str(form.get("slot_ref_y") or "").strip(),
-                       "golden_m": str(form.get("slot_golden_m") or "").strip(), "affinity": on("slot_affinity")}
+                       "golden_m": str(form.get("slot_golden_m") or "").strip(), "affinity": on("slot_affinity"),
+                       "walk_m": str(form.get("slot_walk_m") or "").strip()}
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -196,7 +198,8 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  cross_aisle_m=vals["cross_aisle_m"] or 0, orientation=bc.get("orientation") or "auto",
                  end_caps=bool(bc.get("end_caps")), avenue_m=vals["avenue_m"] or 0,
                  cap_align=bc.get("cap_align") if bc.get("cap_align") in CAP_ALIGN else "row",
-                 address_mode="row" if bc.get("address_mode") == "row" else "aisle")
+                 address_mode="row" if bc.get("address_mode") == "row" else "aisle",
+                 serpentine=bool(bc.get("serpentine")))
     for i, zc in enumerate(bc.get("zones") or [], start=1):
         name = zc.get("name") or f"Zona {i}"
         ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)
@@ -504,7 +507,12 @@ def slotting_spec(cfg: dict, demands: list[Demand]) -> tuple[Optional[dict], str
 
     orders = cfg.get("orders") or {}
     affinity, counts = pair_affinity(orders) if sl.get("affinity") and used == "orders" else ({}, {})
+    try:
+        walk_m = float(parse_decimal(str(sl.get("walk_m") or "")) or 0) or None
+    except ValueError:
+        walk_m = None
     spec = {"on": bool(sl.get("on")), "ref": ref, "ref_xy": ref_xy, "golden_m": golden_m, "affinity": affinity,
+            "walk_golden_m": walk_m,
             "source": label, "metric": sl.get("metric") or "lines", "pair_counts": counts}
     note = ""
     if sl.get("on") and not pop and (sl.get("source") or "auto") != "auto":  # no automático, o cartão já explica

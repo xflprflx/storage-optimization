@@ -92,6 +92,7 @@ BUILDING_KEYS = {
     "end_caps": ["cabeceiras", "usarcabeceiras", "modulosdecabeceira", "cabeceirasnaspontas", "cabeceirassimnao"],
     "cap_align": ["posicaodacabeceira", "posicaodacabeceiraencostadaborda", "alinhamentodacabeceira", "cabeceiraposicao"],
     "address_mode": ["enderecamento", "enderecamentocorredorrua", "letradoendereco", "letrasdosenderecos"],
+    "serpentine": ["serpentina", "ruasemserpentina", "ruasemserpentinasimnao", "numeracaoemserpentina"],
 }
 ZONE_COLS = {
     "name": ["nome", "zona", "nomedazona"],
@@ -334,6 +335,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 cfg["building"][key] = "" if normalize_header(val) in {"nao", "n", "0", "false", "naousar"} else "1"
             elif key == "cap_align":
                 cfg["building"][key] = "edge" if any(w in normalize_header(val) for w in ("borda", "edge", "alinh")) else "row"
+            elif key == "serpentine":
+                cfg["building"][key] = "1" if normalize_header(val) in {"sim", "s", "1", "true", "yes"} else ""
             elif key == "address_mode":
                 cfg["building"][key] = "row" if any(w in normalize_header(val) for w in ("rua", "fileira", "row")) else "aisle"
             else:
@@ -715,7 +718,8 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
           + [("Orientação das fileiras", orient.get(b.get("orientation") or "auto", "automática")),
              ("Cabeceiras (sim/não)", "sim" if b.get("end_caps") else "não"),
              ("Posição da cabeceira (encostada/borda)", "borda" if b.get("cap_align") == "edge" else "encostada"),
-             ("Endereçamento (corredor/rua)", "rua" if b.get("address_mode") == "row" else "corredor")],
+             ("Endereçamento (corredor/rua)", "rua" if b.get("address_mode") == "row" else "corredor"),
+             ("Ruas em serpentina (sim/não)", "sim" if b.get("serpentine") else "não")],
           {1: 50, 2: 16})
     id_code = {str(s.id): s.code for s in db.scalars(select(StructureType))}
     ori_lbl = {"along": "ao longo do comprimento", "across": "perpendicular (ao longo da largura)"}

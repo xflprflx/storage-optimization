@@ -31,7 +31,7 @@
       <option value="fill">Ocupação das bins (%)</option>
       <option value="struct">Estrutura</option>
       <option value="sku">SKU</option>
-      <option value="golden">Zona de ouro</option>
+      <option value="golden">Zonas de ouro (pega e caminhada)</option>
       <option value="abc">Curva ABC (saída)</option>
     </select></div>
   <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
@@ -217,7 +217,7 @@ function binColor(b, mode) {
   if (mode === 'fill') return fillColor(b[7]);
   if (mode === 'struct') return col.set(structById[mods[b[8]].s]?.color || '#888');
   if (mode === 'sku') return skuColor(b[10]);
-  if (mode === 'golden') return b[11] ? col.set('#e0a800') : col.set('#c3cbd1');
+  if (mode === 'golden') return b[11] && b[13] ? col.set('#e0a800') : b[11] ? col.set('#f6d365') : b[13] ? col.set('#f39c4a') : col.set('#c3cbd1');
   if (mode === 'abc') return col.set({ A: '#d62728', B: '#ff9f1c', C: '#9fb3c0' }[b[12]] || '#d5dade');
   return col.set(data.types[b[6]]?.color || '#888');
 }
@@ -270,9 +270,11 @@ function legend(mode) {
         `<div><span class="nk3d-sw" style="background:${cl}"></span>${c} · ${t} · ${n(c)} bins</div>`).join('') +
       (data.bins.some(b => b[12]) ? '' : '<div class="text-muted">Sem dados de saída no projeto.</div>');
   } else if (mode === 'golden') {
-    el.innerHTML = '<b>Zona de ouro</b>' + data.structs.filter(s => s.golden).map(s =>
+    el.innerHTML = '<b>Zonas de ouro</b><div class="text-muted">pega = altura por estrutura · caminhada = perto da referência</div>' + data.structs.filter(s => s.golden).map(s =>
       `<div>${esc(s.code)}: ${fmt(s.golden[0] / 100, 2)}–${fmt(s.golden[1] / 100, 2)} m · níveis ${s.golden_levels.join(', ') || '—'}</div>`).join('') +
-      `<div class="mt-1"><span class="nk3d-sw" style="background:#e0a800"></span>bins em nível da zona de ouro · ${data.bins.filter(b => b[11]).length} de ${data.bins.length}</div>`;
+      [['#e0a800', 'nas duas (pega e caminhada)', b => b[11] && b[13]], ['#f6d365', 'só pega (altura)', b => b[11] && !b[13]],
+       ['#f39c4a', 'só caminhada (perto da referência)', b => !b[11] && b[13]], ['#c3cbd1', 'fora das duas', b => !b[11] && !b[13]]]
+        .map(([c, t, f]) => `<div><span class="nk3d-sw" style="background:${c}"></span>${t} · ${data.bins.filter(f).length} bins</div>`).join('');
   } else if (mode === 'sku') {
     el.innerHTML = `<b>SKU</b> <span class="text-muted">uma cor por SKU · ${Object.keys(data.skus).length} SKUs</span>`;
   } else {

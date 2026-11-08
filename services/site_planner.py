@@ -83,6 +83,7 @@ class Building:
     end_caps: bool = True  # módulos de cabeceira (girados 90°) nas pontas das fileiras, aproveitando a sobra
     cap_align: str = "row"  # cabeceira "row" = encostada na fileira | "edge" = alinhada à borda do trecho
     address_mode: str = "aisle"  # letra por "aisle" (corredor: os dois lados com a mesma letra) | "row" (por rua/fileira)
+    serpentine: bool = False  # por rua: a rua do outro lado do corredor é numerada ao contrário (começa onde a outra termina)
     zones: list = field(default_factory=list)  # [ZoneSpec]; vazio = zona única
     avenue_m: float = 2.0  # largura das avenidas entre zonas
     obstacles: list = field(default_factory=list)  # [Obstacle] áreas bloqueadas
@@ -839,7 +840,8 @@ class Position:
     weight: float = 0.0
     fill: Optional[float] = None  # ocupação das bins (%): volume das unidades ÷ volume útil das bins
     dist_m: Optional[float] = None  # caminhada (em L, pelos corredores) do ponto de referência até a frente da estante
-    golden: bool = False  # nível na zona de ouro da estrutura
+    golden: bool = False  # zona de ouro da PEGA: nível na faixa de altura ergonômica da estrutura
+    walk_golden: bool = False  # zona de ouro da CAMINHADA: posição entre as mais perto do ponto de referência
 
 
 @dataclass
@@ -1481,10 +1483,15 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
         rows_used = sorted({rkey(m) for m in plan.modules + caps_mods})
         row_code = {r: _letters(i) for i, r in enumerate(rows_used)}
         for r in rows_used:
-            mods = sorted([m for m in plan.modules if rkey(m) == r], key=lambda m: m.x0)
+            mods = [m for m in plan.modules if rkey(m) == r]
+            # serpentina: a rua do lado "R" do corredor começa onde a do lado "L" termina (o separador desce uma rua e
+            # volta pela outra, sem voltar ao início vazio)
+            rev = plan.building.serpentine and bool(mods) and mods[0].row.side == "R"
+            mods.sort(key=lambda m: m.x0, reverse=rev)
             for i, m in enumerate(mods):
                 m.aisle, m.bay = row_code[r], f"{i + 1:02d}"
-            for i, m in enumerate(sorted([m for m in caps_mods if rkey(m) == r], key=lambda m: (m.x0, m.y0))):
+            caps_r = sorted([m for m in caps_mods if rkey(m) == r], key=lambda m: (m.x0, m.y0), reverse=rev)
+            for i, m in enumerate(caps_r):
                 m.aisle, m.bay = row_code[r], f"C{i + 1:02d}"
         # rótulo de cada corredor: as letras das ruas dos dois lados (ex.: "B | C")
         side = {}
@@ -1622,6 +1629,7 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
 
 
 SLOT_BUCKET_M = 3.0  # largura (m) das faixas de facilidade na ordem das posições do slotting
+WALK_GOLDEN_SHARE = 0.2  # zona de ouro da caminhada sem limite informado: as posições mais perto com 20% das bins
 
 
 # --------------------------------------------------------------------------- #
@@ -1740,14 +1748,33 @@ def slotting_kpis(plan: SitePlan, demands: list[Demand], prm: SiteParams, used: 
     k["random_dist"] = sum(p.dist_m * p.bins for p in pos) / nbins if nbins else None
     has_gold = any(p.golden for p in pos)
     k["golden_positions"] = sum(p.bins for p in pos if p.golden) / nbins * 100 if nbins and has_gold else None
+    # zona de ouro da CAMINHADA: até X m da referência (informado) ou, sem valor, as posições mais perto que somam
+    # WALK_GOLDEN_SHARE das bins
+    lim = sl.get("walk_golden_m")
+    if not lim:
+        acc, lim = 0, 0.0
+        for p in sorted(pos, key=lambda p: p.dist_m):
+            acc += p.bins
+            lim = p.dist_m
+            if acc >= WALK_GOLDEN_SHARE * nbins:
+                break
+    for p in pos:
+        p.walk_golden = p.dist_m <= lim + EPS
+    k["walk_golden_m"], k["walk_golden_auto"] = lim, not sl.get("walk_golden_m")
+    k["walk_positions"] = sum(p.bins for p in pos if p.walk_golden) / nbins * 100 if nbins else None
     popd = [d for d in demands if d.pop and d.sku in by_sku]
     tot = sum(d.pop for d in popd)
     if not tot:
         return
     dist = {s: sum(p.dist_m * p.bins for p in ps) / max(1, sum(p.bins for p in ps)) for s, ps in by_sku.items()}
-    gold = {s: sum(p.bins for p in ps if p.golden) / max(1, sum(p.bins for p in ps)) for s, ps in by_sku.items()}
+    share = lambda ps, f: sum(p.bins for p in ps if f(p)) / max(1, sum(p.bins for p in ps))  # noqa: E731
+    gold = {s: share(ps, lambda p: p.golden) for s, ps in by_sku.items()}
+    walk = {s: share(ps, lambda p: p.walk_golden) for s, ps in by_sku.items()}
+    both = {s: share(ps, lambda p: p.golden and p.walk_golden) for s, ps in by_sku.items()}
     k["avg_dist"] = sum(d.pop * dist[d.sku] for d in popd) / tot
     k["golden_picks"] = sum(d.pop * gold[d.sku] for d in popd) / tot * 100 if has_gold else None
+    k["walk_picks"] = sum(d.pop * walk[d.sku] for d in popd) / tot * 100
+    k["both_picks"] = sum(d.pop * both[d.sku] for d in popd) / tot * 100 if has_gold else None
     k["abc"] = {c: sum(1 for d in demands if d.abc == c) for c in "ABC"}
     a = [d for d in popd if d.abc == "A"]
     k["a_dist"] = sum(dist[d.sku] for d in a) / len(a) if a else None
@@ -1965,6 +1992,16 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
                    + ('stroke="#1f2d33" stroke-width="1" stroke-dasharray="2 1"' if m.rotated else 'stroke="#fff" stroke-width="0.6"')
                    + f'><title>{title}</title></rect>')
     out += full
+    # zona de ouro da caminhada: as posições até X m (em L) do ponto de referência formam um losango em volta dele
+    ref, lim = (plan.slotting or {}).get("ref"), (plan.slotting or {}).get("walk_golden_m")
+    if ref and lim:
+        rx, ry, r = ref["x"] * sc, ref["y"] * sc, lim * 100 * sc
+        out.append(f'<clipPath id="nkBld"><rect x="0" y="0" width="{W:.1f}" height="{H:.1f}"/></clipPath>'
+                   f'<polygon clip-path="url(#nkBld)" points="{rx - r:.1f},{ry:.1f} {rx:.1f},{ry - r:.1f} {rx + r:.1f},{ry:.1f} '
+                   f'{rx:.1f},{ry + r:.1f}" fill="rgba(245,190,40,.12)" stroke="#d4a017" stroke-width="1.5" '
+                   f'stroke-dasharray="6 3"><title>Zona de ouro da caminhada: até {_m(lim * 100)} m da referência</title></polygon>'
+                   f'<circle cx="{rx:.1f}" cy="{ry:.1f}" r="5" fill="#d62728" stroke="#fff" stroke-width="1.5">'
+                   f'<title>Ponto de referência: {ref["label"]}</title></circle>')
     # cotas: total (externa) e encadeada (interna), em cima (X) e à esquerda (Y)
     xs, ys = dim_chains(fl, 30 / sc, 30 / sc)
     g = ['<g class="nk-dim-fo" stroke="#5b6770" stroke-width="0.8" font-size="9" fill="#1f2d33">']

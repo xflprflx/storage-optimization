@@ -91,6 +91,9 @@
               {% for k, v in ADDRESS_MODES.items() %}<option value="{{ k }}" {% if (b.get('address_mode') or 'aisle') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
             </select>
             <div class="form-text mt-0">Por rua: o corredor entre as ruas X e Y tem X de um lado e Y do outro (comum em CDs). Por corredor: os dois lados têm a mesma letra.</div>
+            <div class="form-check small mt-1" id="serpBox"><input class="form-check-input" type="checkbox" name="b_serpentine" value="1" id="b_serpentine" {% if b.get('serpentine') %}checked{% endif %}>
+              <label class="form-check-label" for="b_serpentine"><b>Ruas em serpentina:</b> a rua da frente começa onde a outra termina (A-01 … A-20 e, do outro lado do corredor, B-01 fica de frente para A-20).
+                O separador desce uma rua e volta pela outra, sem voltar vazio ao início.</label></div>
           </div>
         </div>
         <div class="form-text">Pé-direito útil = altura livre (abaixo de vigas, sprinklers, iluminação). As estruturas são dispostas em fileiras
@@ -410,7 +413,13 @@
                 <div class="form-text">Clique na planta para marcar o ponto de referência (vira "Ponto X/Y informado"); o marcador vermelho aparece em todas as plantas.</div></div>
               <div class="col-6 slot-xy"><label class="form-label small mb-0">X (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_x" value="{{ sl.ref_x }}" inputmode="decimal"></div>
               <div class="col-6 slot-xy"><label class="form-label small mb-0">Y (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_y" value="{{ sl.ref_y }}" inputmode="decimal"></div>
-              <div class="col-12"><label class="form-label small mb-0">A zona de ouro vale quantos metros de caminhada?</label>
+              <div class="col-12"><div class="small fw-semibold">Duas zonas de ouro</div>
+                <div class="form-text mt-0">Da <b>pega</b>: a faixa de altura mais fácil de pegar (cadastrada em cada estrutura). Da <b>caminhada</b>: as posições
+                  mais perto do ponto de referência. O ideal para os itens A é estar nas duas.</div></div>
+              <div class="col-12"><label class="form-label small mb-0">Zona de ouro da caminhada: até quantos metros da referência?</label>
+                <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ sl.walk_m }}" inputmode="decimal" style="max-width:120px" placeholder="automático">
+                <div class="form-text">Vazio = as posições mais perto da referência que somam 20% das bins.</div></div>
+              <div class="col-12"><label class="form-label small mb-0">A zona de ouro da pega vale quantos metros de caminhada?</label>
                 <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ sl.golden_m }}" inputmode="decimal" style="max-width:120px">
                 <div class="form-text">Um nível fora da zona de ouro "fica" esses metros mais longe. 0 = só a caminhada conta. Vale para estruturas com zona de ouro cadastrada.</div></div>
               <div class="col-12"><div class="form-check small"><input class="form-check-input" type="checkbox" name="slot_affinity" value="1" id="slotAff" {% if sl.affinity %}checked{% endif %}>
@@ -556,9 +565,14 @@
         <div class="fs-5 fw-semibold">{{ k.abc.A }} / {{ k.abc.B }} / {{ k.abc.C }}</div>
         <div class="small text-muted">A = 80% das saídas{% if k.a_dist is not none %} · itens A a {{ k.a_dist|dec(1) }} m em média{% endif %}</div></div></div>
       {% if k.golden_picks is not none %}
-      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Saídas na zona de ouro</div>
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted"><i class="bi bi-star-fill text-warning"></i> Saídas na zona de ouro da pega</div>
         <div class="fs-5 fw-semibold">{{ k.golden_picks|dec(0) }}%</div>
-        <div class="small text-muted">a zona de ouro tem {{ k.golden_positions|dec(0) }}% das bins</div></div></div>
+        <div class="small text-muted">altura ergonômica · tem {{ k.golden_positions|dec(0) }}% das bins</div></div></div>
+      {% endif %}
+      {% if k.get('walk_picks') is not none %}
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted"><i class="bi bi-person-walking text-warning"></i> Saídas na zona de ouro da caminhada</div>
+        <div class="fs-5 fw-semibold">{{ k.walk_picks|dec(0) }}%</div>
+        <div class="small text-muted">até {{ k.walk_golden_m|dec(1) }} m da referência{{ ' (20% das bins mais perto)' if k.walk_golden_auto }} · tem {{ k.walk_positions|dec(0) }}% das bins{% if k.both_picks is not none %} · nas duas: <b>{{ k.both_picks|dec(0) }}%</b> das saídas{% endif %}</div></div></div>
       {% endif %}
       {% if k.get('pairs_avg') is not none %}
       <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Itens que saem juntos</div>
@@ -669,7 +683,7 @@
       <tbody class="small">
       {% for ps in positions[:3000] %}
         <tr><td class="mono">{{ ps.address }}</td><td class="mono">{{ ps.struct_code }}</td><td class="mono">{{ types[ps.type_id].code if ps.type_id in types else '?' }}</td>
-          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ pct(ps.fill) }}</td><td class="text-end text-nowrap">{{ ps.dist_m|dec(1) }}{% if ps.golden %} <i class="bi bi-star-fill text-warning" title="Zona de ouro"></i>{% endif %}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
+          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ pct(ps.fill) }}</td><td class="text-end text-nowrap">{{ ps.dist_m|dec(1) }}{% if ps.walk_golden %} <i class="bi bi-person-walking text-warning" title="Zona de ouro da caminhada"></i>{% endif %}{% if ps.golden %} <i class="bi bi-star-fill text-warning" title="Zona de ouro da pega (altura)"></i>{% endif %}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
       {% endfor %}
       {% if positions|length > 3000 %}<tr><td colspan="10" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
       </tbody>
@@ -725,6 +739,8 @@
     };
     sel.addEventListener('change', upd); upd();
   });
+  const am = document.querySelector('[name="b_address_mode"]'), sb = document.getElementById('serpBox');
+  if (am && sb) { const u = () => sb.classList.toggle('d-none', am.value !== 'row'); am.addEventListener('change', u); u(); }
   const sref = document.getElementById('slotRef');
   if (sref) { const u = () => document.querySelectorAll('.slot-xy').forEach(e => e.classList.toggle('d-none', sref.value !== 'xy')); sref.addEventListener('change', u); u(); }
   const src = document.getElementById('d_source'), ref = document.getElementById('refBox');

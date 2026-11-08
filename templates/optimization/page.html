@@ -223,12 +223,16 @@
             <input class="form-control form-control-sm text-end" name="slot_aisle_m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" title="Frente de cada estante, ao longo do corredor">Frente da estante (m)</label>
             <input class="form-control form-control-sm text-end" name="slot_bay_m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Metros de caminhada que um nível fora da zona de ouro &quot;custa&quot;">Zona de ouro vale (m)</label>
+          <div class="col-12 fw-semibold mt-1">Duas zonas de ouro: da pega (altura) e da caminhada (perto da expedição)</div>
+          <div class="col-6"><label class="form-label mb-0" title="Endereços até esta caminhada estimada da referência; vazio = os 20% mais perto">Caminhada até (m)</label>
+            <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ params.slot_walk_m }}" inputmode="decimal" placeholder="20% mais perto"></div>
+          <div class="col-6"><label class="form-label mb-0" title="Metros de caminhada que um nível fora da zona de ouro da pega &quot;custa&quot;">Pega fora vale (m)</label>
             <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ params.slot_golden_m }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro</label>
+          <div class="col-6"><label class="form-label mb-0" title="Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro (pega)</label>
             <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="ex.: 2,3"></div>
         </div>
         {{ switch('slot_rows', 'Letras por rua', '(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)') }}
+        {{ switch('slot_serp', 'Ruas em serpentina', '(com letras por rua: B-01 fica de frente para o fim da A)') }}
         {{ switch('slot_aff', 'Deixar perto os itens que saem juntos') }}
         <div class="form-text">A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores
           + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante
@@ -383,7 +387,8 @@
             {% if hint %}<div class="text-muted" style="font-size:.72rem">{{ hint }}</div>{% endif %}</div></div>
           {% endmacro %}
           {{ cmp('Caminhada média por saída', a.get('avg_dist'), z.get('avg_dist'), ' m', true, 'ponderada pela popularidade; ao acaso: ' ~ (z.random_dist|dec(1) if z.random_dist is not none else '—') ~ ' m') }}
-          {% if a.get('golden_picks') is not none %}{{ cmp('Saídas na zona de ouro', a.golden_picks, z.golden_picks, '%', false, 'a zona de ouro tem ' ~ (z.golden_positions|dec(0)) ~ '% das posições usadas') }}{% endif %}
+          {% if a.get('golden_picks') is not none %}{{ cmp('Saídas na zona de ouro da pega', a.golden_picks, z.golden_picks, '%', false, 'altura ergonômica · tem ' ~ (z.golden_positions|dec(0)) ~ '% das posições usadas') }}{% endif %}
+          {% if a.get('walk_picks') is not none %}{{ cmp('Saídas na zona de ouro da caminhada', a.walk_picks, z.walk_picks, '%', false, 'até ' ~ (slot.info.spec.walk_limit|dec(1)) ~ ' m da referência' ~ ((' · nas duas: ' ~ (a.both_picks|dec(0)) ~ '% → ' ~ (z.both_picks|dec(0)) ~ '%') if a.get('both_picks') is not none else '')) }}{% endif %}
           {% if a.get('pairs_avg') is not none or z.get('pairs_avg') is not none %}{{ cmp('Itens que saem juntos', a.get('pairs_avg'), z.get('pairs_avg'), ' m', true, 'distância entre os pares mais frequentes') }}{% endif %}
           {% if not POOL %}<div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">Trocas sugeridas</div>
             <div class="fs-6 fw-semibold">{{ slot.n_pairs }} troca(s)</div><div class="text-muted" style="font-size:.72rem">{{ slot.swaps|length }} SKUs mudam · entre {{ slot.mono }} endereços com 1 SKU e as mesmas bins de outros ({{ slot.groups }} grupos) · só quando o mais procurado ganha {{ [2, 2 * (slot.info.spec.bay_m)]|max|dec(1) }} m ou mais</div></div></div>{% endif %}

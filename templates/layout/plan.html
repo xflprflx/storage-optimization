@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}Planta da filial — {{ branch.code }}{% endblock %}
+{% block head %}
+<style>
+  .nk-plan-wrap { position: relative; background: #f4f6f8; border: 1px solid #d9e0e5; border-radius: .4rem; overflow: hidden; height: calc(100vh - 230px); min-height: 480px; }
+  .nk-plan-wrap svg { width: 100%; height: 100%; display: block; user-select: none; touch-action: none; }
+  .nk-row { cursor: move; }
+  .nk-row.sel .nk-row-box { stroke: #e11d48; stroke-width: 3; }
+  .nk-obs { cursor: move; }
+  .nk-obs.sel rect { stroke: #e11d48; stroke-width: 3; }
+  .nk-plan-wrap.ref-mode svg { cursor: crosshair; }
+  .nk-plan-side { max-height: calc(100vh - 230px); min-height: 480px; overflow: auto; }
+  .nk-plan-hint { position: absolute; left: .5rem; bottom: .5rem; font-size: .75rem; color: #5b6770; background: rgba(255,255,255,.9); border-radius: .3rem; padding: .2rem .45rem; }
+  .nk-plan-coord { position: absolute; right: .5rem; bottom: .5rem; font-size: .75rem; background: rgba(255,255,255,.9); border-radius: .3rem; padding: .2rem .45rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-vector-pen"></i> Planta da filial</h1>
+    <div class="small text-muted">Desenhe onde ficam as estantes do depósito: com a planta, a caminhada da posição pela saída, o simulador de
+      trajeto e o 3D usam os corredores reais.</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-secondary" href="/layout?{{ qs }}"><i class="bi bi-bricks"></i> Mapa do estoque</a>
+    <a class="btn btn-outline-secondary" id="lnk3d" href="/layout/plan/3d?{{ qs }}"><i class="bi bi-box"></i> Ver em 3D</a>
+    <a class="btn btn-outline-secondary" id="lnkRoutes" href="/optimization/slotting/routes?{{ qs }}"><i class="bi bi-signpost-2"></i> Simulador de trajeto</a>
+    <button class="btn btn-primary" id="btnSave"><i class="bi bi-save"></i> Salvar planta</button>
+  </div>
+</div>
+
+<form class="card mb-2" method="get" action="/layout/plan"><div class="card-body py-2 d-flex flex-wrap gap-2 align-items-end small">
+  <div><label class="form-label mb-0">Filial</label>
+    <select class="form-select form-select-sm" name="branch_id" onchange="this.form.submit()">
+      {% for b in branches %}<option value="{{ b.id }}" {% if b.id == branch.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}</select></div>
+  <div><label class="form-label mb-0">Armazém</label>
+    <select class="form-select form-select-sm" name="warehouse_id" onchange="this.form.submit()">
+      <option value="none" {% if not wid %}selected{% endif %}>— Sem armazém —</option>
+      {% for w in warehouses %}{% if branch.id in (wh_branches.get(w.id) or []) or w.id == wid %}<option value="{{ w.id }}" {% if w.id == wid %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endif %}{% endfor %}</select></div>
+  <div class="ms-auto text-muted" id="status">Carregando…</div>
+</div></form>
+
+<div class="row g-2">
+  <div class="col-xl-9 col-lg-8">
+    <div class="nk-plan-wrap" id="wrap">
+      <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="nk-plan-hint">Arraste fileiras e obstáculos · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
+      <div class="nk-plan-coord" id="coord"></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-lg-4 nk-plan-side small">
+    <div class="card mb-2"><div class="card-body py-2">
+      <div class="fw-semibold mb-1">Imóvel</div>
+      <div class="row g-1">
+        <div class="col-6"><label class="form-label mb-0">Comprimento (m)</label><input class="form-control form-control-sm" id="bL" type="number" step="0.1" min="1"></div>
+        <div class="col-6"><label class="form-label mb-0">Largura (m)</label><input class="form-control form-control-sm" id="bW" type="number" step="0.1" min="1"></div>
+      </div>
+      <div class="d-flex flex-wrap gap-1 mt-2">
+        <button class="btn btn-sm btn-outline-primary" id="addRow"><i class="bi bi-plus-lg"></i> Fileira</button>
+        <button class="btn btn-sm btn-outline-dark" id="addObs"><i class="bi bi-plus-lg"></i> Obstáculo</button>
+        <button class="btn btn-sm btn-outline-danger" id="refMode" title="Clique na planta para marcar o ponto de referência (expedição)"><i class="bi bi-geo-alt"></i> Referência</button>
+        <button class="btn btn-sm btn-outline-secondary" id="fit" title="Enquadrar"><i class="bi bi-arrows-angle-expand"></i></button>
+      </div>
+      <div class="mt-1"><label class="form-label mb-0">Nome da referência</label><input class="form-control form-control-sm" id="refLabel" maxlength="60"></div>
+    </div></div>
+
+    <div class="card mb-2" id="propCard" style="display:none"><div class="card-body py-2">
+      <div class="d-flex justify-content-between"><span class="fw-semibold" id="propTitle">Fileira</span>
+        <button class="btn-close btn-sm" id="unsel" aria-label="Fechar"></button></div>
+      <div id="rowProps" class="row g-1">
+        <div class="col-6"><label class="form-label mb-0">Corredor / rua</label><select class="form-select form-select-sm" id="pAisle"></select></div>
+        <div class="col-6"><label class="form-label mb-0">Estantes</label><select class="form-select form-select-sm" id="pSide">
+          <option value="odd">Ímpares</option><option value="even">Pares</option><option value="all">Todas</option></select></div>
+        <div class="col-6"><label class="form-label mb-0">X (m)</label><input class="form-control form-control-sm" id="pX" type="number" step="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0">Y (m)</label><input class="form-control form-control-sm" id="pY" type="number" step="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0" title="Profundidade da fileira">Profundidade (m)</label><input class="form-control form-control-sm" id="pDepth" type="number" step="0.05" min="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0" title="Frente das estantes sem estrutura cadastrada">Frente (m)</label><input class="form-control form-control-sm" id="pBayW" type="number" step="0.05" min="0.1"></div>
+        <div class="col-12 d-flex flex-wrap gap-1 mt-1">
+          <button class="btn btn-sm btn-outline-secondary" id="pRot" title="Girar 90° (R)"><i class="bi bi-arrow-repeat"></i> Girar</button>
+          <button class="btn btn-sm btn-outline-secondary" id="pFace" title="Troca o lado do corredor de acesso (F)"><i class="bi bi-arrow-down-up"></i> Lado do corredor</button>
+          <button class="btn btn-sm btn-outline-secondary" id="pRev" title="A numeração começa na outra ponta"><i class="bi bi-arrow-left-right"></i> Inverter numeração</button>
+          <button class="btn btn-sm btn-outline-secondary" id="pDup" title="Duplicar"><i class="bi bi-copy"></i></button>
+          <button class="btn btn-sm btn-outline-danger" id="pDel" title="Apagar (Del)"><i class="bi bi-trash"></i></button>
+        </div>
+        <div class="col-12 text-muted mt-1" id="pInfo"></div>
+      </div>
+      <div id="obsProps" class="row g-1">
+        <div class="col-12"><label class="form-label mb-0">Nome</label><input class="form-control form-control-sm" id="oName" maxlength="60"></div>
+        <div class="col-6"><label class="form-label mb-0">X (m)</label><input class="form-control form-control-sm" id="oX" type="number" step="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0">Y (m)</label><input class="form-control form-control-sm" id="oY" type="number" step="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0">Comprimento (m)</label><input class="form-control form-control-sm" id="oW" type="number" step="0.1" min="0.1"></div>
+        <div class="col-6"><label class="form-label mb-0">Largura (m)</label><input class="form-control form-control-sm" id="oD" type="number" step="0.1" min="0.1"></div>
+        <div class="col-12 mt-1"><button class="btn btn-sm btn-outline-danger" id="oDel"><i class="bi bi-trash"></i> Apagar</button></div>
+      </div>
+    </div></div>
+
+    <div class="card mb-2"><div class="card-body py-2">
+      <div class="fw-semibold mb-1">Situação</div>
+      <div id="checkInfo" class="text-muted">—</div>
+    </div></div>
+
+    <div class="card mb-2"><div class="card-body py-2">
+      <div class="fw-semibold mb-1">Gerar automaticamente</div>
+      <div class="text-muted mb-1">Monta as fileiras a partir dos endereços cadastrados (substitui a planta em edição).</div>
+      <select class="form-select form-select-sm mb-1" id="aMode">
+        <option value="aisle">Uma letra por corredor (ímpares de um lado, pares do outro)</option>
+        <option value="row">Uma letra por rua (A|B, C|D… frente a frente)</option></select>
+      <div class="row g-1">
+        <div class="col-6"><label class="form-label mb-0">Corredor (m)</label><input class="form-control form-control-sm" id="aW" type="number" step="0.1" value="3"></div>
+        <div class="col-6"><label class="form-label mb-0" title="Espaço livre antes das fileiras (expedição)">Frente livre (m)</label><input class="form-control form-control-sm" id="aF" type="number" step="0.1" value="4"></div>
+      </div>
+      <button class="btn btn-sm btn-outline-primary mt-1" id="btnAuto"><i class="bi bi-magic"></i> Gerar</button>
+    </div></div>
+
+    <form method="post" action="/layout/plan/delete" onsubmit="return confirm('Remover a planta desta filial? A caminhada volta a ser estimada pelo endereço.')">
+      <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
+      <button class="btn btn-sm btn-link text-danger p-0" id="btnDelete">Remover a planta salva</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const SCOPE = { branch_id: {{ branch.id }}, warehouse_id: {{ (wid or 'none')|tojson }} };
+  const $ = id => document.getElementById(id);
+  const svg = $('svg'), NS = 'http://www.w3.org/2000/svg';
+  const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
+  let D = null, BAYS = {}, INFO = {}, saved = false, dirty = false, sel = null, refMode = false;
+  let vb = { x: 0, y: 0, w: 1000, h: 1000 };
+  const SNAP = 10;
+  const snap = (v, e) => (e && e.shiftKey) ? Math.round(v) : Math.round(v / SNAP) * SNAP;
+
+  // estantes de uma fileira (como no servidor): do corredor, pelo lado dos números, na ordem (ou invertida)
+  const par = b => b.p;
+  function rowBays(r) {
+    const bs = (BAYS[r.aisle] || []).filter(b => r.side === 'all' || par(b) === (r.side === 'odd' ? 1 : 0));
+    return r.rev ? bs.slice().reverse() : bs;
+  }
+  function rowGeom(r) {
+    const bs = rowBays(r); let cur = 0; const out = [];
+    bs.forEach(b => { const w = b.w || r.bay_w; out.push({ bay: b.bay, off: cur, w }); cur += w; });
+    const len = cur || r.bay_w;
+    return { bays: out, len, w: r.orient === 'h' ? len : r.depth, d: r.orient === 'h' ? r.depth : len };
+  }
+  const el = (tag, attrs = {}, parent = null) => {
+    const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+    if (parent) parent.appendChild(e); return e;
+  };
+
+  function draw() {
+    svg.innerHTML = '';
+    svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+    const fs = Math.max(D.L, D.W) / 70, sw = vb.w / 900;
+    el('rect', { x: 0, y: 0, width: D.L, height: D.W, fill: '#fbfcfd', stroke: '#1f2d33', 'stroke-width': sw * 2 }, svg);
+    // grade de 1 m (ou 5 m em plantas grandes)
+    const step = Math.max(D.L, D.W) > 6000 ? 500 : 100, grid = el('g', { stroke: '#e6ebef', 'stroke-width': sw * 0.6 }, svg);
+    for (let x = step; x < D.L; x += step) el('line', { x1: x, y1: 0, x2: x, y2: D.W }, grid);
+    for (let y = step; y < D.W; y += step) el('line', { x1: 0, y1: y, x2: D.L, y2: y }, grid);
+    (INFO.corridors || []).forEach(c => {
+      const a = c.orient === 'h' ? { x: c.lo, y: c.center - c.width / 2, width: c.hi - c.lo, height: c.width }
+        : { x: c.center - c.width / 2, y: c.lo, width: c.width, height: c.hi - c.lo };
+      el('rect', { ...a, fill: '#dbe7f5', opacity: 0.8 }, svg);
+      const ln = c.orient === 'h' ? { x1: c.lo, y1: c.center, x2: c.hi, y2: c.center } : { x1: c.center, y1: c.lo, x2: c.center, y2: c.hi };
+      el('line', { ...ln, stroke: '#2f6db5', 'stroke-width': sw, 'stroke-dasharray': `${sw * 6} ${sw * 4}` }, svg);
+    });
+    D.obstacles.forEach((o, i) => {
+      const g = el('g', { class: 'nk-obs' + (sel && sel.kind === 'obs' && sel.i === i ? ' sel' : ''), 'data-kind': 'obs', 'data-i': i }, svg);
+      el('rect', { x: o.x, y: o.y, width: o.w, height: o.d, fill: '#2b2f33', opacity: 0.85, stroke: '#000', 'stroke-width': sw }, g);
+      const t = el('text', { x: o.x + o.w / 2, y: o.y + o.d / 2 + fs * 0.3, 'font-size': fs * 0.8, fill: '#fff', 'text-anchor': 'middle' }, g);
+      t.textContent = o.name;
+    });
+    D.rows.forEach((r, i) => {
+      const G = rowGeom(r), g = el('g', { class: 'nk-row' + (sel && sel.kind === 'row' && sel.i === i ? ' sel' : ''), 'data-kind': 'row', 'data-i': i }, svg);
+      el('rect', { class: 'nk-row-box', x: r.x, y: r.y, width: G.w, height: G.d, fill: G.bays.length ? '#cfd8df' : '#f8d7da', stroke: '#24548c', 'stroke-width': sw * 1.5 }, g);
+      G.bays.forEach((b, k) => {
+        const a = r.orient === 'h' ? { x: r.x + b.off, y: r.y, width: b.w, height: r.depth } : { x: r.x, y: r.y + b.off, width: r.depth, height: b.w };
+        el('rect', { ...a, fill: 'none', stroke: '#7b8a95', 'stroke-width': sw * 0.6 }, g);
+        const big = b.w / vb.w * svg.clientWidth > 16;
+        if (big || k === 0 || k === G.bays.length - 1) {
+          const t = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 + fs * 0.22, 'font-size': fs * 0.6, fill: '#1f2d33', 'text-anchor': 'middle' }, g);
+          t.textContent = b.bay;
+        }
+      });
+      // lado do corredor (de onde se pega): linha colorida na face
+      const f = r.orient === 'h' ? { x1: r.x, x2: r.x + G.w, y1: r.face === '+' ? r.y + G.d : r.y, y2: r.face === '+' ? r.y + G.d : r.y }
+        : { y1: r.y, y2: r.y + G.d, x1: r.face === '+' ? r.x + G.w : r.x, x2: r.face === '+' ? r.x + G.w : r.x };
+      el('line', { ...f, stroke: '#f28e2b', 'stroke-width': sw * 4 }, g);
+      const side = { odd: ' ímp.', even: ' pares', all: '' }[r.side];
+      const lab = r.orient === 'h' ? { x: r.x - fs * 0.3, y: r.y + G.d / 2 + fs * 0.35, 'text-anchor': 'end' } : { x: r.x + G.w / 2, y: r.y - fs * 0.3, 'text-anchor': 'middle' };
+      const t = el('text', { ...lab, 'font-size': fs, fill: '#24548c', 'font-weight': 600 }, g);
+      t.textContent = r.aisle + side;
+    });
+    const R = D.ref;
+    el('circle', { cx: R.x, cy: R.y, r: fs * 0.6, fill: '#d62728', stroke: '#fff', 'stroke-width': sw * 2 }, svg);
+    const rt = el('text', { x: R.x + fs * 0.9, y: R.y + fs * 0.35, 'font-size': fs * 0.8, fill: '#d62728', 'font-weight': 600 }, svg);
+    rt.textContent = R.label;
+  }
+
+  function fit() {
+    const m = Math.max(D.L, D.W) * 0.05, ar = svg.clientWidth / Math.max(1, svg.clientHeight);
+    let w = D.L + 2 * m, h = D.W + 2 * m;
+    if (w / h > ar) h = w / ar; else w = h * ar;
+    vb = { x: D.L / 2 - w / 2, y: D.W / 2 - h / 2, w, h }; draw();
+  }
+  const pt = e => { const r = svg.getBoundingClientRect(); return { x: vb.x + (e.clientX - r.left) / r.width * vb.w, y: vb.y + (e.clientY - r.top) / r.height * vb.h }; };
+
+  // ---------------------------------------------------------------- mouse
+  let drag = null;
+  svg.addEventListener('pointerdown', e => {
+    const p = pt(e);
+    if (refMode) { D.ref.x = Math.round(Math.min(D.L, Math.max(0, p.x))); D.ref.y = Math.round(Math.min(D.W, Math.max(0, p.y))); setRefMode(false); draw(); changed(); return; }
+    const g = e.target.closest('[data-kind]');
+    if (g) {
+      const kind = g.dataset.kind, i = +g.dataset.i, o = kind === 'row' ? D.rows[i] : D.obstacles[i];
+      select(kind, i);
+      drag = { kind, i, dx: p.x - o.x, dy: p.y - o.y, moved: false };
+    } else {
+      drag = { pan: true, sx: e.clientX, sy: e.clientY, vx: vb.x, vy: vb.y };
+    }
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', e => {
+    const p = pt(e);
+    $('coord').textContent = `x ${fmt(p.x / 100, 1)} m · y ${fmt(p.y / 100, 1)} m`;
+    if (!drag) return;
+    if (drag.pan) {
+      const r = svg.getBoundingClientRect();
+      vb.x = drag.vx - (e.clientX - drag.sx) / r.width * vb.w; vb.y = drag.vy - (e.clientY - drag.sy) / r.height * vb.h;
+      svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); return;
+    }
+    const o = drag.kind === 'row' ? D.rows[drag.i] : D.obstacles[drag.i];
+    o.x = snap(p.x - drag.dx, e); o.y = snap(p.y - drag.dy, e); drag.moved = true;
+    draw(); props();
+  });
+  svg.addEventListener('pointerup', () => { if (drag && drag.moved) changed(); drag = null; });
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = pt(e), k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+    vb = { x: p.x - (p.x - vb.x) * k, y: p.y - (p.y - vb.y) * k, w: vb.w * k, h: vb.h * k }; draw();
+  }, { passive: false });
+  new ResizeObserver(() => D && fit()).observe($('wrap'));
+
+  // ---------------------------------------------------------------- seleção e propriedades
+  function select(kind, i) { sel = kind == null ? null : { kind, i }; draw(); props(); }
+  function props() {
+    $('propCard').style.display = sel ? 'block' : 'none';
+    if (!sel) return;
+    const row = sel.kind === 'row';
+    $('rowProps').style.display = row ? '' : 'none'; $('obsProps').style.display = row ? 'none' : '';
+    if (row) {
+      const r = D.rows[sel.i], G = rowGeom(r);
+      const SIDE = { odd: 'ímpares', even: 'pares', all: 'todas' };
+      $('propTitle').textContent = `Fileira ${r.aisle} (${SIDE[r.side]})`;
+      $('pAisle').value = r.aisle; $('pSide').value = r.side;
+      $('pX').value = r.x / 100; $('pY').value = r.y / 100; $('pDepth').value = r.depth / 100; $('pBayW').value = r.bay_w / 100;
+      $('pInfo').textContent = G.bays.length ? `${G.bays.length} estante(s): ${G.bays[0].bay} → ${G.bays[G.bays.length - 1].bay} · ${fmt(G.len / 100)} m`
+        : 'Nenhuma estante deste corredor/lado nos endereços.';
+    } else {
+      const o = D.obstacles[sel.i];
+      $('propTitle').textContent = 'Obstáculo';
+      $('oName').value = o.name; $('oX').value = o.x / 100; $('oY').value = o.y / 100; $('oW').value = o.w / 100; $('oD').value = o.d / 100;
+    }
+  }
+  const cm = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
+  const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
+  bind('pAisle', r => { r.aisle = $('pAisle').value; });
+  bind('pSide', r => { r.side = $('pSide').value; });
+  bind('pX', r => { if (!isNaN(cm($('pX').value))) r.x = cm($('pX').value); });
+  bind('pY', r => { if (!isNaN(cm($('pY').value))) r.y = cm($('pY').value); });
+  bind('pDepth', r => { const v = cm($('pDepth').value); if (v > 0) r.depth = v; });
+  bind('pBayW', r => { const v = cm($('pBayW').value); if (v > 0) r.bay_w = v; });
+  bind('oName', o => { o.name = $('oName').value || 'Obstáculo'; });
+  bind('oX', o => { if (!isNaN(cm($('oX').value))) o.x = cm($('oX').value); });
+  bind('oY', o => { if (!isNaN(cm($('oY').value))) o.y = cm($('oY').value); });
+  bind('oW', o => { const v = cm($('oW').value); if (v > 0) o.w = v; });
+  bind('oD', o => { const v = cm($('oD').value); if (v > 0) o.d = v; });
+  const act = fn => () => { if (sel && sel.kind === 'row') { fn(D.rows[sel.i]); draw(); props(); changed(); } };
+  const rotate = act(r => { r.orient = r.orient === 'h' ? 'v' : 'h'; });
+  const flip = act(r => { r.face = r.face === '+' ? '-' : '+'; });
+  $('pRot').addEventListener('click', rotate);
+  $('pFace').addEventListener('click', flip);
+  $('pRev').addEventListener('click', act(r => { r.rev = !r.rev; }));
+  $('pDup').addEventListener('click', () => {
+    if (!sel || sel.kind !== 'row') return;
+    const r = D.rows[sel.i], G = rowGeom(r);
+    const c = { ...r, side: r.side === 'odd' ? 'even' : r.side === 'even' ? 'odd' : r.side, face: r.face === '+' ? '-' : '+' };
+    if (r.orient === 'h') c.y = r.y + (r.face === '+' ? G.d + 300 : -G.d - 300); else c.x = r.x + (r.face === '+' ? G.w + 300 : -G.w - 300);
+    D.rows.push(c); select('row', D.rows.length - 1); changed();
+  });
+  function del() {
+    if (!sel) return;
+    (sel.kind === 'row' ? D.rows : D.obstacles).splice(sel.i, 1); select(null); changed();
+  }
+  $('pDel').addEventListener('click', del); $('oDel').addEventListener('click', del);
+  $('unsel').addEventListener('click', () => select(null));
+  document.addEventListener('keydown', e => {
+    if (!sel || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    const o = sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i];
+    const mv = { ArrowLeft: [-SNAP, 0], ArrowRight: [SNAP, 0], ArrowUp: [0, -SNAP], ArrowDown: [0, SNAP] }[e.key];
+    if (mv) { e.preventDefault(); o.x += mv[0]; o.y += mv[1]; draw(); props(); changed(); }
+    else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
+    else if (e.key === 'r' || e.key === 'R') rotate();
+    else if (e.key === 'f' || e.key === 'F') flip();
+    else if (e.key === 'Escape') select(null);
+  });
+  $('addRow').addEventListener('click', () => {
+    const used = new Set(D.rows.map(r => r.aisle + r.side)), aisles = Object.keys(BAYS);
+    let aisle = aisles[0] || 'A', side = 'all';
+    outer: for (const a of aisles) for (const s of ['odd', 'even', 'all']) {
+      if (!used.has(a + s) && !(s === 'all' && (used.has(a + 'odd') || used.has(a + 'even'))) && !(s !== 'all' && used.has(a + 'all'))
+          && (BAYS[a] || []).some(b => s === 'all' || b.p === (s === 'odd' ? 1 : 0))) { aisle = a; side = s; break outer; }
+    }
+    const c = { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
+    D.rows.push({ aisle, side, x: snap(c.x), y: snap(c.y), orient: 'h', rev: false, face: '+', depth: 60, bay_w: 100 });
+    select('row', D.rows.length - 1); changed();
+  });
+  $('addObs').addEventListener('click', () => {
+    const c = { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
+    D.obstacles.push({ x: snap(c.x), y: snap(c.y), w: 100, d: 100, name: 'Pilar' }); select('obs', D.obstacles.length - 1); changed();
+  });
+  function setRefMode(on) { refMode = on; $('wrap').classList.toggle('ref-mode', on); $('refMode').classList.toggle('active', on); }
+  $('refMode').addEventListener('click', () => setRefMode(!refMode));
+  $('refLabel').addEventListener('change', () => { D.ref.label = $('refLabel').value || 'expedição'; draw(); changed(); });
+  $('fit').addEventListener('click', fit);
+  ['bL', 'bW'].forEach(id => $(id).addEventListener('change', () => {
+    const v = cm($(id).value); if (v > 0) { D[id === 'bL' ? 'L' : 'W'] = v; fit(); changed(); }
+  }));
+
+  // ---------------------------------------------------------------- servidor
+  const post = async (url, body) => (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...SCOPE, ...body }) })).json();
+  let checkTimer = null;
+  function changed() {
+    dirty = true; status();
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(async () => { const r = await post('/layout/plan/check', { data: D }); if (!r.error) { INFO = r; draw(); info(); } }, 400);
+  }
+  function status() {
+    $('status').innerHTML = dirty ? '<span class="text-warning-emphasis"><i class="bi bi-pencil"></i> Alterações não salvas</span>'
+      : saved ? '<span class="text-success"><i class="bi bi-check-circle"></i> Planta salva</span>' : '<span class="text-muted">Proposta automática (ainda não salva)</span>';
+    ['lnk3d', 'lnkRoutes'].forEach(id => $(id).classList.toggle('disabled', !saved));
+    $('btnDelete').style.display = saved ? '' : 'none';
+  }
+  function info() {
+    const u = INFO.unplaced || [], d = INFO.dup || [];
+    $('checkInfo').innerHTML = `<div>${INFO.placed || 0} estante(s) na planta · ${(INFO.corridors || []).length} corredor(es) de caminhada</div>` +
+      (u.length ? `<div class="text-danger mt-1">Fora da planta: ${u.map(esc).join('; ')}</div><div class="text-muted">Endereços dessas estantes usam a caminhada estimada pelo endereço.</div>` : '<div class="text-success">Todas as estantes estão na planta.</div>') +
+      (d.length ? `<div class="text-warning-emphasis mt-1">Em mais de uma fileira (vale a primeira): ${d.map(esc).join(', ')}</div>` : '') +
+      '<div class="text-muted mt-1">Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.</div>';
+  }
+  function load(r) {
+    D = r.data; INFO = r; BAYS = r.bays || BAYS;
+    $('pAisle').innerHTML = Object.keys(BAYS).map(a => `<option>${esc(a)}</option>`).join('') || '<option>A</option>';
+    $('bL').value = D.L / 100; $('bW').value = D.W / 100; $('refLabel').value = D.ref.label;
+    select(null); fit(); info(); status();
+  }
+  $('btnAuto').addEventListener('click', async () => {
+    if (D.rows.length && !confirm('Substituir a planta em edição pela gerada automaticamente?')) return;
+    const r = await post('/layout/plan/auto', { mode: $('aMode').value, aisle_w: cm($('aW').value), front: cm($('aF').value) });
+    if (r.error) { alert(r.error); return; }
+    load({ ...r, bays: BAYS }); dirty = true; status();
+  });
+  $('btnSave').addEventListener('click', async () => {
+    const r = await post('/layout/plan/save', { data: D });
+    if (r.error) { alert(r.error); return; }
+    saved = true; dirty = false; D = r.data; INFO = r; draw(); info(); status();
+  });
+  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+  fetch(`/layout/plan/data?branch_id=${SCOPE.branch_id}&warehouse_id=${SCOPE.warehouse_id}`).then(r => r.json()).then(r => {
+    if (r.error) { $('status').textContent = r.error; return; }
+    saved = r.saved; load(r);
+    if (!Object.keys(BAYS).length) $('checkInfo').innerHTML = '<span class="text-danger">Esta filial/armazém não tem endereços cadastrados.</span>';
+  });
+  window.nkPlan = { get data() { return D; }, get info() { return INFO; }, select, fit };
+})();
+</script>
+{% endblock %}

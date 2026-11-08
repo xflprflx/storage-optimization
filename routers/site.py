@@ -382,7 +382,12 @@ def view_3d(pid: int, request: Request, db: Session = Depends(get_db)):
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
-    return render(request, "site/view3d.html", project=pr)
+    v3 = {"name": pr.name, "back_url": f"/optimization/site/{pid}?run=1", "back_label": "Voltar ao projeto",
+          "links": [(f"/optimization/site/{pid}/plan", "list-check", "Plano detalhado"),
+                    (f"/optimization/site/{pid}/routes", "signpost-2", "Simulador de trajeto")],
+          "data_url": f"/optimization/site/{pid}/plan3d.json", "routes_url": f"/optimization/site/{pid}/routes3d.json",
+          "fix_url": f"/optimization/site/{pid}", "fix_label": "Abrir o projeto"}
+    return render(request, "site/view3d.html", v3=v3)
 
 
 @router.get("/{pid}/plan3d.json")
@@ -455,10 +460,6 @@ def _route_setup(db: Session, pr: SiteProject):
     return sample, plan, nodes, ref_node(ref), ref, ""
 
 
-ROUTE_KINDS = (("list", "Lista de separação", "#d62728"), ("s", "Serpentina (rota em S)", "#2f6db5"),
-               ("opt", "Otimizada", "#1a9850"))
-
-
 @router.get("/{pid}/routes")
 def route_simulator(pid: int, request: Request, order: str = "", db: Session = Depends(get_db)):
     """Simulador de trajeto: a amostra de pedidos percorrida no plano (lista de separação × rota otimizada)."""
@@ -507,7 +508,7 @@ def routes_3d_json(pid: int, order: str = "", db: Session = Depends(get_db)):
     Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
     from fastapi.responses import JSONResponse
 
-    from services.route_sim import path_points, simulate
+    from services.route_sim import order_payload, orders_payload
 
     pr = _get(db, pid)
     if not pr:
@@ -516,32 +517,8 @@ def routes_3d_json(pid: int, order: str = "", db: Session = Depends(get_db)):
     if error:
         return JSONResponse({"error": error})
     if not order:
-        sim = simulate(sample, nodes, start)
-        rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
-        r2 = lambda v: round(v, 2) if v is not None else None  # noqa: E731
-        return JSONResponse({"ref": ref, "kinds": [{"key": k, "name": n, "color": c} for k, n, c in ROUTE_KINDS],
-                             "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"]},
-                             "orders": [{"order": r["order"], "lines": r["lines"], "stops": r["stops"], "list_m": r2(r["list_m"]),
-                                         "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"])} for r in rows]})
-    lines = [o for o in sample if o[0] == order]
-    if not lines:
-        return JSONResponse({"error": f"Pedido {order} não está na amostra."})
-    sim = simulate(lines, nodes, start, keep_routes={order})
-    rt = sim["routes"].get(order)
-    if not rt:
-        return JSONResponse({"error": f"Os SKUs do pedido {order} não estão no plano."})
-    sku_of = {n.key: s for s, ns in nodes.items() for n in ns}
-    row = sim["rows"][0]
-    routes = {}
-    for kind, name, color in ROUTE_KINDS:
-        if rt.get(kind) is None:
-            continue
-        idx: list = []
-        pts = path_points(rt[kind], start, idx)
-        routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
-                        "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "skus": [sku_of.get(n.key, "") for n in rt[kind]],
-                        "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
-    return JSONResponse({"order": order, "lines": row["lines"], "stops": row["stops"], "ref": ref, "routes": routes})
+        return JSONResponse(orders_payload(sample, nodes, start, ref))
+    return JSONResponse(order_payload(sample, nodes, start, ref, order))
 
 
 @router.get("/{pid}/skus.xlsx")

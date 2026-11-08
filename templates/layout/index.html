@@ -23,8 +23,14 @@
 {% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-bricks"></i> Mapa do estoque</h1>
-  <div class="small text-muted">Elevação frontal em escala: cada endereço tem a largura e a altura das suas bins.</div>
+  <div>
+    <h1><i class="bi bi-bricks"></i> Mapa do estoque</h1>
+    <div class="small text-muted">Elevação frontal em escala: cada endereço tem a largura e a altura das suas bins.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" id="planLink" href="/layout/plan" title="Planta vista de cima: onde ficam as estantes (usada na caminhada, no simulador de trajeto e no 3D)"><i class="bi bi-vector-pen"></i> Planta da filial</a>
+    <a class="btn btn-outline-secondary" id="plan3dLink" href="/layout/plan/3d"><i class="bi bi-box"></i> 3D</a>
+  </div>
 </div>
 
 <div class="card nk-map-toolbar mb-3">
@@ -84,6 +90,19 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function () {  // links da planta e do 3D seguem a filial/armazém escolhidos
+  const sync = () => {
+    const b = document.getElementById('branch_id'), w = document.getElementById('warehouse_id');
+    if (!b || !w) return;
+    const q = `branch_id=${encodeURIComponent(b.value)}&warehouse_id=${encodeURIComponent(w.value || 'none')}`;
+    document.getElementById('planLink').href = `/layout/plan?${q}`;
+    document.getElementById('plan3dLink').href = `/layout/plan/3d?${q}`;
+  };
+  document.addEventListener('change', e => { if (e.target.id === 'branch_id' || e.target.id === 'warehouse_id') sync(); });
+  document.addEventListener('DOMContentLoaded', sync); sync();
+})();
+</script>
 <script>
 (function () {
   const $ = id => document.getElementById(id);

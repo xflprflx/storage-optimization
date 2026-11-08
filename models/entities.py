@@ -540,6 +540,25 @@ Index(
 )
 
 
+class BranchLayout(TimestampMixin, Base):
+    """Planta desenhada de um depósito existente (filial + armazém): o imóvel, as fileiras de estantes (cada uma com
+    um corredor/rua e o lado dos números — ímpares, pares ou todos), os obstáculos e o ponto de referência da
+    separação. Guardada em `data` (JSON, cm); a geometria é montada em services/branch_layout.py e usada na caminhada
+    da posição pela saída, no simulador de trajeto e no 3D da filial."""
+
+    __tablename__ = "branch_layouts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, index=True)
+    warehouse_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+
+Index("uq_branch_layout_scope", BranchLayout.branch_id, func.coalesce(BranchLayout.warehouse_id, 0), unique=True)
+
+
 class PickHistory(TimestampMixin, Base):
     """Histórico de saídas de uma filial existente (resumo de uma planilha de pedidos ou da coluna Saída), usado na
     posição dos SKUs (slotting) dos modos Por endereço e Pool. Guarda só o resumo em `data` (JSON): linhas de pedido e

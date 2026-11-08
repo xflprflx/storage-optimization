@@ -6,7 +6,8 @@
     <h1><i class="bi bi-signpost-2"></i> Simulador de trajeto</h1>
     <div class="small text-muted">{{ title }} · saída e volta: {{ ref_label }} · {{ how }}</div>
   </div>
-  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <div class="d-flex gap-2">{% if plan_link is defined %}<a href="{{ plan_link }}" class="btn btn-outline-primary"><i class="bi bi-vector-pen"></i> Planta da filial</a>{% endif %}
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a></div>
 </div>
 {% if error %}<div class="alert alert-warning">{{ error }}</div>{% else %}
 <div class="row g-2 mb-3">

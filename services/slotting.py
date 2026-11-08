@@ -140,6 +140,7 @@ class Geo:
     walk_m: float  # caminhada estimada desde a referência
     ease: float  # caminhada + penalidade fora da zona de ouro da pega (menor = melhor)
     walk_golden: bool = False  # zona de ouro da CAMINHADA: entre as posições mais perto da referência
+    node: Optional[object] = None  # ponto na planta desenhada da filial (route_sim.Node), quando houver
 
 
 def slot_spec(raw: dict) -> Optional[dict]:
@@ -186,6 +187,11 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         bays_by_aisle.setdefault((a or "").upper(), set()).add((bay or "").upper())
     rank = {a: {b: k for k, b in enumerate(sorted(bs, key=_natural))} for a, bs in bays_by_aisle.items()}
     max_pos = {a: max([int(re.sub(r"\D", "", b) or 0) for b in bs] + [len(bs)]) for a, bs in bays_by_aisle.items()}
+    from services.branch_layout import geometry
+    from services.route_sim import dist
+
+    layouts = {sc: geometry(db, sc[0], sc[1]) for sc in {(b, w) for _i, b, w, *_ in locs}}
+    used_layout = None
     out = {}
     for lid, br, wh, a, bay, lvl in locs:
         a, bay = (a or "").upper(), (bay or "").upper()
@@ -205,6 +211,14 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
             golden = float(st.golden_from) - EPS <= mid <= float(st.golden_to) + EPS
         elif spec.get("golden_levels") and n:
             golden = n in spec["golden_levels"]
+        geom = layouts.get((br, wh))
+        node = geom.node(a, bay) if geom is not None else None
+        if node is not None:  # planta desenhada: caminhada pelos corredores desde a referência da planta
+            walk = dist(geom.ref_node(), node) / 100.0
+            out[lid] = Geo(node.zone, node.along / 100.0, node.cross / 100.0, golden, walk,
+                           walk + (spec["golden_m"] if golden is False else 0.0), node=node)
+            used_layout = geom
+            continue
         ai = aisles.index(a)
         if spec.get("rows"):  # duas ruas por corredor
             ai, r0 = ai // 2, ridx // 2
@@ -222,12 +236,19 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     for g in out.values():
         g.walk_golden = g.walk_m <= (lim or 0) + EPS
     spec["walk_limit"] = lim
+    if used_layout is not None:
+        ref = f"referência da planta ({used_layout.ref['label']})"
+        spec["layout"] = True
     return out, ref
 
 
 def geo_dist(a: Geo, b: Geo) -> float:
     """Caminhada estimada entre dois endereços: no mesmo corredor, ao longo dele; em corredores diferentes, sai pela
     ponta da expedição e entra no outro."""
+    if a.node is not None and b.node is not None:  # planta desenhada
+        from services.route_sim import dist
+
+        return dist(a.node, b.node) / 100.0
     if a.aisle_idx == b.aisle_idx:
         return abs(a.x_m - b.x_m)
     return a.x_m + b.x_m + abs(a.y_m - b.y_m)

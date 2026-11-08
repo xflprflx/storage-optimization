@@ -1,6 +1,7 @@
 """Otimização de bins: escolha do objetivo e das restrições, análise e aplicação das sugestões."""
 from __future__ import annotations
 
+import html
 import math
 from typing import Mapping, Optional
 from urllib.parse import urlencode
@@ -208,6 +209,13 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
     h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid))
     if h is not None:
         out.update(history=h, summary=summary_text(h.data))
+    from models import BranchLayout
+
+    # plantas desenhadas da filial: com planta, a caminhada é medida nela (pelos corredores)
+    out["layouts"] = [(lay, db.get(Warehouse, lay.warehouse_id) if lay.warehouse_id else None)
+                      for lay in db.scalars(select(BranchLayout).where(BranchLayout.branch_id == bid))]
+    wh = filters.get("warehouse_id") or ""
+    out["layout_link"] = f"/layout/plan?branch_id={bid}&warehouse_id={wh if wh else ''}"
     spec = slot_spec(raw)
     if not spec or h is None or location_ids is None:
         return out
@@ -215,7 +223,8 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
     aff, counts = affinity(h.data) if spec["affinity"] else ({}, {})
     geo, ref = address_geo(db, location_ids, spec)
     out.update(on=bool(pop), spec=spec, pop=pop, abc=classify_abc(pop), aff=aff, counts=counts, geo=geo, ref=ref,
-               key=f"{h.id}:{h.updated_at}:{sorted((k, str(v)) for k, v in spec.items())}")
+               key=f"{h.id}:{h.updated_at}:{sorted((k, str(v)) for k, v in spec.items())}:"
+                   f"{[(lay.id, str(lay.updated_at)) for lay, _w in out['layouts']]}")
     return out
 
 
@@ -1158,6 +1167,14 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
         return render(request, "slotting/routes.html", **ctx, sim={}, error=(
             "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se "
             "ele foi enviado antes desta versão, envie de novo."))
+    from routers.layout import _plan_scope, _plan_qs, branch_route_setup
+
+    _br, wid, wlabel = _plan_scope(db, bid, qp.get("warehouse_id"))
+    lsample, lnodes, lstart, lref, g, _err = branch_route_setup(db, bid, wid)
+    if g is not None:  # planta desenhada: distância pelos corredores e as rotas desenhadas na planta
+        return _layout_routes(request, ctx, g, sample, lnodes, lstart, lref, qp, f"{_plan_qs(br, wid)}", wlabel)
+    ctx.update(plan_link=f"/layout/plan?{_plan_qs(br, wid)}",
+               dist_note=ctx["dist_note"] + " Desenhe a planta da filial para medir pelos corredores reais e ver as rotas.")
     spec = slot_spec({**SLOT_DEFAULTS, **{k: qp.get(k) for k in SLOT_DEFAULTS if qp.get(k) is not None}, "slot": "1"})
     rows = list(db.execute(select(Product.sku, StorageLocation.id, StorageLocation.address)
                            .join(StockItem, StockItem.product_id == Product.id)
@@ -1188,6 +1205,42 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
                else "uma letra por corredor")
     return render(request, "slotting/routes.html", **ctx, sim=sim, error="" if sim["orders"] else
                   "Nenhum pedido da amostra tem SKUs com saldo nesta filial.")
+
+
+def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp, plan_qs: str, wlabel: str):
+    """Simulador de trajeto da filial com planta desenhada (mesma tela do projeto de filial nova)."""
+    from services.branch_layout import svg as layout_svg
+    from services.route_sim import path_points, simulate
+
+    q_no_order = urlencode([(k, v) for k, v in qp.multi_items() if k != "order"])
+    ctx.update(link=f"/optimization/slotting/routes?{q_no_order}&", walk3d=f"/layout/plan/3d?{plan_qs}&walk=1&",
+               ref_label=f"{ref['label']} (planta, {wlabel})", how="planta desenhada",
+               dist_note="Distância pelos corredores da planta desenhada: sai pela ponta da fileira (ou por uma passagem) "
+                         "para trocar de corredor; obstáculos não desviam o trajeto.",
+               plan_link=f"/layout/plan?{plan_qs}")
+    sim = simulate(sample, nodes, start)
+    if not sim["orders"]:
+        return render(request, "slotting/routes.html", **ctx, sim={}, error="Nenhum pedido da amostra tem SKUs com saldo "
+                      "em estantes da planta.")
+    rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
+    chosen = qp.get("order") or rows[0]["order"]
+    one = simulate([o for o in sample if o[0] == chosen], nodes, start, keep_routes={chosen})
+    sel = next((r for r in rows if r["order"] == chosen), None)
+    svg = ""
+    if sel and one.get("routes", {}).get(chosen):
+        fs = max(g.data["L"], g.data["W"]) / 70
+        overlay = []
+        for kind, color, dash in (("list", "#d62728", ""), ("s", "#2f6db5", "2 3"), ("opt", "#1a9850", "6 4")):
+            pts = path_points(one["routes"][chosen][kind], start)
+            overlay.append(f'<polyline points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in pts)}" fill="none" stroke="{color}" '
+                           f'stroke-width="{3 if kind == "list" else 2.5}" vector-effect="non-scaling-stroke" '
+                           f'stroke-linejoin="round" opacity=".85"' + (f' stroke-dasharray="{dash}"' if dash else "") + '/>')
+        for i, n in enumerate(one["routes"][chosen]["list"], start=1):
+            overlay.append(f'<circle cx="{n.gx:.0f}" cy="{n.gy:.0f}" r="{fs * 0.55:.0f}" fill="#d62728" stroke="#fff"/>'
+                           f'<text x="{n.gx:.0f}" y="{n.gy + fs * 0.25:.0f}" font-size="{fs * 0.7:.0f}" fill="#fff" '
+                           f'text-anchor="middle" font-weight="bold">{i}<title>{html.escape(n.key)}</title></text>')
+        svg = layout_svg(g).replace("</svg>", "".join(overlay) + "</svg>")
+    return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel}, sim=sim, error="")
 
 
 @router.get("/slotting/skus.xlsx")

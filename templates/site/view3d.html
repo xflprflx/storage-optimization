@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}3D — {{ project.name }}{% endblock %}
+{% block title %}3D — {{ v3.name }}{% endblock %}
 {% block head %}
 <style>
   .nk3d-wrap { position: relative; height: calc(100vh - 190px); min-height: 460px; background: #eef2f5; border-radius: .4rem; overflow: hidden; }
@@ -26,11 +26,11 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
   <div>
-    <a href="/optimization/site/{{ project.id }}?run=1" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
-    <h5 class="mb-0"><i class="bi bi-box"></i> Arranjo 3D — {{ project.name }}</h5>
+    <a href="{{ v3.back_url }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ v3.back_label }}</a>
+    <h5 class="mb-0"><i class="bi bi-box"></i> Arranjo 3D — {{ v3.name }}</h5>
     <div class="small text-muted" id="nk3dSummary">Carregando o plano…</div>
   </div>
-  <a href="/optimization/site/{{ project.id }}/plan" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-check"></i> Plano detalhado</a>
+  <div class="d-flex gap-1 flex-wrap">{% for href, icon, text in v3.links %}<a href="{{ href }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-{{ icon }}"></i> {{ text }}</a>{% endfor %}</div>
 </div>
 
 <div class="card mb-2"><div class="card-body py-2 d-flex flex-wrap align-items-center gap-3 small">
@@ -65,7 +65,7 @@
   <div class="nk3d-panel nk3d-legend" id="nkLegend"></div>
   <div class="nk3d-panel nk3d-info" id="nkInfo"></div>
   <div class="nk3d-tools">
-    <button type="button" class="btn btn-sm btn-success" id="nkWalkBtn" title="Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)"><i class="bi bi-person-walking"></i> Simular caminhada</button>
+    <button type="button" class="btn btn-sm btn-success{{ '' if v3.routes_url else ' d-none' }}" id="nkWalkBtn" title="Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)"><i class="bi bi-person-walking"></i> Simular caminhada</button>
     <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="Maximiza a vista 3D (Esc volta)"><i class="bi bi-arrows-fullscreen"></i></button>
   </div>
   <div class="nk3d-panel nk3d-hud" id="nkHud"></div>
@@ -127,17 +127,18 @@ const M = v => v / 100;  // cm -> m (cena em metros)
 
 let data;
 try {
-  data = await (await fetch('/optimization/site/{{ project.id }}/plan3d.json')).json();
+  data = await (await fetch({{ v3.data_url|tojson }})).json();
 } catch (e) { data = { error: 'Falha ao carregar o plano.' }; }
 if (data.error) {
-  msg.innerHTML = `<div><i class="bi bi-info-circle fs-4"></i><br>${esc(data.error)}<br><a href="/optimization/site/{{ project.id }}">Abrir o projeto</a></div>`;
+  msg.innerHTML = `<div><i class="bi bi-info-circle fs-4"></i><br>${esc(data.error)}<br><a href="{{ v3.fix_url }}">{{ v3.fix_label }}</a></div>`;
   $('nk3dSummary').textContent = '';
   throw new Error(data.error);
 }
 msg.remove();
 const B = data.building;
 $('nk3dSummary').textContent = `${fmt(B.L / 100, 2)} × ${fmt(B.W / 100, 2)} m · pé-direito ${fmt(B.H / 100, 2)} m · ` +
-  `${data.kpis.modules} estantes · ${data.bins.length} bins · ocupação das bins ${fmt(data.kpis.bin_fill)}% · ocupação dos níveis ${fmt(data.kpis.level_fill)}%`;
+  `${data.kpis.modules} estantes · ${data.bins.length} bins · ocupação das bins ${fmt(data.kpis.bin_fill)}%` +
+  (data.kpis.level_fill != null ? ` · ocupação dos níveis ${fmt(data.kpis.level_fill)}%` : '') + (data.note ? ` · ${data.note}` : '');
 
 // ------------------------------------------------------------------ cena
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -405,7 +406,8 @@ try { const c = localStorage.getItem('nk-3d-color'); if (c) $('nkColor').value =
 $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3d-color', $('nkColor').value); } catch (e) { /* idem */ } });
 
 // ------------------------------------------------------------------ simulação de caminhada (um pedido percorrido em 3D)
-const PID = {{ project.id }};
+const ROUTES = {{ v3.routes_url|tojson }};  // pedidos da amostra e rotas (routes3d.json)
+const routesUrl = order => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); return u.toString(); };
 const WK = { list: null, data: null, walkers: [], stops: {}, t: 0, T: 0, playing: false, group: new THREE.Group(), rec: null, hudAt: 0 };
 scene.add(WK.group);
 const segGeo = new THREE.BoxGeometry(1, 0.03, 0.16); segGeo.translate(0.5, 0, 0);  // faixa do trajeto no piso
@@ -431,7 +433,7 @@ function openWalk(show = true, order = '') {
 async function loadOrders(order) {
   if (!WK.list) {
     $('nkWalkMsg').textContent = 'Carregando os pedidos…';
-    try { WK.list = await (await fetch(`/optimization/site/${PID}/routes3d.json`)).json(); } catch (e) { WK.list = { error: 'Falha ao carregar os pedidos.' }; }
+    try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: 'Falha ao carregar os pedidos.' }; }
     if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
     $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m</option>`).join('');
     const s = WK.list.summary;
@@ -446,7 +448,7 @@ async function loadOrders(order) {
 async function loadOrder(order, autoplay = true) {
   $('nkWalkInfo').textContent = 'Calculando as rotas…';
   let d;
-  try { d = await (await fetch(`/optimization/site/${PID}/routes3d.json?order=${encodeURIComponent(order)}`)).json(); } catch (e) { d = { error: 'Falha ao carregar o pedido.' }; }
+  try { d = await (await fetch(routesUrl(order))).json(); } catch (e) { d = { error: 'Falha ao carregar o pedido.' }; }
   if (d.error) { $('nkWalkInfo').textContent = d.error; return; }
   WK.data = d; build();
   if (autoplay) play(true);

@@ -212,3 +212,41 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
         if stops is not None:
             stops.append(len(pts) - 1)
     return pts
+
+
+ROUTE_KINDS = (("list", "Lista de separação", "#d62728"), ("s", "Serpentina (rota em S)", "#2f6db5"),
+               ("opt", "Otimizada", "#1a9850"))
+
+
+def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Callable = dist) -> dict:
+    """Lista de pedidos da amostra para a caminhada em 3D (maiores caminhadas na lista primeiro)."""
+    sim = simulate(sample, nodes_of, start, d)
+    rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
+    r2 = lambda v: round(v, 2) if v is not None else None  # noqa: E731
+    return {"ref": ref, "kinds": [{"key": k, "name": n, "color": c} for k, n, c in ROUTE_KINDS],
+            "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"]},
+            "orders": [{"order": r["order"], "lines": r["lines"], "stops": r["stops"], "list_m": r2(r["list_m"]),
+                        "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"])} for r in rows]}
+
+
+def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: str, d: Callable = dist) -> dict:
+    """As três rotas de um pedido: pontos (cm, planta), índice de cada parada em pts, endereços, SKUs e a distância."""
+    lines = [o for o in sample if o[0] == order]
+    if not lines:
+        return {"error": f"Pedido {order} não está na amostra."}
+    sim = simulate(lines, nodes_of, start, d, keep_routes={order})
+    rt = sim["routes"].get(order)
+    if not rt:
+        return {"error": f"Os SKUs do pedido {order} não estão na planta."}
+    sku_of = {n.key: s for s, ns in nodes_of.items() for n in ns}
+    row = sim["rows"][0]
+    routes = {}
+    for kind, name, color in ROUTE_KINDS:
+        if rt.get(kind) is None:
+            continue
+        idx: list = []
+        pts = path_points(rt[kind], start, idx)
+        routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
+                        "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "skus": [sku_of.get(n.key, "") for n in rt[kind]],
+                        "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
+    return {"order": order, "lines": row["lines"], "stops": row["stops"], "ref": ref, "routes": routes}

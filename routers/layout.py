@@ -1,6 +1,8 @@
 """Mapa do estoque: desenho proporcional das estruturas a partir do cadastro de endereços."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
@@ -54,3 +56,214 @@ def layout_data(branch_id: int, warehouse_id: str = "", aisle: str = "", preview
     if pv is not None:
         out["preview"] = {"new": len(pv["new"]), "removed": len(pv["removed"]), "conflicts": len(pv["conflicts"])}
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Planta desenhada do depósito existente (fileiras de estantes, obstáculos e referência)
+# --------------------------------------------------------------------------- #
+def _plan_scope(db: Session, branch_id, warehouse_id) -> tuple[Optional[Branch], Optional[int], str]:
+    """(filial, armazém ou None, texto do armazém). Armazém vazio = o único com planta/endereços da filial."""
+    br = db.get(Branch, to_int(branch_id)) if to_int(branch_id) else None
+    if br is None:
+        return None, None, ""
+    wh = str(warehouse_id or "").strip()
+    if wh in ("", "all"):
+        from models import BranchLayout
+
+        lay = db.scalars(select(BranchLayout).where(BranchLayout.branch_id == br.id).order_by(BranchLayout.id)).first()
+        if lay is not None:
+            wid = lay.warehouse_id
+        else:
+            first = db.execute(select(StorageLocation.warehouse_id).where(StorageLocation.branch_id == br.id)
+                               .order_by(StorageLocation.warehouse_id).limit(1)).first()
+            wid = first[0] if first else None
+    else:
+        wid = None if wh == "none" else to_int(wh)
+    w = db.get(Warehouse, wid) if wid else None
+    return br, wid, (f"{w.code} - {w.name}" if w else "sem armazém")
+
+
+def _plan_qs(br: Branch, wid: Optional[int]) -> str:
+    return f"branch_id={br.id}&warehouse_id={wid if wid else 'none'}"
+
+
+def _geom_info(g) -> dict:
+    return {"corridors": [{"orient": c.orient, "center": round(c.center, 1), "width": round(c.width, 1), "lo": round(c.lo, 1),
+                           "hi": round(c.hi, 1), "ends": [round(e, 1) for e in c.ends]} for c in g.corridors],
+            "unplaced": g.unplaced, "dup": g.dup[:50], "placed": len(g.placed)}
+
+
+@router.get("/layout/plan")
+def plan_editor(request: Request, branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+    from routers.common import redirect
+
+    lk = _lookups(db)
+    br, wid, wlabel = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        if lk["branches"]:
+            return redirect(f"/layout/plan?branch_id={lk['branches'][0].id}")
+        return redirect("/layout", "Cadastre uma filial e os endereços antes de desenhar a planta.", "warning")
+    return render(request, "layout/plan.html", branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid), **lk)
+
+
+@router.get("/layout/plan/data")
+def plan_data(branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+    from services.branch_layout import auto_layout, bays_json, build, clean, get_layout, scope_bays
+
+    br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    bays = scope_bays(db, br.id, wid)
+    lay = get_layout(db, br.id, wid)
+    data = clean(lay.data) if lay is not None else auto_layout(bays)
+    return {"saved": lay is not None, "updated": str(lay.updated_at) if lay is not None else "", "data": data,
+            "bays": bays_json(bays), **_geom_info(build(data, bays))}
+
+
+@router.post("/layout/plan/auto")
+async def plan_auto(request: Request, db: Session = Depends(get_db)):
+    from services.branch_layout import auto_layout, build, scope_bays
+
+    body = await request.json()
+    br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    bays = scope_bays(db, br.id, wid)
+    data = auto_layout(bays, "row" if body.get("mode") == "row" else "aisle", body.get("aisle_w"), body.get("front"))
+    return {"data": data, **_geom_info(build(data, bays))}
+
+
+@router.post("/layout/plan/check")
+async def plan_check(request: Request, db: Session = Depends(get_db)):
+    """Corredores e pendências da planta em edição (sem salvar)."""
+    from services.branch_layout import build, clean, scope_bays
+
+    body = await request.json()
+    br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    data = clean(body.get("data") or {})
+    return {"data": data, **_geom_info(build(data, scope_bays(db, br.id, wid)))}
+
+
+@router.post("/layout/plan/save")
+async def plan_save(request: Request, db: Session = Depends(get_db)):
+    from models import BranchLayout
+    from services.branch_layout import build, clean, get_layout, scope_bays
+
+    body = await request.json()
+    br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    data = clean(body.get("data") or {})
+    if not data["rows"]:
+        return JSONResponse({"error": "A planta não tem fileiras."}, status_code=400)
+    lay = get_layout(db, br.id, wid)
+    if lay is None:
+        lay = BranchLayout(branch_id=br.id, warehouse_id=wid, data=data)
+        db.add(lay)
+    else:
+        lay.data = data
+    db.commit()
+    return {"ok": True, "data": data, "updated": str(lay.updated_at), **_geom_info(build(data, scope_bays(db, br.id, wid)))}
+
+
+@router.post("/layout/plan/delete")
+async def plan_delete(request: Request, db: Session = Depends(get_db)):
+    from routers.common import redirect
+    from services.branch_layout import get_layout
+
+    form = await request.form()
+    br, wid, _w = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    if br is None:
+        return redirect("/layout", "Filial não encontrada.", "danger")
+    lay = get_layout(db, br.id, wid)
+    if lay is not None:
+        db.delete(lay)
+        db.commit()
+    return redirect(f"/layout/plan?{_plan_qs(br, wid)}", "Planta removida: a caminhada volta a ser estimada pelo endereço.",
+                    "secondary")
+
+
+def _branch_abc(db: Session, branch_id: int) -> dict:
+    from models import PickHistory
+    from services.slotting import classify_abc, popularity
+
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == branch_id))
+    return classify_abc(popularity(h.data, "lines")) if h is not None else {}
+
+
+@router.get("/layout/plan/3d")
+def plan_3d_page(request: Request, branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+    from routers.common import redirect
+
+    br, wid, wlabel = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        return redirect("/layout", "Filial não encontrada.", "danger")
+    qs = _plan_qs(br, wid)
+    v3 = {"name": f"{br.code} - {br.name} ({wlabel})", "back_url": f"/layout/plan?{qs}", "back_label": "Voltar à planta",
+          "links": [(f"/layout?{qs}", "grid-3x3", "Mapa do estoque"),
+                    (f"/optimization/slotting/routes?branch_id={br.id}&warehouse_id={wid if wid else 'none'}", "signpost-2",
+                     "Simulador de trajeto")],
+          "data_url": f"/layout/plan/plan3d.json?{qs}", "routes_url": f"/layout/plan/routes3d.json?{qs}",
+          "fix_url": f"/layout/plan?{qs}", "fix_label": "Desenhar a planta"}
+    return render(request, "site/view3d.html", v3=v3)
+
+
+@router.get("/layout/plan/plan3d.json")
+def plan_3d_json(branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+    from services.branch_layout import geometry, layout_3d
+
+    br, wid, wlabel = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    g = geometry(db, br.id, wid)
+    if g is None:
+        return JSONResponse({"error": "Esta filial ainda não tem planta desenhada. Desenhe a planta para ver o 3D."})
+    data = layout_3d(db, g, br.id, wid, _branch_abc(db, br.id))
+    data["building"]["name"] = f"{br.code} - {br.name}"
+    if g.unplaced:
+        data["note"] = f"fora da planta: {', '.join(g.unplaced[:6])}{'…' if len(g.unplaced) > 6 else ''}"
+    return data
+
+
+def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
+    """Amostra de pedidos do histórico + endereços com saldo na planta desenhada → (sample, nodes, start, ref, g, erro).
+    Cada SKU pode ser buscado em qualquer endereço dele com saldo (o simulador usa o mais perto da referência)."""
+    import dataclasses
+
+    from models import PickHistory, Product, StockItem
+    from services.addressing import scope_filter
+    from services.branch_layout import geometry
+
+    g = geometry(db, branch_id, wid)
+    if g is None:
+        return None, None, None, None, None, "Esta filial ainda não tem planta desenhada."
+    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == branch_id))
+    sample = (h.data or {}).get("sample") if h else None
+    if not sample:
+        return None, None, None, None, g, ("O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). "
+                                           "Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).")
+    rows = db.execute(scope_filter(select(Product.sku, StorageLocation.aisle, StorageLocation.bay, StorageLocation.address)
+                                   .join(StockItem, StockItem.product_id == Product.id)
+                                   .join(StorageLocation, StorageLocation.id == StockItem.location_id)
+                                   .where(StockItem.quantity > 0), branch_id, wid))
+    nodes: dict[str, list] = {}
+    for sku, a, bay, addr in rows:
+        n = g.node(a, bay)
+        if n is not None:
+            nodes.setdefault(sku, []).append(dataclasses.replace(n, key=addr))
+    return sample, nodes, g.ref_node(), g.ref, g, ""
+
+
+@router.get("/layout/plan/routes3d.json")
+def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", db: Session = Depends(get_db)):
+    from services.route_sim import order_payload, orders_payload
+
+    br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        return JSONResponse({"error": "Filial não encontrada."}, status_code=404)
+    sample, nodes, start, ref, _g, err = branch_route_setup(db, br.id, wid)
+    if err:
+        return {"error": err}
+    return orders_payload(sample, nodes, start, ref) if not order else order_payload(sample, nodes, start, ref, order)

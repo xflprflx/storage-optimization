@@ -340,6 +340,45 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Tela cheia:** botão no canto da vista 3D (Esc volta).
 - **Gravar vídeo:** grava do início ao fim, com o painel de distâncias na imagem, e baixa um `.webm` (Chrome, Edge ou Firefox).
 
+## 6.0.3 Planta desenhada das filiais existentes
+
+O cadastro de uma filial tem só os endereços. A **Planta da filial** (`/layout/plan`, botão no *Mapa do estoque* e na etapa *Posição pela saída*) diz onde cada estante fica, vista de cima. Fica salva por filial + armazém (tabela `branch_layouts`).
+
+**Fileiras:** o desenho é feito de fileiras. Cada uma tem:
+- um corredor/rua;
+- as estantes de um lado: ímpares, pares ou todas;
+- posição, orientação (horizontal ou vertical) e sentido da numeração;
+- o **lado do corredor**, de onde se pega (faixa laranja);
+- profundidade.
+
+A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*) ou da frente informada na fileira.
+
+**Gerar automaticamente:** monta a planta a partir dos endereços. Há dois modos:
+- uma letra por corredor: ímpares de um lado e pares do outro, frente a frente;
+- uma letra por rua: A|B, C|D… frente a frente.
+
+Informe a largura do corredor e o espaço livre na frente.
+
+**Editor com o mouse:**
+- arrastar fileiras e obstáculos (encaixe de 10 cm; com Shift, livre);
+- roda para zoom e arrastar o fundo para mover a vista;
+- girar (R), trocar o lado do corredor (F), inverter a numeração, duplicar (cria a fileira da frente, com o outro lado dos números) e apagar (Del); as setas movem 10 cm;
+- botão para marcar o **ponto de referência** (expedição) com um clique;
+- imóvel (comprimento e largura) e obstáculos.
+
+O painel *Situação* lista as estantes que ficaram **fora da planta** e as que estão em mais de uma fileira. O editor mostra os **corredores de caminhada** (faixas azuis): duas fileiras frente a frente, com até 6 m de vão, formam um corredor; uma fileira sozinha tem o corredor a 1 m da face. As pontas das fileiras e as passagens entre elas são por onde se troca de corredor.
+
+**O que muda com a planta salva:**
+- **Posição pela saída** (Por endereço e Pool):
+  - a caminhada de cada endereço é medida na planta, pelos corredores, desde o ponto de referência dela;
+  - a distância entre os itens que saem juntos também;
+  - os campos de corredor de referência e distâncias passam a valer só para estantes fora da planta;
+  - o resultado mostra "referência da planta".
+- **Simulador de trajeto da filial:** mede pelos corredores da planta e desenha as três rotas do pedido escolhido, com as paradas numeradas.
+- **3D da filial** (`/layout/plan/3d`): cada estante na sua posição, com os níveis da estrutura e as bins cadastradas em cada endereço, lado a lado, na ordem das posições. Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
+
+Obstáculos aparecem na planta e no 3D, mas não desviam o trajeto. Remover a planta volta a estimar a caminhada pelo endereço.
+
 ## 6.0.2 Resultados salvos e comparação
 
 Cada execução de otimização fica guardada (tabela `optimization_runs`): Por endereço, Pool e Projeto de filial nova. Ficam os parâmetros, os indicadores (antes → depois, ou o valor no projeto), as situações e os detalhes (linhas da tabela, até 3.000; no projeto também estruturas e bins).

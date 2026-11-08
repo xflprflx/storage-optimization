@@ -146,8 +146,9 @@ EXAMPLES = [
         "description": "Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de "
                        "empilhadeira de 3,2 m, e zona de picking em estantes com corredor de 1,2 m e um transversal, "
                        "separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins. "
-                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas.",
-        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "~350 SKUs"],
+                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas. "
+                       "Traz um mês de pedidos (aba Pedidos) para a posição dos SKUs pela saída.",
+        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "pedidos", "~350 SKUs"],
         "building": {"length_m": 60, "width_m": 36, "clear_height_m": 9, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 10, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -156,6 +157,7 @@ EXAMPLES = [
         "obstacles": [],
         # setores: só a área necessária; o sistema escolhe o lugar junto às docas
         "sectors": [("Recebimento", 60, 5, "docas"), ("Expedição", 45, 5, "docas")],
+        "orders": 2500,  # aba Pedidos: histórico de um mês (saídas com sinal negativo)
         "structures": {"PP-270-110": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None),
                        "EST-120-60": ("Otimizar", None, None, None)},
         "bins": ["BIN-3", "BIN-5", "BIN-7", "BIN-8", "PALETE"],
@@ -174,6 +176,31 @@ def path_of(slug: str) -> Path:
 # --------------------------------------------------------------------------- #
 # Planilha
 # --------------------------------------------------------------------------- #
+def _orders(rng: random.Random, skus: list[str], n_orders: int) -> list[tuple]:
+    """Histórico de pedidos fictício de um mês, no formato de relatório de movimentação (saída com sinal negativo):
+    popularidade bem desigual (poucos SKUs saem muito) e grupos de itens que costumam sair juntos (ex.: parafuso,
+    porca e arruela da mesma medida = SKUs vizinhos no código)."""
+    import datetime as dt
+
+    order = skus[:]
+    rng.shuffle(order)
+    weights = [1 / (i + 1) ** 1.1 for i in range(len(order))]  # Zipf: o 1º sai muito mais que o 100º
+    idx = {s: i for i, s in enumerate(skus)}
+    rows = []
+    start = dt.date(2026, 10, 1)
+    for n in range(1, n_orders + 1):
+        lines = set(rng.choices(order, weights=weights, k=rng.choice((1, 1, 2, 2, 3, 4, 6))))
+        for s in list(lines):  # itens "irmãos" (código vizinho) entram junto com boa chance
+            i = idx[s]
+            for j in (i + 1, i + 2):
+                if j < len(skus) and rng.random() < 0.45:
+                    lines.add(skus[j])
+        day = start + dt.timedelta(days=rng.randrange(31))
+        for s in sorted(lines):
+            rows.append((f"P{n:05d}", day, s, -rng.choice((1, 1, 2, 3, 5, 10, 12))))
+    return rows
+
+
 def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
@@ -238,9 +265,13 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)"], [(code, *BINS[code]) for code in ex["bins"]], {2: 36})
+    skus = ex["skus"](rng)
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level"], ex["skus"](rng), {2: 36})
+           "Min level", "Max level"], skus, {2: 36})
+    if ex.get("orders"):
+        sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade"],
+              _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"]), {1: 14, 2: 12})
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
     return path

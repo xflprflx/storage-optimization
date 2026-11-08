@@ -143,6 +143,10 @@ class SiteParams:
     allowed_types: Optional[set] = None
     time_limit: float = 15.0
     priority: Optional[list] = None  # desempates (2º, 3º, 4º critério); None = padrão do objetivo
+    # posição dos SKUs (slotting): {"on": bool, "ref": "auto"|"docks"|"sector:<nome>"|"xy", "ref_xy": (x_m, y_m),
+    # "golden_m": metros de caminhada que a zona de ouro vale, "affinity": {(sku_a, sku_b): força 0–1},
+    # "source": rótulo da popularidade, "metric": rótulo da medida}; None = sem slotting
+    slotting: Optional[dict] = None
 
     @property
     def order(self) -> list[str]:
@@ -167,6 +171,8 @@ class Demand:
     placed_bins: int = 0
     cap: Optional[int] = None  # limite de unidades definido pelo usuário (sugestão de redução da demanda)
     bin_fill: Optional[float] = None  # ocupação das bins do SKU (%, volume), depois de alocado
+    pop: Optional[float] = None  # popularidade (linhas de pedido ou unidades de saída no período)
+    abc: str = ""  # curva ABC pela popularidade (A = até 80% das saídas, B = até 95%, C = o resto)
 
     @property
     def status_label(self) -> str:
@@ -827,6 +833,8 @@ class Position:
     units: int
     weight: float = 0.0
     fill: Optional[float] = None  # ocupação das bins (%): volume das unidades ÷ volume útil das bins
+    dist_m: Optional[float] = None  # caminhada (em L, pelos corredores) do ponto de referência até a frente da estante
+    golden: bool = False  # nível na zona de ouro da estrutura
 
 
 @dataclass
@@ -945,6 +953,7 @@ class SitePlan:
     errors: list[str] = field(default_factory=list)
     aisle_codes: dict = field(default_factory=dict)  # (zona, corredor) -> letra
     bin_fill: Optional[float] = None  # ocupação média das bins alocadas (%, volume das unidades ÷ volume das bins)
+    slotting: dict = field(default_factory=dict)  # indicadores da posição dos SKUs (ver `slotting_kpis`)
     # entradas do cálculo, para as vistas (3D): tipos de bin, compartimentos (tipo -> (bin pai, nº por pai)) e regras
     specs: dict = field(default_factory=dict, repr=False)
     parents: dict = field(default_factory=dict, repr=False)
@@ -1491,10 +1500,34 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                 lv.type_id, lv.cap = t, caps[(t, s.id)]
     # SKUs nas posições
     owner = {id(lv): m for m in plan.modules for lv in m.levels}
+    ref = ref_point(plan, (prm.slotting or {}))
+    plan.slotting["ref"] = ref
+    mdist = {id(m): _walk_m(access_point(m), ref) for m in plan.modules}
+    sl = prm.slotting if prm.slotting and prm.slotting.get("on") and any(d.pop for d in demands) else None
+    golden_m = float((sl or {}).get("golden_m") or 0.0)
+
+    def ease(lv) -> float:  # menor = melhor: caminhada + penalidade fora da zona de ouro (quando a estrutura tem uma)
+        m = owner[id(lv)]
+        out_gold = m.struct.golden_from is not None and not m.struct.is_golden(lv.n)
+        return mdist[id(m)] + (golden_m if out_gold else 0.0)
+
+    mpt = {id(m): access_point(m) for m in plan.modules}
+    partners: dict[str, dict] = {}  # itens que saem juntos (todos os tipos de bin): sku -> {parceiro: força}
+    for (a, b_), st in ((sl or {}).get("affinity") or {}).items():
+        if st >= AFFINITY_GROUP:
+            partners.setdefault(a, {})[b_] = st
+            partners.setdefault(b_, {})[a] = st
+    placed_pts: dict[str, list] = {}  # SKU -> pontos das posições já ocupadas
+
     for t in sorted({t for d in demands for t in (d.bins or {})}, key=lambda k: types[k].code):
         slots = sorted([lv for m in plan.modules for lv in m.levels if lv.type_id == t],
                        key=lambda lv: (lv.n, _bay_key(owner[id(lv)])))
         order = sorted([d for d in demands if (d.bins or {}).get(t)], key=lambda d: (d.material, d.sku))
+        if sl:  # slotting: melhores posições primeiro; SKUs mais procurados (por bin) primeiro, vizinhos de quem sai junto
+            # faixas de facilidade (SLOT_BUCKET_M): dentro de cada faixa, na ordem das estantes, para que posições
+            # seguidas na lista sejam vizinhas na planta (itens que saem juntos ficam lado a lado)
+            slots.sort(key=lambda lv: (math.floor(ease(lv) / SLOT_BUCKET_M), _bay_key(owner[id(lv)]), lv.n))
+            order = _slot_order(order, sl.get("affinity") or {})
         si = 0
         for d in order:
             k = d.bins[t]
@@ -1525,6 +1558,20 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                     extra.type_id, extra.cap = t, caps[(t, owner[id(extra)].struct.id)]
                     slots.append(extra)
                     continue
+                if sl and partners.get(d.sku):
+                    # parceiro já posicionado: o nível com menor (caminhada até a referência + força × distância até
+                    # o parceiro), isto é, equilibra ficar perto da expedição e perto de quem sai junto
+                    near = [(st, q) for o, st in partners[d.sku].items() for q in placed_pts.get(o, ())]
+                    if near:
+                        best = None
+                        for jj in range(j, len(slots)):
+                            if room(slots[jj]) <= 0:
+                                continue
+                            pt = mpt[id(owner[id(slots[jj])])]
+                            sc = ease(slots[jj]) + min(st * (abs(pt[0] - q[0]) + abs(pt[1] - q[1])) / 100.0 for st, q in near)
+                            if best is None or sc < best[0] - EPS:
+                                best = (sc, jj)
+                        j = best[1] if best else j
                 lv = slots[j]
                 free = room(lv)
                 s = owner[id(lv)].struct
@@ -1534,9 +1581,11 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                 pos = f"{len(lv.positions) + 1:02d}"
                 lvl = str(lv.n)
                 lv.positions.append(Position(build_address(mod.aisle, mod.bay, lvl, pos), mod.aisle, mod.bay, lvl, pos,
-                                             s.code, t, take, d.sku, d.name, units, units * unit_w))
+                                             s.code, t, take, d.sku, d.name, units, units * unit_w,
+                                             dist_m=round(mdist[id(mod)], 1), golden=s.is_golden(lv.n)))
                 lv.used += take
                 lv.load += units * unit_w
+                placed_pts.setdefault(d.sku, []).append(mpt[id(mod)])
                 d.placed_bins += take
                 k -= take
                 units_left -= units
@@ -1547,6 +1596,163 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     for d in demands:
         if d.status == "ok" and d.total_bins and len({p.address for p in plan.positions if p.sku == d.sku}) > 1:
             d.note = "Dividido em mais de uma posição."
+    slotting_kpis(plan, demands, prm, bool(sl))
+
+
+SLOT_BUCKET_M = 3.0  # largura (m) das faixas de facilidade na ordem das posições do slotting
+
+
+# --------------------------------------------------------------------------- #
+# Posição dos SKUs (slotting): popularidade, caminhada até a expedição, zona de ouro e itens que saem juntos
+# --------------------------------------------------------------------------- #
+def ref_point(plan: SitePlan, sl: dict) -> dict:
+    """Ponto de referência da separação (onde os pedidos são entregues): um setor (por padrão o de expedição),
+    o centro da faixa das docas ou um X/Y informado. {"x", "y" (cm), "label"}."""
+    b, fl = plan.building, plan.floor
+    L, W = fl.length_cm or b.length_m * 100.0, fl.width_cm or b.width_m * 100.0
+    gap, front = b.wall_gap_m * 100.0, b.front_reserved_m * 100.0
+    spec = sl.get("ref") or "auto"
+    sectors = getattr(fl, "sectors", []) or []
+    center = lambda o: (o.x_m * 100 + o.length_m * 50, o.y_m * 100 + o.width_m * 50)  # noqa: E731
+    if spec == "xy" and sl.get("ref_xy"):
+        x, y = sl["ref_xy"]
+        return {"x": x * 100.0, "y": y * 100.0, "label": f"X {x:g} m, Y {y:g} m".replace(".", ",")}
+    if spec.startswith("sector:"):
+        name = spec[7:]
+        o = next((o for o in sectors if o.name == name), None)
+        if o is not None:
+            x, y = center(o)
+            return {"x": x, "y": y, "label": f"setor {o.name}"}
+    if spec in ("auto",) or spec.startswith("sector:"):
+        o = next((o for o in sectors if "exped" in o.name.casefold()), None)
+        if o is not None:
+            x, y = center(o)
+            return {"x": x, "y": y, "label": f"setor {o.name}"}
+    if front > 0:
+        return {"x": gap + front / 2, "y": W / 2, "label": "docas (centro da faixa da frente)"}
+    return {"x": 0.0, "y": W / 2, "label": "frente do imóvel (meio da parede das docas)"}
+
+
+def access_point(m: ModulePlaced) -> tuple[float, float]:
+    """Onde o separador para em frente ao módulo: meio da frente, no corredor (cabeceira: o centro do módulo)."""
+    if m.rotated or m.zone is None:
+        X, Y, w, d = m.grect
+        return X + w / 2, Y + d / 2
+    r = m.row
+    y = r.y + r.depth if r.side == "L" else r.y  # fileira "L" fica antes do corredor
+    X, Y, _, _ = m.zone.to_global(m.x0 + m.struct.width / 2, y, 0, 0)
+    return X, Y
+
+
+def _walk_m(p: tuple[float, float], ref: dict) -> float:
+    """Caminhada aproximada (m): em L (distância de Manhattan), como pelos corredores e pela faixa das docas."""
+    return (abs(p[0] - ref["x"]) + abs(p[1] - ref["y"])) / 100.0
+
+
+def _slot_order(order: list[Demand], affinity: dict) -> list[Demand]:
+    """SKUs na ordem de preenchimento (as melhores posições primeiro).
+    - Popularidade por bin: quem é muito procurado e ocupa pouco vem antes.
+    - Itens que saem juntos (força >= AFFINITY_GROUP) formam grupos de até 6 SKUs, que entram em sequência (posições
+      vizinhas). O grupo é ordenado pela popularidade por bin do conjunto, então um item pouco procurado só vai para
+      perto da expedição quando sai quase sempre junto com um muito procurado."""
+    dens = {d.sku: (d.pop or 0.0) / (d.total_bins or 1) for d in order}
+    ranked = sorted(order, key=lambda d: (-dens[d.sku], d.sku))
+    if not affinity:
+        return ranked
+    by_sku = {d.sku: d for d in ranked}
+    parent = {s: s for s in by_sku}
+    size = {s: 1 for s in by_sku}
+
+    def find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for (a, b), st in sorted(affinity.items(), key=lambda kv: -kv[1]):
+        if st < AFFINITY_GROUP or a not in by_sku or b not in by_sku:
+            continue
+        ra, rb = find(a), find(b)
+        if ra != rb and size[ra] + size[rb] <= 6:
+            parent[rb] = ra
+            size[ra] += size[rb]
+    groups: dict[str, list] = {}
+    for d in ranked:
+        groups.setdefault(find(d.sku), []).append(d)
+    gdens = {r: sum(d.pop or 0.0 for d in g) / max(1, sum(d.total_bins or 1 for d in g)) for r, g in groups.items()}
+    return [d for r in sorted(groups, key=lambda r: (-gdens[r], groups[r][0].sku)) for d in groups[r]]
+
+
+AFFINITY_GROUP = 0.3  # força mínima (fração dos pedidos do menos vendido em que saem juntos) para agrupar
+
+
+def classify_abc(demands: list[Demand]) -> None:
+    """Curva ABC pela popularidade: A = SKUs que somam até 80% das saídas, B = até 95%, C = o resto."""
+    ranked = sorted([d for d in demands if d.pop], key=lambda d: -d.pop)
+    total = sum(d.pop for d in ranked) or 1.0
+    acc = 0.0
+    for d in ranked:
+        d.abc = "A" if acc < 0.80 * total else "B" if acc < 0.95 * total else "C"
+        acc += d.pop
+    for d in demands:
+        if not d.pop:
+            d.abc = "C" if ranked else ""
+
+
+def slotting_kpis(plan: SitePlan, demands: list[Demand], prm: SiteParams, used: bool) -> None:
+    """Indicadores da posição dos SKUs: caminhada média por saída (ponderada pela popularidade) comparada à de uma
+    posição ao acaso (média de todas as posições usadas), parcela das saídas na zona de ouro e distância entre os
+    pares que mais saem juntos."""
+    sl = prm.slotting or {}
+    k = plan.slotting
+    k.update({"used": used, "source": sl.get("source", ""), "metric": sl.get("metric", ""),
+              "golden_m": sl.get("golden_m")})
+    classify_abc(demands)
+    pos = plan.positions
+    if not pos:
+        return
+    by_sku: dict[str, list] = {}
+    for p in pos:
+        by_sku.setdefault(p.sku, []).append(p)
+    nbins = sum(p.bins for p in pos)
+    k["random_dist"] = sum(p.dist_m * p.bins for p in pos) / nbins if nbins else None
+    has_gold = any(p.golden for p in pos)
+    k["golden_positions"] = sum(p.bins for p in pos if p.golden) / nbins * 100 if nbins and has_gold else None
+    popd = [d for d in demands if d.pop and d.sku in by_sku]
+    tot = sum(d.pop for d in popd)
+    if not tot:
+        return
+    dist = {s: sum(p.dist_m * p.bins for p in ps) / max(1, sum(p.bins for p in ps)) for s, ps in by_sku.items()}
+    gold = {s: sum(p.bins for p in ps if p.golden) / max(1, sum(p.bins for p in ps)) for s, ps in by_sku.items()}
+    k["avg_dist"] = sum(d.pop * dist[d.sku] for d in popd) / tot
+    k["golden_picks"] = sum(d.pop * gold[d.sku] for d in popd) / tot * 100 if has_gold else None
+    k["abc"] = {c: sum(1 for d in demands if d.abc == c) for c in "ABC"}
+    a = [d for d in popd if d.abc == "A"]
+    k["a_dist"] = sum(dist[d.sku] for d in a) / len(a) if a else None
+    # pares que mais saem juntos: distância entre as posições mais próximas dos dois SKUs
+    owner_pt = {}
+    for m in plan.modules:
+        pt = access_point(m)
+        for lv in m.levels:
+            for p in lv.positions:
+                owner_pt.setdefault(p.sku, []).append(pt)
+    pairs = []
+    counts = sl.get("pair_counts") or {}
+    aff = sl.get("affinity") or {}
+    for (sa, sb), c in sorted(counts.items(), key=lambda kv: -kv[1])[:30]:  # os pares mais frequentes
+        if sa in owner_pt and sb in owner_pt:
+            dmin = min(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p in owner_pt[sa] for q in owner_pt[sb]) / 100.0
+            pairs.append({"a": sa, "b": sb, "strength": aff.get((sa, sb), 0.0), "count": c, "dist": dmin})
+    k["pairs"] = pairs[:15]
+    if pairs:
+        k["pairs_avg"] = sum(x["dist"] for x in pairs) / len(pairs)
+        # referência: distância média entre duas posições quaisquer do plano (amostra fixa, para ser reproduzível)
+        import random as _rnd
+
+        pts = [access_point(m) for m in plan.modules if any(lv.positions for lv in m.levels)]
+        rg = _rnd.Random(7)
+        smp = [(rg.choice(pts), rg.choice(pts)) for _ in range(2000)] if len(pts) > 1 else []
+        k["pairs_random"] = (sum(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p, q in smp) / len(smp) / 100.0) if smp else None
 
 
 # --------------------------------------------------------------------------- #

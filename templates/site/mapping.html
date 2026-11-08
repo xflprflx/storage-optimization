@@ -38,6 +38,16 @@
             {% endfor %}
             </div>
             {% if kind == 'skus' %}<div class="small text-muted mt-2">Informe ao menos uma quantidade (Saldo, Min level ou Max level). Dimensões vazias são completadas pelo cadastro de produtos.</div>{% endif %}
+            {% if kind == 'orders' %}
+            <div class="small text-muted mt-2">Uma linha por item de pedido (pedido, SKU, quantidade). Serve para saber o que sai mais (linhas de pedido)
+              e o que sai junto. Só o resumo fica no projeto.</div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="orders_abs" value="1" id="ordersAbs">
+              <label class="form-check-label small" for="ordersAbs"><b>Converter quantidades para valor absoluto</b>
+                (relatórios em que a saída vem com sinal negativo). Sem marcar, linhas com quantidade negativa são ignoradas.</label>
+              <div class="small text-warning" id="ordersNeg"></div>
+            </div>
+            {% endif %}
             <div class="table-responsive mt-2"><table class="table table-sm table-bordered small mb-0 preview" data-no-resize></table></div>
           </div>
         </div>
@@ -77,6 +87,20 @@
     });
     preview(card);
   }
+  function negCheck() {  // pedidos: quantidades negativas na prévia -> sugere a conversão para valor absoluto
+    const card = document.querySelector('[data-kind="orders"]');
+    if (!card) return;
+    const sheet = card.querySelector('.sheet-sel').value, sel = card.querySelector('[data-field="qty"]');
+    const box = document.getElementById('ordersAbs'), msg = document.getElementById('ordersNeg');
+    if (!sheet || !sel || sel.value === '') { msg.textContent = ''; return; }
+    const i = +sel.value, rows = SHEETS[sheet].rows;
+    const neg = rows.filter(r => /^\s*-/.test(String(r[i] ?? ''))).length;
+    msg.textContent = neg ? `${neg} de ${rows.length} linha(s) da prévia com quantidade negativa.` : '';
+    if (neg && !box.dataset.touched) box.checked = true;
+  }
+  document.getElementById('ordersAbs')?.addEventListener('change', e => { e.target.dataset.touched = '1'; });
+  document.addEventListener('change', e => { if (e.target.closest('[data-kind="orders"]')) negCheck(); });
+  setTimeout(negCheck, 0);
   function preview(card) {
     const sheet = card.querySelector('.sheet-sel').value; if (!sheet) return;
     const sh = SHEETS[sheet], used = {};

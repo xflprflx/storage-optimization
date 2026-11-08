@@ -32,6 +32,7 @@
       <option value="struct">Estrutura</option>
       <option value="sku">SKU</option>
       <option value="golden">Zona de ouro</option>
+      <option value="abc">Curva ABC (saída)</option>
     </select></div>
   <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
     <select class="form-select form-select-sm w-auto" id="nkAisle"><option value="">Todos</option></select></div>
@@ -162,6 +163,11 @@ function label(text, x, y, z, color = '#5b6770', size = LBL) {
   outline(o.x, o.y, o.w, o.d, '#3b8c5a', true, 0.045);
   scene.add(label(`${o.name} · ${fmt(o.w * o.d / 10000)} m²`, M(o.x + o.w / 2), 0.6, M(o.y + o.d / 2), '#24613a'));
 });
+if (data.ref) {  // ponto de referência da separação (expedição): marcador
+  const pin = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 16), new THREE.MeshLambertMaterial({ color: '#d62728' }));
+  pin.rotation.x = Math.PI; pin.position.set(M(data.ref.x), 0.6, M(data.ref.y)); scene.add(pin);
+  scene.add(label(`Referência: ${data.ref.label}`, M(data.ref.x), 1.6, M(data.ref.y), '#d62728'));
+}
 const aisleLabels = new THREE.Group();
 data.aisles.forEach(a => aisleLabels.add(label(a.label.replace(/^Corredor\s*/i, ''), M(a.x), 0.5, M(a.y), '#24548c', LBL * 0.8)));
 scene.add(aisleLabels);
@@ -212,6 +218,7 @@ function binColor(b, mode) {
   if (mode === 'struct') return col.set(structById[mods[b[8]].s]?.color || '#888');
   if (mode === 'sku') return skuColor(b[10]);
   if (mode === 'golden') return b[11] ? col.set('#e0a800') : col.set('#c3cbd1');
+  if (mode === 'abc') return col.set({ A: '#d62728', B: '#ff9f1c', C: '#9fb3c0' }[b[12]] || '#d5dade');
   return col.set(data.types[b[6]]?.color || '#888');
 }
 
@@ -256,6 +263,12 @@ function legend(mode) {
       <div class="mt-1"><span class="nk3d-sw" style="background:#b8c0c6"></span>sem dimensões · média ${fmt(data.kpis.bin_fill)}%</div>`;
   } else if (mode === 'struct') {
     el.innerHTML = '<b>Estruturas</b>' + data.structs.map(s => `<div><span class="nk3d-sw" style="background:${s.color}"></span>${esc(s.code)} (${s.qty})</div>`).join('');
+  } else if (mode === 'abc') {
+    const n = c => data.bins.filter(b => b[12] === c).length;
+    el.innerHTML = '<b>Curva ABC</b> <span class="text-muted">(pela saída)</span>' +
+      [['A', '#d62728', '80% das saídas'], ['B', '#ff9f1c', 'até 95%'], ['C', '#9fb3c0', 'o resto']].map(([c, cl, t]) =>
+        `<div><span class="nk3d-sw" style="background:${cl}"></span>${c} · ${t} · ${n(c)} bins</div>`).join('') +
+      (data.bins.some(b => b[12]) ? '' : '<div class="text-muted">Sem dados de saída no projeto.</div>');
   } else if (mode === 'golden') {
     el.innerHTML = '<b>Zona de ouro</b>' + data.structs.filter(s => s.golden).map(s =>
       `<div>${esc(s.code)}: ${fmt(s.golden[0] / 100, 2)}–${fmt(s.golden[1] / 100, 2)} m · níveis ${s.golden_levels.join(', ') || '—'}</div>`).join('') +

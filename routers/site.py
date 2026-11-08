@@ -21,8 +21,8 @@ from services.bin_optimizer import BASES, OBJECTIVES
 from services.optimization_service import load_types
 from services.site_planner import (CAP_ALIGN, ORIENTATIONS, SECTOR_PLACES, SITE_CRITERIA, SITE_OBJECTIVES, STRUCT_MODES, ZONE_ORIENTATIONS,
                                    floor_svg, struct_colors, dim_mode, dim_pos)
-from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, config_from_form, create_branch, merged,
-                                   run_project)
+from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, SLOT_METRICS, SLOT_SOURCES,
+                                   config_from_form, create_branch, merged, run_project)
 
 router = APIRouter(prefix="/optimization/site", tags=["Projeto de filial nova"])
 
@@ -166,6 +166,9 @@ def _context(db: Session, pr: SiteProject, cfg: dict) -> dict:
         ZONE_ORIENTATIONS=ZONE_ORIENTATIONS, CAP_ALIGN=CAP_ALIGN, SECTOR_PLACES=SECTOR_PLACES,
         DEFAULT_LOCATION_MODES=DEFAULT_LOCATION_MODES,
         STRUCT_MODES=STRUCT_MODES, BASES=BASES, OBJECTIVES=OBJECTIVES,
+        SLOT_SOURCES=SLOT_SOURCES, SLOT_METRICS=SLOT_METRICS,
+        sl=cfg.get("slotting") or {}, orders=cfg.get("orders") or {},
+        out_count=sum(1 for it in cfg.get("items") or [] if it.get("out")),
     )
 
 
@@ -191,6 +194,8 @@ def save_project(pid: int, form: FormData = Depends(form_data), db: Session = De
     cfg = config_from_form(form)
     cfg["items"] = list((pr.config or {}).get("items") or [])  # SKUs do arquivo não vêm no formulário
     cfg["import_mapping"] = dict((pr.config or {}).get("import_mapping") or {})
+    if form.get("clear_orders") != "1":  # o histórico de pedidos vem da planilha, não do formulário
+        cfg["orders"] = dict((pr.config or {}).get("orders") or {})
     old_caps = ((pr.config or {}).get("demand") or {}).get("caps") or {}
     if old_caps and form.get("clear_caps") != "1":  # limites por SKU não vêm no formulário
         cfg["demand"]["caps"] = dict(old_caps)
@@ -481,6 +486,8 @@ def confirm_upload(pid: int, form: FormData = Depends(form_data), db: Session = 
             raw = str(form.get(f"col_{kind}_{field}") or "")
             cols[field] = int(raw) if raw.isdigit() else None
         mapping[kind] = {"sheet": sheet, "cols": cols}
+        if kind == "orders":
+            mapping[kind]["abs"] = form.get("orders_abs") == "1"
     try:
         cfg, msgs, errs = import_file(db, path, merged(copy.deepcopy(pr.config)), mapping)
     except Exception as exc:

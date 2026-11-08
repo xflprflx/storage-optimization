@@ -64,7 +64,14 @@ DEFAULT_CONFIG = {
     "params": {"objective": "modules", "bin_objective": "min_volume", "fill_limit": "85", "rotation": "upright",
                "single_type": "1", "weight": "1", "level_fill": "100", "top_gap_cm": "5", "side_gap_cm": "0",
                "types": [], "time_limit": "15", "priority": ["", "", ""]},
+    # posição dos SKUs: popularidade (auto = pedidos > coluna Saída), medida, ponto de referência, peso da zona de
+    # ouro (metros de caminhada que ela vale) e itens que saem juntos lado a lado
+    "slotting": {"on": "1", "source": "auto", "metric": "lines", "ref": "auto", "ref_x": "", "ref_y": "",
+                 "golden_m": "5", "affinity": "1"},
 }
+SLOT_SOURCES = {"auto": "Automático (histórico de pedidos; senão a coluna Saída)", "orders": "Histórico de pedidos",
+                "column": "Coluna Saída da aba SKUs", "max": "Quantidade planejada (max level) — aproximação"}
+SLOT_METRICS = {"lines": "Linhas de pedido (visitas ao endereço)", "units": "Unidades"}
 
 
 def _num(raw, label: str, errors: list, default: Optional[float] = None, lo: Optional[float] = None,
@@ -97,6 +104,7 @@ def merged(config: Optional[dict]) -> dict:
             out[sec] = dict(cfg.get(sec) or {})
     out["items"] = list(cfg.get("items") or [])  # SKUs enviados por arquivo (fonte "upload")
     out["import_mapping"] = dict(cfg.get("import_mapping") or {})  # colunas da última importação
+    out["orders"] = dict(cfg.get("orders") or {})  # resumo do histórico de pedidos (popularidade e pares)
     return out
 
 
@@ -139,6 +147,12 @@ def config_from_form(form: Mapping) -> dict:
             row["place"] = row["place"] if row["place"] in SECTOR_PLACES else "auto"
             secs.append(row)
     cfg["building"]["sectors"] = secs
+    src, met = form.get("slot_source"), form.get("slot_metric")
+    cfg["slotting"] = {"on": on("slot_on"), "source": src if src in SLOT_SOURCES else "auto",
+                       "metric": met if met in SLOT_METRICS else "lines",
+                       "ref": str(form.get("slot_ref") or "auto")[:60],
+                       "ref_x": str(form.get("slot_ref_x") or "").strip(), "ref_y": str(form.get("slot_ref_y") or "").strip(),
+                       "golden_m": str(form.get("slot_golden_m") or "").strip(), "affinity": on("slot_affinity")}
     sids = form.getlist("s_id") if hasattr(form, "getlist") else []
     for sid in sids:
         mode = form.get(f"s_mode_{sid}")
@@ -432,9 +446,66 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
             d.cap = int(caps[d.sku])
     if caps:
         notes.append(f"{sum(1 for d in demands if d.cap is not None)} SKU(s) com limite de quantidade (redução da demanda).")
+    prm.slotting, slot_note = slotting_spec(cfg, demands)
+    if slot_note:
+        notes.append(slot_note)
     plan = plan_site(b, structs, types, demands, prm, parents_of(db, types))
     plan.notes = notes + plan.notes
     return plan, []
+
+
+def popularity(cfg: dict, demands: list[Demand]) -> tuple[dict, str, str]:
+    """Popularidade por SKU conforme a fonte escolhida: ({sku: valor}, rótulo da fonte, fonte usada)."""
+    sl, orders = cfg.get("slotting") or {}, cfg.get("orders") or {}
+    src, metric = sl.get("source") or "auto", sl.get("metric") or "lines"
+    col = {it["sku"]: it["out"] for it in cfg.get("items") or [] if it.get("out")}
+    if src in ("auto", "orders") and orders.get("skus"):
+        k = 0 if metric == "lines" else 1
+        return ({s: v[k] for s, v in orders["skus"].items()},
+                f"histórico de pedidos ({orders.get('orders', 0)} pedidos, "
+                f"{'linhas de pedido' if metric == 'lines' else 'unidades'})", "orders")
+    if src in ("auto", "column") and col:
+        return col, "coluna Saída da aba SKUs", "column"
+    if src == "max":
+        return {d.sku: d.units for d in demands}, "quantidade planejada (max level)", "max"
+    return {}, "", ""
+
+
+def slotting_spec(cfg: dict, demands: list[Demand]) -> tuple[Optional[dict], str]:
+    """Popularidade nos SKUs e parâmetros do slotting para o planejador (+ aviso quando não há dados)."""
+    sl = cfg.get("slotting") or {}
+    pop, label, used = popularity(cfg, demands)
+    for d in demands:
+        d.pop = float(pop.get(d.sku) or 0.0) if pop else None
+    ref = sl.get("ref") or "auto"
+    ref_xy = None
+    if ref == "xy":
+        try:
+            ref_xy = (float(parse_decimal(sl.get("ref_x")) or 0), float(parse_decimal(sl.get("ref_y")) or 0))
+        except (ValueError, TypeError):
+            ref_xy = None
+    try:
+        golden_m = float(parse_decimal(str(sl.get("golden_m") or "0")) or 0)
+    except ValueError:
+        golden_m = 0.0
+    affinity, counts = {}, {}
+    orders = cfg.get("orders") or {}
+    if sl.get("affinity") and used == "orders" and orders.get("pairs"):
+        lines = {s: v[0] for s, v in (orders.get("skus") or {}).items()}
+        n_orders = max(1, int(orders.get("orders") or 1))
+        min_count = max(3, round(n_orders * 0.002))  # suporte mínimo: evita "pares" de itens raros (1 ou 2 pedidos)
+        for a, b, c in orders["pairs"]:
+            st = c / max(1, min(lines.get(a, 0), lines.get(b, 0)))  # em que fração das vezes saem juntos
+            if c >= min_count and st >= 0.2:
+                affinity[(a, b)] = round(min(1.0, st), 3)
+                counts[(a, b)] = c
+    spec = {"on": bool(sl.get("on")), "ref": ref, "ref_xy": ref_xy, "golden_m": golden_m, "affinity": affinity,
+            "source": label, "metric": sl.get("metric") or "lines", "pair_counts": counts}
+    note = ""
+    if sl.get("on") and not pop and (sl.get("source") or "auto") != "auto":  # no automático, o cartão já explica
+        note = ("Posição dos SKUs: a fonte de popularidade escolhida não tem dados (aba Pedidos ou coluna Saída) — os SKUs "
+                "ficam na ordem de material/código. Importe os dados ou escolha a aproximação pelo max level.")
+    return spec, note
 
 
 def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0) -> dict:

@@ -146,6 +146,12 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
          f"{plan.levels_used} de {plan.levels_total} níveis em uso"),
         ("Ocupação das bins", (_fmt(plan.bin_fill, 1) + "%") if plan.bin_fill is not None else "—",
          "volume dos produtos ÷ volume útil das bins"),
+    ]
+    k = plan.slotting or {}
+    if k.get("avg_dist") is not None:
+        rep.kpis.append(("Caminhada por saída", _fmt(k["avg_dist"], 1) + " m",
+                         f"ao acaso {_fmt(k.get('random_dist'), 1)} m · até {(k.get('ref') or {}).get('label', '')}"))
+    rep.kpis += [
         ("Uso das fileiras", (_fmt(plan.row_use, 1) + "%") if plan.row_use is not None else "—",
          f"{_fmt(plan.front_m, 1)} de {_fmt(fl.total_row_m, 1)} m · {_fmt(plan.footprint_m2, 1)} m² de estruturas"),
     ]
@@ -197,12 +203,12 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     for pos in plan.positions:
         rep.addresses.append({"address": pos.address, "struct": pos.struct_code, "type": code(pos.type_id),
                               "bins": pos.bins, "sku": pos.sku, "name": pos.name, "units": pos.units,
-                              "weight": pos.weight, "fill": pos.fill})
+                              "weight": pos.weight, "fill": pos.fill, "dist": pos.dist_m, "golden": pos.golden})
     for dm in plan.demands:
         rep.skus.append({"sku": dm.sku, "name": dm.name, "material": dm.material, "units": dm.units,
                          "bins": ", ".join(f"{n}× {code(t)}" for t, n in (dm.bins or {}).items()),
                          "status": dm.status_label, "note": dm.note, "ok": dm.status == "ok",
-                         "fill": dm.bin_fill})
+                         "fill": dm.bin_fill, "pop": dm.pop, "abc": dm.abc})
     rep.warnings = list(plan.errors) + list(plan.notes)
 
     # ---- passo a passo ----
@@ -339,15 +345,16 @@ def to_xlsx(rep: SiteReport) -> bytes:
     ws = wb.create_sheet("Endereços")
     pc = lambda v: round(v, 1) if v is not None else None  # noqa: E731
     table(ws, ["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocupação das bins (%)",
-               "Peso (kg)"],
+               "Peso (kg)", "Caminhada (m)", "Zona de ouro"],
           [(r["address"], r["struct"], r["type"], r["bins"], r["sku"], r["name"], r["units"], pc(r["fill"]),
-            round(r["weight"], 2))
+            round(r["weight"], 2), r.get("dist"), "sim" if r.get("golden") else "")
            for r in rep.addresses], {6: 40})
     ws = wb.create_sheet("SKUs")
-    table(ws, ["SKU", "Produto", "Material", "Quantidade", "Bins", "Ocupação das bins (%)", "Situação", "Observação"],
-          [(r["sku"], r["name"], r["material"], r["units"], r["bins"], pc(r["fill"]), r["status"], r["note"])
-           for r in rep.skus],
-          {2: 40, 8: 40})
+    table(ws, ["SKU", "Produto", "Material", "Quantidade", "Bins", "Ocupação das bins (%)", "Saída (período)", "Curva ABC",
+               "Situação", "Observação"],
+          [(r["sku"], r["name"], r["material"], r["units"], r["bins"], pc(r["fill"]), r.get("pop"), r.get("abc") or None,
+            r["status"], r["note"]) for r in rep.skus],
+          {2: 40, 10: 40})
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

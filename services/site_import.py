@@ -37,7 +37,18 @@ SKU_COLS = {
     "stock": ["saldo", "estoque", "quantidade", "qtd", "saldoatual", "estoqueatual", "qtde"],
     "min": ["min", "minlevel", "nivelminimo", "estoqueminimo", "minimo"],
     "max": ["max", "maxlevel", "nivelmaximo", "estoquemaximo", "maximo"],
+    "out": ["saida", "saidas", "saidaperiodo", "giro", "vendas", "demandadesaida", "consumo", "linhasdepedido",
+            "popularidade"],
 }
+ORDER_COLS = {
+    "order": ["pedido", "numeropedido", "npedido", "idpedido", "codigopedido", "ordem", "documento", "nf",
+              "notafiscal", "order", "orderid"],
+    "sku": ["sku", "codigo", "codigosku", "codproduto", "codigodoproduto", "codigoproduto", "item", "produto"],
+    "qty": ["quantidade", "qtd", "qtde", "quantity", "saida", "unidades"],
+    "date": ["data", "datapedido", "emissao", "dataemissao", "date"],
+}
+MAX_PAIR_LINES = 40  # pedidos com mais SKUs que isso não entram na contagem de pares (combinações demais)
+MAX_PAIRS = 5000  # pares guardados (os que mais saem juntos)
 STRUCT_COLS = {
     "code": ["codigo", "cod", "code"],
     "name": ["nome", "descricao"],
@@ -118,7 +129,8 @@ SHEETS = {"building": ["imovel", "predio", "galpao"], "structures": ["estruturas
           "bins": ["bins", "tiposdebin", "tipos de bin"], "skus": ["skus", "sku", "produtos", "demanda", "itens"],
           "zones": ["zonas", "zona", "zonasdaplanta"],
           "obstacles": ["obstaculos", "obstaculo", "areasbloqueadas", "bloqueios", "areas bloqueadas"],
-          "sectors": ["setores", "setor", "areasoperacionais", "recebimentoeexpedicao"]}
+          "sectors": ["setores", "setor", "areasoperacionais", "recebimentoeexpedicao"],
+          "orders": ["pedidos", "historicodepedidos", "historico", "pedidosdoperiodo", "vendas", "saidas"]}
 
 
 def _map(headers: list[str], spec: dict) -> dict[str, Optional[int]]:
@@ -160,9 +172,9 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
 
 BUILDING_COLS = {"field": ["campo", "parametro", "item", "descricao"], "value": ["valor", "value", "medida"]}
 SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS,
-         "zones": ZONE_COLS, "obstacles": OBSTACLE_COLS, "sectors": SECTOR_COLS}
+         "zones": ZONE_COLS, "obstacles": OBSTACLE_COLS, "sectors": SECTOR_COLS, "orders": ORDER_COLS}
 KIND_LABELS = {"building": "Imóvel", "structures": "Estruturas", "bins": "Bins", "skus": "SKUs", "zones": "Zonas",
-               "obstacles": "Obstáculos", "sectors": "Setores"}
+               "obstacles": "Obstáculos", "sectors": "Setores", "orders": "Pedidos (histórico de saídas)"}
 FIELD_LABELS = {
     "building": {"field": "Campo (nome do parâmetro)", "value": "Valor"},
     "structures": {"code": "Código", "name": "Nome", "kind": "Tipo", "width": "Frente (cm)", "depth": "Profundidade (cm)",
@@ -175,7 +187,7 @@ FIELD_LABELS = {
              "cost": "Custo por bin (R$)"},
     "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
              "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
-             "max": "Max level"},
+             "max": "Max level", "out": "Saída (linhas ou unid./período)"},
     "zones": {"name": "Nome", "length": "Comprimento em X (m)", "orientation": "Orientação das fileiras",
               "aisle": "Corredor (m)", "cross": "Corredores transversais", "structures": "Estruturas permitidas (códigos)",
               "x": "X (m)", "y": "Y (m)", "width": "Largura em Y (m)"},
@@ -184,10 +196,11 @@ FIELD_LABELS = {
     "sectors": {"name": "Nome", "area": "Área necessária (m²)", "min_side": "Lado mínimo (m)",
                 "place": "Onde (automático, docas, fundo, lateral, fixa)", "x": "X (m)", "y": "Y (m)",
                 "length": "Comprimento em X (m)", "width": "Largura em Y (m)"},
+    "orders": {"order": "Pedido (identificador)", "sku": "SKU", "qty": "Quantidade", "date": "Data"},
 }
 REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"],
             "zones": ["orientation"], "obstacles": ["x", "y", "length", "width"],
-            "sectors": ["name"]}
+            "sectors": ["name"], "orders": ["order", "sku", "qty"]}
 
 
 def read_sheets(path: Path, limit: Optional[int] = None) -> dict[str, list[list[str]]]:
@@ -504,6 +517,18 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         cfg["building"]["sectors"] = secs
         msgs.append(f"Setores: {len(secs)} setor(es).")
 
+    # ---- Pedidos (histórico de saídas) ----
+    if "orders" in sheets:
+        res = _orders(sheets["orders"], cms["orders"], bool((mapping.get("orders") or {}).get("abs")))
+        if res.get("error"):
+            errs.append(res["error"])
+        else:
+            cfg["orders"] = res
+            neg = (f" {res['neg']} quantidade(s) negativa(s) "
+                   + ("convertida(s) para valor absoluto." if res["abs"] else "ignorada(s) (sem a conversão).")) if res["neg"] else ""
+            msgs.append(f"Pedidos: {res['orders']} pedido(s), {res['lines']} linha(s), {len(res['skus'])} SKU(s), "
+                        f"{len(res['pairs'])} par(es) que saem juntos.{neg}")
+
     # ---- SKUs ----
     if "skus" in sheets:
         if len(sheets["skus"]) < 2:
@@ -526,6 +551,9 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     it = {"sku": sku[:60], "name": _cell(row, cm["name"])[:255], "material": _cell(row, cm["material"])[:60]}
                     for k in ("h", "w", "l", "wt", "stock", "min", "max"):
                         it[k] = _dec(row, cm[k], k, e, i)
+                    out = _dec(row, cm.get("out"), "saída", e, i)
+                    if out is not None:
+                        it["out"] = out
                     if e:
                         bad += 1
                         if bad <= 10:
@@ -533,9 +561,9 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                         continue
                     if sku in items:  # SKU repetido: soma as quantidades
                         prev = items[sku]
-                        for k in ("stock", "min", "max"):
-                            if it[k] is not None:
-                                prev[k] = (prev[k] or 0) + it[k]
+                        for k in ("stock", "min", "max", "out"):
+                            if it.get(k) is not None:
+                                prev[k] = (prev.get(k) or 0) + it[k]
                         continue
                     items[sku] = it
                     if len(items) >= MAX_ITEMS:
@@ -547,6 +575,85 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 cfg["demand"]["source"] = "upload"
                 msgs.append(f"SKUs: {len(items)} SKU(s) carregado(s) no projeto (fonte da demanda = arquivo).")
     return cfg, msgs, errs
+
+
+def _iso_date(raw: str) -> str:
+    """Data como AAAA-MM-DD (aceita ISO e DD/MM/AAAA); vazio se não reconhecer."""
+    import re
+
+    raw = (raw or "").strip()
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", raw)
+    if m:
+        return m.group(0)
+    m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", raw)
+    if m:
+        d, mo, y = m.groups()
+        y = ("20" + y) if len(y) == 2 else y
+        return f"{y}-{int(mo):02d}-{int(d):02d}"
+    return ""
+
+
+def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
+    """Resumo do histórico de pedidos (o arquivo bruto não fica no projeto): por SKU, linhas de pedido (em quantos
+    pedidos aparece) e unidades; pares de SKUs que aparecem no mesmo pedido (os MAX_PAIRS mais frequentes).
+    Quantidade negativa = saída em alguns relatórios: com `to_abs` vira positiva; sem, a linha é ignorada."""
+    from collections import Counter
+    from itertools import combinations
+
+    if len(rows_all) < 2:
+        return {"error": "Pedidos: a aba não tem linhas."}
+    _hdr, *rows = rows_all
+    lines: dict[tuple, float] = {}
+    neg = ignored = bad = 0
+    dates = []
+    for i, row in enumerate(rows, start=2):
+        order, sku = _cell(row, cm["order"]), _cell(row, cm["sku"])
+        if not order or not sku:
+            continue
+        try:
+            q = parse_decimal(_cell(row, cm["qty"]))
+        except ValueError:
+            bad += 1
+            continue
+        q = float(q) if q is not None else 1.0  # quantidade vazia: conta a linha (1 unidade)
+        if q < 0:
+            neg += 1
+            if not to_abs:
+                ignored += 1
+                continue
+            q = -q
+        if q == 0:
+            continue
+        key = (order[:60], sku[:60])
+        lines[key] = lines.get(key, 0.0) + q
+        if cm.get("date") is not None:
+            d = _iso_date(_cell(row, cm["date"]))
+            if d:
+                dates.append(d)
+    if not lines:
+        return {"error": "Pedidos: nenhuma linha válida (pedido, SKU e quantidade)"
+                         + (f"; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto."
+                            if ignored else ".")}
+    skus: dict[str, list] = {}
+    orders: dict[str, list] = {}
+    for (o, s), q in lines.items():
+        e = skus.setdefault(s, [0, 0.0])
+        e[0] += 1
+        e[1] += q
+        orders.setdefault(o, []).append(s)
+    pairs: Counter = Counter()
+    big = 0
+    for o, ss in orders.items():
+        if len(ss) > MAX_PAIR_LINES:
+            big += 1
+            continue
+        for a, b in combinations(sorted(ss), 2):
+            pairs[(a, b)] += 1
+    top = [[a, b, c] for (a, b), c in pairs.most_common(MAX_PAIRS) if c >= 2]
+    return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3),
+            "skus": {s: [n, round(u, 3)] for s, (n, u) in skus.items()}, "pairs": top, "neg": neg, "abs": to_abs,
+            "ignored": ignored, "bad": bad, "big_orders": big,
+            "dates": [min(dates), max(dates)] if dates else None}
 
 
 def template_xlsx(db: Session, cfg: dict) -> bytes:
@@ -647,9 +754,11 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
            for bt in db.scalars(select(BinType).where(BinType.parent_id.is_(None)).order_by(BinType.code))], {2: 30})
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level"],
+           "Min level", "Max level", "Saída (linhas ou unid./período)"],
           [(it["sku"], it.get("name"), it.get("material"), it.get("h"), it.get("w"), it.get("l"), it.get("wt"),
-            it.get("stock"), it.get("min"), it.get("max")) for it in cfg.get("items") or []], {2: 36})
+            it.get("stock"), it.get("min"), it.get("max"), it.get("out")) for it in cfg.get("items") or []], {2: 36, 11: 18})
+    # o projeto guarda só o resumo dos pedidos: a aba vem vazia, no formato esperado
+    sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade"], [], {1: 14, 2: 12})
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()

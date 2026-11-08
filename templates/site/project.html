@@ -352,6 +352,69 @@
     </div>
   </div>
 
+  {# ------------------------- Posição dos SKUs (slotting) ------------------------- #}
+  <div class="col-12 nk-step" data-step-title="Posição dos SKUs">
+    <div class="card h-100">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <strong>Posição dos SKUs pela saída (slotting)</strong>
+        <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" name="slot_on" value="1" id="slotOn" {% if sl.on %}checked{% endif %}>
+          <label class="form-check-label small" for="slotOn">Priorizar os SKUs que mais saem</label></div>
+      </div>
+      <div class="card-body">
+        <div class="small text-muted mb-3">Cada endereço ganha uma nota de facilidade: a caminhada (em L, pelos corredores) até o ponto de referência
+          (a expedição) mais uma penalidade quando o nível está fora da zona de ouro da estrutura. Os SKUs mais procurados <i>por bin</i>
+          ficam nos melhores endereços, e os que saem juntos ficam vizinhos. As quantidades de estruturas e níveis não mudam, só a posição de cada SKU.</div>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="fw-semibold small mb-1">Dados de saída</div>
+            <div class="border rounded p-2 small mb-2">
+              <div class="mb-1"><b>1. Coluna "Saída" na aba SKUs</b> (você informa a saída de cada SKU no período, em linhas de pedido ou unidades):
+                {% if out_count %}<span class="badge text-bg-success">{{ out_count }} SKU(s) com saída</span>{% else %}<span class="text-muted">não enviada</span>{% endif %}</div>
+              <div><b>2. Aba "Pedidos"</b> com o histórico do período (pedido, SKU, quantidade e, opcional, data). Ao importar dá para converter
+                quantidades negativas (saída) para valor absoluto. Daqui saem as linhas de pedido de cada SKU e os <b>itens que saem juntos</b>:
+                {% if orders.get('orders') %}
+                  <div class="mt-1"><span class="badge text-bg-success">{{ orders.orders }} pedidos</span>
+                    <span class="badge text-bg-light border">{{ orders.lines }} linhas</span>
+                    <span class="badge text-bg-light border">{{ orders.skus|length }} SKUs</span>
+                    <span class="badge text-bg-light border">{{ orders.pairs|length }} pares</span>
+                    {% if orders.dates %}<span class="badge text-bg-light border">{{ orders.dates[0] }} a {{ orders.dates[1] }}</span>{% endif %}
+                    {% if orders.neg %}<span class="badge text-bg-light border">{{ orders.neg }} negativas {{ 'convertidas' if orders.abs else 'ignoradas' }}</span>{% endif %}
+                    <button class="btn btn-link btn-sm text-danger p-0 ms-1" name="clear_orders" value="1" onclick="return confirm('Remover o histórico de pedidos deste projeto?')">remover</button></div>
+                {% else %}<span class="text-muted">não enviado</span>{% endif %}</div>
+              <div class="text-muted mt-1">Use <i>Importar planilha</i> (no topo) para enviar a coluna ou a aba. Sem nenhum dos dois, dá para usar o max level como aproximação.</div>
+            </div>
+            <div class="row g-2">
+              <div class="col-12"><label class="form-label small mb-0">Popularidade vem de</label>
+                <select class="form-select form-select-sm" name="slot_source">{% for k, v in SLOT_SOURCES.items() %}<option value="{{ k }}" {% if sl.source == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+              <div class="col-12"><label class="form-label small mb-0">Medida (histórico de pedidos)</label>
+                <select class="form-select form-select-sm" name="slot_metric">{% for k, v in SLOT_METRICS.items() %}<option value="{{ k }}" {% if sl.metric == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select>
+                <div class="form-text">Linhas de pedido medem quantas vezes o separador vai ao endereço: é o que mais pesa na caminhada.</div></div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="fw-semibold small mb-1">Onde fica o que sai mais</div>
+            <div class="row g-2">
+              <div class="col-12"><label class="form-label small mb-0">Ponto de referência (onde os pedidos são entregues)</label>
+                <select class="form-select form-select-sm" name="slot_ref" id="slotRef">
+                  <option value="auto" {% if sl.ref == 'auto' %}selected{% endif %}>Automático (setor de expedição; senão as docas)</option>
+                  <option value="docks" {% if sl.ref == 'docks' %}selected{% endif %}>Docas (centro da faixa da frente)</option>
+                  {% for sc in b.get('sectors') or [] %}{% set v = 'sector:' ~ sc.name %}<option value="{{ v }}" {% if sl.ref == v %}selected{% endif %}>Setor {{ sc.name }}</option>{% endfor %}
+                  <option value="xy" {% if sl.ref == 'xy' %}selected{% endif %}>Ponto X/Y informado</option>
+                </select></div>
+              <div class="col-6 slot-xy"><label class="form-label small mb-0">X (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_x" value="{{ sl.ref_x }}" inputmode="decimal"></div>
+              <div class="col-6 slot-xy"><label class="form-label small mb-0">Y (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_y" value="{{ sl.ref_y }}" inputmode="decimal"></div>
+              <div class="col-12"><label class="form-label small mb-0">A zona de ouro vale quantos metros de caminhada?</label>
+                <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ sl.golden_m }}" inputmode="decimal" style="max-width:120px">
+                <div class="form-text">Um nível fora da zona de ouro "fica" esses metros mais longe. 0 = só a caminhada conta. Vale para estruturas com zona de ouro cadastrada.</div></div>
+              <div class="col-12"><div class="form-check small"><input class="form-check-input" type="checkbox" name="slot_affinity" value="1" id="slotAff" {% if sl.affinity %}checked{% endif %}>
+                <label class="form-check-label" for="slotAff">Deixar vizinhos os SKUs que saem juntos (precisa da aba Pedidos; pares que aparecem juntos em ao menos 20% dos pedidos do menos vendido)</label></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   {# ------------------------- Objetivo ------------------------- #}
   <div class="col-12 nk-step" data-step-title="Objetivo">
     <div class="card h-100">
@@ -467,6 +530,49 @@
   {% endfor %}
 </div>
 
+{% set k = plan.slotting %}
+{% if k.get('avg_dist') is not none or k.get('random_dist') is not none %}
+<div class="card mb-3">
+  <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2">
+    <strong><i class="bi bi-signpost-split"></i> Posição dos SKUs</strong>
+    <span class="small text-muted">referência: {{ k.ref.label }}{% if k.source %} · popularidade: {{ k.source }}{% endif %}
+      {% if k.used %}<span class="badge text-bg-success">priorizado</span>{% elif k.get('avg_dist') is not none %}<span class="badge text-bg-secondary">sem priorizar (desligado)</span>{% endif %}</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      {% if k.get('avg_dist') is not none %}
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Caminhada média por saída</div>
+        <div class="fs-5 fw-semibold">{{ k.avg_dist|dec(1) }} m</div>
+        <div class="small text-muted">ao acaso seria {{ k.random_dist|dec(1) }} m
+          {% if k.random_dist %}<b class="{{ 'text-success' if k.avg_dist < k.random_dist else 'text-danger' }}">({{ ((k.avg_dist / k.random_dist - 1) * 100)|dec(0) }}%)</b>{% endif %}</div></div></div>
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Curva ABC (SKUs)</div>
+        <div class="fs-5 fw-semibold">{{ k.abc.A }} / {{ k.abc.B }} / {{ k.abc.C }}</div>
+        <div class="small text-muted">A = 80% das saídas{% if k.a_dist is not none %} · itens A a {{ k.a_dist|dec(1) }} m em média{% endif %}</div></div></div>
+      {% if k.golden_picks is not none %}
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Saídas na zona de ouro</div>
+        <div class="fs-5 fw-semibold">{{ k.golden_picks|dec(0) }}%</div>
+        <div class="small text-muted">a zona de ouro tem {{ k.golden_positions|dec(0) }}% das bins</div></div></div>
+      {% endif %}
+      {% if k.get('pairs_avg') is not none %}
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">Itens que saem juntos</div>
+        <div class="fs-5 fw-semibold">{{ k.pairs_avg|dec(1) }} m</div>
+        <div class="small text-muted">entre os pares mais frequentes{% if k.get('pairs_random') %} · duas posições quaisquer: {{ k.pairs_random|dec(1) }} m{% endif %}</div></div></div>
+      {% endif %}
+      {% else %}
+      <div class="col-12 small text-muted">Caminhada média até as posições: {{ k.random_dist|dec(1) }} m. Para priorizar os SKUs que mais saem,
+        envie a coluna Saída ou a aba Pedidos (etapa <i>Posição dos SKUs</i>).</div>
+      {% endif %}
+    </div>
+    {% if k.get('pairs') %}
+    <details class="mt-2 small"><summary>Pares que mais saem juntos ({{ k.pairs|length }})</summary>
+      <table class="table table-sm mb-0 mt-1 w-auto" data-no-resize><thead><tr><th>SKU</th><th>SKU</th><th class="text-end">Pedidos juntos</th><th class="text-end" title="Em que fração dos pedidos do menos vendido os dois saem juntos">Força</th><th class="text-end">Distância</th></tr></thead>
+        <tbody>{% for x in k.pairs %}<tr><td class="mono">{{ x.a }}</td><td class="mono">{{ x.b }}</td><td class="text-end">{{ x.count }}</td><td class="text-end">{{ (x.strength * 100)|dec(0) }}%</td><td class="text-end">{{ x.dist|dec(1) }} m</td></tr>{% endfor %}</tbody></table>
+    </details>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 <div class="card mb-3">
   <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong> <span data-dims-control></span>
     <span class="small">{% for s in plan.structs if s.qty %}<span class="me-3"><span class="d-inline-block rounded-1 align-middle" style="width:12px;height:12px;background:{{ colors[s.struct.id] }}"></span> {{ s.struct.code }} ({{ s.qty }})</span>{% endfor %}
@@ -532,12 +638,13 @@
     <span class="small">{% for k, n in st.items() %}<span class="badge {{ 'text-bg-success' if k == 'ok' else 'text-bg-warning' }} me-1">{{ n }} {{ {'ok': 'alocados', 'sem_dados': 'sem dimensões', 'nao_cabe': 'não cabem', 'falta': 'sem espaço', 'sem_qtd': 'sem quantidade'}.get(k, k) }}</span>{% endfor %}</span></div>
   <div class="table-responsive" style="max-height:420px">
     <table class="table table-sm table-hover mb-0" data-no-resize>
-      <thead class="small sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">Qtd.</th><th>Bins</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins do SKU">Ocupação das bins</th><th>Situação</th><th>Observação</th></tr></thead>
+      <thead class="small sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th>Material</th><th class="text-end">Qtd.</th><th>Bins</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins do SKU">Ocupação das bins</th><th class="text-end" title="Popularidade (saída no período) e curva ABC">Saída</th><th>Situação</th><th>Observação</th></tr></thead>
       <tbody class="small">
       {% for dm in plan.demands|sort(attribute='status', reverse=true) %}
         <tr><td class="mono">{{ dm.sku }}</td><td>{{ dm.name }}</td><td>{{ dm.material }}</td><td class="text-end">{{ dm.units }}</td>
           <td>{% for t, n in (dm.bins or {}).items() %}<span class="badge text-bg-light border mono">{{ n }}× {{ types[t].code if t in types else '?' }}</span>{% endfor %}</td>
           <td class="text-end">{{ pct(dm.bin_fill) }}</td>
+          <td class="text-end text-nowrap">{% if dm.pop %}{{ dm.pop|dec }} {% endif %}{% if dm.abc %}<span class="badge {{ {'A': 'text-bg-danger', 'B': 'text-bg-warning', 'C': 'text-bg-light border'}[dm.abc] }}">{{ dm.abc }}</span>{% endif %}</td>
           <td><span class="badge {{ 'text-bg-success' if dm.status == 'ok' else 'text-bg-warning' }}">{{ dm.status_label }}</span></td><td>{{ dm.note }}</td></tr>
       {% endfor %}
       </tbody>
@@ -551,13 +658,13 @@
     <input class="form-control form-control-sm" style="max-width:240px" type="search" placeholder="Filtrar endereço/SKU" id="posFilter"></div>
   <div class="table-responsive" style="max-height:480px">
     <table class="table table-sm table-hover mb-0" id="posTable" data-no-resize>
-      <thead class="small sticky-top bg-white"><tr><th>Endereço</th><th>Estrutura</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unidades</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins">Ocupação das bins</th><th class="text-end">Peso (kg)</th></tr></thead>
+      <thead class="small sticky-top bg-white"><tr><th>Endereço</th><th>Estrutura</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unidades</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins">Ocupação das bins</th><th class="text-end" title="Caminhada (em L) do ponto de referência até a estante">Dist. (m)</th><th class="text-end">Peso (kg)</th></tr></thead>
       <tbody class="small">
       {% for ps in positions[:3000] %}
         <tr><td class="mono">{{ ps.address }}</td><td class="mono">{{ ps.struct_code }}</td><td class="mono">{{ types[ps.type_id].code if ps.type_id in types else '?' }}</td>
-          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ pct(ps.fill) }}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
+          <td class="text-end">{{ ps.bins }}</td><td class="mono">{{ ps.sku }}</td><td>{{ ps.name }}</td><td class="text-end">{{ ps.units }}</td><td class="text-end">{{ pct(ps.fill) }}</td><td class="text-end text-nowrap">{{ ps.dist_m|dec(1) }}{% if ps.golden %} <i class="bi bi-star-fill text-warning" title="Zona de ouro"></i>{% endif %}</td><td class="text-end">{{ ps.weight|dec(1) }}</td></tr>
       {% endfor %}
-      {% if positions|length > 3000 %}<tr><td colspan="9" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
+      {% if positions|length > 3000 %}<tr><td colspan="10" class="text-muted text-center">… {{ positions|length - 3000 }} endereço(s) a mais — veja a lista completa no Excel.</td></tr>{% endif %}
       </tbody>
     </table>
   </div>
@@ -611,6 +718,8 @@
     };
     sel.addEventListener('change', upd); upd();
   });
+  const sref = document.getElementById('slotRef');
+  if (sref) { const u = () => document.querySelectorAll('.slot-xy').forEach(e => e.classList.toggle('d-none', sref.value !== 'xy')); sref.addEventListener('change', u); u(); }
   const src = document.getElementById('d_source'), ref = document.getElementById('refBox');
   if (src) { const u = () => ref.classList.toggle('d-none', src.value === 'upload'); src.addEventListener('change', u); u(); }
   const f = document.getElementById('posFilter');

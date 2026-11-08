@@ -184,6 +184,26 @@
     if (parent) parent.appendChild(e); return e;
   };
 
+  // rótulo da fileira num lado livre: esquerda/direita (horizontal) ou acima/abaixo (vertical), sem cair sobre
+  // outra fileira ou obstáculo e dentro do imóvel (como no servidor: services/branch_layout.label_spot)
+  function labelSpot(i, r, G, text, fs) {
+    const others = D.rows.map((o, k) => { if (k === i) return null; const g2 = rowGeom(o); return [o.x, o.y, g2.w, g2.d]; }).filter(Boolean)
+      .concat(D.obstacles.map(o => [o.x, o.y, o.w, o.d]));
+    const tw = fs * 0.62 * Math.max(1, text.length), th = fs, gp = fs * 0.3, x = r.x, y = r.y, w = G.w, h = G.d;
+    let c = [[x - gp - tw, y + h / 2 - th / 2, 'end'], [x + w + gp, y + h / 2 - th / 2, 'start'],
+             [x + w / 2 - tw / 2, y - gp - th, 'middle'], [x + w / 2 - tw / 2, y + h + gp, 'middle']];
+    if (r.orient === 'v') c = [c[2], c[3], c[0], c[1]];
+    let best = null;
+    for (const [bx, by, anchor] of c) {
+      const over = others.reduce((a, [ox, oy, ow, oh]) => a + Math.max(0, Math.min(bx + tw, ox + ow) - Math.max(bx, ox)) * Math.max(0, Math.min(by + th, oy + oh) - Math.max(by, oy)), 0);
+      const out = bx >= 0 && by >= 0 && bx + tw <= D.L && by + th <= D.W ? 0 : tw * th * 0.5;
+      if (!best || over + out < best.s - 1e-6) best = { s: over + out, bx, by, anchor };
+      if (over + out <= 0) break;
+    }
+    const ax = best.anchor === 'end' ? best.bx + tw : best.anchor === 'start' ? best.bx : best.bx + tw / 2;
+    return { x: ax, y: best.by + th * 0.85, anchor: best.anchor };
+  }
+
   function draw() {
     svg.innerHTML = '';
     svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
@@ -238,8 +258,9 @@
         : { y1: r.y, y2: r.y + G.d, x1: r.face === '+' ? r.x + G.w : r.x, x2: r.face === '+' ? r.x + G.w : r.x };
       el('line', { ...f, stroke: '#f28e2b', 'stroke-width': sw * 4 }, g);
       const side = { odd: ' ímp.', even: ' pares', all: '' }[r.side];
-      const lab = r.orient === 'h' ? { x: r.x - fs * 0.3, y: r.y + G.d / 2 + fs * 0.35, 'text-anchor': 'end' } : { x: r.x + G.w / 2, y: r.y - fs * 0.3, 'text-anchor': 'middle' };
-      const t = el('text', { ...lab, 'font-size': fs, fill: '#24548c', 'font-weight': 600 }, g);
+      const sp = labelSpot(i, r, G, r.aisle + side, fs);
+      const t = el('text', { x: sp.x, y: sp.y, 'text-anchor': sp.anchor, 'font-size': fs, fill: '#24548c', 'font-weight': 600,
+                             stroke: '#fbfcfd', 'stroke-width': fs / 5, 'paint-order': 'stroke' }, g);
       t.textContent = r.aisle + side;
     });
     const R = D.ref;

@@ -145,7 +145,8 @@ def _level_context(db: Session, loc) -> dict:
 
     for o in options:
         o["info"] = describe(o["key"])
-    return {"level_options": options, "own_level_info": describe(own) if own else None}
+    generic = "§Sem nível — preenche a estante de baixo para cima" if loc.bay and not loc.level else None
+    return {"level_options": options, "own_level_info": describe(own) if own else generic}
 
 
 def _has_positive_stock(db: Session, location_id: int) -> bool:

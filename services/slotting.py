@@ -183,6 +183,11 @@ def classify_abc(pop: dict[str, float]) -> dict[str, str]:
 # Facilidade estimada pelo endereço
 # --------------------------------------------------------------------------- #
 def _natural(v: str):
+    """Ordem dos endereços (lista de separação): números pelo valor ou, na configuração "ordem alfabética", pelo texto."""
+    from services.app_settings import canon, get
+
+    if get("addr_sort") == "alpha":
+        return [canon(v)]
     return [int(p) if p.isdigit() else p for p in re.split(r"(\d+)", v or "")]
 
 
@@ -235,28 +240,36 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
                                 .where(StorageLocation.id.in_(location_ids[i:i + 900]))))
     if not locs:
         return {}, ""
-    aisles = sorted({(a or "").upper() for _i, _b, _w, a, _bay, _l in locs}, key=_natural)
-    ref = spec.get("ref") if spec.get("ref") in aisles else aisles[0]
+    from services.app_settings import canon
+
+    aisles = sorted({canon(a or "") for _i, _b, _w, a, _bay, _l in locs}, key=_natural)
+    ref = canon(spec.get("ref") or "") if canon(spec.get("ref") or "") in aisles else aisles[0]
     ridx = aisles.index(ref)
     branches = {b for _i, b, *_ in locs}
     st_of = {}
     for bs, st in db.execute(select(BayStructure, StructureType).join(StructureType,
                                                                        StructureType.id == BayStructure.structure_type_id)
                              .where(BayStructure.branch_id.in_(branches))):
-        st_of[(bs.branch_id, bs.warehouse_id, bs.aisle.upper(), bs.bay.upper())] = st
+        st_of[(bs.branch_id, bs.warehouse_id, canon(bs.aisle), canon(bs.bay))] = st
     bays_by_aisle: dict[str, list] = {}
     for _i, _b, _w, a, bay, _l in locs:
-        bays_by_aisle.setdefault((a or "").upper(), set()).add((bay or "").upper())
+        bays_by_aisle.setdefault(canon(a or ""), set()).add(canon(bay or ""))
     rank = {a: {b: k for k, b in enumerate(sorted(bs, key=_natural))} for a, bs in bays_by_aisle.items()}
     max_pos = {a: max([int(re.sub(r"\D", "", b) or 0) for b in bs] + [len(bs)]) for a, bs in bays_by_aisle.items()}
     from services.branch_layout import geometry
     from services.route_sim import dist
 
     layouts = {sc: geometry(db, sc[0], sc[1]) for sc in {(b, w) for _i, b, w, *_ in locs}}
+    # zona de ouro da pega pelo nível real das bins de cada endereço (Capacidade dos níveis + estrutura da estante)
+    from services.branch_layout import address_golden
+
+    gold_real: dict[int, Optional[bool]] = {}
+    for sc in layouts:
+        gold_real.update(address_golden(db, sc[0], sc[1], [i for i, b, w, *_ in locs if (b, w) == sc]))
     used_layout = None
     out = {}
     for lid, br, wh, a, bay, lvl in locs:
-        a, bay = (a or "").upper(), (bay or "").upper()
+        a, bay = canon(a or ""), canon(bay or "")
         digits = re.sub(r"\D", "", bay)
         if spec.get("rows"):  # letra por rua: estantes numeradas em sequência ao longo da rua
             pos = int(digits) if digits else rank[a].get(bay, 0) + 1
@@ -267,7 +280,9 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         n = int(re.sub(r"\D", "", lvl or "") or 0)
         st = st_of.get((br, wh, a, bay)) or st_of.get((br, None, a, bay))
         golden = None
-        if st is not None and st.golden_from is not None and st.golden_to is not None and n:
+        if gold_real.get(lid) is not None:  # pelo nível onde as bins estão (nível extra, excedente, genérico)
+            golden = gold_real[lid]
+        elif st is not None and st.golden_from is not None and st.golden_to is not None and n:
             pitch = float(st.height) / max(1, st.levels)
             mid = (n - 1) * pitch + float(st.level_height) / 2
             golden = float(st.golden_from) - EPS <= mid <= float(st.golden_to) + EPS

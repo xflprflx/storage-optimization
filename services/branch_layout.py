@@ -82,18 +82,25 @@ class Bay:
 
 def scope_bays(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict[str, list[Bay]]:
     """Estantes (corredor -> [Bay]) do depósito, com as medidas da estrutura cadastrada quando houver."""
-    pairs = set()
+    from services.app_settings import canon
+
+    # códigos equivalentes ("07 = 7" nas Configurações) são a mesma estante; o rótulo é o 1º código visto
+    disp_a: dict[str, str] = {}
+    pairs: dict[tuple, str] = {}
     for a, b in db.execute(scope_filter(select(StorageLocation.aisle, StorageLocation.bay).distinct(), branch_id, warehouse_id)):
-        pairs.add(((a or "").upper(), (b or "").upper()))
+        A, B = (a or "").upper(), (b or "").upper()
+        disp_a.setdefault(canon(A), A)
+        pairs.setdefault((canon(A), canon(B)), B)
     st = {}
     stmt = select(BayStructure, StructureType).join(StructureType, StructureType.id == BayStructure.structure_type_id) \
         .where(BayStructure.branch_id == branch_id)
     stmt = stmt.where(BayStructure.warehouse_id.is_(None) if warehouse_id is None else BayStructure.warehouse_id == warehouse_id)
     for bs, t in db.execute(stmt):
-        st[(bs.aisle.upper(), bs.bay.upper())] = t
+        st[(canon(bs.aisle), canon(bs.bay))] = t
     out: dict[str, list[Bay]] = {}
-    for a, b in pairs:
-        t = st.get((a, b))
+    for (ca, cb), b in pairs.items():
+        t = st.get((ca, cb))
+        a = disp_a[ca]
         out.setdefault(a, []).append(Bay(a, b, float(t.width) if t else 0.0, float(t.depth) if t else None,
                                          float(t.height) if t else None, t.levels if t else None, t))
     for a in out:
@@ -106,11 +113,16 @@ def bays_json(bays: dict[str, list[Bay]]) -> dict:
 
 
 def row_bays(row: dict, bays: dict[str, list[Bay]]) -> list[Bay]:
+    from services.app_settings import canon
+
     side = row.get("side") or "all"
-    have = bays.get((row.get("aisle") or "").upper(), [])
+    ra = (row.get("aisle") or "").upper()
+    have = bays.get(ra)
+    if have is None:  # "07 = 7": o corredor da fileira pode estar escrito do outro jeito
+        have = next((v for k, v in bays.items() if canon(k) == canon(ra)), [])
     if row.get("bays"):  # lista fixa (na ordem dada)
-        by = {b.bay: b for b in have}
-        out = [by[c] for c in row["bays"] if c in by]
+        by = {canon(b.bay): b for b in have}
+        out = [by[canon(c)] for c in row["bays"] if canon(c) in by]
     else:
         out = [b for b in have if side == "all" or parity(b.bay) == (1 if side == "odd" else 0)]
     return out[::-1] if row.get("rev") else out
@@ -276,7 +288,11 @@ class Geometry:
         return Node(key="REF", gx=self.ref["x"], gy=self.ref["y"], net=self.net)
 
     def node(self, aisle: str, bay: str) -> Optional[Node]:
-        return self.nodes.get(((aisle or "").upper(), (bay or "").upper()))
+        from services.app_settings import canon
+
+        if not hasattr(self, "_cidx"):
+            self._cidx = {(canon(a), canon(b)): n for (a, b), n in self.nodes.items()}
+        return self._cidx.get((canon(aisle or ""), canon(bay or "")))
 
 
 def _edge(r: dict, length: float) -> tuple[float, float, float]:
@@ -486,19 +502,47 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
         out.append(f'<rect x="{p.x:.0f}" y="{p.y:.0f}" width="{p.w:.0f}" height="{p.d:.0f}" fill="#cfd8df" stroke="#7b8a95" '
                    f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}</title></rect>')
     rows = d["rows"]
+    blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h, ri in g.row_rects:
         r = rows[ri]
         out.append(f'<rect x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" fill="none" stroke="#24548c" stroke-width="{fs / 8:.1f}"/>')
-        tx, ty = (x - fs * 0.3, y + h / 2 + fs * 0.35) if r["orient"] == "h" else (x + w / 2, y - fs * 0.3)
-        anchor = "end" if r["orient"] == "h" else "middle"
         side = {"odd": " ímp.", "even": " pares", "all": ""}[r["side"]]
+        others = [b_ for k, b_ in enumerate(blocks) if k != ri]
+        tx, ty, anchor = label_spot((x, y, w, h), r["orient"], r["aisle"] + side, fs, others, L, W)
         out.append(f'<text x="{tx:.0f}" y="{ty:.0f}" font-size="{fs:.0f}" fill="#24548c" text-anchor="{anchor}" '
-                   f'font-weight="600">{_esc(r["aisle"])}{side}</text>')
+                   f'font-weight="600" stroke="#fbfcfd" stroke-width="{fs / 5:.1f}" paint-order="stroke">'
+                   f'{_esc(r["aisle"])}{side}</text>')
     ref = d["ref"]
     out.append(f'<circle cx="{ref["x"]:.0f}" cy="{ref["y"]:.0f}" r="{fs * 0.6:.0f}" fill="#d62728"><title>Referência: '
                f'{_esc(ref["label"])}</title></circle>')
     out.append("</svg>")
     return "".join(out)
+
+
+def label_spot(rect: tuple, orient: str, text: str, fs: float, others: list, L: float, W: float) -> tuple:
+    """Onde escrever o rótulo da fileira para ele ficar visível: tenta à esquerda e à direita (fileira horizontal)
+    ou acima e abaixo (vertical), depois os outros lados, e fica com o 1º lugar que não cai sobre outra fileira ou
+    obstáculo e fica dentro do imóvel (ou, se nenhum servir, o que menos sobrepõe). (x, y da linha de base, âncora)."""
+    x, y, w, h = rect
+    tw, th = fs * 0.62 * max(1, len(text)), fs
+    g = fs * 0.3
+    cands = [(x - g - tw, y + h / 2 - th / 2, "end"), (x + w + g, y + h / 2 - th / 2, "start"),
+             (x + w / 2 - tw / 2, y - g - th, "middle"), (x + w / 2 - tw / 2, y + h + g, "middle")]
+    if orient == "v":
+        cands = [cands[2], cands[3], cands[0], cands[1]]
+    best = None
+    for bx, by, anchor in cands:
+        over = sum(max(0.0, min(bx + tw, ox + ow) - max(bx, ox)) * max(0.0, min(by + th, oy + oh) - max(by, oy))
+                   for ox, oy, ow, oh in others)
+        out = 0.0 if (bx >= 0 and by >= 0 and bx + tw <= L and by + th <= W) else tw * th * 0.5
+        score = over + out
+        if best is None or score < best[0] - 1e-6:
+            best = (score, bx, by, anchor)
+        if score <= 0:
+            break
+    _s, bx, by, anchor = best
+    ax = bx + tw if anchor == "end" else bx if anchor == "start" else bx + tw / 2
+    return ax, by + th * 0.85, anchor
 
 
 def flow_arrows(c: Corridor, fs: float) -> list[str]:
@@ -533,6 +577,75 @@ def _lvl(v: str) -> int:
     return max(1, int(d)) if d else 1
 
 
+def level_id(code) -> object:
+    """Identidade de um nível na estante: o número ("01" = "1") ou, se não for só número (ex.: "01D1", nível
+    dedicado criado acima do 01), o código equivalente."""
+    from services.app_settings import canon
+
+    c = str(code or "").strip()
+    return int(c) if c.isdigit() else canon(c)
+
+
+def shelf_info(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict:
+    """Níveis cadastrados das estantes (Capacidade dos níveis): por estante (códigos equivalentes), nível -> vão (cm
+    ou None); e por id do nível -> código (para as bins enviadas a um nível extra)."""
+    from models import ShelfLevel
+    from services.app_settings import canon
+
+    stl = select(ShelfLevel).where(ShelfLevel.branch_id == branch_id)
+    stl = stl.where(ShelfLevel.warehouse_id.is_(None) if warehouse_id is None else ShelfLevel.warehouse_id == warehouse_id)
+    levels: dict[tuple, dict] = {}
+    by_id: dict[int, str] = {}
+    for sl in db.scalars(stl):
+        levels.setdefault((canon(sl.aisle or ""), canon(sl.bay or "")), {})[sl.level] = \
+            float(sl.height_cm) if sl.height_cm else None
+        by_id[sl.id] = sl.level
+    return {"levels": levels, "by_id": by_id}
+
+
+def level_stack(st, codes: list, shelf: dict) -> dict:
+    """Níveis de uma estante, de baixo para cima: os da estrutura (1..N), os dos endereços e os cadastrados
+    (inclusive reservados e dedicados), sem repetir os equivalentes. Cada um com a base (z) e a altura: o vão
+    cadastrado ou, sem ele, a altura da estrutura ÷ níveis (50 cm sem estrutura); a sobra da altura da estrutura
+    (altura − soma dos vãos) vira a espessura das longarinas. Zona de ouro da pega: o meio do nível dentro da faixa
+    da estrutura. {"levels": [{"n", "code", "z", "h", "gold"}], "index": {level_id: n}, "h": altura total}."""
+    ids: dict = {}
+    for c in [str(i) for i in range(1, (st.levels if st is not None else 0) + 1)] + [c for c in codes if c] + list(shelf):
+        ids.setdefault(level_id(c), c)
+    if not ids:
+        ids[1] = "1"
+    def phys(kv):  # ordem física (sempre numérica, qualquer que seja a ordenação de endereços configurada)
+        k, c = kv
+        if isinstance(k, int):
+            return (0, float(k), "")
+        m = re.fullmatch(r"(\d+)D(\d+)", str(c).upper())
+        if m:  # nível dedicado "01D1": logo acima do 01
+            return (0, int(m.group(1)) + int(m.group(2)) / 1000.0, "")
+        return (1, 0.0, str(c))
+
+    order = sorted(ids.items(), key=phys)
+    vao = {level_id(c): v for c, v in shelf.items() if v}
+    n = len(order)
+    if st is not None:
+        H, pitch = float(st.height), float(st.height) / max(1, st.levels)
+    else:
+        pitch = DEFAULT_PITCH
+        H = pitch * n
+    beam = 0.0
+    if st is not None and all(vao.get(k) for k, _c in order):
+        beam = max(0.0, (H - sum(vao[k] for k, _c in order)) / n)
+    gold = [float(st.golden_from), float(st.golden_to)] if st is not None and st.golden_from is not None \
+        and st.golden_to is not None else None
+    out, index, acc = [], {}, 0.0
+    for i, (k, c) in enumerate(order, start=1):
+        h = vao.get(k) or pitch
+        mid = acc + h / 2
+        out.append({"n": i, "code": c, "z": acc, "h": h, "gold": bool(gold) and gold[0] <= mid <= gold[1]})
+        index[k] = i
+        acc += h + (beam if vao.get(k) else 0.0)
+    return {"levels": out, "index": index, "h": max(H, acc), "has_gold": bool(gold)}
+
+
 def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[int], abc: Optional[dict] = None) -> dict:
     """Arranjo 3D do depósito desenhado, no mesmo formato de services/site_3d.plan_3d (visualizador view3d.html):
     cada estante da planta com os níveis (da estrutura cadastrada ou dos endereços) e as bins cadastradas em cada
@@ -552,9 +665,10 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     names: dict[str, str] = {}
     for i in range(0, len(ids), 900):
         chunk = ids[i:i + 900]
-        for lid, tid, qty in db.execute(select(LocationBin.location_id, LocationBin.bin_type_id, LocationBin.quantity)
-                                        .where(LocationBin.location_id.in_(chunk)).order_by(LocationBin.id)):
-            bins_of.setdefault(lid, []).append((tid, int(qty or 1)))
+        for lid, tid, qty, sl_id in db.execute(select(LocationBin.location_id, LocationBin.bin_type_id, LocationBin.quantity,
+                                                      LocationBin.shelf_level_id)
+                                               .where(LocationBin.location_id.in_(chunk)).order_by(LocationBin.id)):
+            bins_of.setdefault(lid, []).append((tid, int(qty or 1), sl_id))
         for lid, sku, name, q, h, w, ln in db.execute(
                 select(StockItem.location_id, Product.sku, Product.name, StockItem.quantity, Product.height, Product.width,
                        Product.length).join(Product, Product.id == StockItem.product_id)
@@ -565,7 +679,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
             if uv is not None:
                 vol_of[lid] = vol_of.get(lid, 0.0) + uv * float(q)
     types = {t.id: t for t in db.scalars(select(BinType))}
-    used_types = sorted({tid for bs in bins_of.values() for tid, _q in bs if tid in types}, key=lambda t: types[t].code)
+    used_types = sorted({tid for bs in bins_of.values() for tid, _q, _s in bs if tid in types}, key=lambda t: types[t].code)
     tidx = {t: i for i, t in enumerate(used_types)}
     # zona de ouro da caminhada: as 20% estantes mais perto da referência
     ref = g.ref_node()
@@ -575,22 +689,16 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     structs: dict[int, dict] = {}
     out_mods, out_bins, mod_idx = [], [], {}
     fills_by_type: dict[int, list] = {}
+    from services.app_settings import canon
+
     by_bay: dict[tuple, list] = {}
     for r in locs:
-        by_bay.setdefault(((r.aisle or "").upper(), (r.bay or "").upper()), []).append(r)
-    # vão cadastrado de cada nível (Capacidade dos níveis): a altura de cada nível no desenho
-    from models import ShelfLevel
-
-    lv_h: dict[tuple, dict[int, float]] = {}
-    stl = select(ShelfLevel).where(ShelfLevel.branch_id == branch_id)
-    stl = stl.where(ShelfLevel.warehouse_id.is_(None) if warehouse_id is None else ShelfLevel.warehouse_id == warehouse_id)
-    for sl in db.scalars(stl):
-        if sl.height_cm:
-            lv_h.setdefault(((sl.aisle or "").upper(), (sl.bay or "").upper()), {})[_lvl(sl.level)] = float(sl.height_cm)
+        by_bay.setdefault((canon(r.aisle or ""), canon(r.bay or "")), []).append(r)
+    sh = shelf_info(db, branch_id, warehouse_id)
     for key, p in sorted(g.placed.items(), key=lambda kv: (natural_key(kv[0][0]), natural_key(kv[0][1]))):
         b = p.bay
-        rows_here = by_bay.get(key, [])
-        nmax = max([_lvl(r.level) for r in rows_here] + [b.levels or 1])
+        ckey = (canon(key[0]), canon(key[1]))
+        rows_here = by_bay.get(ckey, [])
         st = b.struct
         if st is not None:
             sid = st.id
@@ -599,82 +707,83 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                                 "color": STRUCT_PALETTE[len(structs) % len(STRUCT_PALETTE)],
                                 "golden": [float(st.golden_from), float(st.golden_to)]
                                 if st.golden_from is not None and st.golden_to is not None else None, "golden_levels": []}
-            h = float(st.height)
-            pitch = h / max(1, st.levels)
         else:
             sid = 0
             if 0 not in structs:
                 structs[0] = {"id": 0, "code": "Sem estrutura", "name": "Estante sem estrutura cadastrada", "qty": 0,
                               "color": "#8a96a0", "golden": None, "golden_levels": []}
-            pitch = DEFAULT_PITCH
-            h = pitch * nmax
         structs[sid]["qty"] += 1
-        gold = structs[sid]["golden"]
-        # base (z) e altura de cada nível: o vão cadastrado do nível ou, sem ele, a altura ÷ níveis da estrutura
-        hs = lv_h.get(key, {})
-        # com estrutura, a sobra da altura (altura total − soma dos vãos) é a espessura das longarinas, repartida
-        # entre os níveis; os níveis sem vão cadastrado ocupam o passo da estrutura (altura ÷ níveis)
-        vaos = [hs.get(n) for n in range(1, nmax + 1)]
-        beam = 0.0
-        if st is not None and all(vaos):
-            beam = max(0.0, (h - sum(vaos)) / nmax)
-        zs, hl, acc = {}, {}, 0.0
-        for n in range(1, nmax + 1):
-            zs[n], hl[n] = acc, hs.get(n) or pitch
-            acc += hl[n] + (beam if hs.get(n) else 0.0)
-
-        def is_gold(n):
-            if not gold:
-                return False
-            mid = zs[n] + hl[n] / 2
-            return gold[0] <= mid <= gold[1]
-
-        if gold:
-            structs[sid]["golden_levels"] = sorted({*structs[sid]["golden_levels"], *[n for n in range(1, nmax + 1) if is_gold(n)]})
+        lv = level_stack(st, [r.level for r in rows_here], sh["levels"].get(ckey, {}))
+        if structs[sid]["golden"]:
+            structs[sid]["golden_levels"] = sorted({*structs[sid]["golden_levels"],
+                                                    *[x["n"] for x in lv["levels"] if x["gold"]]})
         mi = len(out_mods)
         mod_idx[key] = mi
         node = g.nodes.get(key)
         wgold = node is not None and dist(ref, node) <= wlim + 1e-6
         row = d["rows"][p.row]
         front_x = row["orient"] == "h"
-        out_mods.append({"x": round(p.x, 1), "y": round(p.y, 1), "w": round(p.w, 1), "d": round(p.d, 1), "h": round(max(h, acc), 1),
-                         "s": sid, "code": f"{b.aisle}-{b.bay}", "fx": front_x, "cap": False,
-                         "levels": [{"n": n, "z": round(zs[n], 1)} for n in range(1, nmax + 1)]})
-        # bins por nível, na ordem das posições
-        for n in range(1, nmax + 1):
-            here = sorted((r for r in rows_here if _lvl(r.level) == n), key=lambda r: (natural_key(r.position or ""),
-                                                                                       natural_key(r.compartment or "")))
-            cur, across = 0.0, 0.0
-            front = p.w if front_x else p.d
-            depth = p.d if front_x else p.w
-            for r in here:
-                bl = bins_of.get(r.id, [])
-                cap = sum((float(types[t].volume or 0) * q) for t, q in bl if t in types)
-                fill = round(vol_of[r.id] / cap * 100, 1) if r.id in vol_of and cap else None
-                sku = sku_of.get(r.id, ("", ""))[0]
-                for tid, q in bl:
-                    t = types.get(tid)
-                    if t is None or t.width is None or t.height is None or t.length is None:
-                        continue
-                    bw, bh, bd = float(t.width), float(t.height), float(t.length)
-                    if t.is_fraction and t.parent is not None and t.parent.width is not None:
-                        bw = float(t.parent.width) / max(1, t.grid[0])
-                    for _ in range(q):
-                        if cur + bw > front + 1e-6 and cur > 0:
-                            cur, across = 0.0, across + bd
-                        if across + bd > depth + 1e-6:
-                            across = 0.0  # não cabe: sobrepõe (desenho aproximado)
-                        # frente da bin no lado do corredor
-                        acr = (depth - across - bd) if row["face"] == "+" else across
-                        if front_x:
-                            bx, by, bwx, bdy = p.x + cur, p.y + acr, bw, bd
-                        else:
-                            bx, by, bwx, bdy = p.x + acr, p.y + cur, bd, bw
-                        out_bins.append([round(bx, 1), round(by, 1), round(zs[n] + 2.0, 1), round(bwx, 1),
-                                         round(bdy, 1), round(min(bh, hl[n] - 4), 1), tidx[tid], fill, mi, r.address, sku,
-                                         is_gold(n), abc.get(sku, ""), wgold])
-                        fills_by_type.setdefault(tid, []).append(fill)
-                        cur += bw
+        out_mods.append({"x": round(p.x, 1), "y": round(p.y, 1), "w": round(p.w, 1), "d": round(p.d, 1),
+                         "h": round(lv["h"], 1), "s": sid, "code": f"{b.aisle}-{b.bay}", "fx": front_x, "cap": False,
+                         "levels": [{"n": x["n"], "z": round(x["z"], 1)} for x in lv["levels"]]})
+        # bins de cada nível: as do próprio nível do endereço, as enviadas a um nível extra (ou excedente) e, por
+        # último, as de endereços genéricos da estante (sem nível), que preenchem a estante de baixo para cima
+        per_level: dict[int, list] = {x["n"]: [] for x in lv["levels"]}
+        loose = []
+        for r in sorted(rows_here, key=lambda r: (natural_key(r.level or ""), natural_key(r.position or ""),
+                                                   natural_key(r.compartment or ""))):
+            for tid, q, sl_id in bins_of.get(r.id, []):
+                tgt = sh["by_id"].get(sl_id) if sl_id else None
+                n = lv["index"].get(level_id(tgt)) if tgt is not None else (lv["index"].get(level_id(r.level))
+                                                                             if r.level else None)
+                (per_level[n] if n in per_level else loose).append((r, tid, q))
+        front = p.w if front_x else p.d
+        depth = p.d if front_x else p.w
+        state = {x["n"]: [0.0, 0.0] for x in lv["levels"]}  # (ao longo da frente, profundidade) ocupados
+        lv_of = {x["n"]: x for x in lv["levels"]}
+
+        def put(n, r, tid, q, spill):
+            t = types.get(tid)
+            if t is None or t.width is None or t.height is None or t.length is None:
+                return
+            bw, bh, bd = float(t.width), float(t.height), float(t.length)
+            if t.is_fraction and t.parent is not None and t.parent.width is not None:
+                bw = float(t.parent.width) / max(1, t.grid[0])
+            bl_ = bins_of.get(r.id, [])
+            cap = sum((float(types[tt].volume or 0) * qq) for tt, qq, _s in bl_ if tt in types)
+            fill = round(vol_of[r.id] / cap * 100, 1) if r.id in vol_of and cap else None
+            sku = sku_of.get(r.id, ("", ""))[0]
+            for _ in range(q):
+                cur, across = state[n]
+                if cur + bw > front + 1e-6 and cur > 0:
+                    cur, across = 0.0, across + bd
+                if across + bd > depth + 1e-6:
+                    nxt = [m for m in sorted(state) if m > n]
+                    if spill and nxt:  # endereço genérico: passa para o nível de cima
+                        state[n] = [cur, across]
+                        n = nxt[0]
+                        cur, across = state[n]
+                    else:
+                        across = 0.0  # não cabe: sobrepõe (desenho aproximado)
+                x_ = lv_of[n]
+                acr = (depth - across - bd) if row["face"] == "+" else across  # frente da bin no lado do corredor
+                if front_x:
+                    bx, by, bwx, bdy = p.x + cur, p.y + acr, bw, bd
+                else:
+                    bx, by, bwx, bdy = p.x + acr, p.y + cur, bd, bw
+                out_bins.append([round(bx, 1), round(by, 1), round(x_["z"] + 2.0, 1), round(bwx, 1), round(bdy, 1),
+                                 round(min(bh, x_["h"] - 4), 1), tidx[tid], fill, mi, r.address, sku, x_["gold"],
+                                 abc.get(sku, ""), wgold])
+                fills_by_type.setdefault(tid, []).append(fill)
+                state[n] = [cur + bw, across]
+
+        for n, items in per_level.items():
+            for r, tid, q in items:
+                put(n, r, tid, q, False)
+        first = min(state) if state else None
+        for r, tid, q in loose:
+            if first is not None:
+                put(first, r, tid, q, True)
     out_types = []
     for t in used_types:
         fs = [f for f in fills_by_type.get(t, []) if f is not None]
@@ -688,11 +797,15 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         else:
             areas.append({"kind": "aisle", "x": c.center - c.width / 2, "y": c.lo, "w": c.width, "d": c.hi - c.lo})
     aisles = []
+    blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h_, ri in g.row_rects:
         r = d["rows"][ri]
         lab = r["aisle"] + {"odd": " ímp.", "even": " pares", "all": ""}[r["side"]]
-        aisles.append({"label": lab, "x": x - 60 if r["orient"] == "h" else x + w / 2,
-                       "y": y + h_ / 2 if r["orient"] == "h" else y - 60})
+        # o rótulo vai para um lado livre da fileira (não fica escondido atrás de outra fileira)
+        tx, ty, anchor = label_spot((x, y, w, h_), r["orient"], lab, 60.0, [b_ for k, b_ in enumerate(blocks) if k != ri],
+                                    d["L"], d["W"])
+        cx = tx - 0.31 * 60 * len(lab) if anchor == "end" else tx + 0.31 * 60 * len(lab) if anchor == "start" else tx
+        aisles.append({"label": lab, "x": cx, "y": ty - 25})
     hmax = max([m["h"] for m in out_mods] + [300.0])
     return {"building": {"L": d["L"], "W": d["W"], "H": hmax + 60, "name": ""}, "areas": areas,
             "obstacles": [{**o, "h": min(300.0, hmax)} for o in d["obstacles"]], "sectors": [], "zones": [],
@@ -761,3 +874,76 @@ def from_plan(plan) -> dict:
     ref = (plan.slotting or {}).get("ref") or ref_point(plan, {})
     return {"L": round(fl.length_cm, 1), "W": round(fl.width_cm, 1), "rows": rows, "obstacles": obstacles,
             "ref": {"x": round(ref["x"], 1), "y": round(ref["y"], 1), "label": str(ref.get("label") or "expedição")[:60]}}
+
+
+def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc_ids: Optional[list] = None) -> dict:
+    """Zona de ouro da PEGA de cada endereço pelo nível onde as bins dele estão de fato (próprio nível, nível extra,
+    excedente ou, no endereço genérico da estante, os níveis de baixo para cima): True/False pela maioria das bins;
+    None quando a estrutura da estante não tem zona de ouro (ou o endereço não tem estante)."""
+    from models import LocationBin
+    from services.app_settings import canon
+
+    L = StorageLocation
+    stmt = scope_filter(select(L.id, L.aisle, L.bay, L.level), branch_id, warehouse_id).where(L.bay != "")
+    rows = list(db.execute(stmt))
+    if loc_ids is not None:
+        want = set(loc_ids)
+        rows_q = [r for r in rows if r[0] in want]
+    else:
+        rows_q = rows
+    bays = scope_bays(db, branch_id, warehouse_id)
+    st_of = {(canon(b.aisle), canon(b.bay)): b.struct for bs in bays.values() for b in bs}
+    sh = shelf_info(db, branch_id, warehouse_id)
+    codes: dict[tuple, list] = {}
+    for _i, a, bay, lv in rows:
+        codes.setdefault((canon(a), canon(bay)), []).append(lv)
+    stacks: dict[tuple, dict] = {}
+    bins: dict[int, list] = {}
+    ids = [r[0] for r in rows_q]
+    for i in range(0, len(ids), 900):
+        for lid, q, sl_id, tid in db.execute(select(LocationBin.location_id, LocationBin.quantity, LocationBin.shelf_level_id,
+                                                    LocationBin.bin_type_id)
+                                             .where(LocationBin.location_id.in_(ids[i:i + 900]))):
+            bins.setdefault(lid, []).append((int(q or 1), sl_id, tid))
+    from models import BinType
+
+    tdim = {t.id: t for t in db.scalars(select(BinType))}
+    out = {}
+    for lid, a, bay, lv in rows_q:
+        k = (canon(a), canon(bay))
+        st = st_of.get(k)
+        if st is None or st.golden_from is None or st.golden_to is None:
+            out[lid] = None
+            continue
+        if k not in stacks:
+            stacks[k] = level_stack(st, codes.get(k, []), sh["levels"].get(k, {}))
+        stk = stacks[k]
+        gold_of = {x["n"]: x["gold"] for x in stk["levels"]}
+        yes = no = 0
+        free = {x["n"]: 1.0 for x in stk["levels"]}  # fração livre de cada nível (endereço genérico da estante)
+        for q, sl_id, tid in bins.get(lid, []) or [(1, None, None)]:
+            code = sh["by_id"].get(sl_id) if sl_id else lv
+            if code:
+                n = stk["index"].get(level_id(code))
+                if n is not None:
+                    yes, no = (yes + q, no) if gold_of.get(n) else (yes, no + q)
+                continue
+            # genérico (sem nível): as bins preenchem a estante de baixo para cima, como no 3D
+            t = tdim.get(tid)
+            per = 1
+            if t is not None and t.width and t.length:
+                per = max(1, int(float(st.width) // float(t.width)) * max(1, int(float(st.depth) // float(t.length))))
+            left = q
+            for n in sorted(free):
+                if left <= 0:
+                    break
+                take = min(left, int(round(free[n] * per)))
+                if take <= 0:
+                    continue
+                free[n] -= take / per
+                left -= take
+                yes, no = (yes + take, no) if gold_of.get(n) else (yes, no + take)
+            if left > 0:
+                no += left
+        out[lid] = None if yes + no == 0 else yes >= no
+    return out

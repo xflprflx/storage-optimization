@@ -276,17 +276,21 @@ def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
     if not sample:
         return None, None, None, None, g, ("O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). "
                                            "Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).")
+    from services.branch_layout import address_golden
+
+    gold = address_golden(db, branch_id, wid)  # zona de ouro da pega pelo nível real das bins de cada endereço
     rows = db.execute(scope_filter(select(Product.sku, StorageLocation.aisle, StorageLocation.bay, StorageLocation.address,
-                                          StockItem.quantity)
+                                          StockItem.quantity, StorageLocation.id)
                                    .join(StockItem, StockItem.product_id == Product.id)
                                    .join(StorageLocation, StorageLocation.id == StockItem.location_id)
                                    .where(StockItem.quantity >= 0), branch_id, wid))
     nodes: dict[str, list] = {}
     zero: dict[str, list] = {}  # SKU só atribuído ao endereço (saldo zero, como na filial recém-criada pelo projeto)
-    for sku, a, bay, addr, qty in rows:
+    for sku, a, bay, addr, qty, lid in rows:
         n = g.node(a, bay)
         if n is not None:
-            (nodes if qty and qty > 0 else zero).setdefault(sku, []).append(dataclasses.replace(n, key=addr))
+            (nodes if qty and qty > 0 else zero).setdefault(sku, []).append(dataclasses.replace(n, key=addr,
+                                                                                                gold=gold.get(lid)))
     for sku, ns in zero.items():
         nodes.setdefault(sku, ns)
     return sample, nodes, g.ref_node(), g.ref, g, ""

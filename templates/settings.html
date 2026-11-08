@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+{% block content %}
+<div class="page-header"><h1><i class="bi bi-gear"></i> Configurações</h1></div>
+<form method="post" class="card" style="max-width:820px"><div class="card-body">
+  <h5>Códigos de endereço</h5>
+  <div class="mb-3">
+    <label class="form-label fw-semibold">Ordenação dos números</label>
+    <div class="form-check"><input class="form-check-input" type="radio" name="addr_sort" value="natural" id="srtN" {% if s.addr_sort != 'alpha' %}checked{% endif %}>
+      <label class="form-check-label" for="srtN"><b>Numérica</b>: pelo valor do número — 2, 3, 10 (A-2 antes de A-10)</label></div>
+    <div class="form-check"><input class="form-check-input" type="radio" name="addr_sort" value="alpha" id="srtA" {% if s.addr_sort == 'alpha' %}checked{% endif %}>
+      <label class="form-check-label" for="srtA"><b>Alfabética</b>: pelo texto — 10, 2, 3 (como o sistema de origem lista)</label></div>
+    <div class="form-text">Vale para o mapa do estoque, a planta, o 3D, a geração da planta e a ordem da lista de separação no simulador.</div>
+  </div>
+  <div class="mb-3">
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="addr_zero_eq" value="1" id="zeq" {% if s.addr_zero_eq %}checked{% endif %}>
+      <label class="form-check-label" for="zeq"><b>Zeros à esquerda não diferenciam</b>: <span class="mono">07</span> e <span class="mono">7</span> são o mesmo local, em qualquer parte do endereço</label></div>
+    <div class="form-text">Ex.: <span class="mono">F.07.01.01</span> e <span class="mono">F.7.01.02-A</span> ficam na mesma estante <span class="mono">F.07</span> (útil quando um dígito é
+      omitido para caber o compartimento). Com a opção ligada:
+      <ul class="mb-0">
+        <li>não dá para cadastrar <span class="mono">F.7.01.01</span> se <span class="mono">F.07.01.01</span> já existe (é o mesmo endereço), e a hierarquia (genérico × sub-endereços) também compara assim;</li>
+        <li>estantes e níveis são agrupados pelo código equivalente: estrutura da estante, capacidade dos níveis, mapa do estoque, planta, 3D e posição pela saída;</li>
+        <li>os códigos gravados <b>não mudam</b> — só a comparação. As importações já reconhecem <span class="mono">07</span> = <span class="mono">7</span> ao procurar um endereço.</li>
+      </ul></div>
+  </div>
+  <button class="btn btn-accent"><i class="bi bi-save"></i> Salvar</button>
+</div></form>
+{% endblock %}

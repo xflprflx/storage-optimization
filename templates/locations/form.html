@@ -51,11 +51,15 @@
       <hr class="my-4">
       <h6 class="text-muted text-uppercase small mb-2"><i class="bi bi-inboxes"></i> Bins neste endereço</h6>
       <div class="form-text mb-2">Um endereço pode ter várias bins, inclusive de tipos diferentes (ex.: 2× Caixa P + 1× Caixa G).
-        {% if level_options %}Se as bins passarem da capacidade do nível do endereço (ex.: cabem 3 e são 6), o excedente ocupa
+        {% if level_options and location and not location.level %}Este é um <b>endereço genérico da estante</b> (sem nível): ele ocupa os níveis
+        da estante. Escolha na coluna "Nível" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a
+        estante de baixo para cima e a zona de ouro da pega considera os níveis onde as bins ficam.
+        {% elif level_options %}Se as bins passarem da capacidade do nível do endereço (ex.: cabem 3 e são 6), o excedente ocupa
         automaticamente o(s) <b>nível(is) de cima, dedicado(s) a este endereço</b> — um nível cheio por vez.
-        Para colocar em <b>outro nível</b>, adicione uma linha e escolha o nível na coluna "Nível": essa escolha é mantida.{% elif location and location.bay and location.level %}Para usar outro nível da estante, cadastre-o em
+        Para colocar em <b>outro nível</b>, adicione uma linha e escolha o nível na coluna "Nível": essa escolha é mantida.
+        O 3D desenha as bins no nível escolhido, e a zona de ouro da pega usa o nível onde as bins estão.{% elif location and location.bay %}Para usar outro nível da estante, cadastre-o em
         <a href="/levels?branch_id={{ location.branch_id }}&warehouse_id={{ location.warehouse_id or 'none' }}&aisle={{ location.aisle }}&bay={{ location.bay }}">Capacidade dos níveis</a>.{% endif %}</div>
-      {{ bin_editor(bin_types, data.get('bins') or [], errors, 'Nenhuma bin neste endereço.', level_options if (level_options is defined and location and location.level) else none, own_level_info if own_level_info is defined else none) }}
+      {{ bin_editor(bin_types, data.get('bins') or [], errors, 'Nenhuma bin neste endereço.', level_options if (level_options is defined and location and location.bay) else none, own_level_info if own_level_info is defined else none) }}
       <div class="mt-4 d-flex gap-2 align-items-center">
         <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
         {% if not location %}<button class="btn btn-outline-secondary" name="add_another" value="1"><i class="bi bi-plus"></i> Salvar e criar outro</button>{% endif %}

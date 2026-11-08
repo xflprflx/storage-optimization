@@ -1,4 +1,5 @@
 from models.entities import (  # noqa: F401
+    AppSetting,
     BayStructure,
     BinContent,
     BinType,
@@ -21,6 +22,7 @@ from models.entities import (  # noqa: F401
 )
 
 __all__ = [
+    "AppSetting",
     "BayStructure",
     "BinContent",
     "BinType",

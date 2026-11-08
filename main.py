@@ -34,6 +34,7 @@ from routers import (
     packing,
     products,
     runs,
+    settings,
     site,
     stock,
     structures,
@@ -56,7 +57,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Neokioski", version="1.0.0", lifespan=lifespan)
 
-for r in (dashboard, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, api):
+for r in (dashboard, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
     app.include_router(r.router)
 
 

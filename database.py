@@ -40,6 +40,10 @@ def fold_text(value) -> str:
 def _sqlite_pragmas(dbapi_connection, _connection_record) -> None:
     # Função SQL usada nas buscas: ignora acentos e maiúsculas (o LIKE do SQLite só trata ASCII).
     dbapi_connection.create_function("nk_fold", 1, fold_text, deterministic=True)
+    # Código de endereço para comparar (zeros à esquerda conforme a configuração; não é determinística: muda com ela)
+    from services.app_settings import sql_canon
+
+    dbapi_connection.create_function("nk_canon", 1, sql_canon)
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.execute("PRAGMA journal_mode=WAL")
@@ -216,6 +220,9 @@ def init_db() -> None:
     with engine.begin() as conn:
         _migrate_stock_policies(conn)
     with SessionLocal() as db:
+        from services.app_settings import load as load_settings
+
+        load_settings(db)  # configurações (ordenação e equivalência dos endereços) antes de qualquer cálculo
         refresh_occupancy(db, None)
         from services.stock_service import sync_default_locations
 

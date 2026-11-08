@@ -110,7 +110,7 @@
   <input class="form-control form-control-sm text-end" type="number" name="bin_qty" min="1" max="100000" value="{{ qty }}" style="width: 90px" title="Quantidade de bins deste tipo">
   {% if level_options is not none %}
   <select class="form-select form-select-sm" name="bin_level" style="max-width: 300px; font-size: .78rem" title="Nível onde estas bins ficam fisicamente">
-    <option value="">No próprio nível{% if own_info %} — {{ own_info }}{% endif %}</option>
+    <option value="">{% if own_info and own_info.startswith('§') %}{{ own_info[1:] }}{% else %}No próprio nível{% if own_info %} — {{ own_info }}{% endif %}{% endif %}</option>
     {% for lv in level_options %}
     <option value="{{ lv.shelf_level_id }}" {% if lv.shelf_level_id == level_id %}selected{% endif %}>Nível extra {{ lv.level }}{% if not lv.has_locations %} (reservado){% endif %} — {{ lv.info }}</option>
     {% endfor %}

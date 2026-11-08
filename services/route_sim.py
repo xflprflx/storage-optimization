@@ -35,10 +35,16 @@ class Node:
     ends: tuple = ()  # pontas e transversais do corredor (cm, ao longo)
     to_global: Optional[Callable] = None
     corridor: object = None  # corredor na rede de caminhada (services/walk_net)
+    gold: Optional[bool] = None  # endereço na zona de ouro da PEGA (None = estrutura sem zona de ouro)
     net: object = None  # rede de caminhada da planta: com ela, a distância e o trajeto contornam as estruturas
 
 
 def _natural(v: str):
+    """Ordem dos endereços (lista de separação): números pelo valor ou, na configuração "ordem alfabética", pelo texto."""
+    from services.app_settings import canon, get
+
+    if get("addr_sort") == "alpha":
+        return [canon(v)]
     return [int(p) if p.isdigit() else p for p in re.split(r"(\d+)", v or "")]
 
 
@@ -64,9 +70,11 @@ def plan_nodes(plan) -> tuple[dict[str, list[Node]], dict]:
             node = dict(gx=gx, gy=gy, zone=zn.index, aisle=m.row.aisle, along=m.x0 + m.struct.width / 2,
                         cross=y + w / 2 if w > 0 else (m.row.y + m.row.depth if m.row.side == "L" else m.row.y),
                         ends=tuple(ends), to_global=zn.to_global)
+        has_gold = m.struct.golden_from is not None and m.struct.golden_to is not None
         for lv in m.levels:
+            gold = m.struct.is_golden(lv.n) if has_gold else None  # zona de ouro da pega do nível
             for p in lv.positions:
-                out.setdefault(p.sku, []).append(Node(key=p.address, **node))
+                out.setdefault(p.sku, []).append(Node(key=p.address, gold=gold, **node))
     return out, ref
 
 
@@ -173,6 +181,19 @@ def _s_shape(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
     return best or []
 
 
+def _stop_key(n: Node) -> tuple:
+    """Ponto de parada: endereços do mesmo módulo (estante) param no mesmo lugar — uma parada só."""
+    return (round(n.gx), round(n.gy))
+
+
+def stop_groups(nodes: list[Node]) -> dict[str, list[Node]]:
+    """Endereço representante (o 1º na ordem dos endereços) -> endereços do mesmo módulo."""
+    groups: dict[tuple, list] = {}
+    for n in sorted(nodes, key=lambda n: _natural(n.key)):
+        groups.setdefault(_stop_key(n), []).append(n)
+    return {g[0].key: g for g in groups.values()}
+
+
 def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Callable = dist,
              unit: float = 100.0, keep_routes: Optional[set] = None, s_shape: bool = True) -> dict:
     """Simula a amostra de pedidos. Cada SKU usa a sua posição mais perto da referência. `unit` = divisor para
@@ -187,19 +208,23 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         if not pts:
             continue
         units = sum(float(q) for s, q in zip(skus, qty) if s in near) if qty else float(len(pts))
-        uniq = list({n.key: n for n in pts}.values())  # o mesmo endereço uma vez
+        out_gold = sum(1 for s_ in skus if s_ in near and near[s_].gold is False)  # linhas fora da zona de ouro
+        # o mesmo endereço uma vez; endereços do mesmo módulo = uma parada (não sai e volta; tempo fixo uma vez)
+        groups = stop_groups(list({n.key: n for n in pts}.values()))
+        uniq = [g[0] for g in groups.values()]
         by_list = sorted(uniq, key=lambda n: _natural(n.key))
         opt = _optimized(uniq, start, d)
         s_route = _s_shape(uniq, start, d) if s_shape else None
         # "otimizada" = a melhor das rotas calculadas (a heurística não garante ser melhor que a em S)
         opt = min([r for r in (opt, s_route, by_list) if r is not None], key=lambda r: _tour(r, start, d))
         dl, do = _tour(by_list, start, d) / unit, _tour(opt, start, d) / unit
-        row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "list_m": dl, "opt_m": do}
+        row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "out_gold": out_gold,
+               "list_m": dl, "opt_m": do}
         if s_route is not None:
             row["s_m"] = _tour(s_route, start, d) / unit
         rows.append(row)
         if keep_routes is not None and oid in keep_routes:
-            routes[oid] = {"list": by_list, "opt": opt, "s": s_route}
+            routes[oid] = {"list": by_list, "opt": opt, "s": s_route, "groups": {k: [n.key for n in g] for k, g in groups.items()}}
     if not rows:
         return {"orders": 0, "rows": [], "skipped_lines": skipped_lines, "routes": routes}
     L = [r["list_m"] for r in rows]
@@ -257,13 +282,13 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
     return pts
 
 
-TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0}  # m/s, s por parada, s por peça
+TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0}  # m/s, s/parada, s/peça, s/item fora do ouro
 
 
 def time_params(qp) -> dict:
     """Parâmetros de tempo da tela (velocidade de caminhada, tempo por parada e por peça), com limites."""
     out = {}
-    for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0))):
+    for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0))):
         try:
             v = float(str(qp.get(k) if qp.get(k) not in (None, "") else TIME_DEFAULTS[k]).replace(",", "."))
         except ValueError:
@@ -278,7 +303,8 @@ def add_times(sim: dict, tp: dict) -> dict:
     rows = sim.get("rows") or []
     if not rows:
         return sim
-    fixed = lambda r: r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
+    fixed = lambda r: (r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
+                       + r.get("out_gold", 0) * tp["t_gold"])
     out = {"params": tp, "pick_avg": sum(fixed(r) for r in rows) / len(rows)}
     for k in ("list", "s", "opt"):
         if all(f"{k}_m" in r for r in rows):
@@ -288,6 +314,7 @@ def add_times(sim: dict, tp: dict) -> dict:
             out[f"{k}_avg"] = sum(ts) / len(ts)
             out[f"{k}_h"] = sum(ts) / 3600
     out["units_avg"] = sum(r.get("units", r["lines"]) for r in rows) / len(rows)
+    out["out_gold_avg"] = sum(r.get("out_gold", 0) for r in rows) / len(rows)
     sim["times"] = out
     return sim
 
@@ -320,11 +347,17 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
     sku_of = {n.key: s for s, ns in nodes_of.items() for n in ns}
     entry = lines[0]
     qty_of = dict(zip(entry[1], entry[2])) if len(entry) > 2 and entry[2] else {}
-    units_at: dict[str, float] = {}  # peças em cada parada (SKUs do pedido naquele endereço)
+    units_at: dict[str, float] = {}  # peças em cada endereço (SKUs do pedido naquele endereço)
+    out_at: dict[str, int] = {}  # linhas fora da zona de ouro da pega em cada endereço
+    skus_at: dict[str, list] = {}
     near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
     for s_ in entry[1]:
         if s_ in near:
-            units_at[near[s_].key] = units_at.get(near[s_].key, 0.0) + float(qty_of.get(s_, 1.0))
+            k = near[s_].key
+            units_at[k] = units_at.get(k, 0.0) + float(qty_of.get(s_, 1.0))
+            out_at[k] = out_at.get(k, 0) + int(near[s_].gold is False)
+            skus_at.setdefault(k, []).append(s_)
+    groups = rt.get("groups") or {}
     row = sim["rows"][0]
     routes = {}
     for kind, name, color in ROUTE_KINDS:
@@ -332,9 +365,13 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
             continue
         idx: list = []
         pts = path_points(rt[kind], start, idx)
+        grp = [groups.get(n.key, [n.key]) for n in rt[kind]]  # endereços de cada parada (mesmo módulo)
         routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
-                        "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "skus": [sku_of.get(n.key, "") for n in rt[kind]],
-                        "qty": [round(units_at.get(n.key, 1.0), 3) for n in rt[kind]],
+                        "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "groups": grp,
+                        "skus": [", ".join(x for k in g for x in skus_at.get(k, [sku_of.get(k, "")])) for g in grp],
+                        "qty": [round(sum(units_at.get(k, 1.0) for k in g), 3) for g in grp],
+                        "out": [sum(out_at.get(k, 0) for k in g) for g in grp],
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
     return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
+            "out_gold": row["out_gold"], "has_gold": any(n.gold is not None for ns in nodes_of.values() for n in ns),
             "ref": ref, "routes": routes}

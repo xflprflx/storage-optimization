@@ -330,7 +330,9 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - respeita a **mão única** dos corredores marcados assim na planta da filial;
 - sem planta (filial existente sem desenho), a distância é a estimada pelo endereço.
 
-**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça**. Os três são editáveis na tela (padrão 1 m/s, 10 s e 2 s); a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
+**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça** + itens fora da zona de ouro da pega × **tempo extra fora do ouro**. Os quatro são editáveis na tela (padrão 1 m/s, 10 s, 2 s e 5 s por item); a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
+
+**Uma parada por módulo:** endereços do pedido no mesmo módulo (mesma estante, mesmo ponto de parada) são **uma parada**: o separador não sai e volta, e o tempo fixo da parada conta uma vez (as peças e os itens fora do ouro de todos os endereços somam). A zona de ouro da pega de cada endereço vem da estrutura da estante e do nível onde as bins estão de fato (nível extra, excedente ou, no endereço genérico da estante, os níveis que as bins ocupam).
 
 **Resultado:** caminhada média por pedido e por linha, mediana e 90º percentil, total, e quanto a rota otimizada economizaria. No projeto, a planta desenha as três rotas do pedido escolhido, com as paradas numeradas. No exemplo de galpão médio com letra por rua, a lista sem serpentina anda cerca de 4% mais que a rota em S; com serpentina, a lista praticamente coincide com ela.
 
@@ -339,7 +341,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
 - **Painel:** distância percorrida, paradas feitas, **peças pegas / total** e tempo de cada rota; no topo, linhas, paradas e peças do pedido. A lista de paradas risca as já feitas. O tempo de caminhada do vídeo usa a mesma distância da simulação (a do painel).
 - **Corredores:** o filtro *Corredor* do 3D aceita **vários corredores** (marque um ou mais; *Todos* limpa, *Inverter* troca a seleção).
-- **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças do endereço, todos editáveis. Cada parada dura o tempo fixo mais as peças daquele endereço; a lista de paradas mostra as peças e o tempo de cada uma.
+- **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças + **fora do ouro** (s) × itens fora da zona de ouro da pega, todos editáveis. Cada parada (um módulo) dura o tempo fixo mais as peças e os itens fora do ouro dos endereços dela; a lista de paradas mostra os endereços do módulo, as peças, os itens fora do ouro e o tempo de cada uma, e as bins de todos os endereços da parada se acendem.
 - **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).
 - **Câmera:** seguir os separadores (afasta para caberem todos), primeira pessoa, de cima (a rota toda) ou livre.
 - **Tela cheia:** botão no canto da vista 3D (Esc volta).
@@ -390,7 +392,8 @@ O painel *Situação* lista as estantes que ficaram **fora da planta** e as que 
   - os campos de corredor de referência e distâncias passam a valer só para estantes fora da planta;
   - o resultado mostra "referência da planta".
 - **Simulador de trajeto da filial:** mede pelo menor caminho na planta (corredores, contornando fileiras e obstáculos, com a mão única) e desenha as três rotas do pedido escolhido, com as paradas numeradas. SKUs sem saldo usam os endereços atribuídos (saldo zero), como na filial recém-criada pelo projeto.
-- **3D da filial** (`/layout/plan/3d`): cada estante na sua posição, com a frente e a **profundidade da estrutura cadastrada** (alinhada ao corredor; sem estrutura, a da fileira), os níveis com o **vão cadastrado de cada nível** (Capacidade dos níveis; a sobra da altura da estrutura vira a espessura das longarinas; sem vão, altura ÷ níveis) e as bins cadastradas em cada endereço, com as medidas do tipo de bin, lado a lado, na ordem das posições (bins que não cabem na profundidade aparecem sobrepostas). Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
+- **Rótulos das ruas:** o nome da fileira vai para um lado livre (esquerda/direita ou acima/abaixo) — não fica escondido sob outra fileira ou obstáculo, nem fora do imóvel (editor, planta do simulador e 3D).
+- **3D da filial** (`/layout/plan/3d`): as bins de cada endereço ficam no **nível onde estão de fato** — o próprio, um **nível extra** escolhido no endereço ou o nível do **excedente** —, e as de um **endereço genérico da estante** (sem nível) preenchem a estante de baixo para cima. Cada estante na sua posição, com a frente e a **profundidade da estrutura cadastrada** (alinhada ao corredor; sem estrutura, a da fileira), os níveis com o **vão cadastrado de cada nível** (Capacidade dos níveis; a sobra da altura da estrutura vira a espessura das longarinas; sem vão, altura ÷ níveis) e as bins cadastradas em cada endereço, com as medidas do tipo de bin, lado a lado, na ordem das posições (bins que não cabem na profundidade aparecem sobrepostas). Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
 
 Obstáculos aparecem na planta e no 3D e **desviam o trajeto**. Remover a planta volta a estimar a caminhada pelo endereço.
 
@@ -415,6 +418,19 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 - **Pool:** os SKUs mais procurados por bin escolhem primeiro e, entre bins equivalentes, ficam nos endereços mais fáceis. Os itens C não disputam esses endereços, e quem sai junto fica perto do parceiro já posicionado. O objetivo do pool (menos bins, volume…) continua mandando: a posição pela saída entra como desempate antes da proximidade de hoje. Com a posição pela saída ligada, o pool usa o motor heurístico.
 - **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
 - **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
+
+## 6.0.5 Configurações de endereço e níveis extras
+
+**Cadastros → Configurações** (`/settings`):
+- **Ordenação dos números:** numérica (2, 3, 10) ou alfabética (10, 2, 3). Vale para o mapa, a planta, o 3D e a ordem da lista de separação no simulador (a ordem física dos níveis é sempre pela altura).
+- **Zeros à esquerda não diferenciam** (`07` = `7`, em qualquer parte do endereço): `F.07.01.01` e `F.7.01.02-A` ficam na mesma estante. Com a opção ligada, o cadastro recusa um endereço equivalente a um existente (e a hierarquia compara assim), e estantes/níveis são agrupados pelo código equivalente (estrutura, capacidade dos níveis, mapa, planta, 3D e posição pela saída). Os códigos gravados não mudam. As importações já reconheciam `07` = `7` ao procurar um endereço.
+
+**Bins em outro nível da estante:**
+1. o nível precisa existir: com endereços ou criado em *Capacidade dos níveis* (nível reservado, ou "criar níveis que faltam");
+2. em *Endereços → editar*, cada linha de bins tem a coluna **Nível**: o próprio ou um **nível extra** da mesma estante;
+3. o excedente da capacidade vai sozinho para o nível de cima, dedicado ao endereço.
+Um **endereço genérico da estante** (só corredor e estante, ex.: `F.07`) ocupa os níveis da estante: escolha o nível de cada linha de bins ou deixe sem nível (o 3D preenche a estante de baixo para cima).
+O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída e tempo do simulador) usam o nível onde as bins estão.
 
 ## 6.0.4 Exclusão em massa
 

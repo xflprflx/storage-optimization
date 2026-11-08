@@ -34,6 +34,22 @@ def level_key_of(loc) -> Optional[LevelKey]:
     return (loc.branch_id, loc.warehouse_id, loc.aisle, loc.bay, loc.level)
 
 
+def _eq(col, value):
+    """Comparação de código de endereço: com "07 = 7" (Configurações), sem os zeros à esquerda."""
+    from sqlalchemy import func
+
+    from services.app_settings import canon, get
+
+    return func.nk_canon(col) == canon(value) if get("addr_zero_eq") else col == value
+
+
+def _ck(key):
+    """Chave de nível para comparar (códigos equivalentes, conforme a configuração)."""
+    from services.app_settings import canon
+
+    return tuple(canon(v) if isinstance(v, str) else v for v in key)
+
+
 def _scope(stmt, model, branch_id, warehouse_id):
     stmt = stmt.where(model.branch_id == branch_id)
     if warehouse_id is None:
@@ -44,7 +60,7 @@ def _scope(stmt, model, branch_id, warehouse_id):
 def get_level(db: Session, key: LevelKey) -> Optional[ShelfLevel]:
     b, w, a, bay, lv = key
     return db.scalar(_scope(select(ShelfLevel), ShelfLevel, b, w).where(
-        ShelfLevel.aisle == a, ShelfLevel.bay == bay, ShelfLevel.level == lv))
+        _eq(ShelfLevel.aisle, a), _eq(ShelfLevel.bay, bay), _eq(ShelfLevel.level, lv)).limit(1))
 
 
 def ensure_level(db: Session, key: LevelKey) -> ShelfLevel:
@@ -62,14 +78,16 @@ def bay_levels(db: Session, branch_id: int, warehouse_id: Optional[int], aisle: 
     Retorna [{key, level, shelf_level_id|None, has_locations}] em ordem natural."""
     from services.layout_service import natural_key
 
+    from services.app_settings import canon
+
     out: dict[str, dict] = {}
     for lv in db.scalars(_scope(select(ShelfLevel), ShelfLevel, branch_id, warehouse_id)
-                         .where(ShelfLevel.aisle == aisle, ShelfLevel.bay == bay)):
-        out[lv.level] = {"level": lv.level, "shelf_level_id": lv.id, "has_locations": False}
+                         .where(_eq(ShelfLevel.aisle, aisle), _eq(ShelfLevel.bay, bay))):
+        out.setdefault(canon(lv.level), {"level": lv.level, "shelf_level_id": lv.id, "has_locations": False})
     for (lv,) in db.execute(_scope(select(StorageLocation.level).distinct(), StorageLocation, branch_id, warehouse_id)
-                            .where(StorageLocation.aisle == aisle, StorageLocation.bay == bay,
+                            .where(_eq(StorageLocation.aisle, aisle), _eq(StorageLocation.bay, bay),
                                    StorageLocation.level != "")):
-        out.setdefault(lv, {"level": lv, "shelf_level_id": None, "has_locations": True})["has_locations"] = True
+        out.setdefault(canon(lv), {"level": lv, "shelf_level_id": None, "has_locations": True})["has_locations"] = True
     return [dict(v, key=(branch_id, warehouse_id, aisle, bay, v["level"])) for v in
             sorted(out.values(), key=lambda d: natural_key(d["level"]))]
 
@@ -121,12 +139,13 @@ def usage_for(db: Session, keys: Iterable[LevelKey]) -> dict[LevelKey, LevelUsag
     for b, w, a, bay, lv in keys:
         bays.setdefault((b, w, a, bay), set()).add(lv)
 
+    by_ck = {_ck(k): k for k in keys}  # códigos equivalentes ("07" = "7", conforme a configuração)
     for (b, w, a, bay), lvls in bays.items():
         # níveis cadastrados + capacidades
         id_to_key: dict[int, LevelKey] = {}
         for sl in db.scalars(_scope(select(ShelfLevel), ShelfLevel, b, w).where(
-                ShelfLevel.aisle == a, ShelfLevel.bay == bay)):
-            k = (b, w, a, bay, sl.level)
+                _eq(ShelfLevel.aisle, a), _eq(ShelfLevel.bay, bay))):
+            k = by_ck.get(_ck((b, w, a, bay, sl.level)), (b, w, a, bay, sl.level))
             id_to_key[sl.id] = k
             if k in res:
                 res[k].shelf_level_id = sl.id
@@ -142,13 +161,13 @@ def usage_for(db: Session, keys: Iterable[LevelKey]) -> dict[LevelKey, LevelUsag
         rows = db.execute(
             _scope(select(StorageLocation.level, LocationBin.bin_type_id, LocationBin.quantity, LocationBin.shelf_level_id)
                    .join(LocationBin, LocationBin.location_id == StorageLocation.id), StorageLocation, b, w)
-            .where(StorageLocation.aisle == a, StorageLocation.bay == bay)
+            .where(_eq(StorageLocation.aisle, a), _eq(StorageLocation.bay, bay))
         ).all()
         for own_level, tid, qty, sl_id in rows:
             if sl_id is None:
                 if not own_level:
                     continue  # endereço acima do nível (ex.: só estante): não ocupa nível
-                k = (b, w, a, bay, own_level)
+                k = by_ck.get(_ck((b, w, a, bay, own_level)), (b, w, a, bay, own_level))
                 if k in res:
                     res[k].used[tid] = res[k].used.get(tid, 0) + qty
             else:
@@ -175,8 +194,10 @@ def location_level_options(db: Session, loc: StorageLocation) -> list[dict]:
     """Opções de nível para as bins de um endereço: próprio nível + demais níveis da estante."""
     if not loc.bay:
         return []
+    from services.app_settings import canon
+
     return [lv for lv in bay_levels(db, loc.branch_id, loc.warehouse_id, loc.aisle, loc.bay)
-            if lv["level"] != loc.level]
+            if canon(lv["level"]) != canon(loc.level or "")]
 
 
 def validate_bin_levels(db: Session, loc_scope: dict, rows: list[tuple[int, int, Optional[int]]]):
@@ -192,9 +213,9 @@ def validate_bin_levels(db: Session, loc_scope: dict, rows: list[tuple[int, int,
     for lid in used:
         sl = levels.get(lid)
         if (sl is None or sl.branch_id != loc_scope["branch_id"] or sl.warehouse_id != loc_scope["warehouse_id"]
-                or sl.aisle != loc_scope["aisle"] or sl.bay != loc_scope["bay"]):
+                or _ck((sl.aisle, sl.bay)) != _ck((loc_scope["aisle"], loc_scope["bay"]))):
             return "Nível extra inválido: precisa ser um nível da mesma estante do endereço.", rows
-        if sl.level == loc_scope.get("level"):
+        if _ck((sl.level,)) == _ck((loc_scope.get("level") or "",)):
             own.add(lid)
     merged: dict[tuple, int] = {}
     for t, q, lid in rows:

@@ -44,8 +44,22 @@ def scope_filter_level(stmt, branch_id: int, warehouse_id: Optional[int]):
     return stmt.where(ShelfLevel.warehouse_id == warehouse_id)
 
 
+def _aisle_eq(col, value):
+    from services.app_settings import canon, get
+
+    return func.nk_canon(col) == canon(value) if get("addr_zero_eq") else col == value
+
+
 def natural_key(value: str):
-    """Ordena '2' antes de '10' e 'Z' antes de 'AA' (como na geração em lote)."""
+    """Ordena '2' antes de '10' e 'Z' antes de 'AA' (como na geração em lote). Com a configuração de endereços
+    "ordem alfabética", ordena pelo texto ('10' antes de '2'); com "07 = 7", os zeros à esquerda não contam."""
+    from services.app_settings import canon, get
+
+    value = value or ""
+    if get("addr_sort") == "alpha":
+        return (3, 0, canon(value))
+    if get("addr_zero_eq") and value[:1] == "0" and value.isdigit():
+        value = canon(value)
     if value.isdigit():
         return (0, int(value), value)
     if value.isalpha() and value.isascii():
@@ -113,14 +127,17 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
     stmt = scope_filter(select(L.id, L.address, L.aisle, L.bay, L.level, L.position, L.compartment, L.is_occupied),
                         branch_id, warehouse_id)
     if aisle:
-        stmt = stmt.where(L.aisle == aisle)
+        stmt = stmt.where(_aisle_eq(L.aisle, aisle))
     count_stmt = scope_filter(select(func.count()).select_from(L), branch_id, warehouse_id)
     if aisle:
-        count_stmt = count_stmt.where(L.aisle == aisle)
+        count_stmt = count_stmt.where(_aisle_eq(L.aisle, aisle))
     total = db.scalar(count_stmt) or 0
-    aisles_all = sorted(
-        db.scalars(scope_filter(select(L.aisle).distinct(), branch_id, warehouse_id)).all(), key=natural_key
-    )
+    from services.app_settings import canon as _canon
+
+    _first: dict[str, str] = {}
+    for a in db.scalars(scope_filter(select(L.aisle).distinct(), branch_id, warehouse_id)).all():
+        _first.setdefault(_canon(a), a)  # corredores equivalentes ("07 = 7") aparecem uma vez
+    aisles_all = sorted(_first.values(), key=natural_key)
     pv_new = []
     if preview:
         pv_new = [(seg, addr) for seg, addr in preview["new"] if not aisle or seg[0] == aisle]
@@ -195,9 +212,25 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
     # ---- Níveis físicos (capacidade, reservados) ----
     sl_stmt = scope_filter_level(select(ShelfLevel), branch_id, warehouse_id)
     if aisle:
-        sl_stmt = sl_stmt.where(ShelfLevel.aisle == aisle)
+        sl_stmt = sl_stmt.where(_aisle_eq(ShelfLevel.aisle, aisle))
     shelf_levels = list(db.scalars(sl_stmt))
-    sl_key = {sl.id: (sl.aisle, sl.bay, sl.level) for sl in shelf_levels}
+    # "07 = 7" (Configurações): códigos equivalentes viram o mesmo nó (com o 1º código visto como rótulo)
+    from services.app_settings import canon, get
+
+    seen: dict[tuple, str] = {}
+
+    def norm(seg) -> tuple:
+        if not get("addr_zero_eq"):
+            return tuple(seg)
+        out, path = [], ()
+        for v in seg:
+            path = path + (canon(v),)
+            out.append(seen.setdefault(path, v))
+        return tuple(out)
+
+    for lf in leaves.values():
+        lf.seg = norm(lf.seg)
+    sl_key = {sl.id: norm((sl.aisle, sl.bay, sl.level)) for sl in shelf_levels}
     levels_info: dict[tuple, dict] = {}
 
     # ---- Estruturas de armazenagem das estantes ----
@@ -205,7 +238,8 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
 
     bay_st = {k: {"code": st.code, "name": st.name, "width": float(st.width), "depth": float(st.depth),
                   "height": float(st.height), "levels": st.levels, "level_h": float(st.level_height)}
-              for k, st in bay_structures(db, branch_id, warehouse_id).items() if not aisle or k[0] == aisle}
+              for k, st in ((norm(k), st) for k, st in bay_structures(db, branch_id, warehouse_id).items())
+              if not aisle or k[0] == aisle}
 
     def linfo(key: tuple) -> dict:
         return levels_info.setdefault(key, {"sl_id": None, "notes": "", "caps": {}, "used": {}, "extra": [],

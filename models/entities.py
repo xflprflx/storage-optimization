@@ -595,3 +595,12 @@ class OptimizationRun(TimestampMixin, Base):
 
     branch: Mapped[Optional[Branch]] = relationship()
 
+
+
+class AppSetting(TimestampMixin, Base):
+    """Configuração do sistema (chave -> valor em JSON), ex.: ordenação dos códigos de endereço."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSON, nullable=True)

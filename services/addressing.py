@@ -86,14 +86,22 @@ def check_location_conflict(
       2. Já existe um endereço genérico ACIMA deste (ex.: A-05 ao criar A-05-01) -> conflito.
       3. Já existem sub-endereços ABAIXO deste (ex.: A-05-01 ao criar A-05) -> conflito.
     """
+    from sqlalchemy import func
+
+    from services.app_settings import canon, get
+
     seg = segments(parts)
     n = len(seg)
     cols = level_columns()
-    full = lambda values: and_(*[cols[i] == (values[i] if i < len(values) else "") for i in range(5)])  # noqa: E731
+    # com "07 = 7" (Configurações), compara os códigos sem os zeros à esquerda
+    zeq = bool(get("addr_zero_eq"))
+    C = (lambda i: func.nk_canon(cols[i])) if zeq else (lambda i: cols[i])  # noqa: E731
+    V = canon if zeq else (lambda v: v)  # noqa: E731
+    full = lambda values: and_(*[C(i) == V(values[i] if i < len(values) else "") for i in range(5)])  # noqa: E731
     conds = [full(seg)]
     conds += [full(seg[:k]) for k in range(1, n)]  # ancestrais
     if n < 5:
-        conds.append(and_(*[cols[i] == seg[i] for i in range(n)], cols[n] != ""))  # descendentes
+        conds.append(and_(*[C(i) == V(seg[i]) for i in range(n)], cols[n] != ""))  # descendentes
     stmt = scope_filter(select(StorageLocation.address, *cols), branch_id, warehouse_id).where(or_(*conds))
     if exclude_id is not None:
         stmt = stmt.where(StorageLocation.id != exclude_id)
@@ -103,7 +111,7 @@ def check_location_conflict(
     by_kind: dict[str, list[str]] = {"exact": [], "ancestor": [], "descendant": []}
     for r in rows:
         other = segments((r.aisle, r.bay, r.level, r.position, r.compartment))
-        if other == seg:
+        if tuple(map(V, other)) == tuple(map(V, seg)):
             by_kind["exact"].append(r.address)
         elif len(other) < n:
             by_kind["ancestor"].append(r.address)

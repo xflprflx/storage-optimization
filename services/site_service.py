@@ -408,11 +408,21 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
     basis = dc.get("basis") if dc.get("basis") in BASES else "stock"
     factor = _factor(dc)
     scoped = str(bid).isdigit()
+    # min/max level: política de estoque da filial de referência (todas as filiais = soma das políticas)
+    levels: dict[int, float] = {}
+    if basis != "stock":
+        from models import StockPolicy
+
+        col = StockPolicy.min_level if basis == "min" else StockPolicy.max_level
+        lq = select(StockPolicy.product_id, func.sum(col)).where(col.is_not(None))
+        if scoped:
+            lq = lq.where(StockPolicy.branch_id == int(bid))
+        levels = {pid: float(v or 0) for pid, v in db.execute(lq.group_by(StockPolicy.product_id))}
     out, no_level = [], 0
     for p in db.scalars(stmt.order_by(Product.sku)):
         q = stock.get(p.id, 0.0)
         if basis != "stock":
-            lvl = p.min_level if basis == "min" else p.max_level
+            lvl = levels.get(p.id)
             if lvl is not None and lvl > 0:
                 if scoped and p.id not in stock:
                     continue  # referência = filial: só os produtos que ela trabalha
@@ -561,10 +571,9 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
 # --------------------------------------------------------------------------- #
 # Gerar o cadastro da filial
 # --------------------------------------------------------------------------- #
-DEFAULT_LOCATION_MODES = {
-    "empty": "Só nos produtos sem endereço padrão (novos ou ainda sem endereço)",
-    "all": "Em todos os produtos do plano (passam a ter o endereço padrão na filial nova)",
-    "none": "Não alterar o endereço padrão",
+DEFAULT_LOCATION_MODES = {  # o endereço padrão é da política de estoque da filial: as outras filiais não mudam
+    "empty": "Definir o endereço padrão de cada produto na filial nova (o 1º endereço dele no plano)",
+    "none": "Não definir o endereço padrão",
 }
 
 
@@ -609,6 +618,7 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             products[pr.sku] = pr
     dec = lambda v: Decimal(str(v)) if v is not None else None  # noqa: E731
     sku_set = set(placed)
+    pending_levels: dict[str, dict] = {}  # sku -> min/max da filial nova (gravados na política depois)
     for sku in skus:
         it, d = by_item.get(sku, {}), demand.get(sku)
         vals = {"name": (it.get("name") or (d.name if d else "") or sku)[:255],
@@ -616,8 +626,8 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 "height": dec(it.get("h") if it.get("h") is not None else (d.unit.h if d else None)),
                 "width": dec(it.get("w") if it.get("w") is not None else (d.unit.w if d else None)),
                 "length": dec(it.get("l") if it.get("l") is not None else (d.unit.l if d else None)),
-                "weight": dec(it.get("wt") if it.get("wt") is not None else (d.unit.weight if d else None)),
-                "min_level": dec(it.get("min")), "max_level": dec(it.get("max"))}
+                "weight": dec(it.get("wt") if it.get("wt") is not None else (d.unit.weight if d else None))}
+        levels = {"min_level": dec(it.get("min")), "max_level": dec(it.get("max"))}  # política da filial nova
         pr = products.get(sku)
         if pr is None:
             if not create_products:
@@ -631,14 +641,32 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
         elif update_products and it:
             changed = False
             src = {"name": "name", "material_type": "material", "height": "h", "width": "w", "length": "l",
-                   "weight": "wt", "min_level": "min", "max_level": "max"}
+                   "weight": "wt"}
             for k, v in vals.items():
                 informed = it.get(src[k]) not in (None, "")  # só o que veio preenchido no arquivo
                 if informed and getattr(pr, k) != v:
                     setattr(pr, k, v)
                     changed = True
             stats["products_updated"] += int(changed)
+        if any(v is not None for v in levels.values()):
+            pending_levels[sku] = levels
     db.flush()
+    # política de estoque da filial nova: min/max level do arquivo (o cadastro do produto é o mesmo das outras filiais)
+    from models import StockPolicy
+
+    policies: dict[str, StockPolicy] = {}
+
+    def policy_of(sku: str) -> StockPolicy:
+        if sku not in policies:
+            policies[sku] = StockPolicy(branch_id=br.id, product_id=products[sku].id)
+            db.add(policies[sku])
+        return policies[sku]
+
+    for sku, lv in pending_levels.items():
+        if sku in products:
+            pol = policy_of(sku)
+            pol.min_level, pol.max_level = lv["min_level"], lv["max_level"]
+            stats["policies"] = stats.get("policies", 0) + 1
 
     # ---- estantes, níveis, endereços e bins ----
     new_ids: list[int] = []
@@ -687,8 +715,9 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             for (lid, _), q in zip(locs, qty):
                 db.add(StockItem(product_id=pr.id, location_id=lid, quantity=Decimal(str(q))))
                 stats["assigned"] += 1
-            if default_mode == "all" or (default_mode == "empty" and pr.default_location_id is None):
-                pr.default_location_id = locs[0][0]
+            pol = policy_of(sku)  # filial nova: a política começa sem endereço padrão
+            if default_mode in ("all", "empty") and pol.default_location_id is None:
+                pol.default_location_id = locs[0][0]
                 stats["defaults"] += 1
     db.flush()
     refresh_occupancy(db, new_ids)

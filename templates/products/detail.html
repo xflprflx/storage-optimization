@@ -16,20 +16,33 @@
     <div class="card h-100"><div class="card-body">
       <h6 class="text-muted text-uppercase small">Dados</h6>
       <dl class="row mb-0 small">
-        <dt class="col-5">Endereço padrão</dt><dd class="col-7 mono">{{ product.default_location.full_label if product.default_location else '—' }}</dd>
         <dt class="col-5">Tipo de material</dt><dd class="col-7">{% if product.material_type %}<a href="/products?material={{ product.material_type|urlencode }}">{{ product.material_type }}</a>{% else %}—{% endif %}</dd>
         <dt class="col-5">Altura</dt><dd class="col-7">{{ product.dimensions.height|dec or '—' }}</dd>
         <dt class="col-5">Largura</dt><dd class="col-7">{{ product.dimensions.width|dec or '—' }}</dd>
         <dt class="col-5">Comprimento</dt><dd class="col-7">{{ product.dimensions.length|dec or '—' }}</dd>
         <dt class="col-5">Volume</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
         <dt class="col-5">Peso</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
-        <dt class="col-5">Nível mínimo</dt><dd class="col-7">{{ product.min_level|dec if product.min_level is not none else '—' }}</dd>
-        <dt class="col-5">Nível máximo</dt><dd class="col-7">{{ product.max_level|dec if product.max_level is not none else '—' }}</dd>
         <dt class="col-5">Saldo total</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>
       </dl>
     </div></div>
   </div>
   <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between"><strong>Política de estoque por filial</strong>
+        <a class="small" href="/products/{{ product.id }}/edit">editar</a></div>
+      <div class="table-responsive"><table class="table table-sm mb-0">
+        <thead><tr><th>Filial</th><th>Endereço padrão</th><th class="text-end">Nível mínimo</th><th class="text-end">Nível máximo</th></tr></thead>
+        <tbody>
+        {% for pol in policies %}
+          <tr><td>{{ pol.branch.code }} <span class="text-muted small">{{ pol.branch.name }}</span></td>
+            <td class="mono">{{ pol.default_location.full_label if pol.default_location else '—' }}</td>
+            <td class="text-end">{{ pol.min_level|dec if pol.min_level is not none else '—' }}</td>
+            <td class="text-end">{{ pol.max_level|dec if pol.max_level is not none else '—' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-muted text-center py-2 small">Nenhuma política: o produto ainda não tem endereço padrão nem min/max em nenhuma filial.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+      <div class="card-body py-2 small text-muted border-top">O cadastro do produto (nome, material, dimensões, peso) é o mesmo em todas as filiais; endereço padrão e níveis de estoque são de cada filial.</div>
+    </div>
     <div class="card">
       <div class="card-header bg-white"><strong>Saldo físico por endereço</strong></div>
       <div class="table-responsive"><table class="table table-sm mb-0">

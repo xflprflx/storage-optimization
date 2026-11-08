@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Optional
 
 from sqlalchemy import select
+
+from services.policy_service import get_policy
 from sqlalchemy.orm import Session
 
 from models import Product
@@ -49,6 +51,8 @@ PRODUCT_FIELDS: dict[str, tuple[str, bool, tuple[str, ...]]] = {
     "location": ("Endereço padrão", False, ("endereco", "endereço", "posicao", "posição", "location", "localizacao")),
 }
 DECIMAL_FIELDS = ("height", "width", "length", "weight", "min_level", "max_level")
+PRODUCT_DECIMALS = ("height", "width", "length", "weight")  # cadastro único do produto (todas as filiais)
+POLICY_DECIMALS = ("min_level", "max_level")  # política de estoque do produto na filial
 
 
 @dataclass
@@ -221,7 +225,7 @@ def _process_chunk(
         prod = products.get(p["sku"])
         if prod is None:
             prod = Product(sku=p["sku"], name=p["name"] or p["sku"], material_type=materials(p["material_type"]))
-            for f in DECIMAL_FIELDS:
+            for f in PRODUCT_DECIMALS:
                 setattr(prod, f, p[f])
             db.add(prod)
             products[p["sku"]] = prod
@@ -231,7 +235,7 @@ def _process_chunk(
                 prod.name = p["name"]
             if materials(p["material_type"]):
                 prod.material_type = materials(p["material_type"])
-            for f in DECIMAL_FIELDS:
+            for f in PRODUCT_DECIMALS:
                 if p[f] is not None:
                     setattr(prod, f, p[f])
             if p["sku"] not in updated_skus:
@@ -243,7 +247,7 @@ def _process_chunk(
                 prod.name = p["name"]
             if materials(p["material_type"]):
                 prod.material_type = materials(p["material_type"])
-            for f in DECIMAL_FIELDS:
+            for f in PRODUCT_DECIMALS:
                 if p[f] is not None:
                     setattr(prod, f, p[f])
     db.flush()
@@ -267,12 +271,24 @@ def _process_chunk(
                     result.locations_created += 1
                 if note:
                     result.warn(p["line"], note)
-                if prod.default_location_id is None or (
-                    opts.update_default_location and prod.default_location_id != ref.id
+                pol = get_policy(db, ref.branch_id, prod.id, create=True)
+                if pol.default_location_id is None or (
+                    opts.update_default_location and pol.default_location_id != ref.id
                 ):
-                    prod.default_location_id = ref.id
+                    pol.default_location_id = ref.id
                     result.default_locations_set += 1
-        elif b_code or w_code:
-            result.warn(p["line"], "Filial/armazém informados sem endereço: nada a vincular ao produto.")
+                branch_id = ref.branch_id
+        elif w_code and not b_code:
+            result.warn(p["line"], "Armazém informado sem filial e sem endereço: nada a vincular ao produto.")
+        # min/max level: política de estoque do produto na filial da linha (ou do endereço)
+        if any(p[f] is not None for f in POLICY_DECIMALS):
+            if branch_id:
+                pol = get_policy(db, branch_id, prod.id, create=True)
+                for f in POLICY_DECIMALS:
+                    if p[f] is not None:
+                        setattr(pol, f, p[f])
+            else:
+                result.warn(p["line"], "Min/max level sem filial: informe a filial (coluna ou filial padrão da "
+                                       "importação) — os níveis de estoque são por filial.")
         result.rows_ok += 1
     db.flush()

@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import BinType, LocationBin, Product, StockItem, StorageLocation
+from models import BinType, LocationBin, Product, StockItem, StockPolicy, StorageLocation
 from services.bin_optimizer import AddressIn, BinSpec, LevelLedger, LevelSlot, Params, ProductUnit, optimize
 from services.bin_service import set_location_bins
 from services.layout_service import natural_key
@@ -94,11 +94,16 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
                 pl[tid] = pl.get(tid, 0) + qty
         seen: set[tuple[int, int]] = set()
         missing: dict[int, list[str]] = {}
-        level_col = Product.min_level if basis == "min" else Product.max_level
+        # endereço padrão e min/max level: política de estoque do produto na filial do endereço
+        level_col = StockPolicy.min_level if basis == "min" else StockPolicy.max_level
         for lid, pid, sku, qty, h, w, ln, wt, dflt, lvl in db.execute(
             select(StockItem.location_id, Product.id, Product.sku, StockItem.quantity, Product.height, Product.width,
-                   Product.length, Product.weight, Product.default_location_id, level_col)
-            .join(Product, Product.id == StockItem.product_id).where(StockItem.location_id.in_(chunk))
+                   Product.length, Product.weight, StockPolicy.default_location_id, level_col)
+            .join(Product, Product.id == StockItem.product_id)
+            .join(StorageLocation, StorageLocation.id == StockItem.location_id)
+            .outerjoin(StockPolicy, (StockPolicy.product_id == Product.id)
+                       & (StockPolicy.branch_id == StorageLocation.branch_id))
+            .where(StockItem.location_id.in_(chunk))
         ):
             seen.add((lid, pid))
             q = float(qty)
@@ -109,8 +114,9 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
                     missing.setdefault(lid, []).append(sku)
             out[lid].items.append(ProductUnit(sku, q, _f(h), _f(w), _f(ln), _f(wt)))
         for lid, pid, sku, h, w, ln, wt, lvl in db.execute(
-            select(Product.default_location_id, Product.id, Product.sku, Product.height, Product.width, Product.length,
-                   Product.weight, level_col).where(Product.default_location_id.in_(chunk))
+            select(StockPolicy.default_location_id, Product.id, Product.sku, Product.height, Product.width,
+                   Product.length, Product.weight, level_col)
+            .join(Product, Product.id == StockPolicy.product_id).where(StockPolicy.default_location_id.in_(chunk))
         ):
             out[lid].linked_without_stock = True
             if basis != "stock" and (lid, pid) not in seen and lvl is not None and float(lvl) > 0:

@@ -487,14 +487,17 @@ def after_items(b, phys: dict) -> list:
     return out
 
 
-def _level_note(db: Session, skus, basis: str) -> str:
-    """Aviso de SKUs sem o nível do cenário (vazio ou 0 = usa o saldo)."""
-    from models import Product
+def _level_note(db: Session, skus, basis: str, branch_id: Optional[int] = None) -> str:
+    """Aviso de SKUs sem o nível do cenário na política de estoque da filial (vazio ou 0 = usa o saldo)."""
+    from models import Product, StockPolicy
 
     if basis == "stock" or not skus:
         return ""
-    col = Product.min_level if basis == "min" else Product.max_level
-    miss = [sku for sku, v in db.execute(select(Product.sku, col).where(Product.sku.in_(list(skus)))) if not v or v <= 0]
+    col = StockPolicy.min_level if basis == "min" else StockPolicy.max_level
+    miss = [sku for sku, v in db.execute(
+        select(Product.sku, col).outerjoin(StockPolicy, (StockPolicy.product_id == Product.id)
+                                           & (StockPolicy.branch_id == (branch_id or -1)))
+        .where(Product.sku.in_(list(skus)))) if not v or v <= 0]
     if not miss:
         return ""
     label = "min level" if basis == "min" else "max level"
@@ -543,7 +546,7 @@ def case_page(request: Request, db: Session = Depends(get_db)):
                     break
                 if plan is None:
                     sections.append(section(f"after-{c}", f"Depois — {dict(SCENARIO_LABELS)[c]}", icons[c], [],
-                                            _level_note(db, [key], c), "SKU fora do plano neste cenário."))
+                                            _level_note(db, [key], c, to_int(filters.get("branch_id"))), "SKU fora do plano neste cenário."))
                     continue
                 phys = physical_map(results)
                 after = list({b.id: b for b, _n in plan.allocations}.values())
@@ -555,7 +558,7 @@ def case_page(request: Request, db: Session = Depends(get_db)):
                              "restante fica reservado (tracejado)")
                 if plan.shortage:
                     note += f" · sem bin: {plan.shortage} un."
-                lv = _level_note(db, [key], c)
+                lv = _level_note(db, [key], c, to_int(filters.get("branch_id")))
                 sections.append(section(f"after-{c}", f"Depois — {dict(SCENARIO_LABELS)[c]}", icons[c], bins,
                                         note + (" · " + lv if lv else "")))
         else:
@@ -597,7 +600,7 @@ def case_page(request: Request, db: Session = Depends(get_db)):
                 if sum(planned.values()) > stock + 1e-9:
                     note += (" · o planejado é maior que o saldo: o saldo é dividido entre as bins sugeridas e o "
                              "restante fica reservado (tracejado)")
-                lv = _level_note(db, list(planned), c)
+                lv = _level_note(db, list(planned), c, to_int(filters.get("branch_id")))
                 sections.append(section(f"after-{c}", f"Depois — {dict(SCENARIO_LABELS)[c]}", icons[c], bins,
                                         note + (" · " + lv if lv else "")))
     except ValueError as exc:

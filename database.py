@@ -132,8 +132,10 @@ def _add_missing_columns(conn) -> None:
     if "shelf_levels" in tables and "height_cm" not in {c["name"] for c in insp.get_columns("shelf_levels")}:
         conn.execute(text("ALTER TABLE shelf_levels ADD COLUMN height_cm BIGINT"))
     pcols = {c["name"] for c in insp.get_columns("products")} if "products" in tables else set()
+    # min/max level ficavam no produto (versões anteriores; agora na política de estoque por filial): a coluna é
+    # criada em bancos bem antigos só para a migração de políticas encontrar o formato esperado
     for col in ("min_level", "max_level"):
-        if "products" in tables and col not in pcols:
+        if "products" in tables and col not in pcols and "default_location_id" in pcols:
             conn.execute(text(f"ALTER TABLE products ADD COLUMN {col} BIGINT"))
     btcols = {c["name"] for c in insp.get_columns("bin_types")} if "bin_types" in tables else set()
     for col, ddl in (("parent_id", "INTEGER REFERENCES bin_types(id)"), ("fraction_num", "INTEGER"),
@@ -157,6 +159,45 @@ def _add_missing_columns(conn) -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_products_material_type ON products (material_type)"))
 
 
+def _migrate_stock_policies(conn) -> None:
+    """Versões anteriores guardavam endereço padrão, min e max level no PRODUTO (valia para todas as filiais).
+    Agora ficam na política de estoque (produto × filial). Migração única (tabela de políticas vazia):
+      - endereço padrão -> política da filial desse endereço;
+      - min/max level -> políticas das filiais onde o produto tem endereço padrão ou saldo; sem nenhuma
+        referência, em todas as filiais.
+    As colunas antigas ficam no banco (não são mais usadas)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(conn)
+    if "products" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("products")}
+    if not {"default_location_id", "min_level", "max_level"} <= cols:
+        return
+    if conn.execute(text("SELECT COUNT(*) FROM stock_policies")).scalar():
+        return
+    rows = conn.execute(text("SELECT p.id, p.default_location_id, p.min_level, p.max_level, l.branch_id FROM products p "
+                             "LEFT JOIN storage_locations l ON l.id = p.default_location_id "
+                             "WHERE p.default_location_id IS NOT NULL OR p.min_level IS NOT NULL "
+                             "OR p.max_level IS NOT NULL")).all()
+    if not rows:
+        return
+    stock_br: dict[int, set] = {}
+    for pid, bid in conn.execute(text("SELECT DISTINCT s.product_id, l.branch_id FROM stock_items s "
+                                      "JOIN storage_locations l ON l.id = s.location_id")):
+        stock_br.setdefault(pid, set()).add(bid)
+    all_br = [b for (b,) in conn.execute(text("SELECT id FROM branches"))]
+    for pid, loc, mn, mx, loc_br in rows:
+        brs = set(stock_br.get(pid, set())) | ({loc_br} if loc_br else set())
+        if not brs and (mn is not None or mx is not None):
+            brs = set(all_br)
+        for b in brs:
+            conn.execute(text("INSERT INTO stock_policies (branch_id, product_id, default_location_id, min_level, "
+                              "max_level, created_at, updated_at) VALUES (:b, :p, :l, :mn, :mx, CURRENT_TIMESTAMP, "
+                              "CURRENT_TIMESTAMP)"),
+                         {"b": b, "p": pid, "l": loc if b == loc_br else None, "mn": mn, "mx": mx})
+
+
 def init_db() -> None:
     import models  # noqa: F401  (registra os modelos no metadata)
     from sqlalchemy import text
@@ -172,6 +213,8 @@ def init_db() -> None:
     # Garante a regra de ocupação também para dados gravados por versões anteriores.
     from services.stock_service import refresh_occupancy
 
+    with engine.begin() as conn:
+        _migrate_stock_policies(conn)
     with SessionLocal() as db:
         refresh_occupancy(db, None)
         from services.stock_service import sync_default_locations

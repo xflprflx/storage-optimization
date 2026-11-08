@@ -26,17 +26,6 @@
           <input class="form-control" name="material_type" maxlength="60" list="materialTypes" value="{{ data.get('material_type') or '' }}" placeholder="Ex.: Eletrônico">
           <datalist id="materialTypes">{% for mt, n in material_types() if mt %}<option value="{{ mt }}">{% endfor %}</datalist>
         </div>
-        <div class="col-12">
-          <label class="form-label">Endereço padrão</label>
-          <div>
-            <input class="form-control mono {{ invalid(errors, 'default_location_id') }}" name="default_location_label"
-                   value="{{ data.get('default_location_label') or '' }}" placeholder="Digite para buscar (ex.: A-01-01)"
-                   data-autocomplete="/api/locations/search" data-hidden="default_location_id">
-          </div>
-          <input type="hidden" name="default_location_id" id="default_location_id" value="{{ data.get('default_location_id') or '' }}">
-          {{ field_error(errors, 'default_location_id') }}
-          <div class="form-text">É o endereço onde o produto fica. Quando o produto tem saldo, é preenchido automaticamente com o endereço de maior saldo; você pode escolher outro entre os endereços onde ele tem saldo. Sem saldo lançado, vale o endereço informado aqui.</div>
-        </div>
       </div>
       <hr class="my-4">
       <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> Dimensões físicas</h6>
@@ -50,20 +39,43 @@
         {% endfor %}
       </div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-bar-chart-steps"></i> Níveis de estoque no endereço padrão (unidades)</h6>
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label">Nível mínimo <small class="text-muted">(min level)</small></label>
-          <input class="form-control text-end {{ invalid(errors, 'min_level') }}" name="min_level" inputmode="decimal" value="{{ data.get('min_level')|dec_input }}">
-          {{ field_error(errors, 'min_level') }}
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Nível máximo <small class="text-muted">(max level)</small></label>
-          <input class="form-control text-end {{ invalid(errors, 'max_level') }}" name="max_level" inputmode="decimal" value="{{ data.get('max_level')|dec_input }}">
-          {{ field_error(errors, 'max_level') }}
-        </div>
-        <div class="col-md-6 form-text align-self-end">Usados na otimização de bins quando a base de cálculo é "Nível mínimo" ou "Nível máximo".</div>
+      <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-diagram-3"></i> Política de estoque por filial</h6>
+      <div class="form-text mt-0 mb-2">O cadastro acima é o mesmo em todas as filiais. Aqui fica o que muda em cada uma: o <b>endereço padrão</b>
+        (onde o produto fica na filial; com saldo, vira o endereço de maior saldo se o escolhido não tiver saldo) e os <b>níveis de estoque</b>
+        (min e max level, em unidades, usados na otimização). Linha sem endereço e sem níveis = sem política nessa filial.</div>
+      {% if errors.get('policies') %}<div class="alert alert-danger py-1 small">{{ errors.get('policies')|join(' ') if errors.get('policies') is not string else errors.get('policies') }}</div>{% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-1" id="polTable" data-no-resize>
+          <thead class="small"><tr><th style="width:230px">Filial</th><th>Endereço padrão</th><th style="width:120px">Mín. (min level)</th><th style="width:120px">Máx. (max level)</th><th style="width:60px" class="text-center">Remover</th></tr></thead>
+          <tbody>
+            {% for r in data.get('policies') or [] %}{% set i = 'e' ~ loop.index0 %}
+            <tr>
+              <td><input type="hidden" name="pol_idx" value="{{ i }}">
+                <select class="form-select form-select-sm" name="pol_branch_{{ i }}" id="pol_branch_{{ i }}"><option value="">— filial —</option>{% for br in branches %}<option value="{{ br.id }}" {% if r.branch_id == br.id %}selected{% endif %}>{{ br.code }} - {{ br.name }}</option>{% endfor %}</select></td>
+              <td><div><input class="form-control form-control-sm mono" name="pol_loc_label_{{ i }}" value="{{ r.location_label or '' }}" placeholder="Digite para buscar"
+                  data-autocomplete="/api/locations/search" data-hidden="pol_loc_{{ i }}" data-deps="pol_branch_{{ i }}:branch_id"></div>
+                <input type="hidden" name="pol_loc_{{ i }}" id="pol_loc_{{ i }}" value="{{ r.location_id or '' }}"></td>
+              <td><input class="form-control form-control-sm text-end" name="pol_min_{{ i }}" inputmode="decimal" value="{{ r.min_level|dec_input }}"></td>
+              <td><input class="form-control form-control-sm text-end" name="pol_max_{{ i }}" inputmode="decimal" value="{{ r.max_level|dec_input }}"></td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" name="pol_del_{{ i }}" value="1" title="Remover a política desta filial"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="addPolicy"><i class="bi bi-plus-lg"></i> Política em outra filial</button>
+      <template id="polTpl">
+            <tr>
+              <td><input type="hidden" name="pol_idx" value="__i__">
+                <select class="form-select form-select-sm" name="pol_branch___i__" id="pol_branch___i__"><option value="">— filial —</option>{% for br in branches %}<option value="{{ br.id }}" >{{ br.code }} - {{ br.name }}</option>{% endfor %}</select></td>
+              <td><div><input class="form-control form-control-sm mono" name="pol_loc_label___i__" placeholder="Digite para buscar"
+                  data-autocomplete="/api/locations/search" data-hidden="pol_loc___i__" data-deps="pol_branch___i__:branch_id"></div>
+                <input type="hidden" name="pol_loc___i__" id="pol_loc___i__"></td>
+              <td><input class="form-control form-control-sm text-end" name="pol_min___i__" inputmode="decimal"></td>
+              <td><input class="form-control form-control-sm text-end" name="pol_max___i__" inputmode="decimal"></td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" name="pol_del___i__" value="1" title="Remover a política desta filial"></td>
+            </tr>
+      </template>
       <div class="mt-4">
         <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
         <a href="/products" class="btn btn-link">Cancelar</a>
@@ -71,4 +83,16 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const tb = document.querySelector('#polTable tbody'), tpl = document.getElementById('polTpl');
+  let n = 0;
+  const add = () => { tb.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', 'n' + (n++))); if (window.nkAutocomplete) nkAutocomplete(); };
+  document.getElementById('addPolicy')?.addEventListener('click', add);
+  if (tb && !tb.querySelector('tr')) add();  // produto sem política: já mostra uma linha
+})();
+</script>
 {% endblock %}

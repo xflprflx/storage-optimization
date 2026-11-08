@@ -370,6 +370,10 @@ class Dimensions:
 
 
 class Product(TimestampMixin, Base):
+    """Cadastro ÚNICO do produto, compartilhado por todas as filiais: o que é do produto em si (SKU, nome, material,
+    dimensões e peso). O que muda de filial para filial (endereço padrão, min e max level) fica na política de
+    estoque (StockPolicy: produto × filial)."""
+
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -377,26 +381,44 @@ class Product(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     # Tipo de material (ex.: Eletrônico, Químico, Embalagem). Vazio = não informado.
     material_type: Mapped[str] = mapped_column(String(60), nullable=False, default="", server_default="", index=True)
-    default_location_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("storage_locations.id", ondelete="SET NULL"), nullable=True, index=True
-    )
     height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    # Níveis de estoque do produto no endereço padrão (unidades): mínimo (min level) e máximo (max level)
-    min_level: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    max_level: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
 
     dimensions: Mapped[Dimensions] = composite("height", "width", "length", "weight")
 
-    default_location: Mapped[Optional[StorageLocation]] = relationship()
+    policies: Mapped[list["StockPolicy"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan", passive_deletes=True
+    )
     stock_items: Mapped[list["StockItem"]] = relationship(
         back_populates="product", cascade="all, delete-orphan", passive_deletes=True
     )
 
     def __repr__(self) -> str:
         return f"<Product {self.sku}>"
+
+
+class StockPolicy(TimestampMixin, Base):
+    """Política de estoque do produto NA FILIAL: endereço padrão (onde o produto normalmente fica nessa filial) e
+    níveis de estoque (min e max level, em unidades). Um registro por (filial, produto); o cadastro do produto é o
+    mesmo para todas as filiais."""
+
+    __tablename__ = "stock_policies"
+    __table_args__ = (UniqueConstraint("branch_id", "product_id", name="uq_policy_branch_product"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    default_location_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("storage_locations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    min_level: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    max_level: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+
+    product: Mapped["Product"] = relationship(back_populates="policies")
+    branch: Mapped[Branch] = relationship()
+    default_location: Mapped[Optional[StorageLocation]] = relationship()
 
 
 # --------------------------------------------------------------------------- #

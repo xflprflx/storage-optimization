@@ -148,6 +148,8 @@ function nkFilterWarehouses() {
    <input data-autocomplete="/api/..." data-hidden="id_do_hidden" data-deps="branch_id,warehouse_id" data-value-field="sku"> */
 function nkAutocomplete() {
   document.querySelectorAll('input[data-autocomplete]').forEach(input => {
+    if (input.dataset.acInit) return;  // pode ser chamada de novo para linhas adicionadas depois
+    input.dataset.acInit = '1';
     const url = input.dataset.autocomplete;
     const hidden = input.dataset.hidden ? document.getElementById(input.dataset.hidden) : null;
     const wrap = input.parentElement; wrap.style.position = 'relative';
@@ -158,8 +160,9 @@ function nkAutocomplete() {
     async function search() {
       const my = ++seq;
       const params = new URLSearchParams({ q: input.value });
-      (input.dataset.deps || '').split(',').filter(Boolean).forEach(d => {
-        const el = document.getElementById(d); if (el && el.value) params.set(d, el.value);
+      (input.dataset.deps || '').split(',').filter(Boolean).forEach(d => {  // "id" ou "id:parâmetro"
+        const [id, param] = d.split(':');
+        const el = document.getElementById(id); if (el && el.value) params.set(param || id, el.value);
       });
       try {
         const r = await fetch(url + '?' + params.toString());

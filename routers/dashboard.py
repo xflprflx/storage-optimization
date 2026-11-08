@@ -8,7 +8,7 @@ from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import BinType, Branch, LocationBin, Product, StockItem, StorageLocation, Warehouse
+from models import BinType, Branch, LocationBin, Product, StockItem, StockPolicy, StorageLocation, Warehouse
 from routers.common import render
 
 router = APIRouter(tags=["Painel"])
@@ -33,7 +33,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "without_bins": total_locations - with_bins,
         "stock_qty": db.scalar(select(func.coalesce(func.sum(StockItem.quantity), Decimal("0")))) or Decimal("0"),
         "products_without_location": db.scalar(
-            select(func.count()).where(Product.default_location_id.is_(None),
+            select(func.count()).where(~Product.id.in_(select(StockPolicy.product_id)
+                                                       .where(StockPolicy.default_location_id.is_not(None))),
                                        ~Product.id.in_(select(StockItem.product_id)))) or 0,
     }
     # Ocupação por filial/armazém

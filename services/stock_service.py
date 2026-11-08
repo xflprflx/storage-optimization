@@ -26,14 +26,14 @@ def has_items_expr(location_id, correlate=None):
     """REGRA ÚNICA DE OCUPAÇÃO: o endereço está ocupado se tiver QUALQUER item atrelado,
     mesmo sem saldo:
       - registro de saldo (StockItem), inclusive com quantidade zero;
-      - produto com este endereço como endereço padrão.
+      - produto com este endereço como endereço padrão (na política de estoque da filial).
     `location_id` pode ser uma coluna (ex.: StorageLocation.id) ou um id fixo.
     """
-    from models import Product
+    from models import StockPolicy
 
     parts = [
         exists().where(StockItem.location_id == location_id),
-        exists().where(Product.default_location_id == location_id),
+        exists().where(StockPolicy.default_location_id == location_id),
     ]
     if correlate is not None:
         parts = [p.correlate(correlate) for p in parts]
@@ -173,43 +173,53 @@ def resolve_skus(db: Session, skus: Iterable[str]) -> tuple[dict[str, int], list
 
 
 def sync_default_locations(db: Session, product_ids: Optional[Iterable[int]] = None) -> int:
-    """ENDEREÇO PADRÃO = endereço onde o produto normalmente está.
+    """ENDEREÇO PADRÃO = endereço onde o produto normalmente está, EM CADA FILIAL (política de estoque).
 
-    Para cada produto que tem saldo lançado:
-      - se o endereço padrão está vazio, ou não é um dos endereços onde o produto está,
-        passa a ser o endereço onde o produto tem a MAIOR quantidade;
+    Para cada produto e filial onde ele tem saldo lançado:
+      - se o endereço padrão da filial está vazio, ou não é um dos endereços onde o produto está nela,
+        passa a ser o endereço onde o produto tem a MAIOR quantidade (a política é criada se faltar);
       - se o padrão já é um dos endereços onde o produto está, é mantido (escolha do usuário).
     "Onde está" = registros com quantidade > 0; se todos estiverem zerados, qualquer registro de saldo.
-    Produto sem nenhum saldo lançado mantém o padrão informado (endereço previsto).
-    Retorna quantos produtos tiveram o endereço padrão alterado (a ocupação é recalculada).
+    Produto sem saldo lançado na filial mantém o padrão informado (endereço previsto).
+    Retorna quantas políticas tiveram o endereço padrão alterado (a ocupação é recalculada).
     """
-    from models import Product
+    from models import StockPolicy
 
     ids = None if product_ids is None else {i for i in product_ids if i}
     if ids is not None and not ids:
         return 0
-    stmt = (select(StockItem.product_id, StockItem.location_id, StockItem.quantity, StorageLocation.address)
+    stmt = (select(StockItem.product_id, StorageLocation.branch_id, StockItem.location_id, StockItem.quantity,
+                   StorageLocation.address)
             .join(StorageLocation, StorageLocation.id == StockItem.location_id))
-    rows_by_product: dict[int, list] = {}
+    rows_by_key: dict[tuple, list] = {}
     chunks = [None] if ids is None else list(_chunks(ids))
     for chunk in chunks:
         q = stmt if chunk is None else stmt.where(StockItem.product_id.in_(chunk))
-        for pid, lid, qty, addr in db.execute(q):
-            rows_by_product.setdefault(pid, []).append((lid, qty or 0, addr))
-    if not rows_by_product:
+        for pid, bid, lid, qty, addr in db.execute(q):
+            rows_by_key.setdefault((pid, bid), []).append((lid, qty or 0, addr))
+    if not rows_by_key:
         return 0
-    current: dict[int, Optional[int]] = {}
-    for chunk in _chunks(rows_by_product.keys()):
-        current.update(db.execute(select(Product.id, Product.default_location_id).where(Product.id.in_(chunk))).all())
+    pols: dict[tuple, StockPolicy] = {}
+    pids = {k[0] for k in rows_by_key}
+    for chunk in _chunks(pids):
+        for pol in db.scalars(select(StockPolicy).where(StockPolicy.product_id.in_(chunk))):
+            pols[(pol.product_id, pol.branch_id)] = pol
     changed, touched = 0, set()
-    for pid, rows in rows_by_product.items():
+    for (pid, bid), rows in rows_by_key.items():
         here = [r for r in rows if r[1] > 0] or rows
-        if current.get(pid) in {r[0] for r in here}:
+        pol = pols.get((pid, bid))
+        if pol is not None and pol.default_location_id in {r[0] for r in here}:
             continue
         best = sorted(here, key=lambda r: (-r[1], r[2]))[0][0]
-        touched.update((current.get(pid), best))
-        db.execute(update(Product).where(Product.id == pid).values(default_location_id=best))
+        if pol is None:
+            pol = StockPolicy(branch_id=bid, product_id=pid)
+            db.add(pol)
+            pols[(pid, bid)] = pol
+        touched.update((pol.default_location_id, best))
+        pol.default_location_id = best
         changed += 1
+    if changed:
+        db.flush()
     if changed:
         refresh_occupancy(db, touched)
     return changed

@@ -29,7 +29,7 @@
         <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".prod-check" title="Selecionar todos da página"></th>
         {{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'name', 'Nome') }}{{ th(request, sort, 'material', 'Tipo de material') }}{{ th(request, sort, 'location', 'Endereço padrão') }}
         {{ th(request, sort, 'height', 'Alt.', 'text-end') }}{{ th(request, sort, 'width', 'Larg.', 'text-end') }}
-        {{ th(request, sort, 'length', 'Comp.', 'text-end') }}{{ th(request, sort, 'weight', 'Peso', 'text-end') }}{{ th(request, sort, 'min_level', 'Mín.', 'text-end') }}{{ th(request, sort, 'max_level', 'Máx.', 'text-end') }}
+        {{ th(request, sort, 'length', 'Comp.', 'text-end') }}{{ th(request, sort, 'weight', 'Peso', 'text-end') }}<th title="Política de estoque por filial: min–max level">Mín.–Máx. por filial</th>
         {{ th(request, sort, 'total', 'Saldo total', 'text-end') }}
         <th class="text-end" style="width:150px">Ações</th>
       </tr></thead>
@@ -51,8 +51,8 @@
           <td class="text-end">{{ p.dimensions.width|dec }}</td>
           <td class="text-end">{{ p.dimensions.length|dec }}</td>
           <td class="text-end">{{ p.dimensions.weight|dec }}</td>
-          <td class="text-end">{{ p.min_level|dec }}</td>
-          <td class="text-end">{{ p.max_level|dec }}</td>
+          <td class="small text-nowrap">{% for pol in policies.get(p.id, [])[:3] %}<div class="nk-line"><span class="text-muted">{{ pol.branch }}</span> {{ pol.min|dec if pol.min is not none else '—' }}–{{ pol.max|dec if pol.max is not none else '—' }}</div>{% else %}<span class="text-muted">—</span>{% endfor %}
+            {% if policies.get(p.id, [])|length > 3 %}<div class="nk-line"><a href="/products/{{ p.id }}">+{{ policies[p.id]|length - 3 }}…</a></div>{% endif %}</td>
           <td class="text-end fw-semibold">{{ (totals.get(p.id) or 0)|dec }}</td>
           <td class="text-end text-nowrap">
             <a class="btn btn-sm btn-outline-secondary" href="/products/{{ p.id }}" title="Detalhes"><i class="bi bi-eye"></i></a>

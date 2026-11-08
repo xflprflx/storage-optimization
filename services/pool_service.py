@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from models import Product, StockItem, StorageLocation
+from models import Product, StockItem, StockPolicy, StorageLocation
 from services.bin_optimizer import ProductUnit
 from services.optimization_service import MAX_SCOPE, load_types
 from services.pool_optimizer import PoolBin, PoolParams, PoolResult, SkuDemand, optimize_pool
@@ -70,20 +70,29 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
             gk = (locs[si.location_id][1], locs[si.location_id][2])
             stock.setdefault((gk, si.product_id), {})[si.location_id] = float(si.quantity)
             prods[si.product_id] = None
-        for p in db.scalars(select(Product).where(Product.default_location_id.in_(ch))):
-            prods[p.id] = p
-            gk = (locs[p.default_location_id][1], locs[p.default_location_id][2])
-            stock.setdefault((gk, p.id), {})
+        # produtos cujo endereço padrão (política de estoque da filial) está no escopo
+        for pol in db.scalars(select(StockPolicy).where(StockPolicy.default_location_id.in_(ch))):
+            prods.setdefault(pol.product_id, None)
+            gk = (locs[pol.default_location_id][1], locs[pol.default_location_id][2])
+            stock.setdefault((gk, pol.product_id), {})
     missing = [pid for pid, p in prods.items() if p is None]
     for ch in _chunks(missing):
         for p in db.scalars(select(Product).where(Product.id.in_(ch))):
             prods[p.id] = p
+    # política de estoque (endereço padrão, min/max) de cada produto nas filiais do escopo
+    pols: dict[tuple, StockPolicy] = {}
+    branch_ids = {b for _a, b, _w in locs.values()}
+    for ch in _chunks(list(prods)):
+        for pol in db.scalars(select(StockPolicy).where(StockPolicy.product_id.in_(ch),
+                                                        StockPolicy.branch_id.in_(branch_ids))):
+            pols[(pol.product_id, pol.branch_id)] = pol
     notes: list[str] = []
     no_level: list[str] = []
 
     def dflt_of(p, gk):
-        return p.default_location_id if p.default_location_id in locs and (locs[p.default_location_id][1],
-                                                                            locs[p.default_location_id][2]) == gk else None
+        pol = pols.get((p.id, gk[0]))
+        d = pol.default_location_id if pol is not None else None
+        return d if d in locs and (locs[d][1], locs[d][2]) == gk else None
     for (gk, pid), cur in stock.items():
         p = prods[pid]
         grp = groups.setdefault(gk, {"bins": [], "demands": {}, "reserved": set(), "no_dims": [], "fixed": {}})
@@ -97,15 +106,15 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
                 grp.setdefault("pinned", set()).add(p.sku)
             continue
         unit = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight))
-        dflt = p.default_location_id if p.default_location_id in locs and (locs[p.default_location_id][1],
-                                                                             locs[p.default_location_id][2]) == gk else None
+        dflt = dflt_of(p, gk)
         if not unit.has_dims:
             grp["no_dims"].append(p.sku)
             grp["reserved"] |= set(cur) | ({dflt} if dflt else set())
             continue
         qty = sum(cur.values())
         if basis in ("min", "max") and dflt:
-            lvl = p.min_level if basis == "min" else p.max_level
+            pol = pols.get((pid, gk[0]))
+            lvl = (pol.min_level if basis == "min" else pol.max_level) if pol is not None else None
             if lvl is not None and float(lvl) > 0:  # 0 = não cadastrado
                 # nunca menos espaço que o saldo físico do endereço padrão
                 qty = max(float(lvl), float(cur.get(dflt, 0))) + sum(q for l, q in cur.items() if l != dflt)
@@ -217,10 +226,12 @@ def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str
             if total <= 0:
                 # sem saldo (min/max level): o produto passa a ficar no endereço planejado
                 best = max(planned, key=lambda l: planned[l])
-                p = db.get(Product, plan.product_id)
-                if p.default_location_id != best:
-                    touched_locs |= {p.default_location_id, best}
-                    p.default_location_id = best
+                from services.policy_service import get_policy
+
+                pol = get_policy(db, db.get(StorageLocation, best).branch_id, plan.product_id, create=True)
+                if pol.default_location_id != best:
+                    touched_locs |= {pol.default_location_id, best}
+                    pol.default_location_id = best
                     changed += 1
                 continue
             affected |= set(cur) | set(planned)

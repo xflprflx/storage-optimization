@@ -18,6 +18,7 @@ from models import (
     Product,
     ShelfLevel,
     StockItem,
+    StockPolicy,
     StorageLocation,
     Warehouse,
     branch_warehouse,
@@ -216,8 +217,10 @@ def location_contents(db: Session, ids: list[int]) -> dict[int, list[dict]]:
         .join(Product, Product.id == StockItem.product_id).where(StockItem.location_id.in_(ids))
     ):
         item(r[0], r[1], r[2], r[3], r[4])["quantity"] = r[5]
-    for r in db.execute(select(Product.default_location_id, Product.id, Product.sku, Product.name, Product.material_type)
-                        .where(Product.default_location_id.in_(ids))):
+    for r in db.execute(select(StockPolicy.default_location_id, Product.id, Product.sku, Product.name,
+                               Product.material_type)
+                        .join(Product, Product.id == StockPolicy.product_id)
+                        .where(StockPolicy.default_location_id.in_(ids))):
         item(*r)["tags"].add("padrão")
     out: dict[int, list[dict]] = {}
     for (lid, _), it in sorted(merged.items(), key=lambda kv: (kv[0][0], kv[1]["sku"])):
@@ -232,7 +235,8 @@ def linked_location_ids(sku_query: str = "", material: str = ""):
         select(StockItem.location_id.label("lid")).join(Product, Product.id == StockItem.product_id),
         sku_query, Product.sku, Product.name, fields=sku_name_fields(Product))
     via_default = text_search(
-        select(Product.default_location_id.label("lid")).where(Product.default_location_id.is_not(None)),
+        select(StockPolicy.default_location_id.label("lid")).join(Product, Product.id == StockPolicy.product_id)
+        .where(StockPolicy.default_location_id.is_not(None)),
         sku_query, Product.sku, Product.name, fields=sku_name_fields(Product))
     cond = material_condition(material)
     if cond is not None:
@@ -300,16 +304,18 @@ def list_locations(
     first_stock_sku = (select(func.min(Product.sku)).select_from(StockItem)
                        .join(Product, Product.id == StockItem.product_id)
                        .where(StockItem.location_id == L.id).correlate(L).scalar_subquery())
-    first_default_sku = (select(func.min(Product.sku)).where(Product.default_location_id == L.id)
-                         .correlate(L).scalar_subquery())
+    first_default_sku = (select(func.min(Product.sku)).select_from(StockPolicy)
+                         .join(Product, Product.id == StockPolicy.product_id)
+                         .where(StockPolicy.default_location_id == L.id).correlate(L).scalar_subquery())
     hi = "\U0010ffff"  # sentinela: endereços sem produto vão para o fim
     first_sku = func.nullif(func.min(func.coalesce(first_stock_sku, hi), func.coalesce(first_default_sku, hi)), hi)
     total_qty = select(func.sum(StockItem.quantity)).where(has_qty).correlate(L).scalar_subquery()
     mat_stock = (select(func.min(func.nullif(Product.material_type, ""))).select_from(StockItem)
                  .join(Product, Product.id == StockItem.product_id)
                  .where(StockItem.location_id == L.id).correlate(L).scalar_subquery())
-    mat_default = (select(func.min(func.nullif(Product.material_type, ""))).where(Product.default_location_id == L.id)
-                   .correlate(L).scalar_subquery())
+    mat_default = (select(func.min(func.nullif(Product.material_type, ""))).select_from(StockPolicy)
+                   .join(Product, Product.id == StockPolicy.product_id)
+                   .where(StockPolicy.default_location_id == L.id).correlate(L).scalar_subquery())
     first_material = func.nullif(func.min(func.coalesce(mat_stock, hi), func.coalesce(mat_default, hi)), hi)
     first_bin = (select(func.min(BinType.code)).select_from(LocationBin)
                  .join(BinType, BinType.id == LocationBin.bin_type_id)

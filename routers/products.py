@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
@@ -30,16 +31,15 @@ from services.stock_service import refresh_occupancy, sync_default_locations
 router = APIRouter(prefix="/products", tags=["Produtos"])
 
 DIM_FIELDS = (("height", "Altura"), ("width", "Largura"), ("length", "Comprimento"), ("weight", "Peso"))
-LEVEL_FIELDS = (("min_level", "Nível mínimo"), ("max_level", "Nível máximo"))
 
 
 def _validate(db: Session, form: FormData, product_id: int | None):
+    """Cadastro do produto (compartilhado por todas as filiais) + políticas de estoque por filial (linhas pol_*)."""
     errors = FormErrors()
     data = {
         "sku": normalize_code(f_str(form, "sku")),
         "name": f_str(form, "name", 255),
         "material_type": MaterialResolver(db)(f_str(form, "material_type")),
-        "default_location_id": f_int(form, "default_location_id"),
     }
     if not data["sku"]:
         errors.add("sku", "SKU é obrigatório.")
@@ -53,23 +53,107 @@ def _validate(db: Session, form: FormData, product_id: int | None):
             errors.add("sku", f"SKU {data['sku']} já cadastrado.")
     if not data["name"]:
         errors.add("name", "Nome é obrigatório.")
-    for key, label in DIM_FIELDS + LEVEL_FIELDS:
+    for key, label in DIM_FIELDS:
         data[key] = f_dec(form, key, errors, label)
-    if (data.get("min_level") is not None and data.get("max_level") is not None
-            and data["min_level"] > data["max_level"]):
-        errors.add("max_level", "Nível máximo deve ser maior ou igual ao mínimo.")
-    if data["default_location_id"] and not db.get(StorageLocation, data["default_location_id"]):
-        errors.add("default_location_id", "Endereço padrão inválido.")
-    data["default_location_label"] = f_str(form, "default_location_label")
+    data["policies"] = _policy_rows(db, form, errors)
     return errors, data
+
+
+def _policy_rows(db: Session, form: FormData, errors: FormErrors) -> list[dict]:
+    """Linhas da tabela "Política de estoque por filial": filial, endereço padrão, min e max level."""
+    from models import Branch
+
+    rows, seen = [], set()
+    for i in form.getlist("pol_idx"):
+        bid = f_int(form, f"pol_branch_{i}")
+        row = {"idx": i, "branch_id": bid, "location_id": f_int(form, f"pol_loc_{i}"),
+               "location_label": f_str(form, f"pol_loc_label_{i}"), "delete": bool(form.get(f"pol_del_{i}"))}
+        row["min_level"] = f_dec(form, f"pol_min_{i}", errors, "Nível mínimo")
+        row["max_level"] = f_dec(form, f"pol_max_{i}", errors, "Nível máximo")
+        empty = not row["location_id"] and row["min_level"] is None and row["max_level"] is None
+        if not bid:
+            if not empty:
+                errors.add("policies", "Escolha a filial de cada política de estoque.")
+            continue
+        br = db.get(Branch, bid)
+        if br is None:
+            errors.add("policies", "Filial inválida.")
+            continue
+        if bid in seen:
+            errors.add("policies", f"Filial {br.code} aparece mais de uma vez: uma política por filial.")
+            continue
+        seen.add(bid)
+        if row["location_label"] and not row["location_id"]:
+            errors.add("policies", f"{br.code}: escolha o endereço padrão na lista (ou deixe vazio).")
+        if row["location_id"]:
+            loc = db.get(StorageLocation, row["location_id"])
+            if loc is None or loc.branch_id != bid:
+                errors.add("policies", f"{br.code}: o endereço padrão precisa ser da própria filial.")
+        if row["min_level"] is not None and row["max_level"] is not None and row["min_level"] > row["max_level"]:
+            errors.add("policies", f"{br.code}: nível máximo deve ser maior ou igual ao mínimo.")
+        row["empty"] = empty
+        rows.append(row)
+    return rows
+
+
+def _save_policies(db: Session, prod: Product, rows: list[dict]) -> set:
+    """Grava as políticas (linha vazia ou marcada para remover = remove a da filial). Retorna os endereços
+    padrão antigos e novos (para recalcular a ocupação)."""
+    from models import StockPolicy
+
+    current = {p.branch_id: p for p in db.scalars(select(StockPolicy).where(StockPolicy.product_id == prod.id))}
+    touched = {p.default_location_id for p in current.values()}
+    keep = set()
+    for r in rows:
+        pol = current.get(r["branch_id"])
+        if r["delete"] or r["empty"]:
+            continue
+        if pol is None:
+            pol = StockPolicy(branch_id=r["branch_id"], product_id=prod.id)
+            db.add(pol)
+        pol.default_location_id = r["location_id"] or None
+        pol.min_level, pol.max_level = r["min_level"], r["max_level"]
+        touched.add(pol.default_location_id)
+        keep.add(r["branch_id"])
+    for bid, pol in current.items():
+        if bid not in keep:
+            db.delete(pol)
+    db.flush()
+    return touched
+
+
+def _policy_form_rows(db: Session, prod: Optional[Product]) -> list[dict]:
+    """Políticas atuais do produto para o formulário (+ uma linha vazia para outra filial)."""
+    from models import StockPolicy
+
+    rows = []
+    if prod is not None:
+        for i, pol in enumerate(db.scalars(select(StockPolicy).where(StockPolicy.product_id == prod.id)
+                                           .options(joinedload(StockPolicy.default_location),
+                                                    joinedload(StockPolicy.branch)))):
+            rows.append({"idx": str(i), "branch_id": pol.branch_id, "location_id": pol.default_location_id,
+                         "location_label": pol.default_location.full_label if pol.default_location else "",
+                         "min_level": pol.min_level, "max_level": pol.max_level})
+    rows.sort(key=lambda r: r["branch_id"])
+    return rows
 
 
 SEARCH_FIELDS = {"": "Tudo", "sku": "SKU", "name": "Nome", "material": "Tipo de material", "address": "Endereço"}
 
 
-def _search_fields(DefLoc, stock_addresses) -> dict:
+def _search_fields(default_addresses, stock_addresses) -> dict:
     return {"sku": ((Product.sku,), ()), "name": ((Product.name,), ()), "material": ((Product.material_type,), ()),
-            "address": ((DefLoc.address, stock_addresses), (DefLoc.address, stock_addresses))}
+            "address": ((default_addresses, stock_addresses), (default_addresses, stock_addresses))}
+
+
+def _default_addresses(first: bool = False):
+    """Endereços padrão do produto nas filiais (políticas de estoque), para busca (todos) ou ordenação (o 1º)."""
+    from models import StockPolicy
+
+    DL = aliased(StorageLocation)
+    col = func.min(DL.address) if first else func.group_concat(DL.address, " ")
+    return (select(col).select_from(StockPolicy).join(DL, DL.id == StockPolicy.default_location_id)
+            .where(StockPolicy.product_id == Product.id).correlate(Product).scalar_subquery())
 
 
 def _filtered(q: str, material: str, field: str = "", mode: str = "contains"):
@@ -79,10 +163,11 @@ def _filtered(q: str, material: str, field: str = "", mode: str = "contains"):
     stock_addresses = (select(func.group_concat(SL.address, " ")).select_from(StockItem)
                        .join(SL, SL.id == StockItem.location_id)
                        .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
-    stmt = select(Product.id).outerjoin(DefLoc, DefLoc.id == Product.default_location_id)
-    stmt = text_search(stmt, q, Product.sku, Product.name, Product.material_type, DefLoc.address, stock_addresses,
-                       address_columns=(DefLoc.address, stock_addresses), mode=mode, only=field or None,
-                       fields=_search_fields(DefLoc, stock_addresses))
+    default_addresses = _default_addresses()
+    stmt = select(Product.id)
+    stmt = text_search(stmt, q, Product.sku, Product.name, Product.material_type, default_addresses, stock_addresses,
+                       address_columns=(default_addresses, stock_addresses), mode=mode, only=field or None,
+                       fields=_search_fields(default_addresses, stock_addresses))
     cond = material_condition(material)
     return stmt.where(cond) if cond is not None else stmt
 
@@ -149,17 +234,10 @@ def list_products(request: Request, q: str = "", material: str = "", sort: str =
                   field: str = "", mode: str = "contains", db: Session = Depends(get_db)):
     field = field if field in SEARCH_FIELDS else ""
     mode = mode if mode in SEARCH_MODES else "contains"
-    DefLoc = aliased(StorageLocation)
     total_stock = (select(func.coalesce(func.sum(StockItem.quantity), Decimal("0")))
                    .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
-    stmt = (
-        select(Product)
-        .outerjoin(DefLoc, DefLoc.id == Product.default_location_id)
-        .options(
-            joinedload(Product.default_location).joinedload(StorageLocation.branch),
-            joinedload(Product.default_location).joinedload(StorageLocation.warehouse),
-        )
-    )
+    stmt = select(Product)
+    default_addresses, first_default = _default_addresses(), _default_addresses(first=True)
     # Endereços onde o produto está (saldo) — usados na busca e na ordenação
     SL = aliased(StorageLocation)
     stock_addresses = (select(func.group_concat(SL.address, " ")).select_from(StockItem)
@@ -168,17 +246,16 @@ def list_products(request: Request, q: str = "", material: str = "", sort: str =
     first_stock_address = (select(func.min(SL.address)).select_from(StockItem)
                            .join(SL, SL.id == StockItem.location_id)
                            .where(StockItem.product_id == Product.id).correlate(Product).scalar_subquery())
-    stmt = text_search(stmt, q, Product.sku, Product.name, Product.material_type, DefLoc.address, stock_addresses,
-                       address_columns=(DefLoc.address, stock_addresses), mode=mode, only=field or None,
-                       fields=_search_fields(DefLoc, stock_addresses))
+    stmt = text_search(stmt, q, Product.sku, Product.name, Product.material_type, default_addresses, stock_addresses,
+                       address_columns=(default_addresses, stock_addresses), mode=mode, only=field or None,
+                       fields=_search_fields(default_addresses, stock_addresses))
     cond = material_condition(material)
     if cond is not None:
         stmt = stmt.where(cond)
     stmt, srt = apply_sort(stmt, sort, dir, {
         "sku": Product.sku, "name": Product.name, "material": (func.nullif(Product.material_type, ""), Product.sku),
-        "location": (func.coalesce(DefLoc.address, first_stock_address), Product.sku),
+        "location": (func.coalesce(first_default, first_stock_address), Product.sku),
         "height": Product.height, "width": Product.width, "length": Product.length, "weight": Product.weight,
-        "min_level": Product.min_level, "max_level": Product.max_level,
         "total": total_stock,
     }, default="sku", tiebreak=Product.id)
     pg = paginate(db, stmt, page)
@@ -191,7 +268,22 @@ def list_products(request: Request, q: str = "", material: str = "", sort: str =
     ) if ids else {}
     return render(request, "products/list.html", page=pg, q=q, material=material, sort=srt, totals=totals,
                   field=field, mode=mode, search_fields=SEARCH_FIELDS, search_modes=SEARCH_MODES,
-                  places=product_places(db, pg.items))
+                  places=product_places(db, pg.items), policies=_policies_summary(db, ids))
+
+
+def _policies_summary(db: Session, ids: list[int]) -> dict[int, list[dict]]:
+    """Políticas de estoque (filial, min, max) dos produtos da página."""
+    from models import Branch, StockPolicy
+
+    out: dict[int, list[dict]] = {}
+    if not ids:
+        return out
+    for pid, code, mn, mx in db.execute(select(StockPolicy.product_id, Branch.code, StockPolicy.min_level,
+                                               StockPolicy.max_level)
+                                        .join(Branch, Branch.id == StockPolicy.branch_id)
+                                        .where(StockPolicy.product_id.in_(ids)).order_by(Branch.code)):
+        out.setdefault(pid, []).append({"branch": code, "min": mn, "max": mx})
+    return out
 
 
 def product_places(db: Session, products) -> dict[int, list[dict]]:
@@ -213,36 +305,46 @@ def product_places(db: Session, products) -> dict[int, list[dict]]:
         .order_by(StockItem.product_id, StockItem.quantity.desc(), StorageLocation.address)
     ):
         out[pid].append({"id": lid, "address": addr, "scope": f"{b} / {w}" if w else b, "qty": qty, "default": False})
-    for p in products:
-        loc = p.default_location
-        if loc is None:
-            continue
-        hit = next((x for x in out[p.id] if x["id"] == loc.id), None)
+    from models import StockPolicy
+
+    for pol in db.scalars(select(StockPolicy).where(StockPolicy.product_id.in_(ids),
+                                                    StockPolicy.default_location_id.is_not(None))
+                          .options(joinedload(StockPolicy.default_location).joinedload(StorageLocation.branch),
+                                   joinedload(StockPolicy.default_location).joinedload(StorageLocation.warehouse))):
+        loc = pol.default_location  # endereço padrão na filial (um por filial)
+        hit = next((x for x in out[pol.product_id] if x["id"] == loc.id), None)
         if hit:
             hit["default"] = True
-            out[p.id].remove(hit)
-            out[p.id].insert(0, hit)
+            out[pol.product_id].remove(hit)
+            out[pol.product_id].insert(0, hit)
         else:
-            out[p.id].insert(0, {"id": loc.id, "address": loc.address, "scope": loc.scope_label, "qty": None,
-                                 "default": True})
+            out[pol.product_id].insert(0, {"id": loc.id, "address": loc.address, "scope": loc.scope_label, "qty": None,
+                                           "default": True})
     return out
 
 
+def _form(request: Request, db: Session, product, data, errors, status_code: int = 200):
+    from models import Branch
+
+    return render(request, "products/form.html", status_code=status_code, product=product, data=data, errors=errors,
+                  dim_fields=DIM_FIELDS, branches=list(db.scalars(select(Branch).order_by(Branch.code))))
+
+
 @router.get("/new")
-def new_product(request: Request):
-    return render(request, "products/form.html", product=None, data={}, errors={}, dim_fields=DIM_FIELDS)
+def new_product(request: Request, db: Session = Depends(get_db)):
+    return _form(request, db, None, {"policies": []}, {})
 
 
 @router.post("/new")
 def create_product(request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     errors, data = _validate(db, form, None)
     if errors:
-        return render(request, "products/form.html", status_code=422, product=None, data=data, errors=errors, dim_fields=DIM_FIELDS)
-    data.pop("default_location_label", None)
+        return _form(request, db, None, data, errors, 422)
+    rows = data.pop("policies")
     prod = Product(**data)
     db.add(prod)
     db.flush()
-    refresh_occupancy(db, [prod.default_location_id])
+    refresh_occupancy(db, _save_policies(db, prod, rows))
     sync_default_locations(db, [prod.id])
     db.commit()
     return redirect(f"/products/{prod.id}", f"Produto {prod.sku} criado.")
@@ -261,7 +363,13 @@ def product_detail(product_id: int, request: Request, db: Session = Depends(get_
         .order_by(StorageLocation.branch_id, StorageLocation.warehouse_id, StorageLocation.address)
     ))
     total = sum((s.quantity for s in stock), Decimal("0"))
-    return render(request, "products/detail.html", product=prod, stock=stock, total=total)
+    from models import StockPolicy
+
+    policies = list(db.scalars(select(StockPolicy).where(StockPolicy.product_id == product_id)
+                               .options(joinedload(StockPolicy.branch),
+                                        joinedload(StockPolicy.default_location).joinedload(StorageLocation.warehouse))))
+    policies.sort(key=lambda p: p.branch.code)
+    return render(request, "products/detail.html", product=prod, stock=stock, total=total, policies=policies)
 
 
 @router.get("/{product_id}/edit")
@@ -269,9 +377,9 @@ def edit_product(product_id: int, request: Request, db: Session = Depends(get_db
     prod = db.get(Product, product_id)
     if not prod:
         return redirect("/products", "Produto não encontrado.", "danger")
-    data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "default_location_id", "height", "width", "length", "weight", "min_level", "max_level")}
-    data["default_location_label"] = prod.default_location.full_label if prod.default_location else ""
-    return render(request, "products/form.html", product=prod, data=data, errors={}, dim_fields=DIM_FIELDS)
+    data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "height", "width", "length", "weight")}
+    data["policies"] = _policy_form_rows(db, prod)
+    return _form(request, db, prod, data, {})
 
 
 @router.post("/{product_id}/edit")
@@ -281,20 +389,17 @@ def update_product(product_id: int, request: Request, form: FormData = Depends(f
         return redirect("/products", "Produto não encontrado.", "danger")
     errors, data = _validate(db, form, product_id)
     if errors:
-        return render(request, "products/form.html", status_code=422, product=prod, data=data, errors=errors, dim_fields=DIM_FIELDS)
-    data.pop("default_location_label", None)
-    old_location = prod.default_location_id
+        return _form(request, db, prod, data, errors, 422)
+    rows = data.pop("policies")
     for k, v in data.items():
         setattr(prod, k, v)
     db.flush()
-    refresh_occupancy(db, [old_location, prod.default_location_id])
-    chosen = prod.default_location_id
+    refresh_occupancy(db, _save_policies(db, prod, rows))
     if sync_default_locations(db, [prod.id]):
         db.commit()
-        db.refresh(prod)
-        msg = (f"Produto {prod.sku} atualizado. O endereço padrão é o endereço onde o produto está: "
-               f"ficou {prod.default_location.address}" + (" (o endereço escolhido não tem saldo deste produto)." if chosen else "."))
-        return redirect(f"/products/{prod.id}", msg, "warning" if chosen else "success")
+        return redirect(f"/products/{prod.id}", f"Produto {prod.sku} atualizado. Em filial(is) onde ele tem saldo, o "
+                        "endereço padrão é o endereço onde o produto está (o de maior saldo, se o escolhido não tinha "
+                        "saldo).", "warning")
     db.commit()
     return redirect(f"/products/{prod.id}", f"Produto {prod.sku} atualizado.")
 
@@ -304,8 +409,10 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     prod = db.get(Product, product_id)
     if not prod:
         return redirect("/products", "Produto não encontrado.", "danger")
+    from models import StockPolicy
+
     location_ids = list(db.scalars(select(StockItem.location_id).where(StockItem.product_id == product_id)))
-    location_ids.append(prod.default_location_id)
+    location_ids += list(db.scalars(select(StockPolicy.default_location_id).where(StockPolicy.product_id == product_id)))
     sku = prod.sku
     db.delete(prod)  # cascata: StockItems
     db.flush()

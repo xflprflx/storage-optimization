@@ -174,9 +174,12 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
             .where(StockItem.location_id.in_(chunk)).order_by(StockItem.location_id, Product.sku)
         ):
             leaves[lid].items.append((sku, name, float(qty), unit_volume_l(h, w, ln), _f(wt)))
-        # Produtos com este endereço como padrão (sem registro de saldo)
+        # Produtos com este endereço como padrão (política de estoque da filial), sem registro de saldo
+        from models import StockPolicy
+
         for lid, sku, name in db.execute(
-            select(Product.default_location_id, Product.sku, Product.name).where(Product.default_location_id.in_(chunk))
+            select(StockPolicy.default_location_id, Product.sku, Product.name)
+            .join(Product, Product.id == StockPolicy.product_id).where(StockPolicy.default_location_id.in_(chunk))
         ):
             if not any(it[0] == sku for it in leaves[lid].items):
                 leaves[lid].items.append((sku, name, None, None, None))

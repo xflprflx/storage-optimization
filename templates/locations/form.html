@@ -36,6 +36,11 @@
         </div>
         {% endfor %}
         <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_generic" value="1" id="isGeneric" {% if data.get('is_generic') %}checked{% endif %}>
+            <label class="form-check-label" for="isGeneric"><b>Endereço genérico</b>: não usa o próprio nível — as bins ficam no nível escolhido em cada linha
+              (coluna "Nível") ou ocupam os níveis da estante de baixo para cima</label>
+          </div>
           <div class="form-text">Hierarquia estrita: Corredor → Estante → Nível → Posição → Compartimento. Deixe o compartimento vazio para uma posição genérica.
             Uma posição não pode ser genérica e ter compartimentos ao mesmo tempo.</div>
         </div>
@@ -51,8 +56,8 @@
       <hr class="my-4">
       <h6 class="text-muted text-uppercase small mb-2"><i class="bi bi-inboxes"></i> Bins neste endereço</h6>
       <div class="form-text mb-2">Um endereço pode ter várias bins, inclusive de tipos diferentes (ex.: 2× Caixa P + 1× Caixa G).
-        {% if level_options and location and not location.level %}Este é um <b>endereço genérico da estante</b> (sem nível): ele ocupa os níveis
-        da estante. Escolha na coluna "Nível" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a
+        {% if level_options and location and (location.is_generic or not location.level) %}Este endereço é <b>genérico</b>{% if not location.level %} (sem nível){% endif %}: ele ocupa os níveis
+        da estante, não o próprio nível. Escolha na coluna "Nível" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a
         estante de baixo para cima e a zona de ouro da pega considera os níveis onde as bins ficam.
         {% elif level_options %}Se as bins passarem da capacidade do nível do endereço (ex.: cabem 3 e são 6), o excedente ocupa
         automaticamente o(s) <b>nível(is) de cima, dedicado(s) a este endereço</b> — um nível cheio por vez.

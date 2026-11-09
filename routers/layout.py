@@ -93,6 +93,7 @@ def _geom_info(g) -> dict:
                            "hi": round(c.hi, 1), "ends": [round(e, 1) for e in c.ends], "flow": c.flow,
                            "rows": [rows[ri]["id"] for ri in c.rows]} for c in g.corridors],
             "pairs": [[rows[i]["id"], rows[j]["id"], round(gap, 1), manual] for i, j, gap, manual in g.pairs],
+            "warn": g.warn,
             "unplaced": g.unplaced, "dup": g.dup[:50], "placed": len(g.placed)}
 
 
@@ -286,8 +287,11 @@ def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
                                    .where(StockItem.quantity >= 0), branch_id, wid))
     nodes: dict[str, list] = {}
     zero: dict[str, list] = {}  # SKU só atribuído ao endereço (saldo zero, como na filial recém-criada pelo projeto)
+    from services.branch_layout import mark_back
+
+    mark_back(db, g, branch_id, wid)  # pega pelos dois lados: endereços com as bins no fundo param na face de trás
     for sku, a, bay, addr, qty, lid in rows:
-        n = g.node(a, bay)
+        n = g.node(a, bay, addr)
         if n is not None:
             (nodes if qty and qty > 0 else zero).setdefault(sku, []).append(dataclasses.replace(n, key=addr,
                                                                                                 gold=gold.get(lid)))

@@ -159,13 +159,14 @@ def usage_for(db: Session, keys: Iterable[LevelKey]) -> dict[LevelKey, LevelUsag
                     res[k].capacity[tid] = mx
         # bins dos endereços desta estante (próprias e enviadas a outros níveis) + bins recebidas
         rows = db.execute(
-            _scope(select(StorageLocation.level, LocationBin.bin_type_id, LocationBin.quantity, LocationBin.shelf_level_id)
+            _scope(select(StorageLocation.level, LocationBin.bin_type_id, LocationBin.quantity, LocationBin.shelf_level_id,
+                          StorageLocation.is_generic)
                    .join(LocationBin, LocationBin.location_id == StorageLocation.id), StorageLocation, b, w)
             .where(_eq(StorageLocation.aisle, a), _eq(StorageLocation.bay, bay))
         ).all()
-        for own_level, tid, qty, sl_id in rows:
+        for own_level, tid, qty, sl_id, generic in rows:
             if sl_id is None:
-                if not own_level:
+                if not own_level or generic:
                     continue  # endereço acima do nível (ex.: só estante): não ocupa nível
                 k = by_ck.get(_ck((b, w, a, bay, own_level)), (b, w, a, bay, own_level))
                 if k in res:

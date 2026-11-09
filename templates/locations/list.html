@@ -71,7 +71,7 @@
             <td><input type="checkbox" class="form-check-input loc-check" name="ids" value="{{ l.id }}"></td>
             <td>{{ l.branch.code }}</td>
             <td>{{ l.warehouse.code if l.warehouse else '—' }}</td>
-            <td class="mono fw-semibold">{{ l.address }}</td>
+            <td class="mono fw-semibold">{{ l.address }}{% if l.is_generic %} <span class="badge text-bg-info fw-normal" title="Endereço genérico: ocupa os níveis da estante, não o próprio nível">genérico</span>{% endif %}</td>
             <td class="mono">{{ l.aisle }}</td><td class="mono">{{ l.bay }}</td><td class="mono">{{ l.level }}</td><td class="mono">{{ l.position }}</td>
             <td class="mono">{{ l.compartment or '—' }}</td>
             <td>{{ occupied_badge(l.is_occupied) }}</td>

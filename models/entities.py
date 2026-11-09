@@ -123,6 +123,9 @@ class StorageLocation(TimestampMixin, Base):
     compartment: Mapped[str] = mapped_column(String(20), nullable=False, default="")
     address: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     is_occupied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # endereço GENÉRICO: não usa o próprio nível — as bins ficam no nível escolhido em cada linha ou ocupam os níveis
+    # da estante de baixo para cima (o código pode ter qualquer granularidade)
+    is_generic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     branch: Mapped[Branch] = relationship(back_populates="locations")
     warehouse: Mapped[Optional[Warehouse]] = relationship(back_populates="locations")

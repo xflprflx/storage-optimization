@@ -109,6 +109,8 @@
         <input class="form-control form-control-sm" type="number" id="nkPiece" min="0" max="120" step="0.5" value="2"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkGold" title="Tempo a mais por item (linha) num nível fora da zona de ouro da pega">Fora do ouro (s/item)</label>
         <input class="form-control form-control-sm" type="number" id="nkGold" min="0" max="120" step="0.5" value="5"></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkGoldP" title="Tempo a mais por peça num nível fora da zona de ouro da pega">Fora do ouro (s/peça)</label>
+        <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="0"></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="Grava a simulação do início ao fim e baixa o vídeo (.webm)"><i class="bi bi-record-circle"></i> Gravar vídeo</button>
@@ -440,7 +442,10 @@ const pickS = () => Math.min(300, Math.max(0, +$('nkPick').value || 0));
 const pieceS = () => Math.min(120, Math.max(0, +$('nkPiece').value || 0));
 const goldS = () => Math.min(120, Math.max(0, +$('nkGold').value || 0));
 // tempo parado: fixo (uma vez por módulo) + peças × tempo por peça + itens fora da zona de ouro × tempo extra
-const stopT = (R, s) => pickS() + pieceS() * (R.qty ? +R.qty[s] || 0 : 1) + goldS() * (R.out ? +R.out[s] || 0 : 0);
+const goldP = () => Math.min(120, Math.max(0, +$('nkGoldP').value || 0));
+const stopT = (R, s) => pickS() + pieceS() * (R.qty ? +R.qty[s] || 0 : 1) + goldS() * (R.out ? +R.out[s] || 0 : 0)
+  + goldP() * (R.outq ? +R.outq[s] || 0 : 0);
+const grpOf = (R, s) => ((R.groups && R.groups[s]) || [R.keys[s]]).join(' + ');  // todos os endereços da parada
 const speed = () => +$('nkSpeed').value || 1;
 
 function setPlayIcon() { $('nkPlay').innerHTML = WK.playing ? '<i class="bi bi-pause-fill"></i>' : '<i class="bi bi-play-fill"></i>'; }
@@ -624,7 +629,7 @@ function hudLines() {
     w.R.keys.forEach((k, s) => { all += q(s); if (w.arrive[k] + stopT(w.R, s) <= WK.t + 1e-9) got += q(s); });
     out.push({ color: w.R.color, text: `${w.R.name.split(' ')[0]}: ${fmt(dm)} de ${fmt(w.R.m)} m · paradas ${w.picked}/${w.R.keys.length} · ` +
       `peças ${fmt(got, 2)}/${fmt(all, 2)} · ` +
-      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${w.R.keys[w.pick]} (${fmt(q(w.pick), 2)} pç)` : mmss(WK.t)) });
+      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${grpOf(w.R, w.pick)} (${fmt(q(w.pick), 2)} pç)` : mmss(WK.t)) });
   });
   return out;
 }
@@ -733,7 +738,7 @@ function recFrame() {
     ctx.fillStyle = '#1f2d33'; ctx.font = `${l.bold ? 700 : 500} ${px}px system-ui, sans-serif`;
     ctx.fillText(l.text, pad * 2 + (l.color ? px * 1.2 : 0), y);
   });
-  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada + ${fmt(pieceS(), 1)} s por peça + ${fmt(goldS(), 1)} s fora do ouro · vídeo ${speed()}×`;
+  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada + ${fmt(pieceS(), 1)} s por peça + ${fmt(goldS(), 1)} s/item e ${fmt(goldP(), 1)} s/peça fora do ouro · vídeo ${speed()}×`;
   ctx.font = `500 ${Math.round(px * 0.8)}px system-ui, sans-serif`;
   const fw = ctx.measureText(foot).width;
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c.width - fw - pad * 3, c.height - px * 1.8, fw + pad * 2, px * 1.4);
@@ -756,7 +761,7 @@ function walkTick(dt) {
 $('nkWalkBtn').addEventListener('click', () => openWalk($('nkWalk').style.display !== 'block'));
 $('nkWalkClose').addEventListener('click', () => openWalk(false));
 $('nkOrder').addEventListener('change', () => { if (WK.rec) stopRec(true); loadOrder($('nkOrder').value); });
-['nkRoute', 'nkWalkV', 'nkPick', 'nkPiece', 'nkGold'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
+['nkRoute', 'nkWalkV', 'nkPick', 'nkPiece', 'nkGold', 'nkGoldP'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
 $('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
 $('nkCam').addEventListener('change', () => camMode(true));
 $('nkPlay').addEventListener('click', () => (WK.playing ? pause() : play()));

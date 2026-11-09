@@ -264,6 +264,15 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     from services.branch_layout import address_golden
 
     gold_real: dict[int, Optional[bool]] = {}
+    from services.branch_layout import mark_back
+
+    for sc, gm in layouts.items():  # pega pelos dois lados: endereços do fundo param na face de trás
+        if gm is not None:
+            mark_back(db, gm, sc[0], sc[1])
+    addr_of = {}
+    for i in range(0, len(location_ids), 900):
+        addr_of.update({k: v for k, v in db.execute(select(StorageLocation.id, StorageLocation.address)
+                                                    .where(StorageLocation.id.in_(location_ids[i:i + 900])))})
     for sc in layouts:
         gold_real.update(address_golden(db, sc[0], sc[1], [i for i, b, w, *_ in locs if (b, w) == sc]))
     used_layout = None
@@ -289,7 +298,7 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         elif spec.get("golden_levels") and n:
             golden = n in spec["golden_levels"]
         geom = layouts.get((br, wh))
-        node = geom.node(a, bay) if geom is not None else None
+        node = geom.node(a, bay, addr_of.get(lid)) if geom is not None else None
         if node is not None:  # planta desenhada: caminhada pelos corredores desde a referência da planta
             walk = dist(geom.ref_node(), node) / 100.0
             out[lid] = Geo(node.zone, node.along / 100.0, node.cross / 100.0, golden, walk,

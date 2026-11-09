@@ -45,7 +45,7 @@
   <div class="col-xl-9 col-lg-8">
     <div class="nk-plan-wrap" id="wrap">
       <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="nk-plan-hint">Arraste fileiras e obstáculos · Ctrl+clique marca estantes · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
+      <div class="nk-plan-hint">Arraste fileiras e obstáculos · Shift+clique / Shift+arrastar = vários · alças no canto do imóvel = tamanho · Ctrl+clique marca estantes · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
       <div class="nk-plan-coord" id="coord"></div>
     </div>
   </div>
@@ -66,6 +66,7 @@
     </div></div>
 
     <div class="card mb-2" id="propCard" style="display:none"><div class="card-body py-2">
+      <div class="alert alert-primary small py-1 px-2 mb-2" id="multiInfo" style="display:none"></div>
       <div class="d-flex justify-content-between"><span class="fw-semibold" id="propTitle">Fileira</span>
         <button class="btn-close btn-sm" id="unsel" aria-label="Fechar"></button></div>
       <div id="rowProps" class="row g-1">
@@ -102,6 +103,11 @@
           <label class="form-check-label" for="pPush" title="Ao mudar a largura, as fileiras depois do vizinho andam junto">empurrar as seguintes</label></div></div>
         <div class="col-12"><label class="form-label mb-0" title="Mão única: o separador só anda no corredor num sentido (sem contra fluxo)">Sentido</label>
           <select class="form-select form-select-sm" id="pFlow"></select></div>
+        <div class="col-12 mt-1"><div class="form-check">
+          <input class="form-check-input" type="checkbox" id="pBoth">
+          <label class="form-check-label" for="pBoth" title="Para estruturas que comportam 2 (ou mais) bins na profundidade e não têm vizinho encostado atrás">
+            <b>Pega pelos dois lados</b>: as bins do fundo são pegas pelo corredor de trás</label></div>
+          <div class="text-muted" id="pBothInfo"></div></div>
       </div>
       <div id="obsProps" class="row g-1">
         <div class="col-12"><label class="form-label mb-0">Nome</label><input class="form-control form-control-sm" id="oName" maxlength="60"></div>
@@ -161,6 +167,10 @@
   const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
   let D = null, BAYS = {}, INFO = {}, saved = false, dirty = false, sel = null, refMode = false;
   let pick = new Set();  // estantes marcadas na fileira selecionada (para separar)
+  let multi = [];  // objetos selecionados ({kind, i}); `sel` é o principal (o do painel)
+  const isSel = (kind, i) => multi.some(m => m.kind === kind && m.i === i);
+  const objOf = m => m.kind === 'row' ? D.rows[m.i] : D.obstacles[m.i];
+  function bboxOf(m) { const o = objOf(m); if (m.kind === 'obs') return [o.x, o.y, o.w, o.d]; const G = rowGeom(o); return [o.x, o.y, G.w, G.d]; }
   let vb = { x: 0, y: 0, w: 1000, h: 1000 };
   const SNAP = 10;
   const snap = (v, e) => (e && e.shiftKey) ? Math.round(v) : Math.round(v / SNAP) * SNAP;
@@ -209,6 +219,11 @@
     svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
     const fs = Math.max(D.L, D.W) / 70, sw = vb.w / 900;
     el('rect', { x: 0, y: 0, width: D.L, height: D.W, fill: '#fbfcfd', stroke: '#1f2d33', 'stroke-width': sw * 2 }, svg);
+    // alças do imóvel (arraste para mudar o comprimento, a largura ou os dois)
+    const hs = sw * 9;
+    [['e', D.L, D.W / 2, 'ew-resize'], ['s', D.L / 2, D.W, 'ns-resize'], ['se', D.L, D.W, 'nwse-resize']].forEach(([k, x, y, cur]) =>
+      el('rect', { x: x - hs / 2, y: y - hs / 2, width: hs, height: hs, fill: '#fff', stroke: '#1f2d33', 'stroke-width': sw * 1.2,
+                   'data-handle': k, style: `cursor:${cur}` }, svg));
     // grade de 1 m (ou 5 m em plantas grandes)
     const step = Math.max(D.L, D.W) > 6000 ? 500 : 100, grid = el('g', { stroke: '#e6ebef', 'stroke-width': sw * 0.6 }, svg);
     for (let x = step; x < D.L; x += step) el('line', { x1: x, y1: 0, x2: x, y2: D.W }, grid);
@@ -235,13 +250,13 @@
       }
     });
     D.obstacles.forEach((o, i) => {
-      const g = el('g', { class: 'nk-obs' + (sel && sel.kind === 'obs' && sel.i === i ? ' sel' : ''), 'data-kind': 'obs', 'data-i': i }, svg);
+      const g = el('g', { class: 'nk-obs' + (isSel('obs', i) ? ' sel' : ''), 'data-kind': 'obs', 'data-i': i }, svg);
       el('rect', { x: o.x, y: o.y, width: o.w, height: o.d, fill: '#2b2f33', opacity: 0.85, stroke: '#000', 'stroke-width': sw }, g);
       const t = el('text', { x: o.x + o.w / 2, y: o.y + o.d / 2 + fs * 0.3, 'font-size': fs * 0.8, fill: '#fff', 'text-anchor': 'middle' }, g);
       t.textContent = o.name;
     });
     D.rows.forEach((r, i) => {
-      const G = rowGeom(r), g = el('g', { class: 'nk-row' + (sel && sel.kind === 'row' && sel.i === i ? ' sel' : ''), 'data-kind': 'row', 'data-i': i }, svg);
+      const G = rowGeom(r), g = el('g', { class: 'nk-row' + (isSel('row', i) ? ' sel' : ''), 'data-kind': 'row', 'data-i': i }, svg);
       el('rect', { class: 'nk-row-box', x: r.x, y: r.y, width: G.w, height: G.d, fill: G.bays.length ? '#cfd8df' : '#f8d7da', stroke: '#24548c', 'stroke-width': sw * 1.5 }, g);
       G.bays.forEach((b, k) => {
         const a = r.orient === 'h' ? { x: r.x + b.off, y: r.y, width: b.w, height: r.depth } : { x: r.x, y: r.y + b.off, width: r.depth, height: b.w };
@@ -257,12 +272,22 @@
       const f = r.orient === 'h' ? { x1: r.x, x2: r.x + G.w, y1: r.face === '+' ? r.y + G.d : r.y, y2: r.face === '+' ? r.y + G.d : r.y }
         : { y1: r.y, y2: r.y + G.d, x1: r.face === '+' ? r.x + G.w : r.x, x2: r.face === '+' ? r.x + G.w : r.x };
       el('line', { ...f, stroke: '#f28e2b', 'stroke-width': sw * 4 }, g);
+      if (r.both) {  // pega pelos dois lados: a face de trás também
+        const b2 = r.orient === 'h' ? { x1: r.x, x2: r.x + G.w, y1: r.face === '+' ? r.y : r.y + G.d, y2: r.face === '+' ? r.y : r.y + G.d }
+          : { y1: r.y, y2: r.y + G.d, x1: r.face === '+' ? r.x : r.x + G.w, x2: r.face === '+' ? r.x : r.x + G.w };
+        el('line', { ...b2, stroke: '#f28e2b', 'stroke-width': sw * 4, 'stroke-dasharray': `${sw * 8} ${sw * 4}` }, g);
+      }
       const side = { odd: ' ímp.', even: ' pares', all: '' }[r.side];
       const sp = labelSpot(i, r, G, r.aisle + side, fs);
       const t = el('text', { x: sp.x, y: sp.y, 'text-anchor': sp.anchor, 'font-size': fs, fill: '#24548c', 'font-weight': 600,
                              stroke: '#fbfcfd', 'stroke-width': fs / 5, 'paint-order': 'stroke' }, g);
       t.textContent = r.aisle + side;
     });
+    if (band) {  // retângulo de seleção (Shift + arrastar o fundo)
+      const x = Math.min(band.x0, band.x1), y = Math.min(band.y0, band.y1);
+      el('rect', { x, y, width: Math.abs(band.x1 - band.x0), height: Math.abs(band.y1 - band.y0), fill: 'rgba(37,99,235,.08)',
+                   stroke: '#2563eb', 'stroke-width': sw, 'stroke-dasharray': `${sw * 4} ${sw * 3}` }, svg);
+    }
     const R = D.ref;
     el('circle', { cx: R.x, cy: R.y, r: fs * 0.6, fill: '#d62728', stroke: '#fff', 'stroke-width': sw * 2 }, svg);
     const rt = el('text', { x: R.x + fs * 0.9, y: R.y + fs * 0.35, 'font-size': fs * 0.8, fill: '#d62728', 'font-weight': 600 }, svg);
@@ -278,9 +303,12 @@
   const pt = e => { const r = svg.getBoundingClientRect(); return { x: vb.x + (e.clientX - r.left) / r.width * vb.w, y: vb.y + (e.clientY - r.top) / r.height * vb.h }; };
 
   // ---------------------------------------------------------------- mouse
-  let drag = null;
+  let drag = null, band = null;
   svg.addEventListener('pointerdown', e => {
     const p = pt(e);
+    if (e.target.dataset.handle) {  // alça do imóvel
+      drag = { handle: e.target.dataset.handle, moved: false }; svg.setPointerCapture(e.pointerId); return;
+    }
     if (refMode) { D.ref.x = Math.round(Math.min(D.L, Math.max(0, p.x))); D.ref.y = Math.round(Math.min(D.W, Math.max(0, p.y))); setRefMode(false); draw(); changed(); return; }
     const g = e.target.closest('[data-kind]');
     if (g && (e.ctrlKey || e.metaKey) && g.dataset.kind === 'row' && e.target.dataset.bay) {  // Ctrl+clique: marca a estante
@@ -292,8 +320,16 @@
     }
     if (g) {
       const kind = g.dataset.kind, i = +g.dataset.i, o = kind === 'row' ? D.rows[i] : D.obstacles[i];
-      select(kind, i);
-      drag = { kind, i, dx: p.x - o.x, dy: p.y - o.y, moved: false };
+      if (e.shiftKey) {  // Shift+clique: soma / tira da seleção
+        if (isSel(kind, i)) { multi = multi.filter(m => !(m.kind === kind && m.i === i)); sel = multi[multi.length - 1] || null; }
+        else { multi.push({ kind, i }); sel = { kind, i }; }
+        pick = new Set(); draw(); props(); return;
+      }
+      if (!isSel(kind, i)) select(kind, i); else { sel = { kind, i }; props(); }
+      // arrasta todos os selecionados juntos (a posição de partida de cada um)
+      drag = { kind, i, dx: p.x - o.x, dy: p.y - o.y, moved: false, start: multi.map(m => ({ m, x: objOf(m).x, y: objOf(m).y })), ox: o.x, oy: o.y };
+    } else if (e.shiftKey) {
+      band = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }; drag = { band: true };
     } else {
       drag = { pan: true, sx: e.clientX, sy: e.clientY, vx: vb.x, vy: vb.y };
     }
@@ -303,16 +339,33 @@
     const p = pt(e);
     $('coord').textContent = `x ${fmt(p.x / 100, 1)} m · y ${fmt(p.y / 100, 1)} m`;
     if (!drag) return;
+    if (drag.handle) {
+      if (drag.handle.includes('e')) D.L = Math.max(100, snap(p.x, e));
+      if (drag.handle.includes('s')) D.W = Math.max(100, snap(p.y, e));
+      $('bL').value = D.L / 100; $('bW').value = D.W / 100; drag.moved = true; draw(); return;
+    }
+    if (drag.band) { band.x1 = p.x; band.y1 = p.y; draw(); return; }
     if (drag.pan) {
       const r = svg.getBoundingClientRect();
       vb.x = drag.vx - (e.clientX - drag.sx) / r.width * vb.w; vb.y = drag.vy - (e.clientY - drag.sy) / r.height * vb.h;
       svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); return;
     }
-    const o = drag.kind === 'row' ? D.rows[drag.i] : D.obstacles[drag.i];
-    o.x = snap(p.x - drag.dx, e); o.y = snap(p.y - drag.dy, e); drag.moved = true;
+    const nx = snap(p.x - drag.dx, e), ny = snap(p.y - drag.dy, e), ddx = nx - drag.ox, ddy = ny - drag.oy;
+    drag.start.forEach(({ m, x, y }) => { const o = objOf(m); o.x = x + ddx; o.y = y + ddy; });
+    drag.moved = true;
     draw(); props();
   });
-  svg.addEventListener('pointerup', () => { if (drag && drag.moved) changed(); drag = null; });
+  svg.addEventListener('pointerup', () => {
+    if (drag && drag.band) {  // seleciona o que o retângulo toca
+      const x0 = Math.min(band.x0, band.x1), x1 = Math.max(band.x0, band.x1), y0 = Math.min(band.y0, band.y1), y1 = Math.max(band.y0, band.y1);
+      const hit = [...D.rows.map((_r, i) => ({ kind: 'row', i })), ...D.obstacles.map((_o, i) => ({ kind: 'obs', i }))]
+        .filter(m => { const [x, y, w, h] = bboxOf(m); return x < x1 && x + w > x0 && y < y1 && y + h > y0; });
+      hit.forEach(m => { if (!isSel(m.kind, m.i)) multi.push(m); });
+      sel = multi[multi.length - 1] || null; band = null; pick = new Set(); draw(); props();
+    }
+    if (drag && drag.moved) changed();
+    drag = null;
+  });
   svg.addEventListener('wheel', e => {
     e.preventDefault();
     const p = pt(e), k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
@@ -323,10 +376,15 @@
   // ---------------------------------------------------------------- seleção e propriedades
   function select(kind, i) {
     if (!(sel && kind === sel.kind && i === sel.i)) pick = new Set();
-    sel = kind == null ? null : { kind, i }; draw(); props();
+    sel = kind == null ? null : { kind, i };
+    multi = sel ? [sel] : [];
+    draw(); props();
   }
   function props() {
     $('propCard').style.display = sel ? 'block' : 'none';
+    $('multiInfo').style.display = multi.length > 1 ? '' : 'none';
+    $('multiInfo').innerHTML = `<b>${multi.length} objetos selecionados</b> — arraste qualquer um para mover todos; setas movem, Del apaga, R gira as fileiras. ` +
+      'O painel abaixo é do último clicado. Shift+clique soma ou tira; Shift+arrastar o fundo seleciona por área.';
     if (!sel) return;
     const row = sel.kind === 'row';
     $('rowProps').style.display = row ? '' : 'none'; $('obsProps').style.display = row ? 'none' : '';
@@ -370,6 +428,9 @@
       `<option value="-">Mão única ${h ? '← (X decrescente)' : '↑ (Y decrescente)'}</option>`;
     const c = corridorOf(r);
     $('pFlow').value = c && c.flow ? (c.flow > 0 ? '+' : '-') : (r.flow || '');
+    $('pBoth').checked = !!r.both;
+    const w = (INFO.warn || []).find(t => t.startsWith(r.aisle + ' '));
+    $('pBothInfo').innerHTML = r.both ? (w ? `<span class="text-danger">${esc(w)}</span>` : 'Cada bin é pega pelo corredor do seu lado: as da frente pela face laranja cheia, as do fundo pela tracejada.') : '';
   }
   $('pPair').addEventListener('change', () => {
     if (!sel || sel.kind !== 'row') return;
@@ -400,6 +461,12 @@
     draw(); props(); changed();
   });
   const nextId = () => Math.max(0, ...D.rows.map(r => r.id || 0)) + 1;
+  $('pBoth').addEventListener('change', () => {
+    if (!sel || sel.kind !== 'row') return;
+    const r = D.rows[sel.i];
+    if ($('pBoth').checked) r.both = true; else delete r.both;
+    draw(); props(); changed();
+  });
 
   // ---------------------------------------------------------------- separar estantes numa fileira nova
   $('pBays').addEventListener('click', e => {
@@ -448,7 +515,12 @@
   bind('oY', o => { if (!isNaN(cm($('oY').value))) o.y = cm($('oY').value); });
   bind('oW', o => { const v = cm($('oW').value); if (v > 0) o.w = v; });
   bind('oD', o => { const v = cm($('oD').value); if (v > 0) o.d = v; });
-  const act = fn => () => { if (sel && sel.kind === 'row') { fn(D.rows[sel.i]); draw(); props(); changed(); } };
+  // girar / trocar o lado valem para todas as fileiras selecionadas
+  const act = fn => () => {
+    const rows = (multi.length ? multi : [sel]).filter(m => m && m.kind === 'row');
+    if (!rows.length) return;
+    rows.forEach(m => fn(D.rows[m.i])); draw(); props(); changed();
+  };
   const rotate = act(r => { r.orient = r.orient === 'h' ? 'v' : 'h'; });
   const flip = act(r => { r.face = r.face === '+' ? '-' : '+'; });
   $('pRot').addEventListener('click', rotate);
@@ -464,15 +536,18 @@
   });
   function del() {
     if (!sel) return;
-    (sel.kind === 'row' ? D.rows : D.obstacles).splice(sel.i, 1); select(null); changed();
+    const all = multi.length ? multi : [sel];
+    if (all.length > 1 && !confirm(`Apagar os ${all.length} objetos selecionados?`)) return;
+    ['row', 'obs'].forEach(k => all.filter(m => m.kind === k).map(m => m.i).sort((a, b) => b - a)
+      .forEach(i => (k === 'row' ? D.rows : D.obstacles).splice(i, 1)));
+    select(null); changed();
   }
   $('pDel').addEventListener('click', del); $('oDel').addEventListener('click', del);
   $('unsel').addEventListener('click', () => select(null));
   document.addEventListener('keydown', e => {
     if (!sel || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-    const o = sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i];
     const mv = { ArrowLeft: [-SNAP, 0], ArrowRight: [SNAP, 0], ArrowUp: [0, -SNAP], ArrowDown: [0, SNAP] }[e.key];
-    if (mv) { e.preventDefault(); o.x += mv[0]; o.y += mv[1]; draw(); props(); changed(); }
+    if (mv) { e.preventDefault(); (multi.length ? multi : [sel]).forEach(m => { const o = objOf(m); o.x += mv[0]; o.y += mv[1]; }); draw(); props(); changed(); }
     else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
     else if (e.key === 'r' || e.key === 'R') rotate();
     else if (e.key === 'f' || e.key === 'F') flip();
@@ -527,6 +602,7 @@
     $('checkInfo').innerHTML = `<div>${INFO.placed || 0} estante(s) na planta · ${(INFO.corridors || []).length} corredor(es) de caminhada</div>` +
       (u.length ? `<div class="text-danger mt-1">Fora da planta: ${u.map(esc).join('; ')}</div><div class="text-muted">Endereços dessas estantes usam a caminhada estimada pelo endereço.</div>` : '<div class="text-success">Todas as estantes estão na planta.</div>') +
       (d.length ? `<div class="text-warning-emphasis mt-1">Em mais de uma fileira (vale a primeira): ${d.map(esc).join(', ')}</div>` : '') +
+      ((INFO.warn || []).length ? `<div class="text-danger mt-1">${INFO.warn.map(esc).join('<br>')}</div>` : '') +
       '<div class="text-muted mt-1">Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.</div>';
   }
   function load(r) {

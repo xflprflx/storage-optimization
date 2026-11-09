@@ -145,8 +145,8 @@ def _level_context(db: Session, loc) -> dict:
 
     for o in options:
         o["info"] = describe(o["key"])
-    generic = "§Sem nível — preenche a estante de baixo para cima" if loc.bay and not loc.level else None
-    return {"level_options": options, "own_level_info": describe(own) if own else generic}
+    generic = "§Sem nível — preenche a estante de baixo para cima" if loc.bay and (loc.is_generic or not loc.level) else None
+    return {"level_options": options, "own_level_info": generic or (describe(own) if own else None)}
 
 
 def _has_positive_stock(db: Session, location_id: int) -> bool:
@@ -163,6 +163,7 @@ def _validate(db: Session, form: FormData, location_id: int | None):
         "level": normalize_code(f_str(form, "level")),
         "position": normalize_code(f_str(form, "position")),
         "compartment": normalize_code(f_str(form, "compartment")),
+        "is_generic": f_bool(form, "is_generic"),
     }
     if not data["branch_id"] or not db.get(Branch, data["branch_id"]):
         errors.add("branch_id", "Filial é obrigatória.")
@@ -636,7 +637,8 @@ def edit_location(location_id: int, request: Request, db: Session = Depends(get_
     loc = db.get(StorageLocation, location_id)
     if not loc:
         return redirect("/locations", "Endereço não encontrado.", "danger")
-    data = {k: getattr(loc, k) for k in ("branch_id", "warehouse_id", "aisle", "bay", "level", "position", "compartment")}
+    data = {k: getattr(loc, k) for k in ("branch_id", "warehouse_id", "aisle", "bay", "level", "position", "compartment",
+                                         "is_generic")}
     data["bins"] = [(lb.bin_type_id, lb.quantity, lb.shelf_level_id) for lb in loc.bins]
     items = location_contents(db, [location_id]).get(location_id, [])
     return render(request, "locations/form.html", location=loc, data=data, errors={}, items=items,

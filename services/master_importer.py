@@ -18,7 +18,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from models import BinType, Branch, LocationBin, StorageLocation, Warehouse
@@ -64,6 +64,7 @@ LOCATION_FIELDS = {
     "level": ("Nível", False, ("nivel", "nível", "andar", "level")),
     "position": ("Posição", False, ("posicao", "posição", "apto", "apartamento", "position", "pos")),
     "compartment": ("Compartimento", False, ("compartimento", "comp", "divisao", "divisão", "compartment")),
+    "generic": ("Genérico (sim/não)", False, ("generico", "genérico", "enderecogenerico", "generic")),
     "bin_type": ("Tipo de bin", False, ("tipodebin", "tipobin", "bin", "tipo", "bintype")),
     "bin_qty": ("Qtd de bins", False, ("qtdbins", "qtddebins", "quantidadedebins", "qtdbin", "bins", "qtd", "quantidade")),
 }
@@ -404,16 +405,21 @@ def import_locations(db: Session, path: Path, mapping: dict, opts: MasterOptions
         idx = scope_index(bid, wid)
         scopes.add((bid, wid))
         lid = idx.get(address)
+        graw = get_cell(row, mapping.get("generic")) if mapping.get("generic") is not None else None
+        gen = None if graw is None or not str(graw).strip() else \
+            str(graw).strip().casefold() in {"s", "sim", "1", "x", "true", "verdadeiro", "yes", "y"}
         if lid is None:
             conflict = check_location_conflict(db, bid, wid, parts)
             if conflict:
                 raise ValueError(f"{address}: {conflict}")
             loc = StorageLocation(branch_id=bid, warehouse_id=wid, aisle=parts[0], bay=parts[1], level=parts[2],
-                                  position=parts[3], compartment=parts[4], address=address)
+                                  position=parts[3], compartment=parts[4], address=address, is_generic=bool(gen))
             db.add(loc)
             db.flush()
             lid = idx[address] = loc.id
             res.inc("Endereços criados")
+        elif gen is not None:  # coluna Genérico informada: atualiza a marca do endereço existente
+            db.execute(update(StorageLocation).where(StorageLocation.id == lid).values(is_generic=gen))
         elif lid not in bins_by_loc:
             res.inc("Endereços já existentes")
         if t_code:

@@ -220,6 +220,7 @@ def clean(data: dict) -> dict:
         bl = [str(b).strip().upper()[:20] for b in (r.get("bays") or []) if str(b).strip()][:2000] \
             if isinstance(r.get("bays"), list) else []
         rows.append({"id": r["_id"], "pair": pair, "flow": r.get("flow") if r.get("flow") in ("+", "-") else "",
+                     **({"both": True} if r.get("both") else {}),
                      **({"bays": bl} if bl else {}),
                      "aisle": str(r["aisle"]).strip().upper()[:20],
                      "side": r.get("side") if r.get("side") in SIDES else "all",
@@ -278,6 +279,9 @@ class Geometry:
     unplaced: list[str] = field(default_factory=list)  # "A (ímpares)…" sem fileira
     dup: list[str] = field(default_factory=list)  # estantes em mais de uma fileira
     pairs: list[tuple] = field(default_factory=list)  # (fileira, fileira, vão em cm, manual?) frente a frente
+    back_nodes: dict[tuple, Node] = field(default_factory=dict)  # paradas na face de trás (pega pelos dois lados)
+    back_addrs: Optional[set] = None  # endereços com as bins no fundo (atendidos pela face de trás)
+    warn: list[str] = field(default_factory=list)
     net: object = None  # rede de caminhada (services/walk_net.WalkNet)
 
     @property
@@ -287,12 +291,18 @@ class Geometry:
     def ref_node(self) -> Node:
         return Node(key="REF", gx=self.ref["x"], gy=self.ref["y"], net=self.net)
 
-    def node(self, aisle: str, bay: str) -> Optional[Node]:
+    def node(self, aisle: str, bay: str, address: Optional[str] = None) -> Optional[Node]:
+        """Parada da estante; com `address` e pega pelos dois lados, a da face de trás quando as bins do endereço
+        ficam no fundo (ver mark_back)."""
         from services.app_settings import canon
 
         if not hasattr(self, "_cidx"):
             self._cidx = {(canon(a), canon(b)): n for (a, b), n in self.nodes.items()}
-        return self._cidx.get((canon(aisle or ""), canon(bay or "")))
+            self._bidx = {(canon(a), canon(b)): n for (a, b), n in self.back_nodes.items()}
+        k = (canon(aisle or ""), canon(bay or ""))
+        if address and self.back_addrs and address in self.back_addrs and k in self._bidx:
+            return self._bidx[k]
+        return self._cidx.get(k)
 
 
 def _edge(r: dict, length: float) -> tuple[float, float, float]:
@@ -365,9 +375,34 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
         length = cur or r["bay_w"]
         rw, rd = (length, r["depth"]) if r["orient"] == "h" else (r["depth"], length)
         g.row_rects.append((r["x"], r["y"], rw, rd, ri))
-        info.append((ri, r, *_edge(r, length)))
-    # corredores: fileiras frente a frente ficam no mesmo; as demais têm o seu
-    parent = list(range(len(rows)))
+        info.append([ri, r, *_edge(r, length), "front"])
+    # pega pelos dois lados: a face de trás também atende um corredor — só se não houver vizinho encostado atrás
+    for ri, r in enumerate(rows):
+        if not r.get("both"):
+            continue
+        back = {**r, "face": "-" if r["face"] == "+" else "+", "pair": 0}
+        length = info[ri][4] - info[ri][3]
+        e, a0, a1 = _edge(back, length)
+        blocked = False
+        for x, y, w, h, rj in g.row_rects + [(o["x"], o["y"], o["w"], o["d"], -1) for o in data.get("obstacles") or []]:
+            if rj == ri:
+                continue
+            if r["orient"] == "h":
+                ov, near_, far_ = min(a1, x + w) - max(a0, x), y, y + h
+            else:
+                ov, near_, far_ = min(a1, y + h) - max(a0, y), x, x + w
+            gap = (near_ - e) if back["face"] == "+" else (e - far_)
+            if ov > 0 and -1.0 <= gap < MIN_PASSAGE:
+                blocked = True
+                break
+        if blocked:
+            g.warn.append(f"{r['aisle']} {SIDES.get(r['side'], '')}: pega pelos dois lados ignorada — há fileira ou obstáculo "
+                          f"encostado atrás (menos de {MIN_PASSAGE / 100:g} m)")
+            continue
+        info.append([ri, back, e, a0, a1, "back"])
+    # corredores: faces que se olham ficam no mesmo; as demais têm o seu (cada face de fileira é uma entrada)
+    ent = [(k, r, e, a0, a1) for k, (_ri, r, e, a0, a1, _side) in enumerate(info)]
+    parent = list(range(len(info)))
 
     def find(i):
         while parent[i] != i:
@@ -376,19 +411,21 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
         return i
 
     pair_c: dict[int, list] = {}
-    for ri, rj, gap, c, manual in _pairs(rows, info):
-        g.pairs.append((ri, rj, gap, manual))
-        pair_c.setdefault(ri, []).append((c, gap))
-        pair_c.setdefault(rj, []).append((c, gap))
-        ra, rb = find(ri), find(rj)
+    for ki, kj, gap, c, manual in _pairs(rows, ent):
+        if info[ki][0] == info[kj][0]:
+            continue  # as duas faces da mesma fileira
+        g.pairs.append((info[ki][0], info[kj][0], gap, manual))
+        pair_c.setdefault(ki, []).append((c, gap))
+        pair_c.setdefault(kj, []).append((c, gap))
+        ra, rb = find(ki), find(kj)
         if ra != rb:
             parent[rb] = ra
     groups: dict[int, list] = {}
-    for ri, r, e, a0, a1 in info:
-        groups.setdefault(find(ri), []).append((ri, a0, a1))
-    row_corr: dict[int, Corridor] = {}
-    for k, members in enumerate(groups.values()):
-        ivs = sorted((a0, a1) for _ri, a0, a1 in members)
+    for k, (_ri, _r, _e, a0, a1, _side) in enumerate(info):
+        groups.setdefault(find(k), []).append((k, a0, a1))
+    ent_corr: dict[tuple, Corridor] = {}  # (fileira, "front"|"back") -> corredor
+    for idx, members in enumerate(groups.values()):
+        ivs = sorted((a0, a1) for _k, a0, a1 in members)
         lo, hi = ivs[0][0], max(a1 for _a0, a1 in ivs)
         ends, reach = {lo - END_MARGIN, hi + END_MARGIN}, ivs[0][1]
         covered = [[ivs[0][0], ivs[0][1]]]
@@ -400,31 +437,43 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
             else:
                 covered[-1][1] = max(covered[-1][1], a1)
             reach = max(reach, a1)
-        pcs = [pc for ri, *_ in members for pc in pair_c.get(ri, [])]
+        pcs = [pc for k, *_ in members for pc in pair_c.get(k, [])]
         if pcs:
             c = sum(v for v, _g in pcs) / len(pcs)
             wdt = min(gp for _v, gp in pcs)
-        else:  # fileira sozinha
-            ri0 = members[0][0]
-            e = info[ri0][2]
-            c = e + (LONE_AISLE if rows[ri0]["face"] == "+" else -LONE_AISLE)
+        else:  # face sozinha: o corredor fica a LONE_AISLE dela
+            k0 = members[0][0]
+            e, rf = info[k0][2], info[k0][1]
+            c = e + (LONE_AISLE if rf["face"] == "+" else -LONE_AISLE)
             wdt = 2 * LONE_AISLE
-        flow = next((rows[ri].get("flow") for ri, *_ in members if rows[ri].get("flow") in ("+", "-")), "")
-        cor = Corridor(k, rows[members[0][0]]["orient"], c, wdt, tuple(sorted(ends)), lo, hi,
-                       {"+": 1, "-": -1}.get(flow, 0), [ri for ri, *_ in members], [tuple(v) for v in covered])
+        mrows = [info[k][0] for k, *_ in members]
+        flow = next((rows[ri].get("flow") for ri in mrows if rows[ri].get("flow") in ("+", "-")), "")
+        cor = Corridor(idx, rows[mrows[0]]["orient"], c, wdt, tuple(sorted(ends)), lo, hi,
+                       {"+": 1, "-": -1}.get(flow, 0), mrows, [tuple(v) for v in covered])
         g.corridors.append(cor)
-        for ri, *_ in members:
-            row_corr[ri] = cor
+        for k, *_ in members:
+            ent_corr[(info[k][0], info[k][5])] = cor
     if with_net:
         g.net = _net(g)
-    for key, p in g.placed.items():
-        cor = row_corr[p.row]
+
+    def tg_of(cor):
         if cor.orient == "h":
-            tg = (lambda along, cross, w, d: (along, cross, w, d))
-        else:
-            tg = (lambda along, cross, w, d: (cross, along, w, d))
+            return lambda along, cross, w, d: (along, cross, w, d)
+        return lambda along, cross, w, d: (cross, along, w, d)
+
+    for key, p in g.placed.items():
+        cor = ent_corr[(p.row, "front")]
         g.nodes[key] = Node(key=f"{key[0]}-{key[1]}", gx=p.gx, gy=p.gy, zone=cor.index, aisle=0, along=p.along,
-                            cross=cor.center, ends=cor.ends, to_global=tg, corridor=cor.index, net=g.net)
+                            cross=cor.center, ends=cor.ends, to_global=tg_of(cor), corridor=cor.index, net=g.net)
+        bc = ent_corr.get((p.row, "back"))
+        if bc is not None:  # pega pelos dois lados: parada também na face de trás (para as bins do fundo)
+            r = rows[p.row]
+            if r["orient"] == "h":
+                bx, by = p.along, (r["y"] if r["face"] == "+" else r["y"] + r["depth"])
+            else:
+                bx, by = (r["x"] if r["face"] == "+" else r["x"] + r["depth"]), p.along
+            g.back_nodes[key] = Node(key=f"{key[0]}-{key[1]} (fundo)", gx=bx, gy=by, zone=bc.index, aisle=0, along=p.along,
+                                     cross=bc.center, ends=bc.ends, to_global=tg_of(bc), corridor=bc.index, net=g.net)
     # estantes sem fileira
     for a, bs in bays.items():
         miss = [b for b in bs if (a, b.bay) not in g.placed]
@@ -656,8 +705,8 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     d = g.data
     abc = abc or {}
     L = StorageLocation
-    locs = list(db.execute(scope_filter(select(L.id, L.aisle, L.bay, L.level, L.position, L.compartment, L.address),
-                                        branch_id, warehouse_id)))
+    locs = list(db.execute(scope_filter(select(L.id, L.aisle, L.bay, L.level, L.position, L.compartment, L.address,
+                                               L.is_generic), branch_id, warehouse_id)))
     ids = [r[0] for r in locs]
     bins_of: dict[int, list] = {}
     sku_of: dict[int, tuple] = {}
@@ -695,6 +744,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     for r in locs:
         by_bay.setdefault((canon(r.aisle or ""), canon(r.bay or "")), []).append(r)
     sh = shelf_info(db, branch_id, warehouse_id)
+    back: set = set()
     for key, p in sorted(g.placed.items(), key=lambda kv: (natural_key(kv[0][0]), natural_key(kv[0][1]))):
         b = p.bay
         ckey = (canon(key[0]), canon(key[1]))
@@ -734,12 +784,15 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                                                    natural_key(r.compartment or ""))):
             for tid, q, sl_id in bins_of.get(r.id, []):
                 tgt = sh["by_id"].get(sl_id) if sl_id else None
+                # endereço genérico: não usa o próprio nível (sem nível escolhido, preenche a estante)
                 n = lv["index"].get(level_id(tgt)) if tgt is not None else (lv["index"].get(level_id(r.level))
-                                                                             if r.level else None)
+                                                                             if r.level and not r.is_generic else None)
                 (per_level[n] if n in per_level else loose).append((r, tid, q))
         front = p.w if front_x else p.d
         depth = p.d if front_x else p.w
         state = {x["n"]: [0.0, 0.0] for x in lv["levels"]}  # (ao longo da frente, profundidade) ocupados
+        both = bool(row.get("both")) and key in g.back_nodes  # pega pelos dois lados: as bins do fundo saem pelo outro corredor
+        seen_addr: set = set()
         lv_of = {x["n"]: x for x in lv["levels"]}
 
         def put(n, r, tid, q, spill):
@@ -766,6 +819,9 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                     else:
                         across = 0.0  # não cabe: sobrepõe (desenho aproximado)
                 x_ = lv_of[n]
+                if both and r.address not in seen_addr and across > 1e-6:
+                    back.add(r.address)  # a 1ª bin do endereço ficou no fundo: atendido pela face de trás
+                seen_addr.add(r.address)
                 acr = (depth - across - bd) if row["face"] == "+" else across  # frente da bin no lado do corredor
                 if front_x:
                     bx, by, bwx, bdy = p.x + cur, p.y + acr, bw, bd
@@ -784,6 +840,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         for r, tid, q in loose:
             if first is not None:
                 put(first, r, tid, q, True)
+    g.back_addrs = back
     out_types = []
     for t in used_types:
         fs = [f for f in fills_by_type.get(t, []) if f is not None]
@@ -884,7 +941,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
     from services.app_settings import canon
 
     L = StorageLocation
-    stmt = scope_filter(select(L.id, L.aisle, L.bay, L.level), branch_id, warehouse_id).where(L.bay != "")
+    stmt = scope_filter(select(L.id, L.aisle, L.bay, L.level, L.is_generic), branch_id, warehouse_id).where(L.bay != "")
     rows = list(db.execute(stmt))
     if loc_ids is not None:
         want = set(loc_ids)
@@ -895,7 +952,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
     st_of = {(canon(b.aisle), canon(b.bay)): b.struct for bs in bays.values() for b in bs}
     sh = shelf_info(db, branch_id, warehouse_id)
     codes: dict[tuple, list] = {}
-    for _i, a, bay, lv in rows:
+    for _i, a, bay, lv, _g in rows:
         codes.setdefault((canon(a), canon(bay)), []).append(lv)
     stacks: dict[tuple, dict] = {}
     bins: dict[int, list] = {}
@@ -909,7 +966,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
 
     tdim = {t.id: t for t in db.scalars(select(BinType))}
     out = {}
-    for lid, a, bay, lv in rows_q:
+    for lid, a, bay, lv, generic in rows_q:
         k = (canon(a), canon(bay))
         st = st_of.get(k)
         if st is None or st.golden_from is None or st.golden_to is None:
@@ -922,7 +979,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
         yes = no = 0
         free = {x["n"]: 1.0 for x in stk["levels"]}  # fração livre de cada nível (endereço genérico da estante)
         for q, sl_id, tid in bins.get(lid, []) or [(1, None, None)]:
-            code = sh["by_id"].get(sl_id) if sl_id else lv
+            code = sh["by_id"].get(sl_id) if sl_id else (None if generic else lv)
             if code:
                 n = stk["index"].get(level_id(code))
                 if n is not None:
@@ -947,3 +1004,10 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
                 no += left
         out[lid] = None if yes + no == 0 else yes >= no
     return out
+
+
+def mark_back(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[int]) -> None:
+    """Pega pelos dois lados: descobre quais endereços têm as bins no fundo da estante (pela mesma arrumação do 3D),
+    para a parada ser na face de trás."""
+    if g.back_nodes and g.back_addrs is None:
+        layout_3d(db, g, branch_id, warehouse_id)

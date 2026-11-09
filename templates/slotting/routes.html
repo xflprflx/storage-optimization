@@ -38,7 +38,7 @@
       <div class="fs-6 fw-semibold"><span title="Lista de separação">{{ mmss(tm.list_avg) }}</span> <span class="text-muted small fw-normal">lista</span>
         {% if tm.s_avg is defined %}· <span class="text-primary">{{ mmss(tm.s_avg) }}</span> <span class="text-muted small fw-normal">serpentina</span>{% endif %}
         · <span class="text-success">{{ mmss(tm.opt_avg) }}</span> <span class="text-muted small fw-normal">otimizada</span></div>
-      <div class="text-muted">pega: {{ mmss(tm.pick_avg) }} por pedido ({{ tm.units_avg|dec(1) }} peça(s) e {{ tm.out_gold_avg|dec(1) }} item(ns) fora da zona de ouro em média) · total {{ tm.list_h|dec(1) }} h na lista,
+      <div class="text-muted">pega: {{ mmss(tm.pick_avg) }} por pedido ({{ tm.units_avg|dec(1) }} peça(s) e {{ tm.out_gold_avg|dec(1) }} item(ns) / {{ tm.out_units_avg|dec(1) }} peça(s) fora da zona de ouro em média) · total {{ tm.list_h|dec(1) }} h na lista,
         {{ tm.opt_h|dec(1) }} h na otimizada{% if not sim.has_qty %} · <span class="text-warning-emphasis">amostra sem quantidades: cada linha = 1 peça (reenvie o histórico)</span>{% endif %}</div></div>
     <div class="col-auto ms-auto"><label class="form-label mb-0" for="t_v">Caminhada (m/s)</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.1" min="0.2" max="3" name="t_v" id="t_v" value="{{ tm.params.t_v }}"></div>
@@ -48,10 +48,12 @@
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_piece" id="t_piece" value="{{ tm.params.t_piece }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_gold" title="Tempo a mais para pegar um item (linha do pedido) num nível fora da zona de ouro da pega (agachar, escada…)">Fora do ouro (s/item)</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold" id="t_gold" value="{{ tm.params.t_gold }}"></div>
+    <div class="col-auto"><label class="form-label mb-0" for="t_gold_piece" title="Tempo a mais por PEÇA num nível fora da zona de ouro da pega">Fora do ouro (s/peça)</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ tm.params.t_gold_piece }}"></div>
     <div class="col-auto"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-stopwatch"></i> Recalcular</button></div>
   </form>
   <div class="text-muted small mt-1">Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça
-    + itens fora da zona de ouro da pega × tempo extra. Endereços do mesmo módulo contam como <b>uma parada</b>.</div>
+    + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.</div>
 </div></div>
 {% endif %}
 <div class="small text-muted mb-2"><b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas

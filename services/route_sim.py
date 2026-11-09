@@ -209,6 +209,8 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
             continue
         units = sum(float(q) for s, q in zip(skus, qty) if s in near) if qty else float(len(pts))
         out_gold = sum(1 for s_ in skus if s_ in near and near[s_].gold is False)  # linhas fora da zona de ouro
+        qmap = dict(zip(skus, qty)) if qty else {}
+        out_units = sum(float(qmap.get(s_, 1.0)) for s_ in skus if s_ in near and near[s_].gold is False)  # peças
         # o mesmo endereço uma vez; endereços do mesmo módulo = uma parada (não sai e volta; tempo fixo uma vez)
         groups = stop_groups(list({n.key: n for n in pts}.values()))
         uniq = [g[0] for g in groups.values()]
@@ -219,7 +221,7 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         opt = min([r for r in (opt, s_route, by_list) if r is not None], key=lambda r: _tour(r, start, d))
         dl, do = _tour(by_list, start, d) / unit, _tour(opt, start, d) / unit
         row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "out_gold": out_gold,
-               "list_m": dl, "opt_m": do}
+               "out_units": out_units, "list_m": dl, "opt_m": do}
         if s_route is not None:
             row["s_m"] = _tour(s_route, start, d) / unit
         rows.append(row)
@@ -282,13 +284,15 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
     return pts
 
 
-TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0}  # m/s, s/parada, s/peça, s/item fora do ouro
+# m/s, s/parada, s/peça, s por item fora da zona de ouro da pega, s por peça fora da zona de ouro
+TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0, "t_gold_piece": 0.0}
 
 
 def time_params(qp) -> dict:
     """Parâmetros de tempo da tela (velocidade de caminhada, tempo por parada e por peça), com limites."""
     out = {}
-    for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0))):
+    for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0)),
+                        ("t_gold_piece", (0.0, 600.0))):
         try:
             v = float(str(qp.get(k) if qp.get(k) not in (None, "") else TIME_DEFAULTS[k]).replace(",", "."))
         except ValueError:
@@ -304,7 +308,7 @@ def add_times(sim: dict, tp: dict) -> dict:
     if not rows:
         return sim
     fixed = lambda r: (r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
-                       + r.get("out_gold", 0) * tp["t_gold"])
+                       + r.get("out_gold", 0) * tp["t_gold"] + r.get("out_units", 0) * tp["t_gold_piece"])
     out = {"params": tp, "pick_avg": sum(fixed(r) for r in rows) / len(rows)}
     for k in ("list", "s", "opt"):
         if all(f"{k}_m" in r for r in rows):
@@ -315,6 +319,7 @@ def add_times(sim: dict, tp: dict) -> dict:
             out[f"{k}_h"] = sum(ts) / 3600
     out["units_avg"] = sum(r.get("units", r["lines"]) for r in rows) / len(rows)
     out["out_gold_avg"] = sum(r.get("out_gold", 0) for r in rows) / len(rows)
+    out["out_units_avg"] = sum(r.get("out_units", 0) for r in rows) / len(rows)
     sim["times"] = out
     return sim
 
@@ -349,6 +354,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
     qty_of = dict(zip(entry[1], entry[2])) if len(entry) > 2 and entry[2] else {}
     units_at: dict[str, float] = {}  # peças em cada endereço (SKUs do pedido naquele endereço)
     out_at: dict[str, int] = {}  # linhas fora da zona de ouro da pega em cada endereço
+    outq_at: dict[str, float] = {}  # peças fora da zona de ouro em cada endereço
     skus_at: dict[str, list] = {}
     near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
     for s_ in entry[1]:
@@ -356,6 +362,8 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
             k = near[s_].key
             units_at[k] = units_at.get(k, 0.0) + float(qty_of.get(s_, 1.0))
             out_at[k] = out_at.get(k, 0) + int(near[s_].gold is False)
+            if near[s_].gold is False:
+                outq_at[k] = outq_at.get(k, 0.0) + float(qty_of.get(s_, 1.0))
             skus_at.setdefault(k, []).append(s_)
     groups = rt.get("groups") or {}
     row = sim["rows"][0]
@@ -371,6 +379,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
                         "skus": [", ".join(x for k in g for x in skus_at.get(k, [sku_of.get(k, "")])) for g in grp],
                         "qty": [round(sum(units_at.get(k, 1.0) for k in g), 3) for g in grp],
                         "out": [sum(out_at.get(k, 0) for k in g) for g in grp],
+                        "outq": [round(sum(outq_at.get(k, 0.0) for k in g), 3) for g in grp],
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
     return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
             "out_gold": row["out_gold"], "has_gold": any(n.gold is not None for ns in nodes_of.values() for n in ns),

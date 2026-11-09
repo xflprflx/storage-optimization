@@ -94,6 +94,7 @@ class LeafData:
     bins: list = field(default_factory=list)  # [(bin_type_id, qty, shelf_level_id|None)]
     items: list = field(default_factory=list)  # [(sku, name, qty, uvol_l, uweight)]
     mark: str = ""  # pré-visualização do lote: "new" ou o motivo do conflito
+    generic: bool = False  # endereço genérico: as bins não ficam no próprio nível
 
 
 # Pré-visualizações do cadastro em lote (em memória): token -> dados do lote
@@ -124,7 +125,8 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
     `preview` (cadastro em lote): desenha os endereços novos (marcados), sem os que seriam removidos, e destaca os
     existentes em conflito."""
     L = StorageLocation
-    stmt = scope_filter(select(L.id, L.address, L.aisle, L.bay, L.level, L.position, L.compartment, L.is_occupied),
+    stmt = scope_filter(select(L.id, L.address, L.aisle, L.bay, L.level, L.position, L.compartment, L.is_occupied,
+                               L.is_generic),
                         branch_id, warehouse_id)
     if aisle:
         stmt = stmt.where(_aisle_eq(L.aisle, aisle))
@@ -152,7 +154,7 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
         if preview and r.id in preview["removed"]:
             continue
         leaves[r.id] = LeafData(r.id, r.address, segments((r.aisle, r.bay, r.level, r.position, r.compartment)),
-                                bool(r.is_occupied))
+                                bool(r.is_occupied), generic=bool(r.is_generic))
     ids = list(leaves)
 
     # Tipos de bin (todos, para legenda e cores estáveis)
@@ -264,7 +266,7 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
         for depth, s in enumerate(leaf.seg):
             node = node["children"].setdefault(s, {"code": s, "depth": depth, "children": {}})
         node["leaf"] = leaf
-        own_key = leaf.seg[:3] if len(leaf.seg) >= 3 else None
+        own_key = leaf.seg[:3] if len(leaf.seg) >= 3 and not leaf.generic else None  # genérico: não usa o próprio nível
         for tid, qty, sl_id in leaf.bins:
             target = sl_key.get(sl_id) if sl_id else own_key
             if target is None:
@@ -298,7 +300,7 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
         cap_w_known = True
         n_bins = 0
         extra = []
-        own_level = leaf.seg[2] if len(leaf.seg) >= 3 else None
+        own_level = leaf.seg[2] if len(leaf.seg) >= 3 and not leaf.generic else None
         for tid, qty, sl_id in leaf.bins:
             info = bt_info.get(tid)
             if not info:

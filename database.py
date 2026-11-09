@@ -154,6 +154,9 @@ def _add_missing_columns(conn) -> None:
                           "WHERE parent_id IS NOT NULL AND fraction_num > 0 AND split_axis != 'length'"))
         conn.execute(text("UPDATE bin_types SET div_w = 1, div_l = fraction_den / fraction_num "
                           "WHERE parent_id IS NOT NULL AND fraction_num > 0 AND split_axis = 'length'"))
+    lcols = {c["name"] for c in insp.get_columns("storage_locations")} if "storage_locations" in tables else set()
+    if "storage_locations" in tables and "is_generic" not in lcols:
+        conn.execute(text("ALTER TABLE storage_locations ADD COLUMN is_generic BOOLEAN NOT NULL DEFAULT 0"))
     stcols = {c["name"] for c in insp.get_columns("structure_types")} if "structure_types" in tables else set()
     for col in ("golden_from", "golden_to"):
         if "structure_types" in tables and col not in stcols:

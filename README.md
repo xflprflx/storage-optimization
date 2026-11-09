@@ -330,7 +330,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - respeita a **mão única** dos corredores marcados assim na planta da filial;
 - sem planta (filial existente sem desenho), a distância é a estimada pelo endereço.
 
-**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça** + itens fora da zona de ouro da pega × **tempo extra fora do ouro**. Os quatro são editáveis na tela (padrão 1 m/s, 10 s, 2 s e 5 s por item); a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
+**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça** + itens fora da zona de ouro da pega × **s por item fora do ouro** + peças fora da zona de ouro × **s por peça fora do ouro**. Todos são editáveis na tela (padrão 1 m/s, 10 s, 2 s, 5 s por item e 0 s por peça); a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
 
 **Uma parada por módulo:** endereços do pedido no mesmo módulo (mesma estante, mesmo ponto de parada) são **uma parada**: o separador não sai e volta, e o tempo fixo da parada conta uma vez (as peças e os itens fora do ouro de todos os endereços somam). A zona de ouro da pega de cada endereço vem da estrutura da estante e do nível onde as bins estão de fato (nível extra, excedente ou, no endereço genérico da estante, os níveis que as bins ocupam).
 
@@ -341,7 +341,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
 - **Painel:** distância percorrida, paradas feitas, **peças pegas / total** e tempo de cada rota; no topo, linhas, paradas e peças do pedido. A lista de paradas risca as já feitas. O tempo de caminhada do vídeo usa a mesma distância da simulação (a do painel).
 - **Corredores:** o filtro *Corredor* do 3D aceita **vários corredores** (marque um ou mais; *Todos* limpa, *Inverter* troca a seleção).
-- **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças + **fora do ouro** (s) × itens fora da zona de ouro da pega, todos editáveis. Cada parada (um módulo) dura o tempo fixo mais as peças e os itens fora do ouro dos endereços dela; a lista de paradas mostra os endereços do módulo, as peças, os itens fora do ouro e o tempo de cada uma, e as bins de todos os endereços da parada se acendem.
+- **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças + **fora do ouro** (s) × itens fora da zona de ouro da pega, todos editáveis. Cada parada (um módulo) dura o tempo fixo mais as peças e os itens fora do ouro dos endereços dela; a lista de paradas e o painel ("pegando …") mostram **todos os endereços** do módulo, as peças, os itens fora do ouro e o tempo de cada uma, e as bins de todos os endereços da parada se acendem. Também há o campo *Fora do ouro (s/peça)*.
 - **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).
 - **Câmera:** seguir os separadores (afasta para caberem todos), primeira pessoa, de cima (a rota toda) ou livre.
 - **Tela cheia:** botão no canto da vista 3D (Esc volta).
@@ -366,6 +366,10 @@ A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*)
 - uma letra por rua: A|B, C|D… frente a frente.
 
 Informe a largura do corredor e o espaço livre na frente. Em *Corredores com outra largura*, dê uma largura própria a alguns corredores pela letra (ex.: `A=3,5; C=2,8`).
+
+**Vários objetos e o imóvel com o mouse:** Shift+clique soma ou tira objetos da seleção, e Shift+arrastar o fundo seleciona por área; arrastar qualquer um move todos, as setas movem, Del apaga e R/F giram/trocam o lado das fileiras selecionadas. As alças na borda direita, na de baixo e no canto do imóvel mudam o comprimento e a largura.
+
+**Pega pelos dois lados:** na fileira, a opção *Pega pelos dois lados* serve para estruturas que comportam 2 (ou mais) bins na profundidade e não têm vizinho encostado atrás: as bins da frente são pegas pelo corredor da frente e as do fundo pelo corredor de trás (face tracejada). O usuário decide fileira a fileira; com fileira ou obstáculo a menos de 80 cm atrás a opção é ignorada e o painel avisa. Os endereços do fundo (pela arrumação das bins do 3D) param na face de trás — no simulador, no 3D e na posição pela saída.
 
 **Mover estantes (módulos) de uma fileira:** no painel da fileira, marque as estantes (botões com os números ou Ctrl/⌘+clique no desenho) e clique em *Separar em nova fileira*. As marcadas viram uma fileira própria (lista fixa de estantes), ao lado, para arrastar, girar (R) e posicionar onde quiser — por exemplo, um módulo perpendicular na ponta de duas ruas costas com costas. As estantes que ficam continuam no lugar (um trecho do meio separado divide a fileira em duas). *Usar todas do lado* desfaz a lista fixa.
 
@@ -429,7 +433,7 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 1. o nível precisa existir: com endereços ou criado em *Capacidade dos níveis* (nível reservado, ou "criar níveis que faltam");
 2. em *Endereços → editar*, cada linha de bins tem a coluna **Nível**: o próprio ou um **nível extra** da mesma estante;
 3. o excedente da capacidade vai sozinho para o nível de cima, dedicado ao endereço.
-Um **endereço genérico da estante** (só corredor e estante, ex.: `F.07`) ocupa os níveis da estante: escolha o nível de cada linha de bins ou deixe sem nível (o 3D preenche a estante de baixo para cima).
+**Endereço genérico** é uma **marca no endereço** (caixa *Endereço genérico* no cadastro, coluna *Genérico* na importação de endereços, selo "genérico" na lista), qualquer que seja o código: o endereço não usa o próprio nível — cada linha de bins vai para o nível escolhido na coluna *Nível* ou, sem nível escolhido, as bins ocupam os níveis da estante de baixo para cima (3D, zona de ouro da pega e uso dos níveis seguem isso). Um endereço só até a estante (sem nível) se comporta do mesmo jeito.
 O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída e tempo do simulador) usam o nível onde as bins estão.
 
 ## 6.0.4 Exclusão em massa

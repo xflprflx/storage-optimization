@@ -423,6 +423,21 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 - **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
 - **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
 
+## 6.0.6 Altura do 1º nível, vão por nível e palete no chão
+
+**Cadastro da estrutura** (Cadastros → Estruturas):
+- **Altura do 1º nível (cm):** a base do 1º nível a partir do piso (0 = no chão).
+- **Vão de cada nível (cm), de baixo para cima:** ex.: `60; 40; 35`. Os níveis sem vão informado usam o vão útil. A sobra da altura total (altura − 1º nível − soma dos vãos) vira a espessura das longarinas; o cadastro recusa quando o 1º nível + os vãos passam da altura. O desenho de frente do módulo mostra os níveis nas alturas reais.
+- **Tipo "Palete no chão":** paletes direto no piso, empilhados por nível (cada nível = uma camada), sem montantes nem longarinas.
+
+**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima) e a capacidade de cada nível pelo seu vão.
+
+**Onde vale:**
+- **3D** (projeto e filial): a base de cada nível sai da altura do 1º nível + vãos (+ longarinas); no palete no chão, um palete de madeira por camada e as bins em cima dele.
+- **Zona de ouro da pega:** o meio de cada nível na altura real (projeto, filial e posição pela saída).
+- **Projeto de filial nova:** cada tipo de bin só ocupa os níveis cujo vão comporta a bin + a folga (o solver e a distribuição dos tipos nos níveis respeitam), e os níveis criados na filial gerada recebem o vão de cada um. A planilha do projeto aceita as colunas *Altura do 1º nível (cm)* e *Vãos por nível (cm)* na aba Estruturas.
+- **Planta 2D:** módulos de palete no chão aparecem com as tábuas do palete (listras).
+
 ## 6.0.5 Configurações de endereço e níveis extras
 
 **Cadastros → Configurações** (`/settings`):

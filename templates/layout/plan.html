@@ -185,7 +185,7 @@
   }
   function rowGeom(r) {
     const bs = rowBays(r); let cur = 0; const out = [];
-    bs.forEach(b => { const w = b.w || r.bay_w; out.push({ bay: b.bay, off: cur, w }); cur += w; });
+    bs.forEach(b => { const w = b.w || r.bay_w; out.push({ bay: b.bay, off: cur, w, f: b.f }); cur += w; });
     const len = cur || r.bay_w;
     return { bays: out, len, w: r.orient === 'h' ? len : r.depth, d: r.orient === 'h' ? r.depth : len };
   }
@@ -218,6 +218,9 @@
     svg.innerHTML = '';
     svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
     const fs = Math.max(D.L, D.W) / 70, sw = vb.w / 900;
+    // tábuas do palete (estrutura "Palete no chão")
+    const defs = el('defs', {}, svg), pat = el('pattern', { id: 'nkPalletE', width: fs * 0.6, height: fs * 0.6, patternUnits: 'userSpaceOnUse' }, defs);
+    el('rect', { width: fs * 0.6, height: fs * 0.35, fill: '#b8864b', 'fill-opacity': 0.6 }, pat);
     el('rect', { x: 0, y: 0, width: D.L, height: D.W, fill: '#fbfcfd', stroke: '#1f2d33', 'stroke-width': sw * 2 }, svg);
     // alças do imóvel (arraste para mudar o comprimento, a largura ou os dois)
     const hs = sw * 9;
@@ -261,7 +264,7 @@
       G.bays.forEach((b, k) => {
         const a = r.orient === 'h' ? { x: r.x + b.off, y: r.y, width: b.w, height: r.depth } : { x: r.x, y: r.y + b.off, width: r.depth, height: b.w };
         const on = sel && sel.kind === 'row' && sel.i === i && pick.has(b.bay);
-        el('rect', { ...a, fill: on ? '#fde68a' : 'transparent', stroke: on ? '#e11d48' : '#7b8a95', 'stroke-width': sw * (on ? 1.5 : 0.6), 'data-bay': b.bay }, g);
+        el('rect', { ...a, fill: on ? '#fde68a' : (b.f ? 'url(#nkPalletE)' : 'transparent'), stroke: on ? '#e11d48' : '#7b8a95', 'stroke-width': sw * (on ? 1.5 : 0.6), 'data-bay': b.bay }, g);
         const big = b.w / vb.w * svg.clientWidth > 16;
         if (big || k === 0 || k === G.bays.length - 1) {
           const t = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 + fs * 0.22, 'font-size': fs * 0.6, fill: '#1f2d33', 'text-anchor': 'middle', 'pointer-events': 'none' }, g);

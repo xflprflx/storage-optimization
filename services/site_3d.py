@@ -14,7 +14,9 @@ from __future__ import annotations
 import math
 from typing import Optional
 
-from services.site_planner import SitePlan, aisle_labels, struct_colors
+from services.site_planner import SitePlan, aisle_labels, is_floor, struct_colors
+
+PALLET_H = 14.0  # altura do palete de madeira (cm): no "Palete no chão" as bins ficam em cima dele
 
 EPS = 1e-6
 TYPE_PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#b07aa1", "#edc948", "#76b7b2", "#ff9da7", "#9c755f", "#e15759",
@@ -54,6 +56,7 @@ def plan_3d(plan: SitePlan) -> dict:
             s = sl.struct
             out["structs"].append({"id": s.id, "code": s.code, "name": s.name, "qty": sl.qty, "color": scol[s.id],
                                    "w": s.width, "d": s.depth, "h": s.height, "levels": s.levels,
+                                   "kind": s.kind, "floor": is_floor(s.kind),
                                    "golden": [s.golden_from, s.golden_to] if s.golden_from is not None else None,
                                    "golden_levels": s.golden_levels})
     tidx: dict[int, int] = {}
@@ -72,11 +75,10 @@ def plan_3d(plan: SitePlan) -> dict:
         front_x = (not m.rotated) != zrot  # a frente do módulo corre ao longo de X na planta?
         # lado do corredor (frente): fileira "L" fica antes do corredor (corredor em y local maior)
         front_far = (m.row.side == "L") if not m.rotated else False
-        pitch = s.height / max(1, s.levels)
         mod = {"x": _r(X), "y": _r(Y), "w": _r(gw), "d": _r(gd), "h": s.height, "s": s.id, "code": f"{m.aisle}-{m.bay}",
                "fx": front_x, "levels": [], "cap": bool(m.rotated)}
         for lv in sorted(m.levels, key=lambda v: v.n):
-            z0 = (lv.n - 1) * pitch
+            z0 = s.z(lv.n)  # 1º nível a partir da altura cadastrada, com o vão de cada nível
             mod["levels"].append({"n": lv.n, "z": _r(z0), "t": tidx.get(lv.type_id) if lv.type_id is not None else None,
                                   "used": lv.used, "cap": lv.cap, "g": s.is_golden(lv.n)})
             if lv.type_id is None or not lv.positions:
@@ -104,7 +106,7 @@ def plan_3d(plan: SitePlan) -> dict:
                         bx, by, bwx, bdy = X + along, Y + across, cw, bl
                     else:
                         bx, by, bwx, bdy = X + across, Y + along, bl, cw
-                    out["bins"].append([_r(bx), _r(by), _r(z0 + 2.0), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
+                    out["bins"].append([_r(bx), _r(by), _r(z0 + (PALLET_H if is_floor(s.kind) else 2.0)), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
                                         None if pos.fill is None else round(pos.fill, 1), mi, pos.address, pos.sku,
                                         golden, abc.get(pos.sku, ""), bool(pos.walk_golden)])
                     k += 1

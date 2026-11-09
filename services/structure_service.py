@@ -26,7 +26,9 @@ BayKey = tuple  # (branch_id, warehouse_id|None, aisle, bay)
 def spec_of(st: StructureType) -> StructureSpec:
     f = lambda v: float(v) if v is not None else None  # noqa: E731
     return StructureSpec(st.id, st.code, st.name, float(st.width), float(st.depth), float(st.height), int(st.levels),
-                         float(st.level_height), f(st.max_load), f(st.cost))
+                         float(st.level_height), f(st.max_load), f(st.cost), golden_from=f(st.golden_from),
+                         golden_to=f(st.golden_to), base=float(st.first_level_cm or 0), kind=st.kind or "",
+                         level_hs=st.vaos() if st.level_heights else None)
 
 
 def _scope(stmt, model, branch_id, warehouse_id):
@@ -53,8 +55,9 @@ def matching_bays(db: Session, branch_id: int, warehouse_id: Optional[int], aisl
 
 
 def capacities_for(st: StructureType, bin_types: Iterable[BinType], top_gap_cm: float = 5.0,
-                   level_fill: float = 1.0) -> dict[int, int]:
-    """tipo de bin -> quantas cabem num nível da estrutura (só tipos inteiros com dimensões que cabem)."""
+                   level_fill: float = 1.0, n: Optional[int] = None) -> dict[int, int]:
+    """tipo de bin -> quantas cabem num nível da estrutura (só tipos inteiros com dimensões que cabem). `n` = o nível
+    (vão próprio, quando a estrutura tem vão por nível)."""
     spec = spec_of(st)
     prm = SiteParams(top_gap_cm=top_gap_cm, level_fill=level_fill)
     from services.bin_optimizer import BinSpec
@@ -63,9 +66,9 @@ def capacities_for(st: StructureType, bin_types: Iterable[BinType], top_gap_cm: 
     for bt in bin_types:
         if bt.is_fraction or bt.height is None or bt.width is None or bt.length is None:
             continue
-        n = level_capacity(BinSpec(bt.id, bt.code, float(bt.height), float(bt.width), float(bt.length)), spec, prm)
-        if n > 0:
-            out[bt.id] = n
+        k = level_capacity(BinSpec(bt.id, bt.code, float(bt.height), float(bt.width), float(bt.length)), spec, prm, None, n)
+        if k > 0:
+            out[bt.id] = k
     return out
 
 
@@ -78,11 +81,20 @@ def _level_codes(existing: list[str], n: int) -> list[str]:
 
 def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, create_levels: bool = True,
                     set_heights: bool = True, set_caps: bool = True, replace_caps: bool = True,
-                    top_gap_cm: float = 5.0, type_ids: Optional[set] = None) -> dict:
-    """Aplica a estrutura às estantes. Retorna estatísticas."""
+                    top_gap_cm: float = 5.0, type_ids: Optional[set] = None, first_level_cm="keep") -> dict:
+    """Aplica a estrutura às estantes. Com vão por nível na estrutura, cada nível (de baixo para cima) recebe o seu
+    vão e a capacidade que cabe nele. `first_level_cm` = altura do 1º nível nessas estantes, quando foram montadas
+    diferente da estrutura (None = a da estrutura; "keep" = não mexe). Retorna estatísticas."""
+    from services.layout_service import natural_key
+
     stats = {"bays": 0, "levels_created": 0, "levels": 0, "caps": 0, "extra_levels": 0}
     bin_types = [bt for bt in db.scalars(select(BinType)) if type_ids is None or bt.id in type_ids]
-    caps = capacities_for(st, bin_types, top_gap_cm) if set_caps else {}
+    vaos = st.vaos()
+    per_level = bool(st.level_heights)
+    caps_n = {n: capacities_for(st, bin_types, top_gap_cm, n=n) for n in range(1, st.levels + 1)} \
+        if set_caps and per_level else {}
+    caps = capacities_for(st, bin_types, top_gap_cm) if set_caps and not per_level else {}
+    idx_of: dict[tuple, int] = {}  # nível -> posição de baixo para cima na estante
     all_keys = []
     by_bay = defaultdict(list)
     for b, w, a, bay in bays:
@@ -94,9 +106,12 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
         link = db.scalar(_scope(select(BayStructure), BayStructure, b, w).where(BayStructure.aisle == a,
                                                                                 BayStructure.bay == bay))
         if link is None:
-            db.add(BayStructure(branch_id=b, warehouse_id=w, aisle=a, bay=bay, structure_type_id=st.id))
+            db.add(BayStructure(branch_id=b, warehouse_id=w, aisle=a, bay=bay, structure_type_id=st.id,
+                                first_level_cm=None if first_level_cm == "keep" else first_level_cm))
         else:
             link.structure_type_id = st.id
+            if first_level_cm != "keep":
+                link.first_level_cm = first_level_cm
         stats["bays"] += 1
         keys = list(by_bay.get(bk, []))
         if create_levels:
@@ -110,21 +125,28 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
             stats["extra_levels"] += len(keys) - st.levels
         stats["levels"] += len(keys)
         all_keys += keys
-        for k in keys:
+        keys.sort(key=lambda k: natural_key(k[4]))
+        for i, k in enumerate(keys):
+            idx_of[k] = min(i + 1, st.levels)
             sl = ensure_level(db, k)
             if set_heights:
-                sl.height_cm = Decimal(str(st.level_height))
+                sl.height_cm = Decimal(str(vaos[min(i, len(vaos) - 1)]))
             if not sl.notes:
                 sl.notes = f"Estrutura {st.code}"
     db.flush()
     if set_caps and all_keys:
-        for bt in bin_types:
-            if bt.is_fraction:
-                continue
-            n = caps.get(bt.id)
-            if n or replace_caps:
-                set_capacity(db, all_keys, bt.id, n or None)
-                stats["caps"] += len(all_keys) if n else 0
+        groups = {}
+        for k in all_keys:  # níveis com a mesma capacidade (com vão por nível, por posição na estante)
+            groups.setdefault(idx_of.get(k, 1) if per_level else 0, []).append(k)
+        for g_n, g_keys in groups.items():
+            cp = caps_n.get(g_n, {}) if per_level else caps
+            for bt in bin_types:
+                if bt.is_fraction:
+                    continue
+                n = cp.get(bt.id)
+                if n or replace_caps:
+                    set_capacity(db, g_keys, bt.id, n or None)
+                    stats["caps"] += len(g_keys) if n else 0
     db.flush()
     stats["fit"] = fit_structure(db, all_keys) if all_keys else []
     stats["spill"] = spill_overflow(db, {k[:4] for k in all_keys}) if set_caps and all_keys else []

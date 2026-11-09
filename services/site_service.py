@@ -321,7 +321,9 @@ def structure_specs(db: Session, modes: dict) -> list[StructureSpec]:
                                  float(st.max_load) if st.max_load is not None else None,
                                  float(st.cost) if st.cost is not None else None, **md,
                                  golden_from=float(st.golden_from) if st.golden_from is not None else None,
-                                 golden_to=float(st.golden_to) if st.golden_to is not None else None))
+                                 golden_to=float(st.golden_to) if st.golden_to is not None else None,
+                                 base=float(st.first_level_cm or 0), kind=st.kind or "",
+                                 level_hs=st.vaos() if st.level_heights else None))
     return out
 
 
@@ -688,7 +690,7 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
         stats["bays"] += 1
         for lv in m.levels:
             sl = ShelfLevel(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
-                            level=str(lv.n), height_cm=Decimal(str(m.struct.level_h)),
+                            level=str(lv.n), height_cm=Decimal(str(m.struct.vao(lv.n))),
                             notes=f"Estrutura {m.struct.code}")
             db.add(sl)
             db.flush()

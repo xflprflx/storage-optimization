@@ -284,12 +284,23 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
         gap = float(parse_decimal(form.get("top_gap") or "5") or 0)
     except ValueError:
         return redirect(_back(form), "Folga acima da bin inválida.", "danger")
+    try:
+        fl = parse_decimal(form.get("first_level") or "")
+    except ValueError:
+        return redirect(_back(form), "Altura do 1º nível inválida.", "danger")
+    if fl is not None and fl < 0:
+        return redirect(_back(form), "Altura do 1º nível não pode ser negativa.", "danger")
     stats = apply_structure(db, bays, st, create_levels=on("create_levels"), set_heights=on("set_heights"),
-                            set_caps=on("set_caps"), replace_caps=on("replace_caps"), top_gap_cm=gap)
+                            set_caps=on("set_caps"), replace_caps=on("replace_caps"), top_gap_cm=gap,
+                            first_level_cm=fl)
     msgs = [f"Estrutura {st.code} aplicada a {stats['bays']} estante(s) ({stats['levels']} níveis"
-            + (f", {stats['levels_created']} criados" if stats["levels_created"] else "") + ")."]
+            + (f", {stats['levels_created']} criados" if stats["levels_created"] else "") + ")"
+            + (f", 1º nível a {fl:g} cm do piso nessas estantes" if fl is not None else "") + "."]
     if on("set_caps"):
         msgs.append("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins.")
+    if fl is not None and float(fl) + sum(st.vaos()) > float(st.height) + 1e-6:
+        msgs.append(f"Atenção: 1º nível a {fl:g} cm + vãos ({sum(st.vaos()):g} cm) passam da altura da estrutura "
+                    f"({float(st.height):g} cm).")
     if stats["extra_levels"]:
         msgs.append(f"Atenção: {stats['extra_levels']} nível(is) além dos {st.levels} da estrutura.")
     adj = structure_message(stats["fit"])

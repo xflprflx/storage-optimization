@@ -42,7 +42,7 @@
           <td class="text-end">{{ s.depth|dec }}</td>
           <td class="text-end">{{ s.height|dec }}</td>
           <td class="text-end">{{ s.levels }}</td>
-          <td class="text-end">{{ s.level_height|dec }}</td>
+          <td class="text-end" title="{% if s.level_heights %}Vão por nível (de baixo para cima){% endif %}">{% if s.level_heights %}{{ s.vaos()|map("int")|join(" / ") }}{% else %}{{ s.level_height|dec }}{% endif %}{% if s.first_level_cm %}<div class="small text-muted">1º nível a {{ s.first_level_cm|dec }} cm</div>{% endif %}</td>
           <td class="text-end">{{ s.max_load|dec }}</td>
           <td class="text-end">{{ s.cost|dec(2) if s.cost is not none else '' }}</td>
           <td class="text-end">{{ usage.get(s.id, 0) or '' }}{% if usage.get(s.id) %} estante(s){% endif %}</td>

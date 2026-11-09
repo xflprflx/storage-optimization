@@ -118,17 +118,41 @@ class StructureSpec:
     max_qty: Optional[int] = None  # modo "auto" (None = sem limite além da planta)
     golden_from: Optional[float] = None  # zona de ouro: faixa de altura (cm do piso) mais ergonômica para pegar
     golden_to: Optional[float] = None
+    base: float = 0.0  # altura da base do 1º nível a partir do piso (cm)
+    level_hs: Optional[list] = None  # vão de cada nível, de baixo para cima (cm); None = level_h em todos
+    kind: str = ""  # tipo (Estante, Porta-palete, Palete no chão…)
+    # vão por nível: tipo de bin -> níveis (1 = de baixo) em que ele cabe (preenchido no cálculo; vazio = todos)
+    fit_levels: dict = field(default_factory=dict, repr=False)
+
+    def vao(self, n: int) -> float:
+        """Vão útil do nível `n` (1 = de baixo)."""
+        if self.level_hs and 0 < n <= len(self.level_hs) and self.level_hs[n - 1]:
+            return float(self.level_hs[n - 1])
+        return self.level_h
+
+    @property
+    def max_vao(self) -> float:
+        return max([self.vao(n) for n in range(1, self.levels + 1)] or [self.level_h])
 
     @property
     def pitch(self) -> float:
-        """Distância entre as bases de dois níveis (cm): a altura total dividida pelos níveis."""
-        return self.height / max(1, self.levels)
+        """Distância média entre as bases de dois níveis (cm): a altura acima do 1º nível dividida pelos níveis."""
+        return max(0.0, self.height - self.base) / max(1, self.levels)
+
+    def z(self, n: int) -> float:
+        """Base do nível `n` (cm do piso): a altura do 1º nível + os vãos dos níveis de baixo + as longarinas (a sobra
+        da altura, repartida). Sem vãos por nível, o passo é a altura acima do 1º nível ÷ níveis."""
+        if not self.level_hs:
+            return self.base + (n - 1) * self.pitch
+        vs = [self.vao(k) for k in range(1, self.levels + 1)]
+        beam = max(0.0, (self.height - self.base - sum(vs)) / max(1, self.levels))
+        return self.base + sum(vs[:n - 1]) + beam * (n - 1)
 
     def is_golden(self, n: int) -> bool:
         """O nível `n` (1 = de baixo) está na zona de ouro: a altura de pega (meio do vão) cai na faixa."""
         if self.golden_from is None or self.golden_to is None:
             return False
-        mid = (n - 1) * self.pitch + self.level_h / 2
+        mid = self.z(n) + self.vao(n) / 2
         return self.golden_from - EPS <= mid <= self.golden_to + EPS
 
     @property
@@ -811,15 +835,18 @@ def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
 # --------------------------------------------------------------------------- #
 # Capacidade de um nível
 # --------------------------------------------------------------------------- #
-def level_capacity(t: BinSpec, s: StructureSpec, prm: SiteParams, parent: Optional[tuple] = None) -> int:
+def level_capacity(t: BinSpec, s: StructureSpec, prm: SiteParams, parent: Optional[tuple] = None,
+                   n: Optional[int] = None) -> int:
     """Bins do tipo `t` que cabem em UM nível da estrutura `s` (frente × profundidade). 0 = não cabe.
-    Compartimentos (parent = (bin pai, nº por pai)) contam pela bin pai."""
+    `n` = o nível (vão próprio); sem ele, o maior vão da estrutura. Compartimentos (parent = (bin pai, nº por pai))
+    contam pela bin pai."""
     if parent:
         pspec, per = parent
-        return level_capacity(pspec, s, prm) * per
+        return level_capacity(pspec, s, prm, None, n) * per
     if not t.has_dims:
         return 0
-    if t.h + prm.top_gap_cm > s.level_h + EPS or t.l > s.depth + EPS or t.w > s.width + EPS:
+    vao = s.vao(n) if n else s.max_vao
+    if t.h + prm.top_gap_cm > vao + EPS or t.l > s.depth + EPS or t.w > s.width + EPS:
         return 0
     usable = s.width * prm.level_fill
     per_row = int(math.floor((usable + prm.side_gap_cm) / (t.w + prm.side_gap_cm) + EPS))
@@ -1098,6 +1125,13 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     # ---- capacidade por (tipo, estrutura) ----
     allowed = [t for t in types.values() if prm.allowed_types is None or t.id in prm.allowed_types]
     caps = {(t.id, s.id): level_capacity(t, s, prm, parents.get(t.id)) for t in allowed for s in active}
+    for s in active:  # vão por nível: em quais níveis cada tipo cabe (o solver e a distribuição nos níveis respeitam)
+        s.fit_levels = {}
+        if s.level_hs:
+            for t in allowed:
+                if caps[(t.id, s.id)] > 0:
+                    s.fit_levels[t.id] = [n for n in range(1, s.levels + 1)
+                                          if level_capacity(t, s, prm, parents.get(t.id), n) > 0]
     fitting = {t.id for t in allowed if any(caps[(t.id, s.id)] > 0 for s in active)}
     if not fitting:
         plan.errors.append("Nenhum tipo de bin permitido cabe nos níveis das estruturas ativas (confira altura/vão, "
@@ -1373,6 +1407,12 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
                                                                + sum(v for kk, v in cmax_of.items() if kk[4] == s.id)),
                                            f"z_{t}_{s.id}")
         m.Add(sum(v for (t, sid), v in z.items() if sid == s.id) <= s.levels * x[s.id])
+        if s.fit_levels:  # vão por nível: os tipos mais altos só ocupam os níveis mais altos (conjuntos encaixados)
+            nfit = {t: len(s.fit_levels.get(t, [])) for (t, sid) in z if sid == s.id}
+            for t, k in nfit.items():
+                if k < s.levels:
+                    m.Add(sum(v for (t2, sid), v in z.items() if sid == s.id and nfit.get(t2, s.levels) <= k)
+                          <= k * x[s.id])
     short = {}
     for t in all_t:
         short[t] = m.NewIntVar(0, need_ub[t], f"short_{t}")
@@ -1588,12 +1628,17 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                 slots.sort(key=lambda lv: (math.floor(mdist0[id(lv_mod[id(lv)])] / SLOT_BUCKET_M),
                                            not s.is_golden(lv.n), lv.n))
         # ordem: nível 1 de todos os módulos, depois nível 2... (mantém o mesmo tipo contínuo ao longo do corredor)
-        it = iter(slots)
+        # vão por nível: cada tipo só vai para os níveis onde cabe (os mais restritos escolhem primeiro)
+        if s.fit_levels:
+            alloc.sort(key=lambda tk: len(s.fit_levels.get(tk[0], range(s.levels))))
+        free = list(slots)
         for t, k in alloc:
+            ok = set(s.fit_levels.get(t, [])) if s.fit_levels else None
             for _ in range(k):
-                lv = next(it, None)
-                if lv is None:
+                j = next((j for j, lv in enumerate(free) if ok is None or lv.n in ok), None)
+                if j is None:
                     break
+                lv = free.pop(j)
                 lv.type_id, lv.cap = t, caps[(t, s.id)]
     # SKUs nas posições
     owner = {id(lv): m for m in plan.modules for lv in m.levels}
@@ -1653,7 +1698,8 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                 j = next((j for j in range(si, len(slots)) if room(slots[j]) > 0), None)
                 if j is None:  # acabaram os níveis do tipo (ex.: limite de carga): usa um nível livre compatível
                     extra = next((lv for m in plan.modules for lv in sorted(m.levels, key=lambda v: v.n)
-                                  if lv.type_id is None and caps.get((t, m.struct.id), 0) > 0), None)
+                                  if lv.type_id is None and caps.get((t, m.struct.id), 0) > 0
+                                  and (not m.struct.fit_levels or lv.n in m.struct.fit_levels.get(t, []))), None)
                     if extra is None:
                         break
                     extra.type_id, extra.cap = t, caps[(t, owner[id(extra)].struct.id)]
@@ -1996,6 +2042,19 @@ def _m(cm: float) -> str:
     return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", ",")
 
 
+FLOOR_KINDS = ("palete no chao", "palete no chão", "blocado", "piso")
+
+
+def is_floor(kind: str) -> bool:
+    """Estrutura do tipo "Palete no chão": paletes direto no piso (empilhados por nível), sem montantes."""
+    k = (kind or "").strip().casefold()
+    return any(k.startswith(f) for f in FLOOR_KINDS)
+
+
+PALLET_PATTERN = ('<defs><pattern id="nkPallet" width="8" height="8" patternUnits="userSpaceOnUse">'
+                  '<rect width="8" height="5" fill="#b8864b" fill-opacity=".55"/></pattern></defs>')
+
+
 def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     """Planta vista de cima. As medidas vêm em camadas (classes `nk-dim-s` = resumo, `nk-dim-f` = completas) que a
     tela mostra conforme a escolha do usuário (`data-dims` no SVG; ver base.html); `data-vb-base`/`data-vb-full`
@@ -2010,7 +2069,8 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     vb_full = f"-40 -40 {W + 44:.1f} {H + 60:.1f}"
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vb_base}" data-vb-base="{vb_base}" data-vb-full="{vb_full}" '
            f'data-dims="summary" data-dims-pos="out" class="w-100 nk-floor" style="max-height:70vh" font-family="sans-serif">',
-           f'<rect x="0" y="0" width="{W:.1f}" height="{H:.1f}" fill="#fbfcfd" stroke="#1f2d33" stroke-width="2"/>']
+           f'<rect x="0" y="0" width="{W:.1f}" height="{H:.1f}" fill="#fbfcfd" stroke="#1f2d33" stroke-width="2"/>',
+           PALLET_PATTERN]
     full = []  # camada de medidas completas (desenhada por cima)
     for kind, X, Y, w, d, label in fl.shapes():
         fill, stroke, dash = SHAPE_STYLE.get(kind, ("none", "#999", ""))
@@ -2063,6 +2123,9 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
                    f'fill="{color[m.struct.id]}" fill-opacity="{op:.2f}" '
                    + ('stroke="#1f2d33" stroke-width="1" stroke-dasharray="2 1"' if m.rotated else 'stroke="#fff" stroke-width="0.6"')
                    + f'><title>{title}</title></rect>')
+        if is_floor(m.struct.kind):  # palete no chão: tábuas do palete (listras) por cima da cor da estrutura
+            out.append(f'<rect x="{X * sc:.1f}" y="{Y * sc:.1f}" width="{w * sc:.1f}" height="{d * sc:.1f}" '
+                       f'fill="url(#nkPallet)" pointer-events="none"/>')
     out += full
     # zona de ouro da caminhada: as posições até X m (em L) do ponto de referência formam um losango em volta dele
     ref, lim = (plan.slotting or {}).get("ref"), (plan.slotting or {}).get("walk_golden_m")

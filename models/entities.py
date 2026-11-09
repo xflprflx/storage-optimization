@@ -494,7 +494,16 @@ class StructureType(TimestampMixin, Base):
     # zona de ouro (opcional): faixa de altura, a partir do piso, mais ergonômica para pegar itens (cm)
     golden_from: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     golden_to: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    # altura da base do 1º nível a partir do piso (cm; 0 = no chão) e vão de cada nível, de baixo para cima (cm;
+    # vazio = o mesmo vão útil em todos)
+    first_level_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    level_heights: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+    def vaos(self) -> list[float]:
+        """Vão de cada nível (cm), de baixo para cima."""
+        hs = [float(v) for v in (self.level_heights or []) if v]
+        return [hs[i] if i < len(hs) else float(self.level_height) for i in range(int(self.levels))]
 
     @property
     def label(self) -> str:
@@ -529,6 +538,8 @@ class BayStructure(TimestampMixin, Base):
     structure_type_id: Mapped[int] = mapped_column(
         ForeignKey("structure_types.id", ondelete="RESTRICT"), nullable=False, index=True
     )
+    # altura do 1º nível nesta estante (cm), quando ela foi montada diferente da estrutura (vazio = a da estrutura)
+    first_level_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
 
     structure_type: Mapped[StructureType] = relationship()
 

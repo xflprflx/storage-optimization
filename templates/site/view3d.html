@@ -257,7 +257,7 @@ $('nkCut').max = Math.ceil(maxH / 5) * 5; $('nkCut').value = $('nkCut').max;
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 box.translate(0.5, 0.5, 0.5);  // origem no canto: escala = tamanho
-const POST = 4, PLATE = 2.5;  // cm
+const POST = 4, PLATE = 2.5, PALLET = 14;  // cm (PALLET: altura do palete de madeira do "Palete no chão")
 const nPosts = mods.length * 4, nPlates = mods.reduce((s, m) => s + m.levels.length, 0);
 const posts = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), nPosts);
 const plates = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial({ transparent: true, opacity: 0.85 }), nPlates);
@@ -304,14 +304,19 @@ function rebuild() {
   let ip = 0, il = 0;
   mods.forEach(m => {
     const s = structById[m.s], show = showMod(m), color = s?.color || '#888';
-    const hh = Math.min(m.h, cut);
+    const hh = Math.min(m.h, cut), floor = !!(s && s.floor);  // "Palete no chão": sem montantes nem bandejas
     [[0, 0], [m.w - POST, 0], [0, m.d - POST], [m.w - POST, m.d - POST]].forEach(([dx, dy]) => {
-      setBox(posts, ip, m.x + dx, m.y + dy, 0, POST, POST, hh, show);
+      setBox(posts, ip, m.x + dx, m.y + dy, 0, POST, POST, hh, show && !floor);
       posts.setColorAt(ip++, col.set(color).multiplyScalar(0.8));
     });
-    m.levels.forEach(l => {  // bandeja de cada nível (sem tampo: de cima se veem as bins do último nível)
-      setBox(plates, il, m.x, m.y, l.z, m.w, m.d, PLATE, show && l.z <= cut);
-      plates.setColorAt(il++, col.set(color).lerp(new THREE.Color('#ffffff'), 0.45));
+    m.levels.forEach(l => {
+      if (floor) {  // palete de madeira na base de cada nível empilhado
+        setBox(plates, il, m.x + 3, m.y + 3, l.z, m.w - 6, m.d - 6, PALLET, show && l.z <= cut);
+        plates.setColorAt(il++, col.set('#b8864b'));
+      } else {  // bandeja de cada nível (sem tampo: de cima se veem as bins do último nível)
+        setBox(plates, il, m.x, m.y, l.z, m.w, m.d, PLATE, show && l.z <= cut);
+        plates.setColorAt(il++, col.set(color).lerp(new THREE.Color('#ffffff'), 0.45));
+      }
     });
   });
   goldMods.forEach((m, i) => {

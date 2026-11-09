@@ -67,6 +67,8 @@ STRUCT_COLS = {
     "max_qty": ["max", "maximo", "qtdmaxima"],
     "golden_from": ["zonadeouroinicio", "zonadeouroiniciocm", "inicioouro", "inicio da zona de ouro"],
     "golden_to": ["zonadeourofim", "zonadeourofimcm", "fimouro", "fim da zona de ouro"],
+    "first_level": ["alturado1nivel", "alturado1onivel", "alturaprimeironivel", "primeironivel", "1nivelcm", "base"],
+    "level_heights": ["vaospornivel", "vaosporniveis", "vaodecadanivel", "vaosporniveiscm", "vaos"],
 }
 BIN_COLS = {
     "code": ["codigo", "cod", "code"],
@@ -184,7 +186,8 @@ FIELD_LABELS = {
                    "height": "Altura total (cm)", "levels": "Nº de níveis", "level_height": "Vão útil (cm)",
                    "max_load": "Carga por nível (kg)", "cost": "Custo por módulo (R$)", "mode": "Modo",
                    "qty": "Qtd fixa", "min_qty": "Mínimo", "max_qty": "Máximo",
-                   "golden_from": "Zona de ouro início (cm)", "golden_to": "Zona de ouro fim (cm)"},
+                   "golden_from": "Zona de ouro início (cm)", "golden_to": "Zona de ouro fim (cm)",
+                   "first_level": "Altura do 1º nível (cm)", "level_heights": "Vãos por nível (cm, ex.: 45; 40; 35)"},
     "bins": {"code": "Código", "name": "Nome", "height": "Altura (cm)", "width": "Largura (cm)",
              "length": "Comprimento (cm)", "max_weight": "Peso máx. (kg)", "max_volume": "Volume (L)",
              "cost": "Custo por bin (R$)"},
@@ -428,6 +431,15 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     st.golden_from, st.golden_to = Decimal(str(v["golden_from"])), Decimal(str(v["golden_to"]))
                 elif v["golden_from"] is not None or v["golden_to"] is not None:
                     errs.append(f"Estruturas linha {i} ({code}): zona de ouro precisa de início e fim (fim maior).")
+                if cm.get("first_level") is not None and _cell(row, cm["first_level"]):
+                    fl = _dec(row, cm["first_level"], "1º nível", errs, i)
+                    st.first_level_cm = Decimal(str(fl)) if fl is not None else st.first_level_cm
+                if cm.get("level_heights") is not None and _cell(row, cm["level_heights"]):
+                    try:
+                        hs = [float(x.replace(",", ".")) for x in re.split(r"[;/|\s]+", _cell(row, cm["level_heights"])) if x]
+                        st.level_heights = [h for h in hs if h > 0][:st.levels or 50] or None
+                    except ValueError:
+                        errs.append(f"Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).")
                 db.flush()
                 mode = mode_of.get(normalize_header(_cell(row, cm["mode"])))
                 if mode is None:
@@ -760,11 +772,13 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
         f = lambda v: float(v) if v is not None else None  # noqa: E731
         rows.append((st.code, st.name, st.kind, f(st.width), f(st.depth), f(st.height), st.levels, f(st.level_height),
                      f(st.max_load), f(st.cost), mode_lbl.get(sc.get("mode") or "off"), sc.get("qty") or None,
-                     sc.get("min_qty") or None, sc.get("max_qty") or None, f(st.golden_from), f(st.golden_to)))
+                     sc.get("min_qty") or None, sc.get("max_qty") or None, f(st.golden_from), f(st.golden_to),
+                     f(st.first_level_cm), "; ".join(f"{h:g}" for h in (st.level_heights or [])) or None))
     sheet(wb.create_sheet("Estruturas"),
           ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
            "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx.",
-           "Zona de ouro início (cm)", "Zona de ouro fim (cm)"], rows, {2: 30})
+           "Zona de ouro início (cm)", "Zona de ouro fim (cm)", "Altura do 1º nível (cm)", "Vãos por nível (cm)"],
+          rows, {2: 30})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)"],

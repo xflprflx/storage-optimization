@@ -58,6 +58,19 @@
           {{ field_error(errors, 'level_height') }}
         </div>
         <div class="col-md-3">
+          <label class="form-label">Altura do 1º nível (cm)</label>
+          <input class="form-control text-end {{ invalid(errors, 'first_level_cm') }}" name="first_level_cm" inputmode="decimal" value="{{ data.get('first_level_cm')|dec_input }}" placeholder="0">
+          {{ field_error(errors, 'first_level_cm') }}
+          <div class="form-text">Base do 1º nível a partir do piso (0 = no chão). Pode ser outra por estante, em Capacidade dos níveis.</div>
+        </div>
+        <div class="col-md-9">
+          <label class="form-label">Vão de cada nível (cm), de baixo para cima <span class="text-muted">(opcional)</span></label>
+          <input class="form-control mono {{ invalid(errors, 'level_heights') }}" name="level_heights" value="{{ (data.get('level_heights') or [])|join('; ') }}" placeholder="ex.: 45; 40; 40; 35 — vazio = o vão útil em todos os níveis">
+          {{ field_error(errors, 'level_heights') }}
+          <div class="form-text">Os níveis sem vão informado (os de cima) usam o vão útil. A sobra da altura total vira a espessura das longarinas.
+            Cada nível só recebe bins que cabem no seu vão (projeto de filial nova e Capacidade dos níveis).</div>
+        </div>
+        <div class="col-md-3">
           <label class="form-label">Carga máx. por nível (kg)</label>
           <input class="form-control text-end {{ invalid(errors, 'max_load') }}" name="max_load" inputmode="decimal" value="{{ data.get('max_load')|dec_input }}">
           {{ field_error(errors, 'max_load') }}
@@ -121,8 +134,15 @@
   let drag = null;
   function geo() {
     const H = num(inp('height').value) || 200, W = num(inp('width').value) || 100, n = Math.max(1, parseInt(inp('levels').value, 10) || 1);
-    const clear = num(inp('level_height').value) || H / n;
-    return { H, W, n, clear, pitch: H / n };
+    const clear = num(inp('level_height').value) || H / n, base = num(inp('first_level_cm').value) || 0;
+    const hs = String(inp('level_heights').value || '').split(/[;/\s]+/).map(v => num(v)).filter(v => v != null && v > 0);
+    const vao = i => hs[i] || clear;  // vão do nível i (0 = de baixo)
+    const vs = Array.from({ length: n }, (_, i) => vao(i));
+    // bases dos níveis: como no servidor (StructureSpec.z): 1º nível + vãos + longarinas (sobra da altura repartida)
+    const beam = hs.length ? Math.max(0, (H - base - vs.reduce((a, b) => a + b, 0)) / n) : 0, pitch = (H - base) / n;
+    const z = i => hs.length ? base + vs.slice(0, i).reduce((a, b) => a + b, 0) + beam * i : base + i * pitch;
+    const floor = (inp('kind') && inp('kind').value) === 'Palete no chão';
+    return { H, W, n, clear, pitch, base, vao, z, floor };
   }
   function band() { return [num(inp('golden_from').value), num(inp('golden_to').value)]; }
   function setBand(a, b) {
@@ -154,15 +174,21 @@
       });
     }
     // módulo: colunas, níveis (bandeja na base de cada nível) e vão útil
-    el('rect', { x: 0, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
-    el('rect', { x: g.W - 4, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
+    if (!g.floor) {  // palete no chão: sem montantes
+      el('rect', { x: 0, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
+      el('rect', { x: g.W - 4, y: Y(g.H), width: 4, height: g.H, fill: '#7a8a96', 'pointer-events': 'none' }, svg);
+    }
     const golden = [];
     for (let i = 0; i < g.n; i++) {
-      const z0 = i * g.pitch, mid = z0 + g.clear / 2;
+      const z0 = g.z(i), vh = g.vao(i), mid = z0 + vh / 2;
       const isG = gf != null && gt != null && mid >= gf && mid <= gt;
       if (isG) golden.push(i + 1);
-      el('rect', { x: 4, y: Y(z0 + g.clear), width: g.W - 8, height: g.clear, fill: isG ? 'rgba(245,190,40,.35)' : 'rgba(47,126,216,.06)', 'pointer-events': 'none' }, svg);
-      el('rect', { x: 0, y: Y(z0) - 3, width: g.W, height: 3, fill: '#5b6770', 'pointer-events': 'none' }, svg);
+      el('rect', { x: 4, y: Y(z0 + vh), width: g.W - 8, height: vh, fill: isG ? 'rgba(245,190,40,.35)' : 'rgba(47,126,216,.06)', 'pointer-events': 'none' }, svg);
+      if (g.floor) {  // palete de madeira na base de cada nível empilhado
+        el('rect', { x: 2, y: Y(z0) - 12, width: g.W - 4, height: 12, fill: '#b8864b', stroke: '#7a5528', 'stroke-width': 1, 'pointer-events': 'none' }, svg);
+      } else {
+        el('rect', { x: 0, y: Y(z0) - 3, width: g.W, height: 3, fill: '#5b6770', 'pointer-events': 'none' }, svg);
+      }
       const t = el('text', { x: g.W / 2, y: Y(mid) + 3, 'font-size': 10, 'text-anchor': 'middle', fill: isG ? '#8a6d1c' : '#5b6770', 'pointer-events': 'none' }, svg);
       t.textContent = `Nível ${i + 1}`;
     }
@@ -203,7 +229,7 @@
     render();
   });
   host.addEventListener('pointerup', () => { drag = null; });
-  ['height', 'width', 'levels', 'level_height', 'golden_from', 'golden_to'].forEach(n => inp(n)?.addEventListener('input', () => { if (!drag) render(); }));
+  ['height', 'width', 'levels', 'level_height', 'golden_from', 'golden_to', 'first_level_cm', 'level_heights', 'kind'].forEach(n => inp(n)?.addEventListener(n === 'kind' ? 'change' : 'input', () => { if (!drag) render(); }));
   document.getElementById('gzSuggest').addEventListener('click', () => { const g = geo(); setBand(Math.min(75, g.H), Math.min(150, g.H)); render(); });
   document.getElementById('gzClear').addEventListener('click', () => { setBand(null, null); render(); });
   render();

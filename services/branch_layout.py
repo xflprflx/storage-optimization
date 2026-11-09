@@ -39,6 +39,9 @@ from models import BayStructure, BranchLayout, StorageLocation, StructureType
 from services.addressing import scope_filter
 from services.layout_service import natural_key
 from services.route_sim import Node, dist
+from services.site_planner import is_floor
+
+PALLET_H = 14.0  # altura do palete de madeira (cm): no "Palete no chão" as bins ficam em cima dele
 
 MAX_AISLE = 600.0  # vão máximo entre duas fileiras que se olham (cm)
 LONE_AISLE = 100.0  # eixo do corredor de uma fileira sozinha, a partir da face (cm)
@@ -78,6 +81,7 @@ class Bay:
     h: Optional[float]
     levels: Optional[int]
     struct: Optional[StructureType] = None
+    base: Optional[float] = None  # altura do 1º nível nesta estante (None = a da estrutura)
 
 
 def scope_bays(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict[str, list[Bay]]:
@@ -92,24 +96,32 @@ def scope_bays(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict
         disp_a.setdefault(canon(A), A)
         pairs.setdefault((canon(A), canon(B)), B)
     st = {}
+    bases: dict[tuple, float] = {}
     stmt = select(BayStructure, StructureType).join(StructureType, StructureType.id == BayStructure.structure_type_id) \
         .where(BayStructure.branch_id == branch_id)
     stmt = stmt.where(BayStructure.warehouse_id.is_(None) if warehouse_id is None else BayStructure.warehouse_id == warehouse_id)
     for bs, t in db.execute(stmt):
         st[(canon(bs.aisle), canon(bs.bay))] = t
+        if bs.first_level_cm is not None:
+            bases[(canon(bs.aisle), canon(bs.bay))] = float(bs.first_level_cm)
     out: dict[str, list[Bay]] = {}
     for (ca, cb), b in pairs.items():
         t = st.get((ca, cb))
         a = disp_a[ca]
         out.setdefault(a, []).append(Bay(a, b, float(t.width) if t else 0.0, float(t.depth) if t else None,
-                                         float(t.height) if t else None, t.levels if t else None, t))
+                                         float(t.height) if t else None, t.levels if t else None, t,
+                                         bases.get((ca, cb))))
     for a in out:
         out[a].sort(key=lambda x: natural_key(x.bay))
     return dict(sorted(out.items(), key=lambda kv: natural_key(kv[0])))
 
 
 def bays_json(bays: dict[str, list[Bay]]) -> dict:
-    return {a: [{"bay": b.bay, "w": b.w or None, "d": b.d, "p": parity(b.bay)} for b in bs] for a, bs in bays.items()}
+    from services.site_planner import is_floor
+
+    return {a: [{"bay": b.bay, "w": b.w or None, "d": b.d, "p": parity(b.bay),
+                 **({"f": 1} if b.struct is not None and is_floor(b.struct.kind) else {})} for b in bs]
+            for a, bs in bays.items()}
 
 
 def row_bays(row: dict, bays: dict[str, list[Bay]]) -> list[Bay]:
@@ -547,9 +559,14 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
     for o in d["obstacles"]:
         out.append(f'<rect x="{o["x"]:.0f}" y="{o["y"]:.0f}" width="{o["w"]:.0f}" height="{o["d"]:.0f}" fill="#2b2f33" opacity=".85">'
                    f'<title>{_esc(o["name"])}</title></rect>')
+    out.append(f'<defs><pattern id="nkPalletB" width="{fs * 0.6:.0f}" height="{fs * 0.6:.0f}" patternUnits="userSpaceOnUse">'
+               f'<rect width="{fs * 0.6:.0f}" height="{fs * 0.35:.0f}" fill="#b8864b" fill-opacity=".6"/></pattern></defs>')
     for p in g.placed.values():
-        out.append(f'<rect x="{p.x:.0f}" y="{p.y:.0f}" width="{p.w:.0f}" height="{p.d:.0f}" fill="#cfd8df" stroke="#7b8a95" '
-                   f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}</title></rect>')
+        fl = p.bay.struct is not None and is_floor(p.bay.struct.kind)  # palete no chão: tábuas do palete
+        out.append(f'<rect x="{p.x:.0f}" y="{p.y:.0f}" width="{p.w:.0f}" height="{p.d:.0f}" '
+                   f'fill="{"url(#nkPalletB)" if fl else "#cfd8df"}" stroke="#7b8a95" '
+                   f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}'
+                   f'{" · palete no chão" if fl else ""}</title></rect>')
     rows = d["rows"]
     blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h, ri in g.row_rects:
@@ -652,12 +669,14 @@ def shelf_info(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict
     return {"levels": levels, "by_id": by_id}
 
 
-def level_stack(st, codes: list, shelf: dict) -> dict:
+def level_stack(st, codes: list, shelf: dict, base: Optional[float] = None) -> dict:
     """Níveis de uma estante, de baixo para cima: os da estrutura (1..N), os dos endereços e os cadastrados
-    (inclusive reservados e dedicados), sem repetir os equivalentes. Cada um com a base (z) e a altura: o vão
-    cadastrado ou, sem ele, a altura da estrutura ÷ níveis (50 cm sem estrutura); a sobra da altura da estrutura
-    (altura − soma dos vãos) vira a espessura das longarinas. Zona de ouro da pega: o meio do nível dentro da faixa
-    da estrutura. {"levels": [{"n", "code", "z", "h", "gold"}], "index": {level_id: n}, "h": altura total}."""
+    (inclusive reservados e dedicados), sem repetir os equivalentes. O 1º nível começa na altura `base` (a da
+    estante ou, sem ela, a da estrutura; 0 = no piso). Cada nível com a base (z) e a altura: o vão cadastrado no nível
+    ou, sem ele, o vão da estrutura para aquele nível (vão por nível) ou a altura acima do 1º nível ÷ níveis (50 cm
+    sem estrutura); a sobra da altura da estrutura (altura − 1º nível − soma dos vãos) vira a espessura das
+    longarinas. Zona de ouro da pega: o meio do nível dentro da faixa da estrutura.
+    {"levels": [{"n", "code", "z", "h", "gold"}], "index": {level_id: n}, "h": altura total}."""
     ids: dict = {}
     for c in [str(i) for i in range(1, (st.levels if st is not None else 0) + 1)] + [c for c in codes if c] + list(shelf):
         ids.setdefault(level_id(c), c)
@@ -675,17 +694,25 @@ def level_stack(st, codes: list, shelf: dict) -> dict:
     order = sorted(ids.items(), key=phys)
     vao = {level_id(c): v for c, v in shelf.items() if v}
     n = len(order)
+    if base is None:
+        base = float(st.first_level_cm or 0) if st is not None else 0.0
     if st is not None:
-        H, pitch = float(st.height), float(st.height) / max(1, st.levels)
+        H = float(st.height)
+        pitch = max(1.0, H - base) / max(1, st.levels)
+        if st.level_heights:  # vão por nível da estrutura (de baixo para cima) para os níveis sem vão cadastrado
+            sv = st.vaos()
+            for i, (k, _c) in enumerate(order):
+                if not vao.get(k) and i < len(sv):
+                    vao[k] = sv[i]
     else:
         pitch = DEFAULT_PITCH
         H = pitch * n
     beam = 0.0
     if st is not None and all(vao.get(k) for k, _c in order):
-        beam = max(0.0, (H - sum(vao[k] for k, _c in order)) / n)
+        beam = max(0.0, (H - base - sum(vao[k] for k, _c in order)) / n)
     gold = [float(st.golden_from), float(st.golden_to)] if st is not None and st.golden_from is not None \
         and st.golden_to is not None else None
-    out, index, acc = [], {}, 0.0
+    out, index, acc = [], {}, base
     for i, (k, c) in enumerate(order, start=1):
         h = vao.get(k) or pitch
         mid = acc + h / 2
@@ -753,8 +780,8 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         if st is not None:
             sid = st.id
             if sid not in structs:
-                structs[sid] = {"id": sid, "code": st.code, "name": st.name, "qty": 0,
-                                "color": STRUCT_PALETTE[len(structs) % len(STRUCT_PALETTE)],
+                structs[sid] = {"id": sid, "code": st.code, "name": st.name, "qty": 0, "kind": st.kind or "",
+                                "floor": is_floor(st.kind), "color": STRUCT_PALETTE[len(structs) % len(STRUCT_PALETTE)],
                                 "golden": [float(st.golden_from), float(st.golden_to)]
                                 if st.golden_from is not None and st.golden_to is not None else None, "golden_levels": []}
         else:
@@ -763,7 +790,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                 structs[0] = {"id": 0, "code": "Sem estrutura", "name": "Estante sem estrutura cadastrada", "qty": 0,
                               "color": "#8a96a0", "golden": None, "golden_levels": []}
         structs[sid]["qty"] += 1
-        lv = level_stack(st, [r.level for r in rows_here], sh["levels"].get(ckey, {}))
+        lv = level_stack(st, [r.level for r in rows_here], sh["levels"].get(ckey, {}), b.base)
         if structs[sid]["golden"]:
             structs[sid]["golden_levels"] = sorted({*structs[sid]["golden_levels"],
                                                     *[x["n"] for x in lv["levels"] if x["gold"]]})
@@ -791,6 +818,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         front = p.w if front_x else p.d
         depth = p.d if front_x else p.w
         state = {x["n"]: [0.0, 0.0] for x in lv["levels"]}  # (ao longo da frente, profundidade) ocupados
+        floor_kind = st is not None and is_floor(st.kind)  # palete no chão: bins em cima do palete
         both = bool(row.get("both")) and key in g.back_nodes  # pega pelos dois lados: as bins do fundo saem pelo outro corredor
         seen_addr: set = set()
         lv_of = {x["n"]: x for x in lv["levels"]}
@@ -827,7 +855,8 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
                     bx, by, bwx, bdy = p.x + cur, p.y + acr, bw, bd
                 else:
                     bx, by, bwx, bdy = p.x + acr, p.y + cur, bd, bw
-                out_bins.append([round(bx, 1), round(by, 1), round(x_["z"] + 2.0, 1), round(bwx, 1), round(bdy, 1),
+                out_bins.append([round(bx, 1), round(by, 1), round(x_["z"] + (PALLET_H if floor_kind else 2.0), 1),
+                                 round(bwx, 1), round(bdy, 1),
                                  round(min(bh, x_["h"] - 4), 1), tidx[tid], fill, mi, r.address, sku, x_["gold"],
                                  abc.get(sku, ""), wgold])
                 fills_by_type.setdefault(tid, []).append(fill)
@@ -950,6 +979,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
         rows_q = rows
     bays = scope_bays(db, branch_id, warehouse_id)
     st_of = {(canon(b.aisle), canon(b.bay)): b.struct for bs in bays.values() for b in bs}
+    base_of = {(canon(b.aisle), canon(b.bay)): b.base for bs in bays.values() for b in bs}
     sh = shelf_info(db, branch_id, warehouse_id)
     codes: dict[tuple, list] = {}
     for _i, a, bay, lv, _g in rows:
@@ -973,7 +1003,7 @@ def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc
             out[lid] = None
             continue
         if k not in stacks:
-            stacks[k] = level_stack(st, codes.get(k, []), sh["levels"].get(k, {}))
+            stacks[k] = level_stack(st, codes.get(k, []), sh["levels"].get(k, {}), base_of.get(k))
         stk = stacks[k]
         gold_of = {x["n"]: x["gold"] for x in stk["levels"]}
         yes = no = 0

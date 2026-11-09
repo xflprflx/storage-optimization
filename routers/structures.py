@@ -13,7 +13,8 @@ from services.addressing import normalize_code
 
 router = APIRouter(prefix="/structures", tags=["Estruturas de armazenagem"])
 
-KINDS = ["Estante", "Porta-palete", "Flow rack", "Cantilever", "Mezanino", "Outro"]
+KINDS = ["Estante", "Porta-palete", "Palete no chão", "Flow rack", "Cantilever", "Mezanino", "Outro"]
+FLOOR_KIND = "Palete no chão"  # paletes direto no piso (empilhados por nível), sem montantes nem longarinas
 NUM_FIELDS = (  # chave, rótulo, obrigatório
     ("width", "Frente do módulo", True),
     ("depth", "Profundidade", True),
@@ -23,6 +24,7 @@ NUM_FIELDS = (  # chave, rótulo, obrigatório
     ("cost", "Custo por módulo", False),
     ("golden_from", "Zona de ouro — início", False),
     ("golden_to", "Zona de ouro — fim", False),
+    ("first_level_cm", "Altura do 1º nível", False),
 )
 
 
@@ -46,7 +48,7 @@ def _validate(db: Session, form: FormData, sid: int | None):
         val = f_dec(form, key, errors, label)
         if val is None and req and not errors.get(key):
             errors.add(key, f"{label}: obrigatório.")
-        elif val is not None and val == 0 and key not in ("cost", "golden_from"):
+        elif val is not None and val == 0 and key not in ("cost", "golden_from", "first_level_cm"):
             errors.add(key, f"{label}: deve ser maior que zero.")
         data[key] = val
     data["levels"] = f_int(form, "levels")
@@ -59,9 +61,29 @@ def _validate(db: Session, form: FormData, sid: int | None):
         errors.add("golden_to", "Zona de ouro: o fim deve ser maior que o início.")
     elif gf is not None and data.get("height") and gt > data["height"]:
         errors.add("golden_to", f"Zona de ouro: o fim passa da altura total ({data['height']} cm).")
-    if not errors and data["levels"] * data["level_height"] > data["height"]:
-        errors.add("level_height", f"{data['levels']} níveis × vão {data['level_height']} cm passam da altura total "
-                                   f"({data['height']} cm).")
+    # vão de cada nível (opcional): "40; 40; 35" de baixo para cima; faltando, o vão útil vale para os de cima
+    raw = f_str(form, "level_heights", 400)
+    hs = []
+    for part in [p_ for p_ in raw.replace(",", ".").replace("/", ";").replace(" ", ";").split(";") if p_.strip()]:
+        try:
+            v = float(part)
+        except ValueError:
+            errors.add("level_heights", f"Vão por nível inválido: {part!r}.")
+            break
+        if v <= 0:
+            errors.add("level_heights", "Vão por nível: os valores devem ser maiores que zero.")
+            break
+        hs.append(round(v, 2))
+    if data["levels"] and len(hs) > data["levels"]:
+        errors.add("level_heights", f"Foram informados {len(hs)} vãos para {data['levels']} níveis.")
+    data["level_heights"] = hs or None
+    base = float(data.get("first_level_cm") or 0)
+    if not errors and data["levels"] and data.get("level_height") and data.get("height"):
+        vs = [hs[i] if i < len(hs) else float(data["level_height"]) for i in range(data["levels"])]
+        if base + sum(vs) > float(data["height"]) + 1e-6:
+            what = "os vãos por nível" if hs else f"{data['levels']} níveis × vão {data['level_height']} cm"
+            errors.add("level_heights" if hs else "level_height",
+                       f"1º nível a {base:g} cm + {what} (= {base + sum(vs):g} cm) passam da altura total ({data['height']} cm).")
     return errors, data
 
 
@@ -102,7 +124,8 @@ def edit_structure(sid: int, request: Request, db: Session = Depends(get_db)):
     st = db.get(StructureType, sid)
     if not st:
         return redirect("/structures", "Estrutura não encontrada.", "danger")
-    data = {k: getattr(st, k) for k in ("code", "name", "kind", "notes", "levels") + tuple(f[0] for f in NUM_FIELDS)}
+    data = {k: getattr(st, k) for k in ("code", "name", "kind", "notes", "levels", "level_heights")
+            + tuple(f[0] for f in NUM_FIELDS)}
     return render(request, "structures/form.html", item=st, data=data, errors={}, kinds=KINDS)
 
 

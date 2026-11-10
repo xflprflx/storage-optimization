@@ -50,6 +50,20 @@ def _aisle_eq(col, value):
     return func.nk_canon(col) == canon(value) if get("addr_zero_eq") else col == value
 
 
+def level_order_key(value: str):
+    """Ordem FÍSICA dos níveis (de baixo para cima): sempre pelo número, qualquer que seja a ordenação de endereços
+    configurada — "2" abaixo de "10"; o nível dedicado "01D1" logo acima do "01"."""
+    import re
+
+    value = (value or "").strip().upper()
+    if value.isdigit():
+        return (0, float(int(value)), value)
+    m = re.fullmatch(r"(\d+)D(\d+)", value)
+    if m:
+        return (0, int(m.group(1)) + int(m.group(2)) / 1000.0, value)
+    return (1, 0.0, value)
+
+
 def natural_key(value: str):
     """Ordena '2' antes de '10' e 'Z' antes de 'AA' (como na geração em lote). Com a configuração de endereços
     "ordem alfabética", ordena pelo texto ('10' antes de '2'); com "07 = 7", os zeros à esquerda não contam."""
@@ -418,7 +432,9 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
             out["struct"] = bay_st[path[:2]]
         if "leaf" in node:
             out["leaf"] = leaf_json(node["leaf"])
-        kids = sorted(node["children"].values(), key=lambda n: natural_key(n["code"]))
+        # os níveis (filhos da estante) ficam na ordem física; o resto segue a ordenação configurada
+        order = level_order_key if node.get("depth") == 1 else natural_key
+        kids = sorted(node["children"].values(), key=lambda n: order(n["code"]))
         if kids:
             out["children"] = [to_json(k, path) for k in kids]
         return out

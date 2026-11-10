@@ -440,6 +440,11 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                         st.level_heights = [h for h in hs if h > 0][:st.levels or 50] or None
                     except ValueError:
                         errs.append(f"Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).")
+                total = float(st.first_level_cm or 0) + sum(st.vaos())
+                if st.height and total > float(st.height) + 1e-6:
+                    errs.append(f"Estruturas linha {i} ({code}): 1º nível + vãos ({total:g} cm) passam da altura total "
+                                f"({float(st.height):g} cm) — altura do 1º nível e vãos por nível não foram gravados.")
+                    st.first_level_cm, st.level_heights = None, None
                 db.flush()
                 mode = mode_of.get(normalize_header(_cell(row, cm["mode"])))
                 if mode is None:

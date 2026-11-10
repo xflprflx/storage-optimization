@@ -7,7 +7,8 @@
 </div>
 <form method="post" action="/bulk-delete/{{ kind }}/run" id="runForm">
   <input type="hidden" name="back" value="{{ back }}">
-  {% for i in ids %}<input type="hidden" name="ids" value="{{ i }}">{% endfor %}
+  {% if all_qs is not none %}<input type="hidden" name="all" value="1"><input type="hidden" name="qs" value="{{ all_qs }}">
+  {% else %}{% for i in ids %}<input type="hidden" name="ids" value="{{ i }}">{% endfor %}{% endif %}
   <div class="row g-3">
     <div class="col-lg-5">
       <div class="card"><div class="card-body">

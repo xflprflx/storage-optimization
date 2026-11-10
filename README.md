@@ -381,7 +381,7 @@ Informe a largura do corredor e o espaço livre na frente. Em *Corredores com ou
 **Planta de um projeto de filial nova:** a filial criada pelo botão *Gerar cadastro da filial* do projeto já nasce com a planta do plano (fileiras, cabeceiras, obstáculos e a referência) e com o histórico de pedidos do projeto. Para uma filial criada antes, o cartão *Planta de um projeto de filial nova* do editor traz a planta do projeto (os endereços precisam ter os mesmos códigos; se o sistema foi reiniciado, rode o projeto de novo antes, porque o solver pode chegar a outro plano).
 
 **Editor com o mouse:**
-- arrastar fileiras e obstáculos (encaixe de 10 cm; com Shift, livre);
+- arrastar fileiras e obstáculos (encaixe de 10 cm; com Alt, livre — o Shift seleciona vários);
 - roda para zoom e arrastar o fundo para mover a vista;
 - girar (R), trocar o lado do corredor (F), inverter a numeração, duplicar (cria a fileira da frente, com o outro lado dos números) e apagar (Del); as setas movem 10 cm;
 - botão para marcar o **ponto de referência** (expedição) com um clique;
@@ -441,7 +441,7 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 ## 6.0.5 Configurações de endereço e níveis extras
 
 **Cadastros → Configurações** (`/settings`):
-- **Ordenação dos números:** numérica (2, 3, 10) ou alfabética (10, 2, 3). Vale para o mapa, a planta, o 3D e a ordem da lista de separação no simulador (a ordem física dos níveis é sempre pela altura).
+- **Ordenação dos números:** numérica (2, 3, 10) ou alfabética (10, 2, 3). Vale para o mapa, a planta, o 3D e a ordem da lista de separação no simulador (a ordem física dos níveis — mapa, 3D, vão e capacidade por nível, excedente — é sempre pelo número).
 - **Zeros à esquerda não diferenciam** (`07` = `7`, em qualquer parte do endereço): `F.07.01.01` e `F.7.01.02-A` ficam na mesma estante. Com a opção ligada, o cadastro recusa um endereço equivalente a um existente (e a hierarquia compara assim), e estantes/níveis são agrupados pelo código equivalente (estrutura, capacidade dos níveis, mapa, planta, 3D e posição pela saída). Os códigos gravados não mudam. As importações já reconheciam `07` = `7` ao procurar um endereço.
 
 **Bins em outro nível da estante:**
@@ -473,6 +473,15 @@ As estruturas cadastradas também descrevem as estantes que já existem (víncul
 - Uma estrutura em uso por alguma estante não pode ser excluída.
 
 ---
+
+## Testes
+
+```
+pip install -r requirements-dev.txt
+python -m pytest tests
+```
+
+Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `neokioski.db`).
 
 ## Estrutura do Projeto
 

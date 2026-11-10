@@ -1064,46 +1064,6 @@ def pool_plan_pdf(request: Request, db: Session = Depends(get_db)):
     return _plan_response(request, db, "pool", "pdf")
 
 
-@router.post("/slotting/history")
-async def upload_history(request: Request, db: Session = Depends(get_db)):
-    """Histórico de saídas da filial (aba Pedidos ou coluna Saída) para a posição pela saída nos modos Por endereço e
-    Pool. Guarda só o resumo, por filial (substitui o anterior)."""
-    from models import PickHistory
-    from services.file_reader import remove_upload, save_upload, token_path
-    from services.slotting import read_history, summary_text
-
-    form = await request.form()
-    back = str(form.get("back") or "/optimization")
-    back = back if back.startswith("/optimization") else "/optimization"
-    bid = to_int(form.get("branch_id"))
-    upload = form.get("file")
-    if not bid or db.get(Branch, bid) is None:
-        return redirect(back, "Escolha a filial (escopo) antes de enviar o histórico.", "danger")
-    if upload is None or not getattr(upload, "filename", ""):
-        return redirect(back, "Escolha o arquivo do histórico.", "danger")
-    try:
-        token = await save_upload(upload)
-    except ValueError as exc:
-        return redirect(back, str(exc), "danger")
-    try:
-        data, err = read_history(token_path(token), form.get("abs") == "1")
-    except Exception as exc:  # noqa: BLE001  (arquivo corrompido etc.)
-        data, err = None, f"não foi possível ler o arquivo ({exc})."
-    finally:
-        remove_upload(token)
-    if err:
-        return redirect(back, f"Histórico não importado: {err}", "danger")
-    h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid)) or PickHistory(branch_id=bid)
-    h.filename, h.data = str(upload.filename)[:200], data
-    db.add(h)
-    db.commit()
-    neg = ""
-    if data.get("neg"):
-        neg = f" {data['neg']} quantidade(s) negativa(s) " + ("convertida(s) para valor absoluto." if data["abs"]
-                                                             else "ignorada(s) (sem a conversão).")
-    return redirect(back, f"Histórico de saídas salvo para a filial: {summary_text(data)}.{neg}", "success")
-
-
 def _branch_sku_report(db: Session, branch_id: int, raw: Mapping):
     """Relatório de SKUs de uma filial existente: histórico de saídas + onde cada SKU está hoje (saldo), com a
     caminhada estimada pelo endereço e as duas zonas de ouro (parâmetros da posição pela saída da tela)."""

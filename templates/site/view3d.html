@@ -577,7 +577,7 @@ function build() {
     (gain != null ? `<br>A rota otimizada anda <b>${fmt(gain, 0)}%</b> menos que a lista.` : '') +
     `<br><span class="text-muted">Vídeo ≈ ${mmss(WK.T / speed())} na velocidade escolhida.</span>`;
   $('nkStops').innerHTML = `<div class="text-muted">Paradas — ${esc(first.name)}:</div>` + first.keys.map((k, j) =>
-    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${esc(first.skus[j])} ${esc(data.skus[first.skus[j]] || '')}` +
+    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${String(first.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
     (first.qty ? ` · <b>${fmt(first.qty[j], 2)} pç</b>` : '') + (first.out && first.out[j] ? ` · <span class="text-warning-emphasis">${first.out[j]} fora do ouro</span>` : '') +
     ` (${fmt(stopT(first, j), 0)} s)</div>`).join('') +
     (d.has_qty ? '' : '<div class="text-warning-emphasis">Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).</div>');

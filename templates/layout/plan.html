@@ -45,7 +45,7 @@
   <div class="col-xl-9 col-lg-8">
     <div class="nk-plan-wrap" id="wrap">
       <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div class="nk-plan-hint">Arraste fileiras e obstáculos · Shift+clique / Shift+arrastar = vários · alças no canto do imóvel = tamanho · Ctrl+clique marca estantes · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
+      <div class="nk-plan-hint">Arraste fileiras e obstáculos (Alt = sem encaixe) · Shift+clique / Shift+arrastar = vários · alças no canto do imóvel = tamanho · Ctrl+clique marca estantes · roda = zoom · arraste o fundo = mover a vista · Del apaga · setas movem 10 cm · R gira · F troca o lado do corredor</div>
       <div class="nk-plan-coord" id="coord"></div>
     </div>
   </div>
@@ -173,7 +173,7 @@
   function bboxOf(m) { const o = objOf(m); if (m.kind === 'obs') return [o.x, o.y, o.w, o.d]; const G = rowGeom(o); return [o.x, o.y, G.w, G.d]; }
   let vb = { x: 0, y: 0, w: 1000, h: 1000 };
   const SNAP = 10;
-  const snap = (v, e) => (e && e.shiftKey) ? Math.round(v) : Math.round(v / SNAP) * SNAP;
+  const snap = (v, e) => (e && e.altKey) ? Math.round(v) : Math.round(v / SNAP) * SNAP;  // Alt = sem encaixe
 
   // estantes de uma fileira (como no servidor): do corredor, pelo lado dos números, na ordem (ou invertida)
   const par = b => b.p;

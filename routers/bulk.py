@@ -37,8 +37,10 @@ def bulk_preview(kind: str, request: Request, form: FormData = Depends(form_data
     if not ids:
         return redirect(back, "Marque os itens a excluir.", "warning")
     imp = impact(db, kind, ids)
+    # "todos do filtro": a confirmação reenvia o filtro (não um campo por item), e a exclusão o resolve de novo
+    by_filter = form.get("all") == "1" and filter_ids(db, kind, {}) is not None
     return render(request, "bulk/confirm.html", kind=kind, cfg=KINDS[kind], ids=list(imp["items"]), imp=imp, back=back,
-                  shown=list(imp["items"].items())[:300])
+                  shown=list(imp["items"].items())[:300], all_qs=str(form.get("qs") or "") if by_filter else None)
 
 
 @router.post("/{kind}/run")
@@ -46,7 +48,7 @@ def bulk_run(kind: str, form: FormData = Depends(form_data), db: Session = Depen
     if kind not in KINDS:
         return redirect("/", "Tipo de cadastro desconhecido.", "danger")
     back = _back(kind, form.get("back"))
-    ids = sorted({i for i in (to_int(v) for v in form.getlist("ids")) if i})
+    ids = _ids(db, kind, form)
     if not ids:
         return redirect(back, "Nada a excluir.", "warning")
     cascade = f_bool(form, "cascade")

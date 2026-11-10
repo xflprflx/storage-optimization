@@ -230,7 +230,10 @@ class WalkNet:
     def dist(self, a, b) -> float:
         if a.key == b.key and a.key != "":
             return 0.0
-        k = (a.key, b.key)
+        # a chave inclui a posição da parada: a mesma rede serve plantas com as estantes em outra ordem (numeração
+        # invertida, outro lado/corredor na fileira), onde o mesmo código fica em outro lugar
+        k = (a.key, a.corridor, round(a.along, 1), round(a.gx), round(a.gy),
+             b.key, b.corridor, round(b.along, 1), round(b.gx), round(b.gy))
         v = self._memo.get(k)
         if v is None:
             v = self._best(a, b)[0]

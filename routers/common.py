@@ -93,7 +93,8 @@ def redirect(url: str, msg: Optional[str] = None, level: str = "success") -> Red
 
 async def form_data(request: Request) -> FormData:
     """Dependência: lê o formulário (permite endpoints síncronos com o formulário completo)."""
-    return await request.form()
+    # o padrão do Starlette recusa formulários com mais de 1.000 campos (seleções grandes passam disso)
+    return await request.form(max_fields=20000)
 
 
 # --------------------------------------------------------------------------- #

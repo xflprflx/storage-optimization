@@ -76,7 +76,7 @@ def ensure_level(db: Session, key: LevelKey) -> ShelfLevel:
 def bay_levels(db: Session, branch_id: int, warehouse_id: Optional[int], aisle: str, bay: str) -> list[dict]:
     """Níveis de uma estante: os cadastrados (inclusive reservados) + os que têm endereços.
     Retorna [{key, level, shelf_level_id|None, has_locations}] em ordem natural."""
-    from services.layout_service import natural_key
+    from services.layout_service import level_order_key as natural_key  # níveis: ordem física
 
     from services.app_settings import canon
 
@@ -406,7 +406,7 @@ def spill_overflow(db: Session, bays: Optional[Iterable[tuple]] = None) -> list[
     Retorna [(endereço, qtd, tipo, nível origem, nível destino)]."""
     import math
 
-    from services.layout_service import natural_key
+    from services.layout_service import level_order_key as natural_key  # níveis: ordem física
 
     if bays is None:
         bays = set(db.execute(select(ShelfLevel.branch_id, ShelfLevel.warehouse_id, ShelfLevel.aisle, ShelfLevel.bay)

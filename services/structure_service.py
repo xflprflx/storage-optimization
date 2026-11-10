@@ -85,7 +85,7 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
     """Aplica a estrutura às estantes. Com vão por nível na estrutura, cada nível (de baixo para cima) recebe o seu
     vão e a capacidade que cabe nele. `first_level_cm` = altura do 1º nível nessas estantes, quando foram montadas
     diferente da estrutura (None = a da estrutura; "keep" = não mexe). Retorna estatísticas."""
-    from services.layout_service import natural_key
+    from services.layout_service import level_order_key as natural_key  # níveis: ordem física
 
     stats = {"bays": 0, "levels_created": 0, "levels": 0, "caps": 0, "extra_levels": 0}
     bin_types = [bt for bt in db.scalars(select(BinType)) if type_ids is None or bt.id in type_ids]

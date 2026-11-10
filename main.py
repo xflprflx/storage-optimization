@@ -17,6 +17,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from database import init_db
@@ -56,6 +59,17 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Neokioski", version="1.0.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
+
+
+@app.get("/help/fields.json", include_in_schema=False)
+def field_help_catalog():
+    """Catálogo da ajuda nos campos (título, explicação e desenho de cada campo de cada tela)."""
+    from fastapi.responses import JSONResponse
+
+    from services.field_help import RULES
+
+    return JSONResponse(RULES, headers={"Cache-Control": "public, max-age=3600"})
 
 for r in (dashboard, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
     app.include_router(r.router)

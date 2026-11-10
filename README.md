@@ -474,6 +474,15 @@ As estruturas cadastradas também descrevem as estantes que já existem (víncul
 
 ---
 
+## Ajuda nos campos
+
+Todo campo de toda tela tem um cartão de ajuda: ao passar o mouse (ou focar o campo com o teclado) aparecem o nome, a explicação e um **desenho** com a parte de que o campo trata em destaque — por exemplo, a cota "1º nível" na estante, a coluna da planilha no mapeamento ou o corredor na planta.
+
+- **Ligar/desligar:** botão *Ajuda nos campos* na barra do topo (a escolha fica salva no navegador).
+- **Catálogo:** `services/field_help.py` — uma regra por campo (tela, nome do campo, título, explicação e desenho). Vale a primeira regra que casa; as telas mais específicas vêm antes.
+- **Desenhos e cartão:** `static/field_help.js` (SVG; funções `D.*`, com o destaque escolhido pela regra, ex.: `rack:base`).
+- **Campo novo:** inclua a regra no catálogo. O teste `tests/test_field_help.py` percorre as telas e falha se algum campo ficar sem ajuda ou apontar para um desenho que não existe.
+
 ## Testes
 
 ```

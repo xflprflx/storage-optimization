@@ -78,9 +78,24 @@ templates.env.globals["material_types"] = _material_types_global
 templates.env.globals["NO_MATERIAL"] = "__none__"
 
 
+def _help_version() -> str:
+    """Versão do catálogo de ajuda dos campos: muda quando o catálogo ou os desenhos mudam (invalida o cache do navegador)."""
+    import hashlib
+    from pathlib import Path
+
+    from services.field_help import RULES
+
+    js = (Path(__file__).resolve().parent.parent / "static" / "field_help.js").read_bytes()
+    return hashlib.sha1(repr(RULES).encode() + js).hexdigest()[:10]
+
+
+HELP_VERSION = _help_version()
+
+
 def render(request: Request, name: str, status_code: int = 200, **context):
     context.setdefault("flash_msg", request.query_params.get("msg"))
     context.setdefault("flash_level", request.query_params.get("level", "success"))
+    context.setdefault("help_version", HELP_VERSION)
     return templates.TemplateResponse(request, name, context, status_code=status_code)
 
 

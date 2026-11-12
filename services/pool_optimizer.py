@@ -25,13 +25,15 @@ EPS = 1e-9
 POOL_OBJECTIVES = {
     "min_bins": "Menos bins",
     "min_volume": "Menos volume de bins (menos ar)",
+    "max_fill": "Maior ocupação das bins (volume das unidades ÷ volume das bins)",
     "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
     "min_moves": "Mínimo de movimentações (mantém o que já está nas bins)",
     "min_cost": "Menor custo de bins (R$)",
     "min_walk": "Menor caminhada na separação (mais procurados perto da expedição)",
     "max_pick": "Mais saídas na zona de ouro da pega (mais procurados nos níveis de ouro)",
+    "min_time": "Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)",
 }
-SLOT_OBJECTIVES = {"min_walk", "max_pick"}  # objetivos de posição pela saída (precisam do histórico de saídas)
+SLOT_OBJECTIVES = {"min_walk", "max_pick", "min_time"}  # objetivos de posição pela saída (precisam do histórico de saídas)
 
 
 @dataclass

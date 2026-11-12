@@ -33,6 +33,7 @@ PAIR_SPAN = 40  # quantas variações de "n bins grandes + resto em pequenas" te
 OBJECTIVES = {
     "min_bins": "Menos bins",
     "min_volume": "Menos volume de bins (menos ar)",
+    "max_fill": "Maior ocupação das bins (volume das unidades ÷ volume das bins)",
     "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
     "min_changes": "Mínimo de mudanças (só corrige o que não comporta o saldo)",
     "min_cost": "Menor custo de bins (R$)",
@@ -368,6 +369,13 @@ CRITERIA = {"bins": "Menos bins", "volume": "Menos volume de bins", "width": "Me
             "changes": "Mínimo de mudanças / movimentações", "cost": "Menor custo de bins"}
 OBJ_CRITERION = {"min_bins": "bins", "min_volume": "volume", "min_width": "width", "min_changes": "changes",
                  "min_moves": "changes", "min_cost": "cost"}
+
+
+def canonical_objective(objective: str) -> str:
+    """"Maior ocupação" é o mesmo cálculo de "menos volume de bins": as unidades guardadas são as mesmas, então
+    ocupação = volume das unidades ÷ volume das bins sobe exatamente quando o volume das bins cai. O nome existe para
+    quem pensa em ocupação; o motor usa o menor volume."""
+    return "min_volume" if objective == "max_fill" else objective
 
 
 def priority_list(objective: str, custom: Optional[list] = None) -> list[str]:

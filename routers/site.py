@@ -294,6 +294,20 @@ def demand_suggestion(pid: int, request: Request, db: Session = Depends(get_db))
     return render(request, "site/suggest.html", project=pr, res=res)
 
 
+@router.post("/{pid}/growth-suggestion")
+def growth_suggestion(pid: int, request: Request, db: Session = Depends(get_db)):
+    """Folga de crescimento: até quanto a demanda cresce com as estruturas e o imóvel atuais."""
+    from services.site_service import suggest_growth
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", "Projeto não encontrado.", "danger")
+    res = suggest_growth(db, merged(copy.deepcopy(pr.config)))
+    if res.get("error"):
+        return redirect(f"/optimization/site/{pid}", res["error"], "danger")
+    return render(request, "site/growth.html", project=pr, res=res)
+
+
 @router.post("/{pid}/demand-apply")
 def demand_apply(pid: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     pr = _get(db, pid)

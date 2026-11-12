@@ -21,7 +21,7 @@ from models import (
     StructureType,
     Warehouse,
 )
-from services.bin_optimizer import BASES, OBJECTIVES, BinSpec, ProductUnit
+from services.bin_optimizer import BASES, OBJECTIVES, BinSpec, ProductUnit, canonical_objective
 from services.file_reader import parse_decimal
 from services.material_service import material_condition
 from services.optimization_service import load_types
@@ -63,7 +63,8 @@ DEFAULT_CONFIG = {
                "factor": "100"},
     "params": {"objective": "modules", "bin_objective": "min_volume", "fill_limit": "85", "rotation": "upright",
                "single_type": "1", "weight": "1", "level_fill": "100", "top_gap_cm": "5", "side_gap_cm": "0",
-               "types": [], "time_limit": "15", "tl_unlimited": "", "priority": ["", "", ""]},
+               "types": [], "time_limit": "15", "tl_unlimited": "", "priority": ["", "", ""],
+               "t_v": "1", "t_gold": "5"},
     # posição dos SKUs: popularidade (auto = pedidos > coluna Saída), medida, ponto de referência, peso da zona de
     # ouro (metros de caminhada que ela vale) e itens que saem juntos lado a lado
     "slotting": {"on": "1", "source": "auto", "metric": "lines", "ref": "auto", "ref_x": "", "ref_y": "",
@@ -174,7 +175,7 @@ def config_from_form(form: Mapping) -> dict:
     p["priority"] = [form.get(f"p_prio{i}") or "" for i in (2, 3, 4)]
     p["bin_objective"] = form.get("p_bin_objective") if form.get("p_bin_objective") in OBJECTIVES else "min_volume"
     p["rotation"] = "any" if form.get("p_rotation") == "any" else "upright"
-    for k in ("fill_limit", "level_fill", "top_gap_cm", "side_gap_cm", "time_limit"):
+    for k in ("fill_limit", "level_fill", "top_gap_cm", "side_gap_cm", "time_limit", "t_v", "t_gold"):
         p[k] = str(form.get(f"p_{k}") or "").strip()
     p["single_type"], p["weight"] = on("p_single_type"), on("p_weight")
     p["tl_unlimited"] = on("p_tl_unlimited")
@@ -294,7 +295,9 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
     prm = SiteParams(
         objective=p.get("objective") if p.get("objective") in SITE_OBJECTIVES else "modules",
         priority=[c for c in (p.get("priority") or []) if c in SITE_OBJECTIVES] or None,
-        bin_objective=p.get("bin_objective") if p.get("bin_objective") in OBJECTIVES else "min_volume",
+        bin_objective=canonical_objective(p.get("bin_objective")) if p.get("bin_objective") in OBJECTIVES else "min_volume",
+        walk_speed=_num(p.get("t_v"), "Velocidade de caminhada", errors, 1, 0.1, 5) or 1.0,
+        gold_s=_num(p.get("t_gold"), "Tempo extra fora da zona de ouro", errors, 5, 0, 600) or 0.0,
         fill_limit=(_num(p.get("fill_limit"), "Taxa máxima de enchimento das bins", errors, 85, 5, 100) or 85) / 100,
         rotation="any" if p.get("rotation") == "any" else "upright",
         single_type=bool(p.get("single_type")),
@@ -578,6 +581,56 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
         else:
             hi = mid
     out["fit_factor"] = math.floor(f0 * lo * 10) / 10 if lo > 0 else None
+    return out
+
+
+def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0, max_mult: float = 8.0) -> dict:
+    """Até quanto a demanda pode crescer com as estruturas e o imóvel atuais: busca o maior fator de demanda (relativo
+    ao atual) em que ainda não falta espaço. Só faz sentido quando a demanda atual já cabe.
+    Retorna {"factor", "max_factor" (% — None se nem a atual cabe), "growth_pct" (crescimento sobre a atual),
+    "capped" (passou do limite da busca), "plan" (plano atual), "limits" (o que limita: estruturas no máximo)}."""
+    import copy
+    import math
+
+    base, errors = run_project(db, cfg)
+    if errors or base is None:
+        return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
+    f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
+    out = {"factor": f0, "plan": base, "max_factor": None, "growth_pct": None, "capped": False, "limits": [],
+           "shortage": base.shortage, "levels_free": None}
+    for s in base.structs:
+        st = s.struct
+        if st.mode == "fixed" or (st.mode == "auto" and st.max_qty is not None and s.qty >= st.max_qty):
+            out["limits"].append(f"{st.code}: {'quantidade fixa' if st.mode == 'fixed' else 'máximo'} de "
+                                 f"{st.qty if st.mode == 'fixed' else st.max_qty} módulo(s)")
+        elif s.floor_max and s.qty >= s.floor_max:
+            out["limits"].append(f"{st.code}: a planta comporta no máximo {s.floor_max} módulo(s)")
+    total_levels = sum(s.struct.levels * s.qty for s in base.structs)
+    used_levels = sum(1 for m in base.modules for lv in m.levels if lv.type_id is not None)
+    out["levels_free"] = max(0, total_levels - used_levels)
+    if base.shortage:
+        return out  # a demanda atual não cabe: use "Sugerir redução da demanda"
+
+    def fits(mult: float) -> bool:
+        c2 = copy.deepcopy(cfg)
+        c2["demand"]["factor"] = f"{f0 * mult:.4f}"
+        c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15), per_run_s))
+        c2["params"]["tl_unlimited"] = ""  # a busca roda várias vezes: sempre com tempo curto
+        plan, errs = run_project(db, c2)
+        return plan is not None and not errs and not plan.errors and plan.shortage == 0
+
+    lo, hi = 1.0, max_mult
+    if fits(max_mult):  # cabe até o limite da busca
+        out.update(max_factor=f0 * max_mult, growth_pct=(max_mult - 1) * 100, capped=True)
+        return out
+    for _ in range(steps):
+        mid = (lo + hi) / 2
+        if fits(mid):
+            lo = mid
+        else:
+            hi = mid
+    out["max_factor"] = math.floor(f0 * lo * 10) / 10
+    out["growth_pct"] = math.floor((lo - 1) * 1000) / 10
     return out
 
 

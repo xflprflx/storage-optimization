@@ -16,7 +16,7 @@ from database import get_db
 from models import BinType, Branch, StockItem, StorageLocation, Warehouse, branch_warehouse
 from routers.common import form_data, redirect, render, to_int
 from routers.locations import FILTER_KEYS, _apply_filters
-from services.bin_optimizer import BASES, CRITERIA, OBJECTIVES, STATUS_LABELS, Params
+from services.bin_optimizer import BASES, CRITERIA, OBJECTIVES, STATUS_LABELS, Params, canonical_objective
 from services.action_plan import build_address_plan, build_pool_plan
 from services.file_reader import parse_decimal
 from services.optimization_service import apply as apply_suggestions
@@ -95,7 +95,7 @@ def parse_params(src: Mapping) -> tuple[Params, dict, list[str]]:
         errors.append("Máximo de bins: número inteiro inválido.")
     on = lambda k: str(raw.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
     prm = Params(
-        objective=raw["objective"] if raw["objective"] in OBJECTIVES else "min_volume",
+        objective=canonical_objective(raw["objective"]) if raw["objective"] in OBJECTIVES else "min_volume",
         allowed_types={int(t) for t in raw["types"] if str(t).isdigit()} or None,
         fill_limit=(fill if fill is not None else 85.0) / 100.0,
         growth=(growth or 0.0) / 100.0,
@@ -694,7 +694,7 @@ def parse_pool_params(src: Mapping):
     if growth < 0 or growth > 1000:
         errors.append("Margem deve estar entre 0% e 1000%.")
     on = lambda k: str(raw.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
-    prm = PoolParams(objective=raw["objective"] if raw["objective"] in POOL_OBJECTIVES else "min_bins",
+    prm = PoolParams(objective=canonical_objective(raw["objective"]) if raw["objective"] in POOL_OBJECTIVES else "min_bins",
                      fill_limit=fill / 100.0, growth=growth / 100.0, use_geometry=on("geometry"),
                      rotation="any" if raw["rotation"] == "any" else "upright", enforce_weight=on("weight"),
                      mix_skus=on("mix"), allow_split=on("split"), single_type=on("single_type"),
@@ -761,6 +761,11 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                     raw["slot"] = "1"  # trajeto/pega no objetivo: a posição pela saída é obrigatória
                     if prm.objective == "max_pick":
                         raw["slot_golden_m"] = "1000"  # pega antes da caminhada
+                    elif prm.objective == "min_time":
+                        # tempo: um item fora da zona de ouro "custa" slot_gold_s segundos = segundos × velocidade metros
+                        from services.slotting import _num as _slot_num
+
+                        raw["slot_golden_m"] = f"{max(0.0, _slot_num(raw.get('slot_gold_s'), 5.0)) * max(0.05, _slot_num(raw.get('slot_v'), 1.0)):g}"
                 sl = _slot_setup(db, filters, raw, ids)
                 slot_notes = []
                 if prm.objective in SLOT_OBJECTIVES and not sl.get("on"):

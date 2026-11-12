@@ -104,6 +104,8 @@ O **cadastro do produto é único** e vale para todas as filiais: SKU, nome, tip
 
 A ferramenta principal para compactar o armazém ou reorganizar SKUs, usando modelos matemáticos (Pesquisa Operacional com OR-Tools CP-SAT) ou Heurística.
 
+**Como as peças são encaixadas na bin:** o sistema não posiciona peça a peça. A capacidade de um SKU numa bin é o menor entre o **encaixe em grade** (todas as peças do SKU na mesma orientação, a melhor das permitidas: 2 em "só girar no plano", com a altura para cima, ou 6 em "qualquer orientação"), o **volume × enchimento máximo** e o **peso máximo**. Vários SKUs na mesma bin ficam em faixas ao longo do comprimento, cada um com a sua melhor orientação (o arranjo desenhado é aproximado). O solver escolhe tipos, quantidades e endereços das bins sobre essa capacidade já calculada; não faz empacotamento 3D com orientações misturadas, então o cálculo é conservador (um arranjo fora da grade pode caber mais peças do que o sistema conta).
+
 ```mermaid
 flowchart TD
     A[Início: Otimização] --> B{Qual Modo?}
@@ -275,14 +277,25 @@ flowchart TD
 
 ## 5.0 Trajeto e pega no objetivo
 
-- **Projeto de filial nova:** os critérios **Menor caminhada na separação (trajeto)** e **Mais saídas na zona de ouro da pega** podem ser o objetivo ou um desempate.
+- **Projeto de filial nova:** os critérios **Menor caminhada na separação (trajeto)**, **Mais saídas na zona de ouro da pega** e **Menor tempo de separação** podem ser o objetivo ou um desempate.
   - **Trajeto no solver:** cada módulo "custa" a distância do início do trecho de fileira até a expedição. Com sobra de espaço, as estruturas ficam nos trechos mais perto.
   - **Trajeto e pega na posição:** os tipos de bin mais procurados (por bin) ficam com os níveis da zona de ouro e/ou mais perto da expedição. Os SKUs mais procurados ficam nos melhores endereços. A ordem entre os dois decide quem manda.
   - **Resultado:** os valores alcançados aparecem na lista de etapas do solver, marcados "posição dos SKUs".
 
   No exemplo do CD, com o mesmo número de módulos, a caminhada média caiu de 31,7 m para cerca de 21,5 m e as saídas na zona de ouro da pega subiram de 62% para cerca de 68%.
-- **Pool:** objetivos **Menor caminhada na separação** e **Mais saídas na zona de ouro da pega**. Exigem o histórico de saídas da filial e usam o motor heurístico. No exemplo do CD, com pega, 93% das saídas ficam na zona de ouro.
+- **Pool:** objetivos **Menor caminhada na separação**, **Mais saídas na zona de ouro da pega** e **Menor tempo de separação**. Exigem o histórico de saídas da filial e usam o motor heurístico. No exemplo do CD, com pega, 93% das saídas ficam na zona de ouro.
 - **Por endereço:** os produtos ficam nos endereços. Para trajeto e pega valem as trocas sugeridas da posição pela saída, ou o Pool.
+
+## 5.0.1 Objetivos de maximizar: ocupação, capacidade e tempo
+
+Alguns objetivos são melhor pensados como "o maior possível". Todos entram como objetivo ou desempate, nas mesmas telas dos demais.
+
+- **Maior ocupação das bins** (Por endereço, Pool e a escolha das bins do projeto): ocupação = volume das unidades ÷ volume das bins. Como as unidades guardadas são as mesmas, a ocupação sobe exatamente quando o volume das bins cai, então o motor usa o mesmo cálculo de **Menos volume de bins**; o nome existe para quem pensa em ocupação (o indicador "ocupação antes → depois" do resultado mostra o ganho). Os dois dão o mesmo plano.
+- **Maior capacidade do imóvel** (projeto de filial nova, critério `capacity`): em vez de usar só o necessário, enche o imóvel com o máximo de **níveis de armazenagem** (as estruturas que couberem, até o máximo de cada uma), atendendo à demanda. O resultado mostra os níveis totais e quantos ficam livres; o custo vira o desempate padrão (a forma mais barata de chegar à capacidade máxima). No exemplo do galpão médio: 344 níveis com o objetivo "menos módulos" e 4.896 com "maior capacidade".
+- **Quanto posso crescer?** (botão no resultado do projeto, quando a demanda atual cabe): busca com o próprio otimizador o maior fator de demanda que ainda cabe com as estruturas e o imóvel atuais (todos os SKUs crescendo na mesma proporção, até 8× a atual) e mostra os níveis livres e o que limita (estruturas no máximo). *Aplicar fator* grava o fator e reotimiza. É a folga de crescimento.
+- **Menor tempo de separação** (Pool `min_time` e projeto `time`): como a caminhada, mas um item fora da zona de ouro da pega "custa" o tempo extra informado (**Fora do ouro, s por item**), convertido em metros pela **velocidade de caminhada**: metros equivalentes = s × m/s. A caminhada pura (`min_walk`) usa o valor fixo "Pega fora vale (m)". O resultado traz o **Tempo estimado por saída** (s) = caminhada média ÷ velocidade + parcela fora da zona de ouro × s por item, antes → depois (Pool e Por endereço) e na lista de etapas do projeto ("s por saída").
+
+Já existem, sem precisar de objetivo novo: **ponderar pela saída** (medida *Unidades* em vez de *Linhas de pedido* na posição pela saída) e **níveis livres** (o critério "menos níveis ocupados").
 
 ## 5.1 Tempo limite × solução do solver a qualquer custo
 

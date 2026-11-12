@@ -159,7 +159,7 @@
         {% for key, label in objectives.items() %}
         <div class="form-check mb-1">
           <input class="form-check-input" type="radio" name="objective" id="obj_{{ key }}" value="{{ key }}" {% if params.objective == key %}checked{% endif %}>
-          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">(só com bins existentes)</span>{% endif %}{% if key in ('min_walk', 'max_pick') %} <span class="text-muted">(usa o histórico de saídas; motor heurístico)</span>{% endif %}</label>
+          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">(só com bins existentes)</span>{% endif %}{% if key in ('min_walk', 'max_pick', 'min_time') %} <span class="text-muted">(usa o histórico de saídas; motor heurístico)</span>{% endif %}</label>
         </div>
         {% endfor %}
         {% if not POOL %}<div class="form-text mb-2"><i class="bi bi-signpost-split"></i> Trajeto e pega: neste modo os produtos ficam nos endereços — use as
@@ -252,6 +252,11 @@
             <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ params.slot_golden_m }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" title="Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro (pega)</label>
             <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="ex.: 2,3"></div>
+          <div class="col-12 fw-semibold mt-1">Tempo de separação <span class="fw-normal text-muted">(objetivo "Menor tempo" e indicador do resultado)</span></div>
+          <div class="col-6"><label class="form-label mb-0" for="slot_v" title="Velocidade de caminhada do separador">Caminhada (m/s)</label>
+            <input class="form-control form-control-sm text-end" name="slot_v" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0" for="slot_gold_s" title="Tempo a mais por item pego num nível fora da zona de ouro da pega">Fora do ouro (s/item)</label>
+            <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
         </div>
         {{ switch('slot_rows', 'Letras por rua', '(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)') }}
         {{ switch('slot_serp', 'Ruas em serpentina', '(com letras por rua: B-01 fica de frente para o fim da A)') }}
@@ -412,6 +417,7 @@
             {% if hint %}<div class="text-muted" style="font-size:.72rem">{{ hint }}</div>{% endif %}</div></div>
           {% endmacro %}
           {{ cmp('Caminhada média por saída', a.get('avg_dist'), z.get('avg_dist'), ' m', true, 'ponderada pela popularidade; ao acaso: ' ~ (z.random_dist|dec(1) if z.random_dist is not none else '—') ~ ' m') }}
+          {% if a.get('avg_dist') is not none and z.get('avg_dist') is not none %}{% set sv = [params.slot_v|float(1.0), 0.05]|max %}{% set sg = params.slot_gold_s|float(5.0) %}{{ cmp('Tempo estimado por saída', a.avg_dist / sv + ((1 - a.golden_picks / 100) * sg if a.get('golden_picks') is not none else 0), z.avg_dist / sv + ((1 - z.golden_picks / 100) * sg if z.get('golden_picks') is not none else 0), ' s', true, 'caminhada ÷ ' ~ (sv|dec(1)) ~ ' m/s + ' ~ (sg|dec(0)) ~ ' s por item fora da zona de ouro') }}{% endif %}
           {% if a.get('golden_picks') is not none %}{{ cmp('Saídas na zona de ouro da pega', a.golden_picks, z.golden_picks, '%', false, 'altura ergonômica · tem ' ~ (z.golden_positions|dec(0)) ~ '% das posições usadas') }}{% endif %}
           {% if a.get('walk_picks') is not none %}{{ cmp('Saídas na zona de ouro da caminhada', a.walk_picks, z.walk_picks, '%', false, 'até ' ~ (slot.info.spec.walk_limit|dec(1)) ~ ' m da referência' ~ ((' · nas duas: ' ~ (a.both_picks|dec(0)) ~ '% → ' ~ (z.both_picks|dec(0)) ~ '%') if a.get('both_picks') is not none else '')) }}{% endif %}
           {% if a.get('pairs_avg') is not none or z.get('pairs_avg') is not none %}{{ cmp('Itens que saem juntos', a.get('pairs_avg'), z.get('pairs_avg'), ' m', true, 'distância entre os pares mais frequentes') }}{% endif %}
@@ -604,7 +610,7 @@
   const prios = [...document.querySelectorAll('.nk-prio')];
   const syncPrio = () => {
     const obj = (document.querySelector('input[name=objective]:checked') || {}).value || '';
-    const first = { min_bins: 'bins', min_volume: 'volume', min_width: 'width', min_changes: 'changes', min_moves: 'changes' }[obj];
+    const first = { min_bins: 'bins', min_volume: 'volume', max_fill: 'volume', min_width: 'width', min_changes: 'changes', min_moves: 'changes' }[obj];
     const used = new Set([first]);
     prios.forEach(sel => { [...sel.options].forEach(o => { o.disabled = !!o.value && used.has(o.value) && o.value !== sel.value; });
       if (sel.value && used.has(sel.value)) sel.value = ''; if (sel.value) used.add(sel.value); });

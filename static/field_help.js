@@ -311,6 +311,7 @@
     if (h === 'serp') s += arrow(60, 50, 140, 50, true) + arrow(140, 86, 60, 86, true);
     if (h === 'mode') s += T(100, 30, 'A', true, { 'font-size': 9 }) + T(100, 42, 'B', true, { 'font-size': 9 }) + T(200, 54, 'letra por corredor ou por rua', true, { 'font-size': 8 });
     if (h === 'H') s += T(150, 54, 'pé-direito: altura livre', true, { 'font-size': 9 });
+    if (h === 'full') s += rows.map(y => R(56, y, 90, 10, true) + R(160, y, 90, 10, true)).join('') + T(150, 126, 'maior capacidade: enche o imóvel', true, { 'font-size': 9 });
     if (h === 'ref') s += C(27, 64, 5, true);
     return s;
   };

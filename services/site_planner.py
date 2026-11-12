@@ -44,16 +44,19 @@ SITE_CRITERIA = {  # critérios do projeto (ordem de prioridade definida pelo us
     "levels": "Menos níveis ocupados (mais níveis livres)",
     "walk": "Menor caminhada na separação (trajeto)",
     "pick": "Mais saídas na zona de ouro da pega",
+    "time": "Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)",
+    "capacity": "Maior capacidade do imóvel (mais níveis de armazenagem, atendendo à demanda)",
 }
 SITE_OBJECTIVES = SITE_CRITERIA  # o 1º critério é o objetivo
 DEFAULT_TIEBREAK = {"modules": ["area"], "cost": ["modules"], "area": ["modules"], "structures_cost": ["modules"],
                     "bins_cost": ["modules"], "bins": ["modules"], "levels": ["modules"], "walk": ["modules"],
-                    "pick": ["modules"]}
+                    "pick": ["modules"], "time": ["modules"], "capacity": ["cost"]}
 # trajeto e pega: "walk" também entra no solver (estruturas nos trechos de fileira mais perto da expedição); os dois
 # decidem a posição: tipos de bin mais procurados nos níveis da zona de ouro / mais perto, SKUs idem
-PLACEMENT_CRITERIA = {"walk", "pick"}
+PLACEMENT_CRITERIA = {"walk", "pick", "time"}
+WALK_LIKE = {"walk", "time"}  # no solver, o tempo usa a mesma distância do trajeto; a pega fora do ouro entra na posição dos SKUs
 BIN_CRITERIA = {"cost", "bins_cost", "bins"}  # critérios que dependem das bins escolhidas para cada SKU
-CRIT_UNITS = {"walk": ("m·módulo", 10), "cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
+CRIT_UNITS = {"walk": ("m·módulo", 10), "time": ("m·módulo", 10), "capacity": ("níveis", 1), "cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
               "modules": ("módulos", 1), "bins": ("bins", 1), "levels": ("níveis", 1)}
 
 
@@ -164,6 +167,8 @@ class StructureSpec:
 class SiteParams:
     objective: str = "modules"
     bin_objective: str = "min_volume"
+    walk_speed: float = 1.0  # m/s (objetivo "tempo")
+    gold_s: float = 5.0  # s a mais por item fora da zona de ouro da pega (objetivo "tempo")
     fill_limit: float = 0.85
     rotation: str = "upright"
     single_type: bool = True
@@ -1196,11 +1201,12 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     compute_bin_fill(plan, types, demands)
     k = plan.slotting or {}
     for c in [c for c in prm.order if c in PLACEMENT_CRITERIA]:  # resultado do trajeto/pega (na posição dos SKUs)
-        v = k.get("avg_dist") if c == "walk" else k.get("golden_picks")
+        v = {"walk": k.get("avg_dist"), "time": k.get("time_pick_s")}.get(c, k.get("golden_picks"))
         if v is not None and isinstance(plan.solver, dict):
             plan.solver.setdefault("stages", []).append(
                 {"criterion": c, "label": SITE_CRITERIA[c] + " — na posição dos SKUs", "value": v, "display": v,
-                 "unit": "m por saída" if c == "walk" else "% das saídas", "optimal": True, "placement": True})
+                 "unit": {"walk": "m por saída", "time": "s por saída"}.get(c, "% das saídas"), "optimal": True,
+                 "placement": True})
     if plan.shortage:
         plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
                           "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
@@ -1426,9 +1432,11 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     bins_cost = sum(bin_c[t] * need_ex[t] for t in all_t)
     levels_used = sum(z.values()) if z else 0
     exprs = {"modules": total_mods, "area": front, "cost": st_cost + bins_cost, "structures_cost": st_cost,
-             "bins_cost": bins_cost, "bins": sum(need_ex[t] for t in all_t), "levels": levels_used}
+             "bins_cost": bins_cost, "bins": sum(need_ex[t] for t in all_t), "levels": levels_used,
+             # capacidade = níveis de armazenagem do imóvel (maximiza: o solver minimiza o negativo)
+             "capacity": -sum(s.levels * x[s.id] for s in active)}
     ref = getattr(prm, "walk_ref", None)
-    if ref and "walk" in prm.order:
+    if ref and any(c in WALK_LIKE for c in prm.order):
         # trajeto: cada módulo "custa" a distância (em L, dm) do início do trecho de fileira até a expedição — com
         # sobra de espaço, as estruturas ficam nos trechos mais perto (os módulos começam no início do trecho)
         wd = []
@@ -1438,7 +1446,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
             r = zn.rows[ln.row]
             gx, gy, _w, _d = zn.to_global(ln.x0, r.y + (r.depth if r.side == "L" else 0), 0, 0)
             wd.append(int(round((abs(gx - ref["x"]) + abs(gy - ref["y"])) / 10)))
-        exprs["walk"] = sum(v * wd[g] for (sid, g), v in n.items())
+        exprs["walk"] = exprs["time"] = sum(v * wd[g] for (sid, g), v in n.items())
     stages = [("short", sum(short.values()) if short else 0)] + [(c, exprs[c]) for c in prm.order if c in exprs]
 
     solver = cp_model.CpSolver()
@@ -1480,8 +1488,9 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
         val = int(round(solver.ObjectiveValue()))
         all_optimal &= st == cp_model.OPTIMAL
         unit, div = CRIT_UNITS.get(label, ("bins", 1))
+        sgn = -1 if label == "capacity" else 1  # critério de maximizar: mostra o valor positivo
         info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, "Falta de bins (guardar toda a demanda)"),
-                               "value": val, "display": val / div, "unit": unit, "optimal": st == cp_model.OPTIMAL})
+                               "value": sgn * val, "display": sgn * val / div, "unit": unit, "optimal": st == cp_model.OPTIMAL})
         m.Add(expr <= val)
         # guarda a solução desta etapa (a próxima pode estourar o tempo)
         sol = {"qty": {s.id: solver.Value(x[s.id]) for s in active},
@@ -1649,6 +1658,8 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
     has_pop = any(d.pop for d in demands)
     sl = prm.slotting if prm.slotting and (prm.slotting.get("on") or goal) and has_pop else None
     golden_m = float((sl or {}).get("golden_m") or 0.0)
+    if "time" in goal:  # tempo: um item fora da zona de ouro "custa" gold_s segundos = gold_s × velocidade metros
+        golden_m = prm.gold_s * prm.walk_speed
     if goal and goal[0] == "pick":
         golden_m = 1e6  # pega antes do trajeto: zona de ouro primeiro, a caminhada só desempata
 
@@ -1891,6 +1902,10 @@ def slotting_kpis(plan: SitePlan, demands: list[Demand], prm: SiteParams, used: 
     both = {s: share(ps, lambda p: p.golden and p.walk_golden) for s, ps in by_sku.items()}
     k["avg_dist"] = sum(d.pop * dist[d.sku] for d in popd) / tot
     k["golden_picks"] = sum(d.pop * gold[d.sku] for d in popd) / tot * 100 if has_gold else None
+    # tempo estimado por saída (s): caminhada ÷ velocidade + a parcela fora da zona de ouro × tempo extra
+    spd = max(0.05, float(getattr(prm, "walk_speed", 1.0) or 1.0))
+    k["time_pick_s"] = k["avg_dist"] / spd + ((1 - k["golden_picks"] / 100) * float(getattr(prm, "gold_s", 0.0) or 0.0)
+                                               if k["golden_picks"] is not None else 0.0)
     k["walk_picks"] = sum(d.pop * walk[d.sku] for d in popd) / tot * 100
     k["both_picks"] = sum(d.pop * both[d.sku] for d in popd) / tot * 100 if has_gold else None
     k["abc"] = {c: sum(1 for d in demands if d.abc == c) for c in "ABC"}

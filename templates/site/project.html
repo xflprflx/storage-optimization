@@ -460,6 +460,16 @@
           mais perto da expedição) e na posição dos SKUs; "Zona de ouro da pega" decide a posição: os tipos de bin e os SKUs mais procurados ficam nos níveis da
           zona de ouro de cada estrutura. Quem vem antes na ordem manda. Os dois usam os dados de saída (etapa Posição dos SKUs). Com eles, as bins
           mais procuradas podem ficar acima das maiores (o peso continua conferido nível a nível).</div>
+        <div class="form-text mb-2"><b>Tempo de separação:</b> "Menor tempo" otimiza como a caminhada, mas um item fora da zona de ouro da pega
+          "custa" o tempo extra abaixo (convertido em metros pela velocidade). O resultado mostra o tempo estimado por saída.
+          <b>Maior capacidade do imóvel:</b> em vez de usar só o necessário, enche o imóvel com o máximo de níveis de armazenagem (as estruturas
+          que couberem, até o máximo de cada uma), atendendo à demanda; o que sobra é capacidade livre para crescer.</div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label small mb-0" for="p_t_v">Velocidade de caminhada (m/s)</label>
+            <input class="form-control form-control-sm text-end" name="p_t_v" id="p_t_v" inputmode="decimal" value="{{ p.get('t_v') or '1' }}"></div>
+          <div class="col-6"><label class="form-label small mb-0" for="p_t_gold">Fora da zona de ouro (s por item)</label>
+            <input class="form-control form-control-sm text-end" name="p_t_gold" id="p_t_gold" inputmode="decimal" value="{{ p.get('t_gold') or '5' }}"></div>
+        </div>
         <label class="form-label small mb-0">Tempo limite do solver (s)</label>
         <div class="d-flex align-items-center gap-3 mb-1 flex-wrap">
           <input class="form-control form-control-sm text-end" name="p_time_limit" id="p_time_limit" inputmode="decimal" value="{{ p.time_limit }}" style="max-width:120px">
@@ -480,6 +490,8 @@
 </form>
 <form method="post" action="/optimization/site/{{ project.id }}/demand-suggestion" id="suggestForm"
       onsubmit="document.body.style.cursor = 'progress'"></form>
+<form method="post" action="/optimization/site/{{ project.id }}/growth-suggestion" id="growthForm"
+      onsubmit="document.body.style.cursor = 'progress'"></form>
 
 {# ============================ Resultado ============================ #}
 {% if plan %}
@@ -490,6 +502,8 @@
   <div class="d-flex gap-2">
     <button class="btn {{ 'btn-warning' if plan.shortage else 'btn-outline-secondary' }}" type="submit" form="suggestForm"
             title="Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-funnel"></i> Sugerir redução da demanda</button>
+    {% if not plan.shortage %}<button class="btn btn-outline-secondary" type="submit" form="growthForm"
+            title="Calcula até quanto a demanda pode crescer com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-graph-up-arrow"></i> Quanto posso crescer?</button>{% endif %}
     <a class="btn btn-primary" href="/optimization/site/{{ project.id }}/plan"><i class="bi bi-list-check"></i> Plano detalhado</a>
     {% if plan.modules %}<a class="btn btn-outline-primary" href="/optimization/site/{{ project.id }}/3d"><i class="bi bi-box"></i> Ver em 3D</a>{% endif %}
     <a class="btn btn-outline-success" href="/optimization/site/{{ project.id }}/plan.xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>

@@ -579,7 +579,7 @@ def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
     # pontas com acesso (cabeceira de frente para uma área livre): docas/frente e fundo se a faixa tiver ao menos a
     # largura de um corredor; corredores transversais sempre
     fl = build_zone(depth_cm, a, run, cross, run_pad=(gap + front, gap + back), cross_pad=(gap, gap),
-                    run_ends=("a faixa da frente (docas)" if front >= a - EPS else None,
+                    run_ends=(_("a faixa da frente (docas)") if front >= a - EPS else None,
                               _("a faixa do fundo") if back >= a - EPS else None),
                     cross_aisles=b.cross_aisles, cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps,
                     along=along)
@@ -646,7 +646,7 @@ def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -
         if any(_overlap(strip, r) for j, r in enumerate(rects) if j != i) or any(_overlap(strip, o) for o in blocks):
             return None
         if front > 0 and sx < gap + front - EPS:
-            return "a faixa da frente (docas)"
+            return _("a faixa da frente (docas)")
         if back > 0 and sx + sw > L - gap - back + EPS:
             return _("a faixa do fundo")
         return _("a circulação")
@@ -808,7 +808,7 @@ def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
         allowed = [s for s in structs if not z.structures or s.id in z.structures]
         depth = max((s.depth for s in allowed), default=0.0)
         a = (z.aisle_m or b.aisle_m) * 100.0
-        prev = _("a avenida {i}", i=i) if i > 0 else ("a faixa da frente (docas)" if front >= a - EPS else None)
+        prev = _("a avenida {i}", i=i) if i > 0 else (_("a faixa da frente (docas)") if front >= a - EPS else None)
         nxt = _("a avenida {v}", v=i + 1) if i < len(zs) - 1 else (_("a faixa do fundo") if back >= a - EPS else None)
         if z.orientation == "across":
             side = _("a circulação junto à parede") if gap >= a - EPS else None

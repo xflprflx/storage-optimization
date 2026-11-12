@@ -51,7 +51,7 @@
 {% if errors and errors.get(name) %}<div class="invalid-feedback d-block">{{ errors.get(name) }}</div>{% endif %}
 {%- endmacro %}
 
-{% macro invalid(errors, name) -%}{% if errors and errors.get(name) %}{{ _("is-invalid") }}{% endif %}{%- endmacro %}
+{% macro invalid(errors, name) -%}{% if errors and errors.get(name) %}is-invalid{% endif %}{%- endmacro %}
 
 {% macro form_alert(errors) -%}
 {% if errors %}

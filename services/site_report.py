@@ -180,7 +180,7 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
             return _("cabeceira (girada 90°, de frente para {faces})", faces=m.faces)
         zn = m.zone
         if zn is not None and zn.aisles[m.row.aisle][1] <= 0:  # fileira de frente para a avenida/faixa
-            return _("de frente para {get}", get=zn.edge_names.get(m.row.aisle, 'a área livre'))
+            return _("de frente para {get}", get=zn.edge_names.get(m.row.aisle, _('a área livre')))
         return side_lbl.get(m.row.side, m.row.side)
 
     for m in plan.modules:
@@ -227,17 +227,19 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         zone = f"{m.zone.name}, " if fl.mixed and m.zone is not None else ""
         if m.rotated:
             blk = m.zone.blocks[m.row.block] if m.zone is not None and m.zone.blocks else None
-            kind = "dupla" if blk and len(blk.rows) > 1 else "simples"
-            add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), f"Cabeceira {m.aisle}-{m.bay}",
+            kind = _("dupla") if blk and len(blk.rows) > 1 else _("simples")
+            add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), _("Cabeceira {bay}", bay=f"{m.aisle}-{m.bay}"),
                 _("{code} GIRADA 90° na ponta da fileira {kind} ({zone}fileiras {v}), de frente para {faces}: {where}; {levels} níveis com vão de {fmt} cm", code=m.struct.code, kind=kind, zone=zone, v=', '.join(str(r + 1) for r in (blk.rows if blk else [m.row.index])), faces=m.faces, where=where, levels=m.struct.levels, fmt=_fmt(m.struct.level_h)))
             continue
         s_txt = side_of(m)
-        face = s_txt if s_txt.startswith("de frente") else _("lado {s_txt} do corredor {aisle}", s_txt=s_txt, aisle=m.aisle)
-        add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), f"Estante {m.aisle}-{m.bay}",
+        zn = m.zone
+        facing = zn is not None and zn.aisles[m.row.aisle][1] <= 0
+        face = s_txt if facing else _("lado {s_txt} do corredor {aisle}", s_txt=s_txt, aisle=m.aisle)
+        add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), _("Estante {bay}", bay=f"{m.aisle}-{m.bay}"),
             _("{code} na fileira {v} ({zone}{face}{v2}): {where}; {levels} níveis com vão de {fmt} cm", code=m.struct.code, v=m.row.index + 1, zone=zone, face=face, v2=N_('; fileira ao longo da largura') if m.zone is not None and m.zone.rot else '', where=where, levels=m.struct.levels, fmt=_fmt(m.struct.level_h)))
     for m in plan.modules:
         used = [lv for lv in m.levels if lv.positions]
-        add(3, _("Corredor {aisle}", aisle=m.aisle), _("Configurar"), f"Estante {m.aisle}-{m.bay}",
+        add(3, _("Corredor {aisle}", aisle=m.aisle), _("Configurar"), _("Estante {bay}", bay=f"{m.aisle}-{m.bay}"),
             "; ".join(f"N{lv.n}: {lv.cap}× {code(lv.type_id)}" if lv.type_id is not None else f"N{lv.n}: livre"
                       for lv in m.levels)
             + _(" · etiquetar {sum} endereço(s)", sum=sum(len(lv.positions) for lv in used)))

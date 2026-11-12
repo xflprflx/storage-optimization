@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import BinType, Branch, LocationBin, Product, StockItem, StockPolicy, StorageLocation, Warehouse
 from routers.common import render
+from services.i18n import N_
 
-router = APIRouter(tags=["Painel"])
+router = APIRouter(tags=[N_("Painel")])
 
 
 @router.get("/")

@@ -44,21 +44,22 @@ from services.site_planner import (
     ZoneSpec,
     plan_site,
 )
+from services.i18n import N_, _
 
 BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("length_m", "Comprimento (m)", "", 1),
     ("width_m", "Largura (m)", "", 1),
-    ("clear_height_m", "Pé-direito útil (m)", "", 1),
-    ("aisle_m", "Largura dos corredores (m)", "3", 0.5),
-    ("wall_gap_m", "Afastamento das paredes (m)", "0,3", 0),
-    ("front_reserved_m", "Faixa reservada na frente — docas/expedição (m)", "0", 0),
-    ("back_reserved_m", "Faixa reservada no fundo (m)", "0", 0),
-    ("cross_aisles", "Corredores transversais (qtd.)", "0", 0),
-    ("cross_aisle_m", "Largura dos transversais (m)", "2", 0),
-    ("avenue_m", "Largura das avenidas entre zonas (m)", "2", 0),
+    ("clear_height_m", N_("Pé-direito útil (m)"), "", 1),
+    ("aisle_m", N_("Largura dos corredores (m)"), "3", 0.5),
+    ("wall_gap_m", N_("Afastamento das paredes (m)"), "0,3", 0),
+    ("front_reserved_m", N_("Faixa reservada na frente — docas/expedição (m)"), "0", 0),
+    ("back_reserved_m", N_("Faixa reservada no fundo (m)"), "0", 0),
+    ("cross_aisles", N_("Corredores transversais (qtd.)"), "0", 0),
+    ("cross_aisle_m", N_("Largura dos transversais (m)"), "2", 0),
+    ("avenue_m", N_("Largura das avenidas entre zonas (m)"), "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _, d, _ in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle", "serpentine": "",
+    "building": {k: d for k, _x, d, _x in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle", "serpentine": "",
                                                           "zones": [], "obstacles": [], "sectors": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
@@ -72,9 +73,9 @@ DEFAULT_CONFIG = {
     "slotting": {"on": "1", "source": "auto", "metric": "lines", "ref": "auto", "ref_x": "", "ref_y": "",
                  "golden_m": "5", "affinity": "1", "walk_m": ""},
 }
-SLOT_SOURCES = {"auto": "Automático (histórico de pedidos; senão a coluna Saída)", "orders": "Histórico de pedidos",
-                "column": "Coluna Saída da aba SKUs", "max": "Quantidade planejada (max level) — aproximação"}
-SLOT_METRICS = {"lines": "Linhas de pedido (visitas ao endereço)", "units": "Unidades"}
+SLOT_SOURCES = {"auto": N_("Automático (histórico de pedidos; senão a coluna Saída)"), "orders": N_("Histórico de pedidos"),
+                "column": N_("Coluna Saída da aba SKUs"), "max": N_("Quantidade planejada (max level) — aproximação")}
+SLOT_METRICS = {"lines": N_("Linhas de pedido (visitas ao endereço)"), "units": N_("Unidades")}
 
 
 def _num(raw, label: str, errors: list, default: Optional[float] = None, lo: Optional[float] = None,
@@ -82,17 +83,17 @@ def _num(raw, label: str, errors: list, default: Optional[float] = None, lo: Opt
     try:
         v = parse_decimal(str(raw or "").strip())
     except ValueError:
-        errors.append(f"{label}: número inválido.")
+        errors.append(_("{label}: número inválido.", label=label))
         return default
     if v is None:
         if required:
-            errors.append(f"{label}: obrigatório.")
+            errors.append(_("{label}: obrigatório.", label=label))
         return default
     f = float(v)
     if lo is not None and f < lo:
-        errors.append(f"{label}: mínimo {lo:g}.")
+        errors.append(_("{label}: mínimo {lo}.", label=label, lo=f"{lo:g}"))
     if hi is not None and f > hi:
-        errors.append(f"{label}: máximo {hi:g}.")
+        errors.append(_("{label}: máximo {hi}.", label=label, hi=f"{hi:g}"))
     return f
 
 
@@ -115,7 +116,7 @@ def config_from_form(form: Mapping) -> dict:
     """Lê o formulário da tela do projeto (checkbox ausente = desligado)."""
     on = lambda k: "1" if str(form.get(k) or "").lower() in {"1", "on", "true"} else ""  # noqa: E731
     cfg = merged(None)
-    for k, *_ in BUILDING_FIELDS:
+    for k, *_x in BUILDING_FIELDS:
         cfg["building"][k] = str(form.get(f"b_{k}") or "").strip()
     cfg["building"]["orientation"] = form.get("b_orientation") if form.get("b_orientation") in ORIENTATIONS else "auto"
     cfg["building"]["end_caps"] = on("b_end_caps")
@@ -190,11 +191,11 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
     """Valida a configuração. Retorna (imóvel, modos das estruturas, parâmetros, erros)."""
     errors: list[str] = []
     bc = cfg["building"]
-    labels = {k: lab for k, lab, _, _ in BUILDING_FIELDS}
+    labels = {k: lab for k, lab, _x, _x in BUILDING_FIELDS}
     req = {"length_m", "width_m", "clear_height_m"}
     vals = {k: _num(bc.get(k), labels[k], errors, default=float(parse_decimal(d) or 0) if d else 0.0, lo=mn,
                     required=k in req)
-            for k, _, d, mn in BUILDING_FIELDS}
+            for k, _x, d, mn in BUILDING_FIELDS}
     b = Building(length_m=vals["length_m"] or 0, width_m=vals["width_m"] or 0,
                  clear_height_m=vals["clear_height_m"] or 0, aisle_m=vals["aisle_m"] or 0,
                  wall_gap_m=vals["wall_gap_m"] or 0, front_reserved_m=vals["front_reserved_m"] or 0,
@@ -205,35 +206,35 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  address_mode="row" if bc.get("address_mode") == "row" else "aisle",
                  serpentine=bool(bc.get("serpentine")))
     for i, zc in enumerate(bc.get("zones") or [], start=1):
-        name = zc.get("name") or f"Zona {i}"
+        name = zc.get("name") or _("Zona {i}", i=i)
         ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)
-        al = _num(zc.get("aisle_m"), f"{name}: largura do corredor", errors, None, lo=0.5)
-        cr = _num(zc.get("cross_aisles"), f"{name}: corredores transversais", errors, 0, lo=0)
+        al = _num(zc.get("aisle_m"), _("{name}: largura do corredor", name=name), errors, None, lo=0.5)
+        cr = _num(zc.get("cross_aisles"), _("{name}: corredores transversais", name=name), errors, 0, lo=0)
         zx = _num(zc.get("x_m"), f"{name}: X", errors, None, lo=0)
         zy = _num(zc.get("y_m"), f"{name}: Y", errors, None, lo=0)
-        zw = _num(zc.get("width_m"), f"{name}: largura em Y", errors, None, lo=0.5)
+        zw = _num(zc.get("width_m"), _("{name}: largura em Y", name=name), errors, None, lo=0.5)
         if (zx is None) != (zy is None):
-            errors.append(f"{name}: informe X e Y juntos (ou deixe os dois vazios para empilhar a zona).")
+            errors.append(_("{name}: informe X e Y juntos (ou deixe os dois vazios para empilhar a zona).", name=name))
         b.zones.append(ZoneSpec(length_m=ln, orientation=zc.get("orientation") if zc.get("orientation") in ZONE_ORIENTATIONS
                                 else "along", aisle_m=al, cross_aisles=int(cr or 0),
                                 structures={int(x) for x in zc.get("structures") or [] if str(x).isdigit()} or None,
                                 name=name, x_m=zx, y_m=zy, width_m=zw))
     for i, oc in enumerate(bc.get("obstacles") or [], start=1):
-        name = oc.get("name") or f"Obstáculo {i}"
+        name = oc.get("name") or _("Obstáculo {i}", i=i)
         vals_o = {k: _num(oc.get(k), f"{name}: {lab}", errors, None, lo=0, required=True)
                   for k, lab in (("x_m", "X"), ("y_m", "Y"), ("length_m", "comprimento"), ("width_m", "largura"))}
         if any(v is None for v in vals_o.values()):
             continue
         if vals_o["length_m"] <= 0 or vals_o["width_m"] <= 0:
-            errors.append(f"{name}: comprimento e largura devem ser maiores que zero.")
+            errors.append(_("{name}: comprimento e largura devem ser maiores que zero.", name=name))
             continue
         if b.length_m and b.width_m and (vals_o["x_m"] + vals_o["length_m"] > b.length_m + 1e-6
                                          or vals_o["y_m"] + vals_o["width_m"] > b.width_m + 1e-6):
-            errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+            errors.append(_("{name}: fica fora do imóvel ({length_m} × {width_m} m).", name=name, length_m=f"{b.length_m:g}", width_m=f"{b.width_m:g}"))
             continue
         b.obstacles.append(Obstacle(name, **vals_o))
     for i, sc in enumerate(bc.get("sectors") or [], start=1):
-        name = sc.get("name") or f"Setor {i}"
+        name = sc.get("name") or _("Setor {i}", i=i)
         place = sc.get("place") if sc.get("place") in SECTOR_PLACES else "auto"
         if place == "fixed":
             v = {k: _num(sc.get(k), f"{name}: {lab}", errors, None, lo=0, required=True)
@@ -241,56 +242,56 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
             if any(x is None for x in v.values()):
                 continue
             if v["length_m"] <= 0 or v["width_m"] <= 0:
-                errors.append(f"{name}: comprimento e largura devem ser maiores que zero.")
+                errors.append(_("{name}: comprimento e largura devem ser maiores que zero.", name=name))
                 continue
             if b.length_m and b.width_m and (v["x_m"] + v["length_m"] > b.length_m + 1e-6
                                              or v["y_m"] + v["width_m"] > b.width_m + 1e-6):
-                errors.append(f"{name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+                errors.append(_("{name}: fica fora do imóvel ({length_m} × {width_m} m).", name=name, length_m=f"{b.length_m:g}", width_m=f"{b.width_m:g}"))
                 continue
             b.sectors.append(SectorSpec(name, v["length_m"] * v["width_m"], 0.0, "fixed", **v))
             continue
-        area = _num(sc.get("area_m2"), f"{name}: área", errors, None, lo=0.5, required=True)
-        side = _num(sc.get("min_side_m"), f"{name}: lado mínimo", errors, 2.0, lo=0)
+        area = _num(sc.get("area_m2"), _("{name}: área", name=name), errors, None, lo=0.5, required=True)
+        side = _num(sc.get("min_side_m"), _("{name}: lado mínimo", name=name), errors, 2.0, lo=0)
         if area is None:
             continue
         b.sectors.append(SectorSpec(name, area, side if side is not None else 2.0, place))
     positioned = [z for z in b.zones if z.positioned]
     if positioned:  # zonas em qualquer lugar do imóvel
         if len(positioned) != len(b.zones):
-            errors.append("Zonas posicionadas: informe X e Y em todas as zonas (ou em nenhuma, para empilhá-las a partir "
-                          "da frente com avenidas).")
+            errors.append(_("Zonas posicionadas: informe X e Y em todas as zonas (ou em nenhuma, para empilhá-las a partir "
+                          "da frente com avenidas)."))
         else:
             from services.site_planner import _overlap, zone_rects
 
             for z in b.zones:
                 if not z.length_m:
-                    errors.append(f"{z.name}: zona posicionada precisa do comprimento em X.")
+                    errors.append(_("{name}: zona posicionada precisa do comprimento em X.", name=z.name))
                 elif b.length_m and b.width_m and (z.x_m >= b.length_m or z.y_m >= b.width_m
                                                    or z.x_m + z.length_m > b.length_m + 1e-6
                                                    or (z.width_m and z.y_m + z.width_m > b.width_m + 1e-6)):
-                    errors.append(f"{z.name}: fica fora do imóvel ({b.length_m:g} × {b.width_m:g} m).")
+                    errors.append(_("{name}: fica fora do imóvel ({length_m} × {width_m} m).", name=z.name, length_m=f"{b.length_m:g}", width_m=f"{b.width_m:g}"))
             if not errors and b.length_m and b.width_m:
                 rects = zone_rects(b)
                 for i in range(len(rects)):
                     for j in range(i + 1, len(rects)):
                         if _overlap(rects[i], rects[j]):
-                            errors.append(f"As zonas {b.zones[i].name} e {b.zones[j].name} se sobrepõem.")
+                            errors.append(_("As zonas {v} e {v2} se sobrepõem.", v=b.zones[i].name, v2=b.zones[j].name))
     else:
         if len(b.zones) == 1:
-            errors.append("Com zonas empilhadas, informe ao menos duas (uma zona só é o mesmo que não usar zonas); "
-                          "para uma zona só, informe X e Y.")
+            errors.append(_("Com zonas empilhadas, informe ao menos duas (uma zona só é o mesmo que não usar zonas); "
+                          "para uma zona só, informe X e Y."))
         if b.zones and b.avenue_m <= 0:
-            errors.append("Com zonas, a largura das avenidas entre elas deve ser maior que zero.")
+            errors.append(_("Com zonas, a largura das avenidas entre elas deve ser maior que zero."))
     modes = {}
     for sid, sc in cfg["structures"].items():
         mode = sc.get("mode") if sc.get("mode") in STRUCT_MODES else "off"
-        qty = _num(sc.get("qty"), f"Quantidade fixa ({sid})", errors, 0, lo=0)
-        mn = _num(sc.get("min_qty"), f"Mínimo ({sid})", errors, 0, lo=0)
-        mx = _num(sc.get("max_qty"), f"Máximo ({sid})", errors, None, lo=0)
+        qty = _num(sc.get("qty"), _("Quantidade fixa ({sid})", sid=sid), errors, 0, lo=0)
+        mn = _num(sc.get("min_qty"), _("Mínimo ({sid})", sid=sid), errors, 0, lo=0)
+        mx = _num(sc.get("max_qty"), _("Máximo ({sid})", sid=sid), errors, None, lo=0)
         if mode == "fixed" and not qty:
-            errors.append("Estrutura com quantidade fixa: informe a quantidade (ou use \"Otimizar quantidade\").")
+            errors.append(_("Estrutura com quantidade fixa: informe a quantidade (ou use \"Otimizar quantidade\")."))
         if mode == "auto" and mx is not None and mn and mn > mx:
-            errors.append("Estrutura: o mínimo é maior que o máximo.")
+            errors.append(_("Estrutura: o mínimo é maior que o máximo."))
         modes[int(sid)] = {"mode": mode, "qty": int(qty or 0), "min_qty": int(mn or 0),
                            "max_qty": int(mx) if mx is not None else None}
     p = cfg["params"]
@@ -298,23 +299,23 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
         objective=p.get("objective") if p.get("objective") in SITE_OBJECTIVES else "modules",
         priority=[c for c in (p.get("priority") or []) if c in SITE_OBJECTIVES] or None,
         bin_objective=canonical_objective(p.get("bin_objective")) if p.get("bin_objective") in OBJECTIVES else "min_volume",
-        walk_speed=_num(p.get("t_v"), "Velocidade de caminhada", errors, 1, 0.1, 5) or 1.0,
-        gold_s=_num(p.get("t_gold"), "Tempo extra fora da zona de ouro", errors, 5, 0, 600) or 0.0,
+        walk_speed=_num(p.get("t_v"), _("Velocidade de caminhada"), errors, 1, 0.1, 5) or 1.0,
+        gold_s=_num(p.get("t_gold"), _("Tempo extra fora da zona de ouro"), errors, 5, 0, 600) or 0.0,
         quick=bool(p.get("_quick")),
-        fill_limit=(_num(p.get("fill_limit"), "Taxa máxima de enchimento das bins", errors, 85, 5, 100) or 85) / 100,
+        fill_limit=(_num(p.get("fill_limit"), _("Taxa máxima de enchimento das bins"), errors, 85, 5, 100) or 85) / 100,
         rotation="any" if p.get("rotation") == "any" else "upright",
         single_type=bool(p.get("single_type")),
         enforce_weight=bool(p.get("weight")),
-        growth=(_num(cfg["demand"].get("growth"), "Margem de crescimento", errors, 0, 0, 1000) or 0) / 100,
-        level_fill=(_num(p.get("level_fill"), "Aproveitamento da frente do nível", errors, 100, 10, 100) or 100) / 100,
-        top_gap_cm=_num(p.get("top_gap_cm"), "Folga acima da bin", errors, 5, 0) or 0,
-        side_gap_cm=_num(p.get("side_gap_cm"), "Folga entre bins", errors, 0, 0) or 0,
+        growth=(_num(cfg["demand"].get("growth"), _("Margem de crescimento"), errors, 0, 0, 1000) or 0) / 100,
+        level_fill=(_num(p.get("level_fill"), _("Aproveitamento da frente do nível"), errors, 100, 10, 100) or 100) / 100,
+        top_gap_cm=_num(p.get("top_gap_cm"), _("Folga acima da bin"), errors, 5, 0) or 0,
+        side_gap_cm=_num(p.get("side_gap_cm"), _("Folga entre bins"), errors, 0, 0) or 0,
         allowed_types={int(t) for t in p.get("types") or [] if str(t).isdigit()} or None,
         # sem limite (None): a solução do solver a qualquer custo — cada critério vai até provar o ótimo
-        time_limit=None if p.get("tl_unlimited") else (_num(p.get("time_limit"), "Tempo limite", errors, 15, 1, 3600) or 15),
+        time_limit=None if p.get("tl_unlimited") else (_num(p.get("time_limit"), _("Tempo limite"), errors, 15, 1, 3600) or 15),
     )
     if b.length_m and b.width_m and b.front_reserved_m + b.back_reserved_m >= max(b.length_m, b.width_m):
-        errors.append("As faixas reservadas ocupam todo o imóvel.")
+        errors.append(_("As faixas reservadas ocupam todo o imóvel."))
     return b, modes, prm, errors
 
 
@@ -388,9 +389,9 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
             dims = filled
         out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims)))
     if no_level:
-        notes.append(f"{no_level} SKU(s) do arquivo sem {'min' if basis == 'min' else 'max'} level: usou o saldo.")
+        notes.append(_("{no_level} SKU(s) do arquivo sem {v} level: usou o saldo.", no_level=no_level, v='min' if basis == 'min' else 'max'))
     if from_cat:
-        notes.append(f"{from_cat} SKU(s) do arquivo tiveram dimensões/peso completados pelo cadastro de produtos.")
+        notes.append(_("{from_cat} SKU(s) do arquivo tiveram dimensões/peso completados pelo cadastro de produtos.", from_cat=from_cat))
     return out, notes
 
 
@@ -448,8 +449,8 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
         out.append(Demand(p.sku, p.name, p.material_type or "",
                           ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight))))
     if no_level:
-        label = "nível mínimo" if basis == "min" else "nível máximo"
-        notes.append(f"{no_level} SKU(s) sem {label} cadastrado: usou o saldo atual.")
+        label = _("nível mínimo") if basis == "min" else _("nível máximo")
+        notes.append(_("{no_level} SKU(s) sem {label} cadastrado: usou o saldo atual.", no_level=no_level, label=label))
     return out, notes
 
 
@@ -461,7 +462,7 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
     structs = structure_specs(db, modes)
     if cfg["demand"].get("source") == "upload":
         if not cfg.get("items"):
-            return None, ["Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs)."]
+            return None, [_("Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs).")]
         demands, notes = load_uploaded_demand(db, cfg["items"], cfg["demand"])
     else:
         demands, notes = load_demand(db, cfg["demand"])
@@ -470,7 +471,7 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
         if d.sku in caps:
             d.cap = int(caps[d.sku])
     if caps:
-        notes.append(f"{sum(1 for d in demands if d.cap is not None)} SKU(s) com limite de quantidade (redução da demanda).")
+        notes.append(_("{sum} SKU(s) com limite de quantidade (redução da demanda).", sum=sum(1 for d in demands if d.cap is not None)))
     prm.slotting, slot_note = slotting_spec(cfg, demands)
     if slot_note:
         notes.append(slot_note)
@@ -487,10 +488,9 @@ def popularity(cfg: dict, demands: list[Demand]) -> tuple[dict, str, str]:
     if src in ("auto", "orders") and orders.get("skus"):
         k = 0 if metric == "lines" else 1
         return ({s: v[k] for s, v in orders["skus"].items()},
-                f"histórico de pedidos ({orders.get('orders', 0)} pedidos, "
-                f"{'linhas de pedido' if metric == 'lines' else 'unidades'})", "orders")
+                _("histórico de pedidos ({orders} pedidos, {v})", orders=orders.get('orders', 0), v=N_('linhas de pedido') if metric == 'lines' else 'unidades'), "orders")
     if src in ("auto", "column") and col:
-        return col, "coluna Saída da aba SKUs", "column"
+        return col, _("coluna Saída da aba SKUs"), "column"
     if src == "max":
         return {d.sku: d.units for d in demands}, "quantidade planejada (max level)", "max"
     return {}, "", ""
@@ -526,8 +526,8 @@ def slotting_spec(cfg: dict, demands: list[Demand]) -> tuple[Optional[dict], str
             "source": label, "metric": sl.get("metric") or "lines", "pair_counts": counts}
     note = ""
     if sl.get("on") and not pop and (sl.get("source") or "auto") != "auto":  # no automático, o cartão já explica
-        note = ("Posição dos SKUs: a fonte de popularidade escolhida não tem dados (aba Pedidos ou coluna Saída) — os SKUs "
-                "ficam na ordem de material/código. Importe os dados ou escolha a aproximação pelo max level.")
+        note = (_("Posição dos SKUs: a fonte de popularidade escolhida não tem dados (aba Pedidos ou coluna Saída) — os SKUs "
+                "ficam na ordem de material/código. Importe os dados ou escolha a aproximação pelo max level."))
     return spec, note
 
 
@@ -558,11 +558,11 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
 
     prog = progress or (lambda *_a: None)
     stop = cancelled or (lambda: False)
-    prog(0, steps + 1, "Otimizando o plano atual")
+    prog(0, steps + 1, _("Otimizando o plano atual"))
     # a 1ª rodada é a do plano atual, mas com tempo limitado (um projeto "sem limite de tempo" não prende a busca)
     base, errors = run_project(db, _probe_cfg(cfg, max(per_run_s, 15.0), quick=False))
     if errors or base is None:
-        return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
+        return {"error": " ".join(errors) or _("Não foi possível rodar o plano.")}
     f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
     out = {"factor": f0, "shortage": base.shortage, "bins_needed": base.bins_needed, "plan": base, "fit_factor": None,
            "cuts": [], "top": [], "limits": []}
@@ -576,10 +576,9 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
     for s in base.structs:  # estruturas que limitam (quantidade fixa ou máximo atingido)
         st = s.struct
         if st.mode == "fixed" or (st.mode == "auto" and st.max_qty is not None and s.qty >= st.max_qty):
-            out["limits"].append(f"{st.code}: {'quantidade fixa' if st.mode == 'fixed' else 'máximo'} de "
-                                 f"{st.qty if st.mode == 'fixed' else st.max_qty} módulo(s) atingido")
+            out["limits"].append(_("{code}: {v} de {v2} módulo(s) atingido", code=st.code, v=N_('quantidade fixa') if st.mode == 'fixed' else N_('máximo'), v2=st.qty if st.mode == 'fixed' else st.max_qty))
         elif s.floor_max and s.qty >= s.floor_max:
-            out["limits"].append(f"{st.code}: a planta comporta no máximo {s.floor_max} módulo(s)")
+            out["limits"].append(_("{code}: a planta comporta no máximo {floor_max} módulo(s)", code=st.code, floor_max=s.floor_max))
     if not base.shortage:
         return out
     # cortes por SKU: o que coube de cada SKU sem lugar
@@ -597,7 +596,7 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
             out["partial"] = True
             break
         mid = (lo + hi) / 2
-        prog(i + 1, steps + 1, f"Testando {f0 * mid:.0f}% da demanda")
+        prog(i + 1, steps + 1, _("Testando {v}% da demanda", v=f"{f0 * mid:.0f}"))
         c2 = copy.deepcopy(cfg)
         c2["demand"]["factor"] = f"{f0 * mid:.4f}"
         plan, errs = run_project(db, _probe_cfg(c2, per_run_s))
@@ -605,7 +604,7 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
             lo = mid
         else:
             hi = mid
-    prog(steps + 1, steps + 1, "Pronto")
+    prog(steps + 1, steps + 1, _("Pronto"))
     out["fit_factor"] = math.floor(f0 * lo * 10) / 10 if lo > 0 else None
     return out
 
@@ -621,20 +620,19 @@ def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.
 
     prog = progress or (lambda *_a: None)
     stop = cancelled or (lambda: False)
-    prog(0, steps + 2, "Otimizando o plano atual")
+    prog(0, steps + 2, _("Otimizando o plano atual"))
     base, errors = run_project(db, _probe_cfg(cfg, max(per_run_s, 15.0), quick=False))
     if errors or base is None:
-        return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
+        return {"error": " ".join(errors) or _("Não foi possível rodar o plano.")}
     f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
     out = {"factor": f0, "plan": base, "max_factor": None, "growth_pct": None, "capped": False, "limits": [],
            "shortage": base.shortage, "levels_free": None}
     for s in base.structs:
         st = s.struct
         if st.mode == "fixed" or (st.mode == "auto" and st.max_qty is not None and s.qty >= st.max_qty):
-            out["limits"].append(f"{st.code}: {'quantidade fixa' if st.mode == 'fixed' else 'máximo'} de "
-                                 f"{st.qty if st.mode == 'fixed' else st.max_qty} módulo(s)")
+            out["limits"].append(_("{code}: {v} de {v2} módulo(s)", code=st.code, v=N_('quantidade fixa') if st.mode == 'fixed' else N_('máximo'), v2=st.qty if st.mode == 'fixed' else st.max_qty))
         elif s.floor_max and s.qty >= s.floor_max:
-            out["limits"].append(f"{st.code}: a planta comporta no máximo {s.floor_max} módulo(s)")
+            out["limits"].append(_("{code}: a planta comporta no máximo {floor_max} módulo(s)", code=st.code, floor_max=s.floor_max))
     total_levels = sum(s.struct.levels * s.qty for s in base.structs)
     used_levels = sum(1 for m in base.modules for lv in m.levels if lv.type_id is not None)
     out["levels_free"] = max(0, total_levels - used_levels)
@@ -648,24 +646,24 @@ def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.
         return plan is not None and not errs and not plan.errors and plan.shortage == 0
 
     lo, hi = 1.0, max_mult
-    prog(1, steps + 2, f"Testando {f0 * max_mult:.0f}% da demanda")
+    prog(1, steps + 2, _("Testando {v}% da demanda", v=f"{f0 * max_mult:.0f}"))
     if stop():
         raise Cancelled()
     if fits(max_mult):  # cabe até o limite da busca
         out.update(max_factor=f0 * max_mult, growth_pct=(max_mult - 1) * 100, capped=True)
-        prog(steps + 2, steps + 2, "Pronto")
+        prog(steps + 2, steps + 2, _("Pronto"))
         return out
     for i in range(steps):
         if stop():
             out["partial"] = True
             break
         mid = (lo + hi) / 2
-        prog(i + 2, steps + 2, f"Testando {f0 * mid:.0f}% da demanda")
+        prog(i + 2, steps + 2, _("Testando {v}% da demanda", v=f"{f0 * mid:.0f}"))
         if fits(mid):
             lo = mid
         else:
             hi = mid
-    prog(steps + 2, steps + 2, "Pronto")
+    prog(steps + 2, steps + 2, _("Pronto"))
     out["max_factor"] = math.floor(f0 * lo * 10) / 10
     out["growth_pct"] = math.floor((lo - 1) * 1000) / 10
     return out
@@ -675,8 +673,8 @@ def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.
 # Gerar o cadastro da filial
 # --------------------------------------------------------------------------- #
 DEFAULT_LOCATION_MODES = {  # o endereço padrão é da política de estoque da filial: as outras filiais não mudam
-    "empty": "Definir o endereço padrão de cada produto na filial nova (o 1º endereço dele no plano)",
-    "none": "Não definir o endereço padrão",
+    "empty": N_("Definir o endereço padrão de cada produto na filial nova (o 1º endereço dele no plano)"),
+    "none": N_("Não definir o endereço padrão"),
 }
 
 
@@ -781,7 +779,7 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
         for lv in m.levels:
             sl = ShelfLevel(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
                             level=str(lv.n), height_cm=Decimal(str(m.struct.vao(lv.n))),
-                            notes=f"Estrutura {m.struct.code}")
+                            notes=_("Estrutura {code}", code=m.struct.code))
             db.add(sl)
             db.flush()
             stats["levels"] += 1
@@ -808,14 +806,14 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             qty = [0.0] * len(locs)
             stock = (by_item.get(sku) or {}).get("stock") if launch_stock else None
             if stock:
-                total = sum(u for _, u in locs) or 1
+                total = sum(u for _x, u in locs) or 1
                 left = float(stock)
-                for i, (_, u) in enumerate(locs):  # proporcional ao planejado; o resto fica no último endereço
+                for i, (_x, u) in enumerate(locs):  # proporcional ao planejado; o resto fica no último endereço
                     q = left if i == len(locs) - 1 else round(float(stock) * u / total, 4)
                     q = min(q, left)
                     qty[i], left = q, left - q
                 stats["stock_units"] += float(stock)
-            for (lid, _), q in zip(locs, qty):
+            for (lid, _x), q in zip(locs, qty):
                 db.add(StockItem(product_id=pr.id, location_id=lid, quantity=Decimal(str(q))))
                 stats["assigned"] += 1
             pol = policy_of(sku)  # filial nova: a política começa sem endereço padrão

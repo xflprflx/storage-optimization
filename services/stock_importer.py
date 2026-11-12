@@ -26,15 +26,16 @@ from services.addressing import LocationResolver, normalize_code, scope_filter
 from services.file_reader import chunked, get_cell, iter_rows, parse_decimal
 from services.product_importer import ImportResult
 from services.stock_service import CHUNK, MasterDataCache, refresh_occupancy, resolve_skus, sync_default_locations
+from services.i18n import N_, _
 
 CHUNK_SIZE = 500
 
 STOCK_FIELDS: dict[str, tuple[str, bool, tuple[str, ...]]] = {
-    "branch_code": ("Filial", False, ("filial", "codfilial", "branch", "loja", "empresa")),
-    "warehouse_code": ("Armazém", False, ("armazem", "armazém", "deposito", "depósito", "warehouse")),
-    "location": ("Posição / Endereço", True, ("posicao", "posição", "endereco", "endereço", "location", "local")),
+    "branch_code": (N_("Filial"), False, ("filial", "codfilial", "branch", "loja", "empresa")),
+    "warehouse_code": (N_("Armazém"), False, ("armazem", "armazém", "deposito", "depósito", "warehouse")),
+    "location": (N_("Posição / Endereço"), True, ("posicao", "posição", "endereco", "endereço", "location", "local")),
     "sku": ("SKU", True, ("sku", "codigo", "código", "cod", "codproduto", "referencia", "item")),
-    "bin": ("Bin (opcional, ex.: CX-M #2)", False, ("bin", "nbin", "numerobin", "nºbin", "binfisica", "caixa", "bindestino")),
+    "bin": (N_("Bin (opcional, ex.: CX-M #2)"), False, ("bin", "nbin", "numerobin", "nºbin", "binfisica", "caixa", "bindestino")),
 }
 QTY_SYNONYMS = ("quantidade", "qtd", "qtde", "quantity", "saldo", "estoque", "qty")
 
@@ -59,13 +60,13 @@ def import_stock(
 ) -> ImportResult:
     t0 = time.perf_counter()
     if mapping.get("sku") is None:
-        raise ValueError("A coluna SKU é obrigatória.")
+        raise ValueError(_("A coluna SKU é obrigatória."))
     if mapping.get("location") is None:
-        raise ValueError("A coluna Posição/Endereço é obrigatória.")
+        raise ValueError(_("A coluna Posição/Endereço é obrigatória."))
     if mapping.get("branch_code") is None and not normalize_code(opts.default_branch_code):
-        raise ValueError("Mapeie a coluna Filial ou informe uma filial padrão.")
+        raise ValueError(_("Mapeie a coluna Filial ou informe uma filial padrão."))
     if not qty_columns:
-        raise ValueError("Selecione ao menos uma coluna de quantidade.")
+        raise ValueError(_("Selecione ao menos uma coluna de quantidade."))
 
     result = ImportResult()
     master = MasterDataCache(db)
@@ -84,15 +85,15 @@ def import_stock(
             try:
                 sku = normalize_code(get_cell(row, mapping.get("sku")))
                 if not sku:
-                    raise ValueError("SKU vazio")
+                    raise ValueError(_("SKU vazio"))
                 location = normalize_code(get_cell(row, mapping.get("location")))
                 if not location:
-                    raise ValueError("Posição/endereço vazio")
+                    raise ValueError(_("Posição/endereço vazio"))
                 branch = normalize_code(get_cell(row, mapping.get("branch_code"))) or normalize_code(
                     opts.default_branch_code
                 )
                 if not branch:
-                    raise ValueError("Filial vazia")
+                    raise ValueError(_("Filial vazia"))
                 warehouse = normalize_code(get_cell(row, mapping.get("warehouse_code"))) or normalize_code(
                     opts.default_warehouse_code
                 )
@@ -102,10 +103,10 @@ def import_stock(
                     try:
                         val = parse_decimal(raw)
                     except ValueError:
-                        raise ValueError(f"Quantidade inválida na coluna {col + 1}: {raw!r}")
+                        raise ValueError(_("Quantidade inválida na coluna {v}: {raw}", v=col + 1, raw=f"{raw!r}"))
                     qty += val or Decimal("0")
                 if qty < 0 and not opts.allow_negative:
-                    raise ValueError(f"Quantidade negativa ({qty}) não permitida")
+                    raise ValueError(_("Quantidade negativa ({qty}) não permitida", qty=qty))
                 parsed.append(
                     {"line": line, "sku": sku, "location": location, "branch": branch, "warehouse": warehouse, "qty": qty,
                      "bin": normalize_code(get_cell(row, mapping.get("bin")))}
@@ -134,7 +135,7 @@ def import_stock(
             touched_pairs.update(pairs_snap)
             (result.products_created, result.locations_created, result.stock_items_written, result.rows_ok) = counters
             for item in parsed:
-                result.error(item["line"], f"Lote descartado por erro inesperado: {exc}")
+                result.error(item["line"], _("Lote descartado por erro inesperado: {exc}", exc=exc))
         finally:
             db.expunge_all()
 
@@ -223,7 +224,7 @@ def _process_chunk(
     for p in parsed:
         product_id = products.get(p["sku"])
         if product_id is None:
-            result.error(p["line"], f"SKU {p['sku']} não cadastrado (habilite 'criar produtos inexistentes').")
+            result.error(p["line"], _("SKU {sku} não cadastrado (habilite 'criar produtos inexistentes').", sku=p['sku']))
             continue
         branch_id = master.branches[p["branch"]]
         warehouse_id = master.warehouses[p["warehouse"]] if p["warehouse"] else None
@@ -313,12 +314,12 @@ def _apply_bin_rows(db: Session, bin_rows: dict, result: ImportResult) -> int:
         for (pid, label), q in rows.items():
             tb = parse_bin_label(label, phys.get(lid, []), codes)
             if tb is None:
-                bad = f"bin '{label}' não existe no endereço"
+                bad = _("bin '{label}' não existe no endereço", label=label)
                 break
             out.append((tb[0], tb[1], pid, q))
         err = bad or set_contents(db, lid, out)
         if err:
-            result.notes.append(f"{address}: divisão por bin não gravada ({err}); usada a distribuição automática.")
+            result.notes.append(_("{address}: divisão por bin não gravada ({err}); usada a distribuição automática.", address=address, err=err))
         else:
             ok += 1
     return ok

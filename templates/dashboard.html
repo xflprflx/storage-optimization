@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Painel{% endblock %}
+{% block title %}{{ _("Painel") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-speedometer2"></i> Painel</h1>
+  <h1><i class="bi bi-speedometer2"></i> {{ _("Painel") }}</h1>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-secondary" href="/locations/batch"><i class="bi bi-magic"></i> Gerar endereços</a>
-    <a class="btn btn-outline-secondary" href="/imports/products"><i class="bi bi-upload"></i> Importar produtos</a>
-    <a class="btn btn-accent" href="/imports/stock"><i class="bi bi-upload"></i> Importar saldos</a>
+    <a class="btn btn-outline-secondary" href="/locations/batch"><i class="bi bi-magic"></i> {{ _("Gerar endereços") }}</a>
+    <a class="btn btn-outline-secondary" href="/imports/products"><i class="bi bi-upload"></i> {{ _("Importar produtos") }}</a>
+    <a class="btn btn-accent" href="/imports/stock"><i class="bi bi-upload"></i> {{ _("Importar saldos") }}</a>
   </div>
 </div>
 
 <div class="row g-3 mb-4">
   {% set cards = [
-    ('Filiais', stats.branches, 'bi-building', '/branches'),
-    ('Armazéns', stats.warehouses, 'bi-house-gear', '/warehouses'),
-    ('Endereços', stats.locations, 'bi-grid-3x3-gap', '/locations'),
-    ('Tipos de Bin', stats.bin_types, 'bi-inboxes', '/bin-types'),
-    ('Produtos', stats.products, 'bi-tag', '/products'),
+    (_('Filiais'), stats.branches, 'bi-building', '/branches'),
+    (_('Armazéns'), stats.warehouses, 'bi-house-gear', '/warehouses'),
+    (_('Endereços'), stats.locations, 'bi-grid-3x3-gap', '/locations'),
+    (_('Tipos de Bin'), stats.bin_types, 'bi-inboxes', '/bin-types'),
+    (_('Produtos'), stats.products, 'bi-tag', '/products'),
   ] %}
   {% for label, value, icon, href in cards %}
   <div class="col-6 col-md-4 col-xl">
@@ -33,35 +33,35 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="card stat-card h-100"><div class="card-body">
-      <div class="label">Ocupação dos endereços</div>
+      <div class="label">{{ _("Ocupação dos endereços") }}</div>
       <div class="value">{{ stats.occupancy_pct|dec }}%</div>
       <div class="progress mt-2" style="height:8px"><div class="progress-bar bg-success" style="width: {{ stats.occupancy_pct }}%"></div></div>
-      <small class="text-muted"><a href="/locations?occupied=1">{{ stats.occupied|dec }} ocupados</a> · <a href="/locations?occupied=0">{{ stats.free|dec }} livres</a></small>
+      <small class="text-muted"><a href="/locations?occupied=1">{{ _h("{occupied} ocupados", occupied=(stats.occupied|dec)) }}</a> · <a href="/locations?occupied=0">{{ _h("{free} livres", free=(stats.free|dec)) }}</a></small>
     </div></div>
   </div>
   <div class="col-md-4">
     <div class="card stat-card h-100"><div class="card-body">
-      <div class="label">Saldo físico total (unidades)</div>
+      <div class="label">{{ _("Saldo físico total (unidades)") }}</div>
       <div class="value">{{ stats.stock_qty|dec }}</div>
-      <a href="/stock" class="small">Ver saldos por endereço →</a>
+      <a href="/stock" class="small">{{ _("Ver saldos por endereço →") }}</a>
     </div></div>
   </div>
   <div class="col-md-4">
     <div class="card stat-card h-100"><div class="card-body">
-      <div class="label">Pendências de cadastro</div>
+      <div class="label">{{ _("Pendências de cadastro") }}</div>
       <div class="small mt-2">
-        <div><a href="/locations?bin_type_id=none">{{ stats.without_bins|dec }}</a> endereço(s) sem bin</div>
-        <div>{{ stats.products_without_location|dec }} produto(s) sem endereço padrão e sem saldo</div>
+        <div>{{ _h("<a href=\"/locations?bin_type_id=none\">{without_bins}</a> endereço(s) sem bin", without_bins=(stats.without_bins|dec)) }}</div>
+        <div>{{ _h("{products_without_location} produto(s) sem endereço padrão e sem saldo", products_without_location=(stats.products_without_location|dec)) }}</div>
       </div>
     </div></div>
   </div>
 </div>
 
 <div class="card">
-  <div class="card-header bg-white"><strong>Ocupação por filial / armazém</strong></div>
+  <div class="card-header bg-white"><strong>{{ _("Ocupação por filial / armazém") }}</strong></div>
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0">
-      <thead><tr><th>Filial</th><th>Armazém</th><th class="text-end">Endereços</th><th class="text-end">Ocupados</th><th class="text-end">Livres</th><th style="width:30%">Ocupação</th></tr></thead>
+      <thead><tr><th>{{ _("Filial") }}</th><th>{{ _("Armazém") }}</th><th class="text-end">{{ _("Endereços") }}</th><th class="text-end">{{ _("Ocupados") }}</th><th class="text-end">{{ _("Livres") }}</th><th style="width:30%">{{ _("Ocupação") }}</th></tr></thead>
       <tbody>
       {% for b_code, w_code, total, occ in by_scope %}
         {% set occ = occ or 0 %}{% set pct = (occ * 100 / total) if total else 0 %}
@@ -71,7 +71,7 @@
           <td><div class="progress" style="height:8px"><div class="progress-bar bg-success" style="width: {{ pct }}%"></div></div></td>
         </tr>
       {% else %}
-        <tr><td colspan="6" class="text-center text-muted py-4">Nenhum endereço cadastrado. <a href="/locations/batch">Gerar em lote</a></td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">{{ _h("Nenhum endereço cadastrado. <a href=\"/locations/batch\">Gerar em lote</a>") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

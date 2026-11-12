@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 
 from services.action_plan import ActionPlan, _fmt
+from services.i18n import N_, _, fmt_datetime, tr, translate_workbook
 
 ACCENT = "0F766E"
 GOOD, BAD = "1A7A4C", "B42318"
@@ -45,22 +46,22 @@ def to_xlsx(plan: ActionPlan) -> bytes:
 
     # ---- Resumo ----
     ws = wb.active
-    ws.title = "Resumo"
+    ws.title = _("Resumo")
     ws.append([plan.title])
     ws["A1"].font = Font(bold=True, size=14, color=ACCENT)
-    ws.append([f"Gerado em {plan.created:%d/%m/%Y %H:%M}"])
+    ws.append([_("Gerado em {created}", created=fmt_datetime(plan.created))])
     ws.append([])
-    ws.append(["Escopo", ""])
+    ws.append([_("Escopo"), ""])
     ws.cell(ws.max_row, 1).font = Font(bold=True)
     for k, v in plan.scope:
         ws.append([k, v])
     ws.append([])
-    ws.append(["Parâmetros", ""])
+    ws.append([_("Parâmetros"), ""])
     ws.cell(ws.max_row, 1).font = Font(bold=True)
     for k, v in plan.params:
         ws.append([k, v])
     ws.append([])
-    ws.append(["Indicador", "Antes", "Depois", "Variação", "Variação %", "Unidade"])
+    ws.append([_("Indicador"), _("Antes"), _("Depois"), _("Variação"), _("Variação %"), _("Unidade")])
     hr = header(ws, 0, None)
     first_kpi = ws.max_row + 1
     for label, b, a, d, pct, unit, good in _kpi_rows(plan):
@@ -76,12 +77,12 @@ def to_xlsx(plan: ActionPlan) -> bytes:
             c.number_format = "#,##0.0" if isinstance(c.value, float) and c.value % 1 else "#,##0"
     ws.append([])
     if plan.warnings:
-        ws.append(["Avisos"])
+        ws.append([_("Avisos")])
         ws.cell(ws.max_row, 1).font = Font(bold=True, color=BAD)
         for w in plan.warnings:
             ws.append([w])
     ws.append([])
-    ws.append([f"Passos no plano: {plan.n_steps}" + ("" if plan.applicable else " — plano informativo (não pode ser aplicado)")])
+    ws.append([_("Passos no plano: {n_steps}", n_steps=plan.n_steps) + ("" if plan.applicable else _(" — plano informativo (não pode ser aplicado)"))])
     ws.column_dimensions["A"].width = 34
     for c in "BCDEF":
         ws.column_dimensions[c].width = 16
@@ -89,7 +90,7 @@ def to_xlsx(plan: ActionPlan) -> bytes:
     pairs = [i for i, k in enumerate(plan.kpis) if k.before is not None and k.after is not None]
     if pairs:
         ch = BarChart()
-        ch.type, ch.title, ch.height, ch.width = "col", "Antes × depois", 7, 16
+        ch.type, ch.title, ch.height, ch.width = "col", _("Antes × depois"), 7, 16
         data = Reference(ws, min_col=2, max_col=3, min_row=first_kpi - 1, max_row=first_kpi + max(pairs))
         cats = Reference(ws, min_col=1, min_row=first_kpi, max_row=first_kpi + max(pairs))
         ch.add_data(data, titles_from_data=True)
@@ -97,8 +98,8 @@ def to_xlsx(plan: ActionPlan) -> bytes:
         ws.add_chart(ch, "H4")
 
     # ---- Passo a passo ----
-    ws = wb.create_sheet("Passo a passo")
-    ws.append(["Nº", "Grupo", "Ação", "Onde / origem", "Destino", "Qtd", "Descrição", "Destino no momento", "Feito?"])
+    ws = wb.create_sheet(_("Passo a passo"))
+    ws.append(["Nº", _("Grupo"), _("Ação"), _("Onde / origem"), _("Destino"), _("Qtd"), _("Descrição"), _("Destino no momento"), "Feito?"])
     header(ws, 0, None)
     fills = {"remove": "FDECEA", "add": "E7F5EC", "move": "E8F0FE", "info": "F4F6F8"}
     for s in plan.steps:
@@ -122,23 +123,24 @@ def to_xlsx(plan: ActionPlan) -> bytes:
     widths(ws)
 
     # ---- Bins por tipo ----
-    ws = wb.create_sheet("Bins por tipo")
+    ws = wb.create_sheet(_("Bins por tipo"))
     unlimited = plan.mode == "pool_unlimited"
-    ws.append(["Tipo de bin", "Existentes" if plan.mode.startswith("pool") else "Antes",
-               "Necessárias" if unlimited else ("Usadas no plano" if plan.mode == "pool" else "Depois"), "Diferença"])
+    ws.append([N_("Tipo de bin"), _("Existentes") if plan.mode.startswith("pool") else _("Antes"),
+               N_("Necessárias") if unlimited else (_("Usadas no plano") if plan.mode == "pool" else _("Depois")), _("Diferença")])
     header(ws, 0, None)
     for c, b, a in plan.by_type:
         ws.append([c, b, a, a - b])
     widths(ws, 12)
     if plan.by_type:
         ch = BarChart()
-        ch.type, ch.title, ch.height, ch.width = "col", "Bins por tipo", 8, 18
+        ch.type, ch.title, ch.height, ch.width = "col", _("Bins por tipo"), 8, 18
         n = len(plan.by_type) + 1
         ch.add_data(Reference(ws, min_col=2, max_col=3, min_row=1, max_row=n), titles_from_data=True)
         ch.set_categories(Reference(ws, min_col=1, min_row=2, max_row=n))
         ws.add_chart(ch, "F2")
 
     buf = io.BytesIO()
+    translate_workbook(wb)
     wb.save(buf)
     return buf.getvalue()
 
@@ -188,11 +190,12 @@ def to_pdf(plan: ActionPlan) -> bytes:
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.grey)
-        canvas.drawString(12 * mm, 7 * mm, _t(f"{plan.title} - gerado em {plan.created:%d/%m/%Y %H:%M}").replace("&amp;", "&"))
-        canvas.drawRightString(page[0] - 12 * mm, 7 * mm, f"Página {d.page}")
+        canvas.drawString(12 * mm, 7 * mm, _t(f"{plan.title} - " + _("gerado em {created}", created=fmt_datetime(plan.created))).replace("&amp;", "&"))
+        canvas.drawRightString(page[0] - 12 * mm, 7 * mm, _("Página {page}", page=d.page))
         canvas.restoreState()
 
     def table(data, col_widths=None, header=True, zebra=True):
+        data = [[tr(c) if isinstance(c, str) else c for c in row] for row in data]  # textos fixos no idioma atual
         t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
         st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
               ("FONTSIZE", (0, 0), (-1, -1), 7.5), ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]
@@ -207,11 +210,11 @@ def to_pdf(plan: ActionPlan) -> bytes:
         return t
 
     story = [Paragraph(_t(plan.title), h1),
-             Paragraph(_t(f"Gerado em {plan.created:%d/%m/%Y %H:%M} · {plan.n_steps} passo(s)"
-                          + ("" if plan.applicable else " · plano informativo (não pode ser aplicado)")), small),
+             Paragraph(_t(_("Gerado em {created} · {n_steps} passo(s)", created=fmt_datetime(plan.created), n_steps=plan.n_steps)
+                          + ("" if plan.applicable else _(" · plano informativo (não pode ser aplicado)"))), small),
              Spacer(1, 4)]
     # escopo e parâmetros lado a lado
-    sp = [[P("Escopo", small), P("", small), P("Parâmetros", small), P("", small)]]
+    sp = [[P(_("Escopo"), small), P("", small), P(_("Parâmetros"), small), P("", small)]]
     rows = max(len(plan.scope), len(plan.params))
     for i in range(rows):
         a = plan.scope[i] if i < len(plan.scope) else ("", "")
@@ -220,8 +223,8 @@ def to_pdf(plan: ActionPlan) -> bytes:
     story.append(table(sp, [35 * mm, 95 * mm, 50 * mm, width - 180 * mm], zebra=False))
 
     # indicadores
-    story.append(Paragraph("Antes × depois", h2))
-    kd = [["Indicador", "Antes", "Depois", "Variação", "Var. %"]]
+    story.append(Paragraph(_("Antes × depois"), h2))
+    kd = [[_("Indicador"), _("Antes"), _("Depois"), _("Variação"), "Var. %"]]
     colors_rows = []
     for i, (label, b, a, d, pct, unit, ok) in enumerate(_kpi_rows(plan), start=1):
         places = plan.kpis[i - 1].places
@@ -240,8 +243,8 @@ def to_pdf(plan: ActionPlan) -> bytes:
         dw = Drawing(width - 185 * mm, 62 * mm)
         bc = VerticalBarChart()
         bc.x, bc.y, bc.height, bc.width = 30, 28, 62 * mm - 50, width - 185 * mm - 50
-        bc.data = [[b for _, b, _ in plan.by_type], [a for _, _, a in plan.by_type]]
-        bc.categoryAxis.categoryNames = [c for c, _, _ in plan.by_type]
+        bc.data = [[b for _x, b, _x in plan.by_type], [a for _x, _x, a in plan.by_type]]
+        bc.categoryAxis.categoryNames = [c for c, _x, _x in plan.by_type]
         bc.categoryAxis.labels.fontSize = 7
         bc.valueAxis.labels.fontSize = 7
         bc.valueAxis.valueMin = 0
@@ -252,28 +255,28 @@ def to_pdf(plan: ActionPlan) -> bytes:
         lg = Legend()
         lg.x, lg.y, lg.fontSize, lg.alignment = width - 185 * mm - 150, 62 * mm - 6, 7, "right"
         lg.dx, lg.dy, lg.deltax = 8, 8, 70
-        names = ("Existentes", "Necessárias") if plan.mode == "pool_unlimited" else (
-            ("Existentes", "Usadas no plano") if plan.mode == "pool" else ("Antes", "Depois"))
+        names = (_("Existentes"), N_("Necessárias")) if plan.mode == "pool_unlimited" else (
+            (_("Existentes"), _("Usadas no plano")) if plan.mode == "pool" else (_("Antes"), _("Depois")))
         lg.colorNamePairs = [(colors.HexColor("#9AA5AD"), names[0]), (accent, names[1])]
         lg.columnMaximum = 1
         lg.boxAnchor = "nw"
         dw.add(lg)
-        dw.add(String(0, 62 * mm - 10, "Bins por tipo", fontSize=8, fontName="Helvetica-Bold"))
+        dw.add(String(0, 62 * mm - 10, _("Bins por tipo"), fontSize=8, fontName="Helvetica-Bold"))
         chart = dw
     top = Table([[kt, chart or ""]], colWidths=[180 * mm, width - 180 * mm])
     top.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
     story.append(top)
 
     if plan.warnings:
-        story.append(Paragraph("Avisos", h2))
+        story.append(Paragraph(_("Avisos"), h2))
         for w in plan.warnings:
             story.append(Paragraph("• " + _t(w), small))
 
     # passo a passo (checklist)
     story.append(PageBreak())
-    story.append(Paragraph("Passo a passo", h2))
+    story.append(Paragraph(_("Passo a passo"), h2))
     if plan.steps:
-        sd = [["Nº", "Grupo", "Ação", "Onde / origem", "Destino", "Descrição", "Destino no momento", "Feito"]]
+        sd = [["Nº", _("Grupo"), _("Ação"), _("Onde / origem"), _("Destino"), _("Descrição"), _("Destino no momento"), _("Feito")]]
         bg = {"remove": "#FDECEA", "add": "#E7F5EC", "move": "#E8F0FE", "info": "#F4F6F8"}
         st = []
         for i, s in enumerate(plan.steps, start=1):
@@ -283,13 +286,13 @@ def to_pdf(plan: ActionPlan) -> bytes:
         t.setStyle(TableStyle(st))
         story.append(t)
     else:
-        story.append(Paragraph("Nenhuma ação necessária.", small))
+        story.append(Paragraph(_("Nenhuma ação necessária."), small))
 
     # visual por endereço (modo por endereço: bins antes x depois; pool: bins usadas)
     if plan.visuals:
         story.append(PageBreak())
-        story.append(Paragraph("Visual por endereço (antes × depois)", h2))
-        vd = [["Endereço", "Antes", "Depois"]]
+        story.append(Paragraph(_("Visual por endereço (antes × depois)"), h2))
+        vd = [[N_("Endereço"), _("Antes"), _("Depois")]]
         for v in plan.visuals:
             if "before" in v:
                 vd.append([P(v["label"]), _bins_drawing(v["before"], 110 * mm), _bins_drawing(v["after"], 110 * mm)])
@@ -307,7 +310,7 @@ def to_pdf(plan: ActionPlan) -> bytes:
         story.append(table([[P(c, ParagraphStyle("hc", parent=cell, textColor=colors.white, fontName="Helvetica-Bold")) for c in dd[0]]] + dd[1:],
                            [width / n] * n))
     else:
-        story.append(Paragraph("Sem linhas.", small))
+        story.append(Paragraph(_("Sem linhas."), small))
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return buf.getvalue()
 
@@ -319,11 +322,11 @@ def _bins_drawing(bins, max_w):
 
     h = 14
     d = Drawing(max_w, h + 2)
-    units = [(c, w or 30) for c, n, w in bins for _ in range(min(n, 40))]
+    units = [(c, w or 30) for c, n, w in bins for _x in range(min(n, 40))]
     if not units:
-        d.add(String(2, 4, "nenhuma bin", fontSize=7, fillColor=colors.grey))
+        d.add(String(2, 4, _("nenhuma bin"), fontSize=7, fillColor=colors.grey))
         return d
-    total = sum(w for _, w in units)
+    total = sum(w for _x, w in units)
     scale = min(1.0, (max_w - 4) / total) if total else 1
     x = 1
     for c, w in units:

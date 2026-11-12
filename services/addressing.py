@@ -11,6 +11,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from models import StorageLocation
+from services.i18n import _
 
 SEPARATOR = "-"
 _SPLIT_RE = re.compile(r"[-./|\\\s]+")
@@ -47,10 +48,10 @@ def parse_address(text: object) -> AddressParts:
     """
     raw = normalize_code(text)
     if not raw:
-        raise ValueError("Endereço vazio")
+        raise ValueError(_("Endereço vazio"))
     pieces = [p for p in _SPLIT_RE.split(raw) if p != ""]
     if not pieces:
-        raise ValueError(f"Endereço inválido: {text!r}")
+        raise ValueError(_("Endereço inválido: {text}", text=f"{text!r}"))
     if len(pieces) > 5:
         pieces = pieces[:4] + [SEPARATOR.join(pieces[4:])]
     while len(pieces) < 5:
@@ -58,7 +59,7 @@ def parse_address(text: object) -> AddressParts:
     aisle, bay, level, position, compartment = pieces
     for seg in pieces:
         if len(seg) > 20:
-            raise ValueError(f"Segmento de endereço muito longo (máx. 20): {seg!r}")
+            raise ValueError(_("Segmento de endereço muito longo (máx. 20): {seg}", seg=f"{seg!r}"))
     return aisle, bay, level, position, compartment
 
 
@@ -118,16 +119,14 @@ def check_location_conflict(
         else:
             by_kind["descendant"].append(r.address)
     if by_kind["exact"]:
-        return f"O endereço {by_kind['exact'][0]} já existe neste depósito."
+        return _("O endereço {exact} já existe neste depósito.", exact=by_kind['exact'][0])
     if by_kind["ancestor"]:
         return (
-            f"Conflito de hierarquia: já existe o endereço genérico {by_kind['ancestor'][0]} acima deste; "
-            "não é possível criar sub-endereços nele."
+            _("Conflito de hierarquia: já existe o endereço genérico {ancestor} acima deste; não é possível criar sub-endereços nele.", ancestor=by_kind['ancestor'][0])
         )
     sample = ", ".join(sorted(by_kind["descendant"])[:5])
     return (
-        f"Conflito de hierarquia: este endereço já possui sub-endereços ({sample}); "
-        "não é possível criá-lo como genérico."
+        _("Conflito de hierarquia: este endereço já possui sub-endereços ({sample}); não é possível criá-lo como genérico.", sample=sample)
     )
 
 
@@ -283,7 +282,7 @@ class LocationResolver:
         if len(seg) == 1:  # texto sem separadores: compara com endereços compactados
             cp = idx["compact"].get(compact_key(raw), [])
             if cp:
-                return cp, "sem separadores"
+                return cp, _("sem separadores")
         return [], ""
 
     # ---------- API ----------
@@ -302,38 +301,38 @@ class LocationResolver:
             rows = self.db.execute(select(StorageLocation.branch_id, StorageLocation.warehouse_id).distinct()).all()
             found = []
             for b, w in rows:
-                hits, _ = self._lookup(self._index(b, w), address, seg, text)
+                hits, _x = self._lookup(self._index(b, w), address, seg, text)
                 found += hits
             if len(found) == 1:
                 ref = found[0]
-                return ref, False, None, None if ref.address == address else f"{text} associado a {ref.address}"
+                return ref, False, None, None if ref.address == address else _("{text} associado a {address}", text=text, address=ref.address)
             if len(found) > 1:
-                return None, False, f"Endereço {address} existe em mais de um depósito; informe a filial/armazém.", None
-            return None, False, f"Endereço {address} não encontrado (informe a filial para criá-lo).", None
+                return None, False, _("Endereço {address} existe em mais de um depósito; informe a filial/armazém.", address=address), None
+            return None, False, _("Endereço {address} não encontrado (informe a filial para criá-lo).", address=address), None
 
         idx = self._index(branch_id, warehouse_id)
-        hits, _ = self._lookup(idx, address, seg, text)
+        hits, _x = self._lookup(idx, address, seg, text)
         if not hits and warehouse_id is None:
             # Armazém não informado: procura nos armazéns da filial
             for b, w in self._branch_scopes(branch_id):
                 if w is None:
                     continue
-                h, _ = self._lookup(self._index(b, w), address, seg, text)
+                h, _x = self._lookup(self._index(b, w), address, seg, text)
                 hits += h
         if len(hits) > 1:
             opts = ", ".join(sorted({h.address for h in hits})[:4])
-            return None, False, f"Endereço {text} é ambíguo neste depósito ({opts}).", None
+            return None, False, _("Endereço {text} é ambíguo neste depósito ({opts}).", text=text, opts=opts), None
         if hits:
             ref = hits[0]
             note = None
             if ref.address != address or ref.warehouse_id != warehouse_id:
-                note = f"Endereço {text} associado ao existente {ref.address}"
+                note = _("Endereço {text} associado ao existente {address}", text=text, address=ref.address)
                 if ref.warehouse_id != warehouse_id:
-                    note += " (armazém encontrado na filial)"
+                    note += _(" (armazém encontrado na filial)")
             return ref, False, None, note
 
         if not create:
-            return None, False, f"Endereço {address} não cadastrado.", None
+            return None, False, _("Endereço {address} não cadastrado.", address=address), None
         conflict = check_location_conflict(self.db, branch_id, warehouse_id, parts)
         if conflict:
             return None, False, conflict, None

@@ -11,6 +11,7 @@ from services.bin_optimizer import AddressIn, BinSpec, LevelLedger, LevelSlot, P
 from services.bin_service import set_location_bins
 from services.layout_service import natural_key
 from services.level_service import bay_levels, ensure_level, fit_structure, usage_for
+from services.i18n import _
 
 MAX_SCOPE = 20_000
 
@@ -122,9 +123,9 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
             if basis != "stock" and (lid, pid) not in seen and lvl is not None and float(lvl) > 0:
                 # produto que fica aqui mas ainda sem saldo: dimensiona pelo min/max level
                 out[lid].items.append(ProductUnit(sku, float(lvl), _f(h), _f(w), _f(ln), _f(wt)))
-        label = "nível mínimo" if basis == "min" else "nível máximo"
+        label = _("nível mínimo") if basis == "min" else _("nível máximo")
         for lid, skus in missing.items():
-            out[lid].notes.append(f"Sem {label} cadastrado (usou o saldo atual): " + ", ".join(skus[:5])
+            out[lid].notes.append(_("Sem {label} cadastrado (usou o saldo atual): ", label=label) + ", ".join(skus[:5])
                                   + ("…" if len(skus) > 5 else "") + ".")
 
     # ---- níveis das estantes envolvidas: capacidade e uso atual (de TODOS os endereços) ----
@@ -181,8 +182,7 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     from services.bin_optimizer import Donor, assign_donors, donors_inventory, summarize
 
     if len(location_ids) + len(donors or []) > MAX_SCOPE:
-        raise ValueError(f"O escopo tem {len(location_ids) + len(donors or []):,} endereços (limite {MAX_SCOPE:,}). "
-                         "Filtre por armazém ou corredor.")
+        raise ValueError(_("O escopo tem {len} endereços (limite {MAX_SCOPE}). Filtre por armazém ou corredor.", len=f"{len(location_ids) + len(donors or []):,}", MAX_SCOPE=f"{MAX_SCOPE:,}"))
     types = load_types(db)
     if prm.allowed_types is not None:
         prm.allowed_types = {t for t in prm.allowed_types if t in types}
@@ -199,7 +199,7 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     for d in dn:
         d.bins = pbins.get(d.a.id, [])
     extra = donors_inventory(dn, prm)
-    for _ in range(4):
+    for _x in range(4):
         ledger = copy.deepcopy(ledger0)
         p2 = dataclasses.replace(prm, extra_inventory=extra)
         results, summary = optimize(addresses, types, p2, ledger)
@@ -264,7 +264,7 @@ def apply(db: Session, location_ids: list[int], prm: Params, only: Optional[set]
           donors: Optional[list[int]] = None) -> int:
     """Recalcula (mesmos parâmetros, no escopo todo) e grava as sugestões aplicáveis — todas, ou só as de `only`
     (com bins existentes, mais os endereços que liberam as bins que eles recebem). Retorna nº de endereços alterados."""
-    results, _, _ = run(db, location_ids, prm, donors)
+    results, _x, _x = run(db, location_ids, prm, donors)
     chosen = None
     if only is not None:
         chosen = inventory_closure(results, only) if prm.limit_inventory else set(only)

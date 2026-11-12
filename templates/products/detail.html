@@ -5,48 +5,48 @@
 <div class="page-header">
   <h1><i class="bi bi-tag"></i> <span class="mono">{{ product.sku }}</span> <small class="text-muted fs-6">{{ product.name }}</small></h1>
   <div class="d-flex gap-2">
-    <a href="/products" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Produtos</a>
-    <a href="/products/{{ product.id }}/edit" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Editar</a>
-    {{ delete_button('/products/' ~ product.id ~ '/delete', 'Excluir', 'Excluir o produto ' ~ product.sku ~ '? Os saldos dele também serão excluídos.') }}
+    <a href="/products" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Produtos") }}</a>
+    <a href="/products/{{ product.id }}/edit" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> {{ _("Editar") }}</a>
+    {{ delete_button('/products/' ~ product.id ~ '/delete', _('Excluir'), _('Excluir o produto {sku}? Os saldos dele também serão excluídos.', sku=product.sku)) }}
   </div>
 </div>
 
 <div class="row g-3">
   <div class="col-lg-4">
     <div class="card h-100"><div class="card-body">
-      <h6 class="text-muted text-uppercase small">Dados</h6>
+      <h6 class="text-muted text-uppercase small">{{ _("Dados") }}</h6>
       <dl class="row mb-0 small">
-        <dt class="col-5">Tipo de material</dt><dd class="col-7">{% if product.material_type %}<a href="/products?material={{ product.material_type|urlencode }}">{{ product.material_type }}</a>{% else %}—{% endif %}</dd>
-        <dt class="col-5">Altura</dt><dd class="col-7">{{ product.dimensions.height|dec or '—' }}</dd>
-        <dt class="col-5">Largura</dt><dd class="col-7">{{ product.dimensions.width|dec or '—' }}</dd>
-        <dt class="col-5">Comprimento</dt><dd class="col-7">{{ product.dimensions.length|dec or '—' }}</dd>
-        <dt class="col-5">Volume</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
-        <dt class="col-5">Peso</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
-        <dt class="col-5">Saldo total</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>
+        <dt class="col-5">{{ _("Tipo de material") }}</dt><dd class="col-7">{% if product.material_type %}<a href="/products?material={{ product.material_type|urlencode }}">{{ product.material_type }}</a>{% else %}—{% endif %}</dd>
+        <dt class="col-5">{{ _("Altura") }}</dt><dd class="col-7">{{ product.dimensions.height|dec or '—' }}</dd>
+        <dt class="col-5">{{ _("Largura") }}</dt><dd class="col-7">{{ product.dimensions.width|dec or '—' }}</dd>
+        <dt class="col-5">{{ _("Comprimento") }}</dt><dd class="col-7">{{ product.dimensions.length|dec or '—' }}</dd>
+        <dt class="col-5">{{ _("Volume") }}</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
+        <dt class="col-5">{{ _("Peso") }}</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
+        <dt class="col-5">{{ _("Saldo total") }}</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>
       </dl>
     </div></div>
   </div>
   <div class="col-lg-8">
     <div class="card mb-3">
-      <div class="card-header bg-white d-flex justify-content-between"><strong>Política de estoque por filial</strong>
-        <a class="small" href="/products/{{ product.id }}/edit">editar</a></div>
+      <div class="card-header bg-white d-flex justify-content-between"><strong>{{ _("Política de estoque por filial") }}</strong>
+        <a class="small" href="/products/{{ product.id }}/edit">{{ _("editar") }}</a></div>
       <div class="table-responsive"><table class="table table-sm mb-0">
-        <thead><tr><th>Filial</th><th>Endereço padrão</th><th class="text-end">Nível mínimo</th><th class="text-end">Nível máximo</th></tr></thead>
+        <thead><tr><th>{{ _("Filial") }}</th><th>{{ _("Endereço padrão") }}</th><th class="text-end">{{ _("Nível mínimo") }}</th><th class="text-end">{{ _("Nível máximo") }}</th></tr></thead>
         <tbody>
         {% for pol in policies %}
           <tr><td>{{ pol.branch.code }} <span class="text-muted small">{{ pol.branch.name }}</span></td>
             <td class="mono">{{ pol.default_location.full_label if pol.default_location else '—' }}</td>
             <td class="text-end">{{ pol.min_level|dec if pol.min_level is not none else '—' }}</td>
             <td class="text-end">{{ pol.max_level|dec if pol.max_level is not none else '—' }}</td></tr>
-        {% else %}<tr><td colspan="4" class="text-muted text-center py-2 small">Nenhuma política: o produto ainda não tem endereço padrão nem min/max em nenhuma filial.</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="4" class="text-muted text-center py-2 small">{{ _("Nenhuma política: o produto ainda não tem endereço padrão nem min/max em nenhuma filial.") }}</td></tr>{% endfor %}
         </tbody>
       </table></div>
-      <div class="card-body py-2 small text-muted border-top">O cadastro do produto (nome, material, dimensões, peso) é o mesmo em todas as filiais; endereço padrão e níveis de estoque são de cada filial.</div>
+      <div class="card-body py-2 small text-muted border-top">{{ _("O cadastro do produto (nome, material, dimensões, peso) é o mesmo em todas as filiais; endereço padrão e níveis de estoque são de cada filial.") }}</div>
     </div>
     <div class="card">
-      <div class="card-header bg-white"><strong>Saldo físico por endereço</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("Saldo físico por endereço") }}</strong></div>
       <div class="table-responsive"><table class="table table-sm mb-0">
-        <thead><tr><th>Filial</th><th>Armazém</th><th>Endereço</th><th class="text-end">Quantidade</th><th></th></tr></thead>
+        <thead><tr><th>{{ _("Filial") }}</th><th>{{ _("Armazém") }}</th><th>{{ _("Endereço") }}</th><th class="text-end">{{ _("Quantidade") }}</th><th></th></tr></thead>
         <tbody>
         {% for s in stock %}
           <tr>
@@ -54,7 +54,7 @@
             <td class="mono">{{ s.location.address }}</td><td class="text-end fw-semibold">{{ s.quantity|dec }}</td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/stock/{{ s.id }}/edit"><i class="bi bi-pencil"></i></a></td>
           </tr>
-        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Sem saldo.</td></tr>{% endfor %}
+        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">{{ _("Sem saldo.") }}</td></tr>{% endfor %}
         </tbody>
       </table></div>
     </div>

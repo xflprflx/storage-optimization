@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Arranjo — {{ title }}{% endblock %}
+{% block title %}{{ _h("Arranjo — {title}", title=(title)) }}{% endblock %}
 {% block head %}<style>
   .nk-3d { height: 340px; background: #f4f6f8; border-radius: .375rem; position: relative; }
   .nk-3d .nk-views { position: absolute; top: 6px; right: 6px; z-index: 2; }
@@ -8,11 +8,10 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-boxes"></i> Arranjo das unidades — {{ title }}</h1>
-    <div class="small text-muted">Rotação: {{ 'qualquer orientação' if rot == 'any' else 'só girar no plano (altura sempre para cima)' }} ·
-      camadas numeradas de baixo (1) para cima · arraste para girar, roda do mouse para zoom</div>
+    <h1><i class="bi bi-boxes"></i> {{ _h("Arranjo das unidades — {title}", title=(title)) }}</h1>
+    <div class="small text-muted">{{ _h("Rotação: {v} · camadas numeradas de baixo (1) para cima · arraste para girar, roda do mouse para zoom", v=(_('qualquer orientação') if rot == 'any' else _('só girar no plano (altura sempre para cima)'))) }}</div>
   </div>
-  <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : window.close()"><i class="bi bi-arrow-left"></i> Voltar</button>
+  <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : window.close()"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</button>
 </div>
 
 {% for e in errors or [] %}<div class="alert alert-danger">{{ e }}</div>{% endfor %}
@@ -20,14 +19,14 @@
 <form method="get" class="card card-body py-2 mb-3 d-flex flex-row flex-wrap align-items-center gap-3" id="scForm">
   {% for k, v in scenarios.hidden %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
   <input type="hidden" name="scf" value="1">
-  <strong class="small">Cenários do depois:</strong>
+  <strong class="small">{{ _("Cenários do depois:") }}</strong>
   {% for code, label in scenarios.options %}
   <div class="form-check form-check-inline m-0">
     <input class="form-check-input" type="checkbox" name="sc" value="{{ code }}" id="sc-{{ code }}" {{ 'checked' if code in scenarios.chosen }} onchange="this.form.submit()">
-    <label class="form-check-label small" for="sc-{{ code }}">{{ label }}{% if code == scenarios.run_basis %} <span class="badge text-bg-light border">usado na otimização</span>{% endif %}</label>
+    <label class="form-check-label small" for="sc-{{ code }}">{{ label }}{% if code == scenarios.run_basis %} <span class="badge text-bg-light border">{{ _("usado na otimização") }}</span>{% endif %}</label>
   </div>
   {% endfor %}
-  <span class="small text-muted ms-auto">cada cenário recalcula a otimização com os mesmos parâmetros, mudando só a quantidade considerada</span>
+  <span class="small text-muted ms-auto">{{ _("cada cenário recalcula a otimização com os mesmos parâmetros, mudando só a quantidade considerada") }}</span>
 </form>
 {% endif %}
 <div class="accordion" id="caseAcc">
@@ -37,13 +36,13 @@
     <h2 class="accordion-header">
       <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#acc-{{ side }}">
         <i class="bi {{ icon }} me-2"></i> <strong>{{ label }}</strong>
-        <span class="ms-2 text-muted small">{% if sec.unchanged %}sem mudança{% else %}{{ bins|length }} bin(s){% endif %}{% if bins %}{% set its = bins|sum(attribute='arr.items', start=[]) %} · {{ its|sum(attribute='qty') }} un.{% set rs = its|sum(attribute='reserved') %}{% if rs %} + reserva para {{ rs }}{% endif %}{% endif %}</span>
+        <span class="ms-2 text-muted small">{% if sec.unchanged %}{{ _("sem mudança") }}{% else %}{{ _h("{bins} bin(s)", bins=(bins|length)) }}{% endif %}{% if bins %}{% set its = bins|sum(attribute='arr.items', start=[]) %} {{ _h("· {its} un.", its=(its|sum(attribute='qty'))) }}{% set rs = its|sum(attribute='reserved') %}{% if rs %} {{ _h("+ reserva para {rs}", rs=(rs)) }}{% endif %}{% endif %}</span>
       </button>
     </h2>
     <div id="acc-{{ side }}" class="accordion-collapse collapse show" data-side="{{ side }}">
       <div class="accordion-body">
         {% if sec.note %}<div class="small text-muted mb-2"><i class="bi bi-info-circle"></i> {{ sec.note }}</div>{% endif %}
-        {% if sec.unchanged %}<div class="text-muted">Sem mudança: o arranjo continua igual ao de antes.</div>
+        {% if sec.unchanged %}<div class="text-muted">{{ _("Sem mudança: o arranjo continua igual ao de antes.") }}</div>
         {% elif not bins %}<div class="text-muted">{{ sec.empty }}</div>{% endif %}
         <div class="row g-3">
         {% for b in bins %}
@@ -51,28 +50,28 @@
             <div class="card bin-card h-100" id="b-{{ side }}-{{ loop.index0 }}">
               <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <span class="mono fw-semibold">{{ b.label }}</span>
-                {% if b.arr.dims %}<small class="text-muted">{% if b.arr.parent %}<span class="badge bg-info-subtle text-info-emphasis border me-1"><i class="bi bi-layout-split"></i> compartimento {{ b.arr.parent.label }} · {{ b.arr.parent.code }} nº {{ b.arr.parent.n }}, posição {{ b.arr.parent.slot }} de {{ b.arr.parent.k }} (grade {{ b.arr.parent.grid }})</span>{% endif %}interna {{ b.arr.dims[1]|dec }} × {{ b.arr.dims[2]|dec }} × {{ b.arr.dims[0]|dec }} cm (L×C×A)</small>{% endif %}
+                {% if b.arr.dims %}<small class="text-muted">{% if b.arr.parent %}<span class="badge bg-info-subtle text-info-emphasis border me-1"><i class="bi bi-layout-split"></i> {{ _h("compartimento {label} · {code} nº {n}, posição {slot} de {k} (grade {grid})", label=(b.arr.parent.label), code=(b.arr.parent.code), n=(b.arr.parent.n), slot=(b.arr.parent.slot), k=(b.arr.parent.k), grid=(b.arr.parent.grid)) }}</span>{% endif %}{{ _h("interna {v} × {v2} × {v3} cm (L×C×A)", v=(b.arr.dims[1]|dec), v2=(b.arr.dims[2]|dec), v3=(b.arr.dims[0]|dec)) }}</small>{% endif %}
               </div>
               <div class="card-body small">
-                {% if b.empty and not b.arr.parent %}<div class="text-muted">Bin vazia.</div>
-                {% elif not b.arr.dims %}<div class="text-warning">Tipo de bin sem dimensões cadastradas.</div>
+                {% if b.empty and not b.arr.parent %}<div class="text-muted">{{ _("Bin vazia.") }}</div>
+                {% elif not b.arr.dims %}<div class="text-warning">{{ _("Tipo de bin sem dimensões cadastradas.") }}</div>
                 {% else %}
-                {% if b.empty %}<div class="text-muted mb-1">Compartimento vazio.</div>{% endif %}
+                {% if b.empty %}<div class="text-muted mb-1">{{ _("Compartimento vazio.") }}</div>{% endif %}
                 <div class="row g-2">
                   <div class="col-md-7"><div class="nk-3d" data-bin='{{ b.json }}'>
-                    <div class="nk-views btn-group btn-group-sm"><button class="btn btn-light border" data-view="iso">3D</button><button class="btn btn-light border" data-view="top">Cima</button><button class="btn btn-light border" data-view="front">Frente</button><button class="btn btn-light border" data-view="side">Lado</button></div>
+                    <div class="nk-views btn-group btn-group-sm"><button class="btn btn-light border" data-view="iso">3D</button><button class="btn btn-light border" data-view="top">{{ _("Cima") }}</button><button class="btn btn-light border" data-view="front">{{ _("Frente") }}</button><button class="btn btn-light border" data-view="side">{{ _("Lado") }}</button></div>
                   </div></div>
                   <div class="col-md-5">
                     {% for it in b.arr.items %}
                     <div class="mb-2"><span class="d-inline-block rounded me-1" style="width:11px;height:11px;background:{{ it.color }};vertical-align:-1px"></span>
-                      <span class="mono fw-semibold">{{ it.sku }}</span> · {{ it.qty }} un.
+                      {{ _h("<span class=\"mono fw-semibold\">{sku}</span> · {qty} un.", sku=(it.sku), qty=(it.qty)) }}
                       <div class="text-muted">{{ it.text }}</div>
-                      {% if it.layers() %}<div class="text-muted">{% for n, y, dy, c, g in it.layers() %}camada {{ n }}: {{ c }} un.{% if g %} (+{{ g }} reserva){% endif %}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
-                      {% if it.overflow %}<div class="text-danger">{{ it.overflow }} un. não cabem pela geometria</div>{% endif %}
+                      {% if it.layers() %}<div class="text-muted">{% for n, y, dy, c, g in it.layers() %}{{ _h("camada {n}: {c} un.", n=(n), c=(c)) }}{% if g %} {{ _h("(+{g} reserva)", g=(g)) }}{% endif %}{{ '; ' if not loop.last }}{% endfor %}</div>{% endif %}
+                      {% if it.overflow %}<div class="text-danger">{{ _h("{overflow} un. não cabem pela geometria", overflow=(it.overflow)) }}</div>{% endif %}
                     </div>
                     {% endfor %}
-                    {% if b.arr.items|sum(attribute='reserved') %}<div class="text-muted mb-2"><span class="d-inline-block me-1" style="width:11px;height:11px;border:1.5px dashed #6c7a84;vertical-align:-1px"></span>tracejado = espaço reservado: o plano (nível mínimo/máximo ou margem de crescimento) é maior que o saldo de hoje</div>{% endif %}
-                    {% if b.arr.approx %}<div class="badge bg-warning-subtle text-warning-emphasis border mb-2">vários SKUs: divisão aproximada</div>{% endif %}
+                    {% if b.arr.items|sum(attribute='reserved') %}<div class="text-muted mb-2">{{ _h("<span class=\"d-inline-block me-1\" style=\"width:11px;height:11px;border:1.5px dashed #6c7a84;vertical-align:-1px\"></span>tracejado = espaço reservado: o plano (nível mínimo/máximo ou margem de crescimento) é maior que o saldo de hoje") }}</div>{% endif %}
+                    {% if b.arr.approx %}<div class="badge bg-warning-subtle text-warning-emphasis border mb-2">{{ _("vários SKUs: divisão aproximada") }}</div>{% endif %}
                     <div>{{ b.svg|safe }}</div>
                   </div>
                 </div>

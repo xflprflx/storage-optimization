@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% from "_macros.html" import material_select %}
 {% set POOL = mode == 'pool' %}
-{% block title %}Otimização de bins — {{ 'pool de bins' if POOL else 'por endereço' }}{% endblock %}
+{% block title %}{{ _h("Otimização de bins — {v}", v=(_('pool de bins') if POOL else _('por endereço'))) }}{% endblock %}
 
 {# ============================ macros compartilhadas ============================ #}
 {% macro cfg(c, types) -%}
 {% if c is none %}<span class="text-muted">—</span>
-{% elif not c %}<span class="text-muted">nenhuma bin</span>
+{% elif not c %}<span class="text-muted">{{ _("nenhuma bin") }}</span>
 {% else %}{% for tid, n in c|dictsort %}<span class="badge text-bg-light border mono me-1">{{ n }}× {{ types[tid].code if tid in types else '?' }}</span>{% endfor %}{% endif %}
 {%- endmacro %}
 
@@ -37,12 +37,12 @@
 {% macro pack(pk, label, sku, cls) -%}
 <div class="d-inline-flex align-items-center gap-1 me-2 mb-1 align-top nk-packitem">
   <span class="badge {{ cls }} border mono">{{ label }}</span>
-  {% if pk %}<a href="{{ pk.url }}" target="_blank" class="text-decoration-none" title="{{ pk.texts.get(sku, '') if sku else pk.texts.values()|join(' · ') }} — clique para ver o caso em 3D">{% if pk.svg %}{{ pk.svg|safe }}{% endif %}<span class="badge text-bg-dark ms-1" style="font-size:.6rem">3D</span></a>
-  {% if pk.overflow %}<i class="bi bi-exclamation-triangle text-danger" title="Há unidades que não cabem pela geometria"></i>{% endif %}{% endif %}
+  {% if pk %}<a href="{{ pk.url }}" target="_blank" class="text-decoration-none" title="{{ _("{get} — clique para ver o caso em 3D", get=(pk.texts.get(sku, '') if sku else pk.texts.values()|join(' · '))) }}">{% if pk.svg %}{{ pk.svg|safe }}{% endif %}<span class="badge text-bg-dark ms-1" style="font-size:.6rem">3D</span></a>
+  {% if pk.overflow %}<i class="bi bi-exclamation-triangle text-danger" title="{{ _("Há unidades que não cabem pela geometria") }}"></i>{% endif %}{% endif %}
 </div>
 {%- endmacro %}
 
-{% macro plbl(b, n, sku) %}{% set f = phys.get((b.id, sku), n) %}{% if f <= 0.0001 and n > 0 %}{{ b.tag }} · reservada ({{ n|dec }} un.){% else %}{{ b.tag }} · {{ f|dec }}{% if n - f > 0.0001 %} (+{{ (n - f)|dec }} reserva){% endif %}{% endif %}{% endmacro %}
+{% macro plbl(b, n, sku) %}{% set f = phys.get((b.id, sku), n) %}{% if f <= 0.0001 and n > 0 %}{{ _h("{tag} · reservada ({n} un.)", tag=(b.tag), n=(n|dec)) }}{% else %}{{ b.tag }} · {{ f|dec }}{% if n - f > 0.0001 %} {{ _h("(+{v} reserva)", v=((n - f)|dec)) }}{% endif %}{% endif %}{% endmacro %}
 
 {% macro switch(name, label, hint='') -%}
 <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="{{ name }}" value="1" id="sw_{{ name }}" {% if params[name] %}checked{% endif %}><label class="form-check-label" for="sw_{{ name }}">{{ label }}{% if hint %} <span class="text-muted">{{ hint }}</span>{% endif %}</label></div>
@@ -52,16 +52,16 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-sliders"></i> Otimização de bins</h1>
-    <div class="small text-muted">Escolha o que otimizar e as restrições. Nada é gravado até você aplicar.</div>
+    <h1><i class="bi bi-sliders"></i> {{ _("Otimização de bins") }}</h1>
+    <div class="small text-muted">{{ _("Escolha o que otimizar e as restrições. Nada é gravado até você aplicar.") }}</div>
   </div>
 </div>
 
 <ul class="nav nav-tabs mb-3">
-  <li class="nav-item"><a class="nav-link {{ 'active' if not POOL }}" href="/optimization">Por endereço <small class="text-muted">(troca as bins de cada endereço)</small></a></li>
-  <li class="nav-item"><a class="nav-link {{ 'active' if POOL }}" href="/optimization/pool">Pool de bins <small class="text-muted">(bins fixas, produtos mudam de lugar)</small></a></li>
-  <li class="nav-item"><a class="nav-link" href="/optimization/site"><i class="bi bi-building-add"></i> Projeto de filial nova <small class="text-muted">(imóvel e estruturas do zero)</small></a></li>
-  <li class="nav-item"><a class="nav-link" href="/optimization/runs"><i class="bi bi-clock-history"></i> Resultados salvos</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if not POOL }}" href="/optimization">{{ _h("Por endereço <small class=\"text-muted\">(troca as bins de cada endereço)</small>") }}</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if POOL }}" href="/optimization/pool">{{ _h("Pool de bins <small class=\"text-muted\">(bins fixas, produtos mudam de lugar)</small>") }}</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/site"><i class="bi bi-building-add"></i> {{ _h("Projeto de filial nova <small class=\"text-muted\">(imóvel e estruturas do zero)</small>") }}</a></li>
+  <li class="nav-item"><a class="nav-link" href="/optimization/runs"><i class="bi bi-clock-history"></i> {{ _("Resultados salvos") }}</a></li>
 </ul>
 
 {% for e in errors %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> {{ e }}</div>{% endfor %}
@@ -72,252 +72,233 @@
   <form method="get" id="optForm">
   <input type="hidden" name="run" value="1">
   <div data-stepper id="optStepper" {% if results is not none %}data-start="last"{% endif %}>
-    <div class="card mb-3 nk-step" data-step-title="Escopo">
-      <div class="card-header bg-white"><strong>Escopo</strong></div>
+    <div class="card mb-3 nk-step" data-step-title="{{ _("Escopo") }}">
+      <div class="card-header bg-white"><strong>{{ _("Escopo") }}</strong></div>
       <div class="card-body" data-step-footer>
-        <label class="form-label small mb-0">Filial *</label>
+        <label class="form-label small mb-0">{{ _("Filial *") }}</label>
         <select class="form-select form-select-sm mb-2" name="branch_id" id="branch_id" required>
-          <option value="">Selecione...</option>
+          <option value="">{{ _("Selecione...") }}</option>
           {% for b in branches %}<option value="{{ b.id }}" {% if filters.branch_id == b.id|string %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
         </select>
-        <label class="form-label small mb-0">Armazém</label>
+        <label class="form-label small mb-0">{{ _("Armazém") }}</label>
         <select class="form-select form-select-sm mb-2" name="warehouse_id">
-          <option value="">Todos</option>
-          <option value="none" {% if filters.warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          <option value="">{{ _("Todos") }}</option>
+          <option value="none" {% if filters.warehouse_id == 'none' %}selected{% endif %}>{{ _("— Sem armazém —") }}</option>
           {% for w in warehouses %}<option value="{{ w.id }}" {% if filters.warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
         </select>
-        <label class="form-label small mb-0">Endereço contém</label>
-        <input class="form-control form-control-sm mono mb-2" name="q" value="{{ filters.q }}" placeholder="Ex.: A-01 (corredor A, estante 01)">
-        <label class="form-label small mb-0">SKU ou produto</label>
-        <input class="form-control form-control-sm mb-2" name="sku" value="{{ filters.sku }}" title="10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · &quot;frase inteira&quot; · sku:10* só no SKU, nome:… só no nome">
-        <label class="form-label small mb-0">Tipo de material</label>
-        {{ material_select(filters.material, cls='form-select form-select-sm mb-2', all_label='Todos') }}
-        <label class="form-label small mb-0">Bins atuais</label>
+        <label class="form-label small mb-0">{{ _("Endereço contém") }}</label>
+        <input class="form-control form-control-sm mono mb-2" name="q" value="{{ filters.q }}" placeholder="{{ _("Ex.: A-01 (corredor A, estante 01)") }}">
+        <label class="form-label small mb-0">{{ _("SKU ou produto") }}</label>
+        <input class="form-control form-control-sm mb-2" name="sku" value="{{ filters.sku }}" title="{{ _("10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · \"frase inteira\" · sku:10* só no SKU, nome:… só no nome") }}">
+        <label class="form-label small mb-0">{{ _("Tipo de material") }}</label>
+        {{ material_select(filters.material, cls='form-select form-select-sm mb-2', all_label=_('Todos')) }}
+        <label class="form-label small mb-0">{{ _("Bins atuais") }}</label>
         <select class="form-select form-select-sm" name="bin_type_id">
-          <option value="">Todas</option>
-          <option value="any" {% if filters.bin_type_id == 'any' %}selected{% endif %}>Com alguma bin</option>
-          <option value="none" {% if filters.bin_type_id == 'none' %}selected{% endif %}>Sem bin</option>
-          {% for bt in bin_types %}<option value="{{ bt.id }}" {% if filters.bin_type_id == bt.id|string %}selected{% endif %}>Tipo {{ bt.code }}</option>{% endfor %}
+          <option value="">{{ _("Todas") }}</option>
+          <option value="any" {% if filters.bin_type_id == 'any' %}selected{% endif %}>{{ _("Com alguma bin") }}</option>
+          <option value="none" {% if filters.bin_type_id == 'none' %}selected{% endif %}>{{ _("Sem bin") }}</option>
+          {% for bt in bin_types %}<option value="{{ bt.id }}" {% if filters.bin_type_id == bt.id|string %}selected{% endif %}>{{ _h("Tipo {code}", code=(bt.code)) }}</option>{% endfor %}
         </select>
         <input type="hidden" name="occupied" value="{{ filters.occupied }}">
         <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" name="focus" value="1" id="sw_focus" {% if params.focus %}checked{% endif %}>
-          <label class="form-check-label small" for="sw_focus"><b>Foco nos SKUs filtrados</b></label></div>
+          <label class="form-check-label small" for="sw_focus"><b>{{ _("Foco nos SKUs filtrados") }}</b></label></div>
         {% if POOL %}
-        <div class="form-text">Ligado: "SKU ou produto" e "Tipo de material" escolhem só <b>quais produtos</b> otimizar; as bins vêm do
-          resto do escopo (filial, armazém, endereço, bins atuais) — o item pode ir para qualquer bin livre. Os outros produtos
-          ficam onde estão e as bins deles não entram. Desligado: o filtro escolhe os endereços (só as bins de onde o item está).</div>
-        <div class="form-text mt-1">As bins do escopo formam um único pool (por filial + armazém); as bins não mudam de lugar.</div>
+        <div class="form-text">{{ _h("Ligado: \"SKU ou produto\" e \"Tipo de material\" escolhem só <b>quais produtos</b> otimizar; as bins vêm do resto do escopo (filial, armazém, endereço, bins atuais) — o item pode ir para qualquer bin livre. Os outros produtos ficam onde estão e as bins deles não entram. Desligado: o filtro escolhe os endereços (só as bins de onde o item está).") }}</div>
+        <div class="form-text mt-1">{{ _("As bins do escopo formam um único pool (por filial + armazém); as bins não mudam de lugar.") }}</div>
         {% else %}
-        <div class="form-text">Ligado (com bins existentes): "SKU ou produto" e "Tipo de material" escolhem os endereços a otimizar,
-          e eles podem receber bins dos <b>outros endereços do escopo</b> (filial, armazém, endereço, bins atuais) — conforme
-          "Bins que podem ser usadas". Desligado: só as bins dos próprios endereços filtrados.</div>
+        <div class="form-text">{{ _h("Ligado (com bins existentes): \"SKU ou produto\" e \"Tipo de material\" escolhem os endereços a otimizar, e eles podem receber bins dos <b>outros endereços do escopo</b> (filial, armazém, endereço, bins atuais) — conforme \"Bins que podem ser usadas\". Desligado: só as bins dos próprios endereços filtrados.") }}</div>
         {% endif %}
       </div>
     </div>
 
-    <div class="card mb-3 nk-step" data-step-title="O que otimizar">
-      <div class="card-header bg-white"><strong>O que otimizar</strong></div>
+    <div class="card mb-3 nk-step" data-step-title="{{ _("O que otimizar") }}">
+      <div class="card-header bg-white"><strong>{{ _("O que otimizar") }}</strong></div>
       <div class="card-body" data-step-footer>
-        <div class="small fw-semibold mb-1">Bins</div>
+        <div class="small fw-semibold mb-1">{{ _("Bins") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           {% for key, label in bins_modes.items() %}
           <input type="radio" class="btn-check" name="bins_mode" id="bm_{{ key }}" value="{{ key }}" {% if (params.bins_mode or 'existing') == key %}checked{% endif %}>
-          <label class="btn btn-outline-secondary" for="bm_{{ key }}">{{ {'existing': 'Existentes', 'unlimited': 'Recurso infinito'}[key] }}</label>
+          <label class="btn btn-outline-secondary" for="bm_{{ key }}">{{ {'existing': _('Existentes'), 'unlimited': _('Recurso infinito')}[key] }}</label>
           {% endfor %}
         </div>
         <div class="form-text mb-2">
-          <b>Existentes:</b> o plano só usa as bins que já existem nos endereços do escopo{% if not POOL %} (elas trocam de endereço; o total de cada tipo não aumenta; bins de endereços vazios só entram com "remover bins de endereços sem saldo"){% endif %}.
-          <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje{% if POOL %} (só simulação: bins novas não têm endereço, não se aplica){% else %} (a capacidade dos níveis continua valendo){% endif %}.
+          {{ _h("<b>Existentes:</b> o plano só usa as bins que já existem nos endereços do escopo") }}{% if not POOL %} {{ _("(elas trocam de endereço; o total de cada tipo não aumenta; bins de endereços vazios só entram com \"remover bins de endereços sem saldo\")") }}{% endif %}{{ _h(". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje") }}{% if POOL %} {{ _("(só simulação: bins novas não têm endereço, não se aplica)") }}{% else %} {{ _("(a capacidade dos níveis continua valendo)") }}{% endif %}.
         </div>
         <div id="srcBox">
-          <div class="small fw-semibold mb-1">Bins que podem ser usadas <span class="fw-normal text-muted">(com bins existentes)</span></div>
+          <div class="small fw-semibold mb-1">{{ _h("Bins que podem ser usadas <span class=\"fw-normal text-muted\">(com bins existentes)</span>") }}</div>
           {% for k, lbl in bin_sources.items() %}
           <div class="form-check mb-0"><input class="form-check-input" type="radio" name="bin_source" id="bs_{{ k }}" value="{{ k }}" {% if (params.bin_source or 'free') == k %}checked{% endif %}>
             <label class="form-check-label small" for="bs_{{ k }}">{{ lbl }}</label></div>
           {% endfor %}
           <div id="orphBox" class="ms-3 mt-1">
-            <div class="small fw-semibold mb-0">Itens que perderem a bin</div>
+            <div class="small fw-semibold mb-0">{{ _("Itens que perderem a bin") }}</div>
             {% for k, lbl in orphan_modes.items() %}
             <div class="form-check mb-0"><input class="form-check-input" type="radio" name="orphans" id="or_{{ k }}" value="{{ k }}" {% if (params.orphans or 'relocate') == k %}checked{% endif %}>
               <label class="form-check-label small" for="or_{{ k }}">{{ lbl }}</label></div>
             {% endfor %}
           </div>
-          <div class="form-text mb-2">Vale com "Foco nos SKUs filtrados" e filtro de SKU / tipo de material. <b>Só bins livres</b>: o item só usa bins sem saldo.
-            <b>Qualquer bin</b>: pode usar bins com saldo de outros itens (ex.: 2 bins G em vez de 14 P livres) — esses itens são
-            <b>realocados</b> ({% if POOL %}nas bins que sobraram deles ou em bins livres{% else %}rearranjados nas bins que ficam no endereço deles, ou em bins que sobraram{% endif %}, com o mínimo de movimentação) ou ficam
-            <b>fora de bin</b> no mesmo endereço (órfãos, para tratar à mão).</div>
+          <div class="form-text mb-2">{{ _h("Vale com \"Foco nos SKUs filtrados\" e filtro de SKU / tipo de material. <b>Só bins livres</b>: o item só usa bins sem saldo. <b>Qualquer bin</b>: pode usar bins com saldo de outros itens (ex.: 2 bins G em vez de 14 P livres) — esses itens são <b>realocados</b> (") }}{% if POOL %}{{ _("nas bins que sobraram deles ou em bins livres") }}{% else %}{{ _("rearranjados nas bins que ficam no endereço deles, ou em bins que sobraram") }}{% endif %}{{ _h(", com o mínimo de movimentação) ou ficam <b>fora de bin</b> no mesmo endereço (órfãos, para tratar à mão).") }}</div>
         </div>
-        <div class="small fw-semibold mb-1">Quantidade considerada por SKU</div>
+        <div class="small fw-semibold mb-1">{{ _("Quantidade considerada por SKU") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           {% for key, label in bases.items() %}
           <input type="radio" class="btn-check" name="basis" id="basis_{{ key }}" value="{{ key }}" {% if (params.basis or 'stock') == key %}checked{% endif %}>
-          <label class="btn btn-outline-secondary" for="basis_{{ key }}" title="{{ label }}">{{ {'stock': 'Saldo atual', 'min': 'Min level', 'max': 'Max level'}[key] }}</label>
+          <label class="btn btn-outline-secondary" for="basis_{{ key }}" title="{{ label }}">{{ {'stock': _('Saldo atual'), 'min': _('Min level'), 'max': _('Max level')}[key] }}</label>
           {% endfor %}
         </div>
-        <div class="form-text mb-2">Min/max valem no endereço padrão do produto; vazio ou 0 usa o saldo; nunca abaixo do saldo físico.</div>
-        <div class="small fw-semibold mb-1">Objetivo</div>
+        <div class="form-text mb-2">{{ _("Min/max valem no endereço padrão do produto; vazio ou 0 usa o saldo; nunca abaixo do saldo físico.") }}</div>
+        <div class="small fw-semibold mb-1">{{ _("Objetivo") }}</div>
         {% for key, label in objectives.items() %}
         <div class="form-check mb-1">
           <input class="form-check-input" type="radio" name="objective" id="obj_{{ key }}" value="{{ key }}" {% if params.objective == key %}checked{% endif %}>
-          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">(só com bins existentes)</span>{% endif %}{% if key in ('min_walk', 'max_pick', 'min_time') %} <span class="text-muted">(usa o histórico de saídas; motor heurístico)</span>{% endif %}</label>
+          <label class="form-check-label small" for="obj_{{ key }}">{{ label }}{% if key == 'min_moves' %} <span class="text-muted">{{ _("(só com bins existentes)") }}</span>{% endif %}{% if key in ('min_walk', 'max_pick', 'min_time') %} <span class="text-muted">{{ _("(usa o histórico de saídas; motor heurístico)") }}</span>{% endif %}</label>
         </div>
         {% endfor %}
-        {% if not POOL %}<div class="form-text mb-2"><i class="bi bi-signpost-split"></i> Trajeto e pega: neste modo os produtos ficam nos endereços — use as
-          <b>trocas sugeridas</b> da posição pela saída (no resultado) ou o modo <a href="/optimization/pool">Pool</a>, que tem os objetivos de menor caminhada e de zona de ouro da pega.</div>{% endif %}
-        <div class="small fw-semibold mt-2 mb-1">Depois, desempatar por <span class="fw-normal text-muted">(ordem de prioridade)</span></div>
+        {% if not POOL %}<div class="form-text mb-2"><i class="bi bi-signpost-split"></i> {{ _h("Trajeto e pega: neste modo os produtos ficam nos endereços — use as <b>trocas sugeridas</b> da posição pela saída (no resultado) ou o modo <a href=\"/optimization/pool\">Pool</a>, que tem os objetivos de menor caminhada e de zona de ouro da pega.") }}</div>{% endif %}
+        <div class="small fw-semibold mt-2 mb-1">{{ _h("Depois, desempatar por <span class=\"fw-normal text-muted\">(ordem de prioridade)</span>") }}</div>
         <div class="d-flex gap-1 mb-1">
           {% for i in (2, 3, 4) %}{% set cur = params['prio' ~ i] %}
-          <select class="form-select form-select-sm nk-prio" name="prio{{ i }}" title="{{ i }}º critério">
-            <option value="">{{ i }}º: padrão</option>
+          <select class="form-select form-select-sm nk-prio" name="prio{{ i }}" title="{{ _("{i}º critério", i=(i)) }}">
+            <option value="">{{ _h("{i}º: padrão", i=(i)) }}</option>
             {% for k, lbl in criteria.items() %}<option value="{{ k }}" {% if cur == k %}selected{% endif %}>{{ i }}º: {{ lbl }}</option>{% endfor %}
           </select>{% endfor %}
         </div>
-        <div class="form-text mb-2">Padrão: o objetivo escolhido, depois mínimo de {{ 'movimentações' if POOL else 'mudanças' }} e os demais
-          (bins, volume, largura). {% if POOL %}Na heurística do pool a ordem vale só para o objetivo.{% else %}Com "padrão", a heurística mantém o desempate atual.{% endif %}</div>
-        <div class="small fw-semibold mb-1">Motor</div>
+        <div class="form-text mb-2">{{ _h("Padrão: o objetivo escolhido, depois mínimo de {v} e os demais (bins, volume, largura).", v=(_('movimentações') if POOL else _('mudanças'))) }} {% if POOL %}{{ _("Na heurística do pool a ordem vale só para o objetivo.") }}{% else %}{{ _("Com \"padrão\", a heurística mantém o desempate atual.") }}{% endif %}</div>
+        <div class="small fw-semibold mb-1">{{ _("Motor") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           <input type="radio" class="btn-check" name="engine" id="eng_or" value="or" {% if params.engine == 'or' %}checked{% endif %}>
-          <label class="btn btn-outline-secondary" for="eng_or" title="Modelo matemático (OR-Tools CP-SAT) resolvido para o escopo inteiro"><i class="bi bi-diagram-3"></i> Pesquisa operacional</label>
+          <label class="btn btn-outline-secondary" for="eng_or" title="{{ _("Modelo matemático (OR-Tools CP-SAT) resolvido para o escopo inteiro") }}"><i class="bi bi-diagram-3"></i> {{ _("Pesquisa operacional") }}</label>
           <input type="radio" class="btn-check" name="engine" id="eng_h" value="heuristic" {% if params.engine != 'or' %}checked{% endif %}>
-          <label class="btn btn-outline-secondary" for="eng_h" title="Decide um item por vez (rápido)"><i class="bi bi-lightning"></i> Heurística</label>
+          <label class="btn btn-outline-secondary" for="eng_h" title="{{ _("Decide um item por vez (rápido)") }}"><i class="bi bi-lightning"></i> {{ _("Heurística") }}</label>
         </div>
         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap" id="tlBox">
-          <label class="small mb-0" for="time_limit">Tempo limite</label>
+          <label class="small mb-0" for="time_limit">{{ _("Tempo limite") }}</label>
           <input class="form-control form-control-sm text-end" style="width:80px" name="time_limit" id="time_limit" value="{{ params.time_limit or '15' }}" inputmode="decimal">
           <span class="small text-muted">s</span>
           <div class="form-check mb-0 small"><input class="form-check-input" type="checkbox" name="tl_unlimited" value="1" id="tl_unlimited" {% if params.tl_unlimited %}checked{% endif %}>
-            <label class="form-check-label" for="tl_unlimited"><b>Sem limite de tempo</b></label></div>
+            <label class="form-check-label" for="tl_unlimited"><b>{{ _("Sem limite de tempo") }}</b></label></div>
         </div>
-        <div class="alert alert-warning py-1 px-2 small mb-1" id="tlWarn"><i class="bi bi-exclamation-triangle"></i> Com tempo limite, o resultado pode vir da
-          <b>heurística</b> (se o solver não achar solução melhor a tempo) ou ser só a melhor solução encontrada, sem prova de que é a ótima.
-          Para a solução do solver a qualquer custo, marque <b>Sem limite de tempo</b> (escopos grandes podem levar muitos minutos).</div>
-        <div class="form-text">Pesquisa operacional: modelo de otimização inteira resolvido para o escopo todo, critério a critério na ordem
-          acima, partindo da solução da heurística (nunca fica pior). O resultado mostra de onde veio: ótimo comprovado, melhor no tempo ou heurística.</div>
+        <div class="alert alert-warning py-1 px-2 small mb-1" id="tlWarn"><i class="bi bi-exclamation-triangle"></i> {{ _h("Com tempo limite, o resultado pode vir da <b>heurística</b> (se o solver não achar solução melhor a tempo) ou ser só a melhor solução encontrada, sem prova de que é a ótima. Para a solução do solver a qualquer custo, marque <b>Sem limite de tempo</b> (escopos grandes podem levar muitos minutos).") }}</div>
+        <div class="form-text">{{ _("Pesquisa operacional: modelo de otimização inteira resolvido para o escopo todo, critério a critério na ordem acima, partindo da solução da heurística (nunca fica pior). O resultado mostra de onde veio: ótimo comprovado, melhor no tempo ou heurística.") }}</div>
       </div>
     </div>
 
     {# ---------------- posição dos SKUs pela saída (slotting) ---------------- #}
-    <div class="card mb-3 nk-step" data-step-title="Posição pela saída">
-      <div class="card-header bg-white"><strong>Posição dos SKUs pela saída</strong></div>
+    <div class="card mb-3 nk-step" data-step-title="{{ _("Posição pela saída") }}">
+      <div class="card-header bg-white"><strong>{{ _("Posição dos SKUs pela saída") }}</strong></div>
       <div class="card-body small">
-        {{ switch('slot', 'Considerar a saída dos SKUs', '(curva ABC, zona de ouro e itens que saem juntos)') }}
-        <div class="text-muted mb-2">{% if POOL %}Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem
-          juntos ficam perto. Usa o motor heurístico.{% else %}Os produtos continuam nos endereços: o resultado mostra a caminhada e a zona de ouro de hoje
-          e sugere <b>trocas de endereço</b> entre SKUs que usam exatamente as mesmas bins (sempre viáveis).{% endif %}</div>
+        {{ switch('slot', _('Considerar a saída dos SKUs'), _('(curva ABC, zona de ouro e itens que saem juntos)')) }}
+        <div class="text-muted mb-2">{% if POOL %}{{ _("Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem juntos ficam perto. Usa o motor heurístico.") }}{% else %}{{ _h("Os produtos continuam nos endereços: o resultado mostra a caminhada e a zona de ouro de hoje e sugere <b>trocas de endereço</b> entre SKUs que usam exatamente as mesmas bins (sempre viáveis).") }}{% endif %}</div>
         <div class="border rounded p-2 mb-2">
-          <div class="fw-semibold mb-1">Histórico de saídas da filial</div>
+          <div class="fw-semibold mb-1">{{ _("Histórico de saídas da filial") }}</div>
           {% if slot_info.history %}
             <div><span class="badge text-bg-success">{{ slot_info.summary }}</span></div>
             <div class="text-muted">{{ slot_info.history.filename }}</div>
-            <a class="small" href="/optimization/slotting/skus?{{ request.query_params }}"><i class="bi bi-bar-chart-line"></i> Relatório de SKUs (popularidade e afinidade)</a><br>
-            <a class="small" href="/optimization/slotting/routes?{{ request.query_params }}"><i class="bi bi-signpost-2"></i> Simulador de trajeto pelos pedidos</a><br>
-            <button class="btn btn-link btn-sm text-danger p-0" form="slotDelete" onclick="return confirm('Remover o histórico de saídas desta filial?')">remover</button>
-          {% elif filters.branch_id %}<div class="text-muted">Nenhum histórico para a filial selecionada.</div>
-          {% else %}<div class="text-muted">Escolha a filial no escopo.</div>{% endif %}
+            <a class="small" href="/optimization/slotting/skus?{{ request.query_params }}"><i class="bi bi-bar-chart-line"></i> {{ _("Relatório de SKUs (popularidade e afinidade)") }}</a><br>
+            <a class="small" href="/optimization/slotting/routes?{{ request.query_params }}"><i class="bi bi-signpost-2"></i> {{ _("Simulador de trajeto pelos pedidos") }}</a><br>
+            <button class="btn btn-link btn-sm text-danger p-0" form="slotDelete" onclick="return confirm(_t('Remover o histórico de saídas desta filial?'))">{{ _("remover") }}</button>
+          {% elif filters.branch_id %}<div class="text-muted">{{ _("Nenhum histórico para a filial selecionada.") }}</div>
+          {% else %}<div class="text-muted">{{ _("Escolha a filial no escopo.") }}</div>{% endif %}
           <div class="mt-2">
             <input class="form-control form-control-sm mb-1" type="file" name="file" form="slotUpload" accept=".xlsx,.xlsm,.csv,.txt">
             <div class="form-check"><input class="form-check-input" type="checkbox" name="abs" value="1" form="slotUpload" id="slotAbs" checked>
-              <label class="form-check-label" for="slotAbs">Converter quantidades para valor absoluto (saída com sinal negativo)</label></div>
-            <button class="btn btn-sm btn-outline-primary mt-1" form="slotUpload"><i class="bi bi-upload"></i> Enviar histórico</button>
-            <a class="small ms-1" href="/imports/history{% if filters.branch_id %}?branch_id={{ filters.branch_id }}{% endif %}">ou em Importações</a>
-            <div class="form-text">Aba <b>Pedidos</b> (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna <b>Saída</b>. Na próxima etapa você confere a aba e as colunas. Fica salvo para a filial (só o resumo).</div>
+              <label class="form-check-label" for="slotAbs">{{ _("Converter quantidades para valor absoluto (saída com sinal negativo)") }}</label></div>
+            <button class="btn btn-sm btn-outline-primary mt-1" form="slotUpload"><i class="bi bi-upload"></i> {{ _("Enviar histórico") }}</button>
+            <a class="small ms-1" href="/imports/history{% if filters.branch_id %}?branch_id={{ filters.branch_id }}{% endif %}">{{ _("ou em Importações") }}</a>
+            <div class="form-text">{{ _h("Aba <b>Pedidos</b> (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna <b>Saída</b>. Na próxima etapa você confere a aba e as colunas. Fica salvo para a filial (só o resumo).") }}</div>
           </div>
         </div>
         <div class="border rounded p-2 mb-2">
-          <div class="fw-semibold mb-1"><i class="bi bi-vector-pen"></i> Planta da filial</div>
+          <div class="fw-semibold mb-1"><i class="bi bi-vector-pen"></i> {{ _("Planta da filial") }}</div>
           {% if slot_info.get('layouts') %}
-            <div><span class="badge text-bg-success">Planta desenhada</span> a caminhada é medida na planta, pelos corredores,
-              desde o ponto de referência dela (os campos de corredor e distâncias abaixo valem só para estantes fora da planta).</div>
-            {% for lay, w in slot_info.layouts %}<a class="small d-block" href="/layout/plan?branch_id={{ lay.branch_id }}&warehouse_id={{ lay.warehouse_id or 'none' }}"><i class="bi bi-pencil"></i> Editar a planta{% if w %} — {{ w.code }}{% elif slot_info.layouts|length > 1 %} — sem armazém{% endif %}</a>{% endfor %}
+            <div>{{ _h("<span class=\"badge text-bg-success\">Planta desenhada</span> a caminhada é medida na planta, pelos corredores, desde o ponto de referência dela (os campos de corredor e distâncias abaixo valem só para estantes fora da planta).") }}</div>
+            {% for lay, w in slot_info.layouts %}<a class="small d-block" href="/layout/plan?branch_id={{ lay.branch_id }}&warehouse_id={{ lay.warehouse_id or 'none' }}"><i class="bi bi-pencil"></i> {{ _("Editar a planta") }}{% if w %} — {{ w.code }}{% elif slot_info.layouts|length > 1 %} {{ _("— sem armazém") }}{% endif %}</a>{% endfor %}
           {% elif filters.branch_id %}
-            <div class="text-muted">Sem planta: a caminhada é estimada pelo endereço.</div>
-            <a class="small" href="{{ slot_info.layout_link }}"><i class="bi bi-vector-pen"></i> Desenhar a planta da filial</a> <span class="text-muted">(mais precisa; também habilita o 3D e as rotas desenhadas)</span>
+            <div class="text-muted">{{ _("Sem planta: a caminhada é estimada pelo endereço.") }}</div>
+            <a class="small" href="{{ slot_info.layout_link }}"><i class="bi bi-vector-pen"></i> {{ _("Desenhar a planta da filial") }}</a> <span class="text-muted">{{ _("(mais precisa; também habilita o 3D e as rotas desenhadas)") }}</span>
           {% endif %}
         </div>
         <div class="row g-2">
-          <div class="col-12"><label class="form-label mb-0">Medida</label>
+          <div class="col-12"><label class="form-label mb-0">{{ _("Medida") }}</label>
             <select class="form-select form-select-sm" name="slot_metric">
-              <option value="lines" {% if params.slot_metric != 'units' %}selected{% endif %}>Linhas de pedido (visitas ao endereço)</option>
-              <option value="units" {% if params.slot_metric == 'units' %}selected{% endif %}>Unidades</option></select></div>
-          <div class="col-12"><label class="form-label mb-0">Corredor mais perto da expedição</label>
-            <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="o primeiro" maxlength="20" title="Corredor (ou rua) mais perto da expedição"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Distância de um corredor para o seguinte">Entre corredores (m)</label>
+              <option value="lines" {% if params.slot_metric != 'units' %}selected{% endif %}>{{ _("Linhas de pedido (visitas ao endereço)") }}</option>
+              <option value="units" {% if params.slot_metric == 'units' %}selected{% endif %}>{{ _("Unidades") }}</option></select></div>
+          <div class="col-12"><label class="form-label mb-0">{{ _("Corredor mais perto da expedição") }}</label>
+            <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="{{ _("o primeiro") }}" maxlength="20" title="{{ _("Corredor (ou rua) mais perto da expedição") }}"></div>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Distância de um corredor para o seguinte") }}">{{ _("Entre corredores (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_aisle_m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Frente de cada estante, ao longo do corredor">Frente da estante (m)</label>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Frente de cada estante, ao longo do corredor") }}">{{ _("Frente da estante (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_bay_m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
-          <div class="col-12 fw-semibold mt-1">Duas zonas de ouro: da pega (altura) e da caminhada (perto da expedição)</div>
-          <div class="col-6"><label class="form-label mb-0" title="Endereços até esta caminhada estimada da referência; vazio = os 20% mais perto">Caminhada até (m)</label>
-            <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ params.slot_walk_m }}" inputmode="decimal" placeholder="20% mais perto"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Metros de caminhada que um nível fora da zona de ouro da pega &quot;custa&quot;">Pega fora vale (m)</label>
+          <div class="col-12 fw-semibold mt-1">{{ _("Duas zonas de ouro: da pega (altura) e da caminhada (perto da expedição)") }}</div>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Endereços até esta caminhada estimada da referência; vazio = os 20% mais perto") }}">{{ _("Caminhada até (m)") }}</label>
+            <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ params.slot_walk_m }}" inputmode="decimal" placeholder="{{ _("20% mais perto") }}"></div>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Metros de caminhada que um nível fora da zona de ouro da pega \"custa\"") }}">{{ _("Pega fora vale (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ params.slot_golden_m }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" title="Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada">Níveis de ouro (pega)</label>
-            <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="ex.: 2,3"></div>
-          <div class="col-12 fw-semibold mt-1">Tempo de separação <span class="fw-normal text-muted">(objetivo "Menor tempo" e indicador do resultado)</span></div>
-          <div class="col-6"><label class="form-label mb-0" for="slot_v" title="Velocidade de caminhada do separador">Caminhada (m/s)</label>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada") }}">{{ _("Níveis de ouro (pega)") }}</label>
+            <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="{{ _("ex.: 2,3") }}"></div>
+          <div class="col-12 fw-semibold mt-1">{{ _h("Tempo de separação <span class=\"fw-normal text-muted\">(objetivo \"Menor tempo\" e indicador do resultado)</span>") }}</div>
+          <div class="col-6"><label class="form-label mb-0" for="slot_v" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_v" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" for="slot_gold_s" title="Tempo a mais por item pego num nível fora da zona de ouro da pega">Fora do ouro (s/item)</label>
+          <div class="col-6"><label class="form-label mb-0" for="slot_gold_s" title="{{ _("Tempo a mais por item pego num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/item)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
         </div>
-        {{ switch('slot_rows', 'Letras por rua', '(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)') }}
-        {{ switch('slot_serp', 'Ruas em serpentina', '(com letras por rua: B-01 fica de frente para o fim da A)') }}
-        {{ switch('slot_aff', 'Deixar perto os itens que saem juntos') }}
-        <div class="form-text">A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores
-          + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante
-          (Cadastros → Estruturas) ou dos níveis informados.</div>
+        {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
+        {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}
+        {{ switch('slot_aff', _('Deixar perto os itens que saem juntos')) }}
+        <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.") }}</div>
       </div>
     </div>
 
-    <div class="card mb-3 nk-step" data-step-title="Restrições">
-      <div class="card-header bg-white"><strong>Restrições</strong></div>
+    <div class="card mb-3 nk-step" data-step-title="{{ _("Restrições") }}">
+      <div class="card-header bg-white"><strong>{{ _("Restrições") }}</strong></div>
       <div class="card-body small">
-        <label class="form-label mb-1">Tipos de bin permitidos <span class="text-muted">(nenhum marcado = todos)</span></label>
+        <label class="form-label mb-1">{{ _h("Tipos de bin permitidos <span class=\"text-muted\">(nenhum marcado = todos)</span>") }}</label>
         <div class="border rounded p-2 mb-2" style="max-height: 150px; overflow-y: auto">
           {% for bt in bin_types %}
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="types" value="{{ bt.id }}" id="t{{ bt.id }}" {% if bt.id|string in params.types %}checked{% endif %}>
             <label class="form-check-label" for="t{{ bt.id }}"><span class="mono">{{ bt.code }}</span> <span class="text-muted">{% if bt.width is not none %}{{ bt.height|dec }}×{{ bt.width|dec }}×{{ bt.length|dec }} cm{% endif %}{% if bt.max_weight is not none %} · {{ bt.max_weight|dec }} kg{% endif %}</span></label>
           </div>
-          {% else %}<span class="text-muted">Nenhum tipo cadastrado. <a href="/bin-types/new">Cadastrar</a></span>{% endfor %}
+          {% else %}<span class="text-muted">{{ _h("Nenhum tipo cadastrado. <a href=\"/bin-types/new\">Cadastrar</a>") }}</span>{% endfor %}
         </div>
         <div class="row g-2 mb-2">
-          <div class="col-6"><label class="form-label mb-0">Enchimento máx. (%)</label><input class="form-control form-control-sm text-end" name="fill_limit" value="{{ params.fill_limit }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0">Margem s/ quantidade (%)</label><input class="form-control form-control-sm text-end" name="growth" value="{{ params.growth }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0">{{ _("Enchimento máx. (%)") }}</label><input class="form-control form-control-sm text-end" name="fill_limit" value="{{ params.fill_limit }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0">{{ _("Margem s/ quantidade (%)") }}</label><input class="form-control form-control-sm text-end" name="growth" value="{{ params.growth }}" inputmode="decimal"></div>
         </div>
-        <label class="form-label mb-0">Área de espera (para trocas)</label>
-        <input class="form-control form-control-sm mb-2" name="staging" value="{{ params.staging }}" maxlength="60" placeholder="ÁREA DE ESPERA" title="Onde deixar itens temporariamente quando o destino ainda está ocupado (ex.: DOCA 1, PULMÃO)">
-        <div class="fw-semibold mt-1 mb-1">Unidades na bin</div>
-        {{ switch('geometry', 'Considerar encaixe geométrico') }}
+        <label class="form-label mb-0">{{ _("Área de espera (para trocas)") }}</label>
+        <input class="form-control form-control-sm mb-2" name="staging" value="{{ params.staging }}" maxlength="60" placeholder="{{ _("ÁREA DE ESPERA") }}" title="{{ _("Onde deixar itens temporariamente quando o destino ainda está ocupado (ex.: DOCA 1, PULMÃO)") }}">
+        <div class="fw-semibold mt-1 mb-1">{{ _("Unidades na bin") }}</div>
+        {{ switch('geometry', _('Considerar encaixe geométrico')) }}
         <select class="form-select form-select-sm my-1" name="rotation">
-          <option value="upright" {% if params.rotation != 'any' %}selected{% endif %}>Rotação: só girar no plano (altura sempre para cima)</option>
-          <option value="any" {% if params.rotation == 'any' %}selected{% endif %}>Rotação: qualquer orientação (6)</option>
+          <option value="upright" {% if params.rotation != 'any' %}selected{% endif %}>{{ _("Rotação: só girar no plano (altura sempre para cima)") }}</option>
+          <option value="any" {% if params.rotation == 'any' %}selected{% endif %}>{{ _("Rotação: qualquer orientação (6)") }}</option>
         </select>
-        {{ switch('weight', 'Respeitar peso máximo da bin') }}
-        {{ switch('mix', 'Permitir SKUs diferentes na mesma bin') }}
-        <div class="fw-semibold mt-2 mb-1">Bins</div>
-        {{ switch('single_type', 'Um único tipo de bin por ' ~ ('SKU' if POOL else 'endereço')) }}
+        {{ switch('weight', _('Respeitar peso máximo da bin')) }}
+        {{ switch('mix', _('Permitir SKUs diferentes na mesma bin')) }}
+        <div class="fw-semibold mt-2 mb-1">{{ _("Bins") }}</div>
+        {{ switch('single_type', _('Um único tipo de bin por ') ~ ('SKU' if POOL else _('endereço'))) }}
         {% if POOL %}
-        <div class="row g-2 mb-1"><div class="col-6"><label class="form-label mb-0">Máx. bins por SKU</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric"></div></div>
-        <div class="fw-semibold mt-2 mb-1">Endereços</div>
-        {{ switch('split', 'Permitir o mesmo SKU em mais de um endereço') }}
-        <div class="text-muted mt-2"><i class="bi bi-info-circle"></i> Capacidade dos níveis, largura/altura máximas e "remover bins de vazios"
-          não se aplicam ao pool: as bins não mudam de lugar nem de tipo.</div>
+        <div class="row g-2 mb-1"><div class="col-6"><label class="form-label mb-0">{{ _("Máx. bins por SKU") }}</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric"></div></div>
+        <div class="fw-semibold mt-2 mb-1">{{ _("Endereços") }}</div>
+        {{ switch('split', _('Permitir o mesmo SKU em mais de um endereço')) }}
+        <div class="text-muted mt-2"><i class="bi bi-info-circle"></i> {{ _("Capacidade dos níveis, largura/altura máximas e \"remover bins de vazios\" não se aplicam ao pool: as bins não mudam de lugar nem de tipo.") }}</div>
         {% else %}
         <div class="row g-2 mb-1">
-          <div class="col-4"><label class="form-label mb-0">Máx. bins</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric" title="por endereço"></div>
-          <div class="col-4"><label class="form-label mb-0">Larg. máx. (cm)</label><input class="form-control form-control-sm text-end" name="max_width" value="{{ params.max_width }}" inputmode="decimal"></div>
-          <div class="col-4"><label class="form-label mb-0">Alt. máx. (cm)</label><input class="form-control form-control-sm text-end" name="max_height" value="{{ params.max_height }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Máx. bins") }}</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric" title="{{ _("por endereço") }}"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Larg. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_width" value="{{ params.max_width }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Alt. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_height" value="{{ params.max_height }}" inputmode="decimal"></div>
         </div>
-        {{ switch('clear_empty', 'Sugerir remover bins de endereços sem saldo e sem produto') }}
-        <div class="fw-semibold mt-2 mb-1">Níveis</div>
+        {{ switch('clear_empty', _('Sugerir remover bins de endereços sem saldo e sem produto')) }}
+        <div class="fw-semibold mt-2 mb-1">{{ _("Níveis") }}</div>
         <input type="hidden" name="levels" value="1">
-        <div class="text-muted mb-1"><i class="bi bi-shield-check"></i> A capacidade dos níveis é sempre respeitada (<a href="/levels" target="_blank">cadastro</a>; sem capacidade cadastrada, é estimada pela largura do nível).</div>
-        {{ switch('other_levels', 'Pode usar outros níveis da mesma estante com espaço livre') }}
-        {{ switch('uniform_levels', 'Um único tipo de bin por nível') }}
-        {{ switch('keep_space', 'Não exceder o espaço atual do endereço', '(nível sem capacidade cadastrada)') }}
+        <div class="text-muted mb-1"><i class="bi bi-shield-check"></i> {{ _h("A capacidade dos níveis é sempre respeitada (<a href=\"/levels\" target=\"_blank\">cadastro</a>; sem capacidade cadastrada, é estimada pela largura do nível).") }}</div>
+        {{ switch('other_levels', _('Pode usar outros níveis da mesma estante com espaço livre')) }}
+        {{ switch('uniform_levels', _('Um único tipo de bin por nível')) }}
+        {{ switch('keep_space', _('Não exceder o espaço atual do endereço'), _('(nível sem capacidade cadastrada)')) }}
         {% endif %}
       </div>
       <div class="card-footer bg-white" data-step-footer>
-        <button class="btn btn-accent w-100"><i class="bi bi-cpu"></i> Analisar</button>
+        <button class="btn btn-accent w-100"><i class="bi bi-cpu"></i> {{ _("Analisar") }}</button>
       </div>
     </div>
   </div>
@@ -336,19 +317,19 @@
   <div class="col-xl-9 col-lg-8">
     {% if results is none %}
     <div class="card"><div class="card-body small text-muted">
-      <p class="mb-2"><i class="bi bi-info-circle"></i> <b>Como funciona</b></p>
+      <p class="mb-2"><i class="bi bi-info-circle"></i> <b>{{ _("Como funciona") }}</b></p>
       {% if POOL %}
       <ul class="mb-2">
-        <li>O motor "esquece" os endereços e enxerga só as bins e suas dimensões: pode usar qualquer quantidade das bins de qualquer endereço do escopo (ex.: de 6 bins de um endereço usar só 2 e liberar 4).</li>
-        <li>O resultado é um <b>plano de movimentação</b> por SKU. Ao aplicar, os <b>saldos</b> são movidos (as bins continuam onde estão) e o endereço padrão acompanha.</li>
+        <li>{{ _("O motor \"esquece\" os endereços e enxerga só as bins e suas dimensões: pode usar qualquer quantidade das bins de qualquer endereço do escopo (ex.: de 6 bins de um endereço usar só 2 e liberar 4).") }}</li>
+        <li>{{ _h("O resultado é um <b>plano de movimentação</b> por SKU. Ao aplicar, os <b>saldos</b> são movidos (as bins continuam onde estão) e o endereço padrão acompanha.") }}</li>
       </ul>
       {% else %}
       <ul class="mb-2">
-        <li>Para cada endereço, testa um tipo de bin ou a combinação de dois tipos e escolhe pela meta. Os produtos ficam no mesmo endereço; o que muda são as bins.</li>
-        <li>A sugestão precisa caber no nível (descontadas as bins dos vizinhos) — ou em outros níveis da estante, se permitido.</li>
+        <li>{{ _("Para cada endereço, testa um tipo de bin ou a combinação de dois tipos e escolhe pela meta. Os produtos ficam no mesmo endereço; o que muda são as bins.") }}</li>
+        <li>{{ _("A sugestão precisa caber no nível (descontadas as bins dos vizinhos) — ou em outros níveis da estante, se permitido.") }}</li>
       </ul>
       {% endif %}
-      <p class="mb-0"><b>Capacidade</b> de uma bin para um SKU = menor entre encaixe geométrico, volume × enchimento máx. e peso máx. A <b>margem</b> reserva espaço para crescer. Produtos sem dimensões ficam de fora.</p>
+      <p class="mb-0">{{ _h("<b>Capacidade</b> de uma bin para um SKU = menor entre encaixe geométrico, volume × enchimento máx. e peso máx. A <b>margem</b> reserva espaço para crescer. Produtos sem dimensões ficam de fora.") }}</p>
     </div></div>
     {% else %}
 
@@ -358,22 +339,22 @@
     <div class="card mb-3 border-{{ ok_cls }}">
       <div class="card-body py-2 small">
         <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
-          <i class="bi bi-diagram-3 text-{{ ok_cls }}"></i><b>Pesquisa operacional</b>
+          <i class="bi bi-diagram-3 text-{{ ok_cls }}"></i><b>{{ _("Pesquisa operacional") }}</b>
           <span class="badge text-bg-{{ ok_cls }}">{{ sv.status_txt }}</span>
-          <span class="text-muted">{{ sv.seconds|dec(1) }} s{% if solvers|length > 1 %} · pool {{ loop.index }}{% endif %}</span>
+          <span class="text-muted">{{ sv.seconds|dec(1) }} s{% if solvers|length > 1 %} {{ _h("· pool {index}", index=(loop.index)) }}{% endif %}</span>
           {% if sv.note %}<span class="text-muted">· {{ sv.note }}</span>{% endif %}
           {% if sv.status_help %}<div class="w-100 text-{{ 'danger' if sv.status == 'heuristic' else 'primary' }}"><i class="bi bi-info-circle"></i> {{ sv.status_help }}</div>{% endif %}
         </div>
         {% set opt = {} %}{% for st in sv.stages %}{% set _ = opt.update({st.criterion: st.optimal}) %}{% endfor %}
         <table class="table table-sm mb-0 small w-auto" data-no-resize>
-          <thead><tr><th>Critério (na ordem)</th><th class="text-end">Heurística</th><th class="text-end">Pesquisa operacional</th><th></th></tr></thead>
+          <thead><tr><th>{{ _("Critério (na ordem)") }}</th><th class="text-end">{{ _("Heurística") }}</th><th class="text-end">{{ _("Pesquisa operacional") }}</th><th></th></tr></thead>
           <tbody>
           {% for c in ['short'] + sv.order %}{% if c in sv.final %}
             {% set h, f = sv.heuristic[c], sv.final[c] %}
             {% set pl = 0 if c in ('short', 'bins', 'changes') else (2 if c == 'cost' else 1) %}
             <tr><td>{{ crit_labels.get(c, c) }}</td><td class="text-end">{{ h|dec(pl) }}</td>
               <td class="text-end {{ 'text-success fw-semibold' if f < h else ('text-danger' if f > h else '') }}">{{ f|dec(pl) }}</td>
-              <td>{% if c in opt %}{% if opt[c] %}<span class="text-success" title="valor ótimo comprovado nesta etapa"><i class="bi bi-check2-circle"></i> ótimo</span>{% else %}<span class="text-muted" title="o tempo acabou nesta etapa">melhor encontrado</span>{% endif %}{% elif sv.status in ('optimal', 'feasible') %}<span class="text-muted">sem tempo</span>{% endif %}</td></tr>
+              <td>{% if c in opt %}{% if opt[c] %}<span class="text-success" title="{{ _("valor ótimo comprovado nesta etapa") }}"><i class="bi bi-check2-circle"></i> {{ _("ótimo") }}</span>{% else %}<span class="text-muted" title="{{ _("o tempo acabou nesta etapa") }}">{{ _("melhor encontrado") }}</span>{% endif %}{% elif sv.status in ('optimal', 'feasible') %}<span class="text-muted">{{ _("sem tempo") }}</span>{% endif %}</td></tr>
           {% endif %}{% endfor %}
           </tbody>
         </table>
@@ -381,8 +362,8 @@
     </div>
     {% endif %}{% endfor %}
 
-    {% if run_id %}<div class="small text-muted mb-2"><i class="bi bi-clock-history"></i> Resultado salvo como <a href="/optimization/runs/{{ run_id }}">nº {{ run_id }}</a> ·
-      <a href="/optimization/runs?kind={{ mode }}">comparar com outros</a></div>{% endif %}
+    {% if run_id %}<div class="small text-muted mb-2"><i class="bi bi-clock-history"></i> {{ _("Resultado salvo como") }} <a href="/optimization/runs/{{ run_id }}">nº {{ run_id }}</a> ·
+      <a href="/optimization/runs?kind={{ mode }}">{{ _("comparar com outros") }}</a></div>{% endif %}
     {# ---- indicadores (mesmos cartões nos dois modos) ---- #}
     <div class="row g-2 mb-3">
       {% for k in kpis %}
@@ -405,8 +386,8 @@
     {% if slot %}{% set a, z = slot.before, slot.after %}
     <div class="card mb-3">
       <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2">
-        <strong><i class="bi bi-signpost-split"></i> Posição pela saída</strong>
-        <span class="small text-muted">referência: {{ slot.ref if slot.info.spec.get('layout') else 'corredor ' ~ slot.ref }} · {{ slot.info.summary }}</span>
+        <strong><i class="bi bi-signpost-split"></i> {{ _("Posição pela saída") }}</strong>
+        <span class="small text-muted">{{ _h("referência: {layout} · {summary}", layout=(slot.ref if slot.info.spec.get('layout') else 'corredor ' ~ slot.ref), summary=(slot.info.summary)) }}</span>
       </div>
       <div class="card-body small">
         <div class="row g-2">
@@ -416,28 +397,28 @@
             {% if b is not none and c is not none %}{% set dl = c - b %}<div class="{{ ('text-success' if (dl < 0) == better_low else 'text-danger') if dl|abs > 0.05 else 'text-muted' }}">{{ '+' if dl > 0 }}{{ dl|dec(1) }}{{ unit }}</div>{% endif %}
             {% if hint %}<div class="text-muted" style="font-size:.72rem">{{ hint }}</div>{% endif %}</div></div>
           {% endmacro %}
-          {{ cmp('Caminhada média por saída', a.get('avg_dist'), z.get('avg_dist'), ' m', true, 'ponderada pela popularidade; ao acaso: ' ~ (z.random_dist|dec(1) if z.random_dist is not none else '—') ~ ' m') }}
-          {% if a.get('avg_dist') is not none and z.get('avg_dist') is not none %}{% set sv = [params.slot_v|float(1.0), 0.05]|max %}{% set sg = params.slot_gold_s|float(5.0) %}{{ cmp('Tempo estimado por saída', a.avg_dist / sv + ((1 - a.golden_picks / 100) * sg if a.get('golden_picks') is not none else 0), z.avg_dist / sv + ((1 - z.golden_picks / 100) * sg if z.get('golden_picks') is not none else 0), ' s', true, 'caminhada ÷ ' ~ (sv|dec(1)) ~ ' m/s + ' ~ (sg|dec(0)) ~ ' s por item fora da zona de ouro') }}{% endif %}
-          {% if a.get('golden_picks') is not none %}{{ cmp('Saídas na zona de ouro da pega', a.golden_picks, z.golden_picks, '%', false, 'altura ergonômica · tem ' ~ (z.golden_positions|dec(0)) ~ '% das posições usadas') }}{% endif %}
-          {% if a.get('walk_picks') is not none %}{{ cmp('Saídas na zona de ouro da caminhada', a.walk_picks, z.walk_picks, '%', false, 'até ' ~ (slot.info.spec.walk_limit|dec(1)) ~ ' m da referência' ~ ((' · nas duas: ' ~ (a.both_picks|dec(0)) ~ '% → ' ~ (z.both_picks|dec(0)) ~ '%') if a.get('both_picks') is not none else '')) }}{% endif %}
-          {% if a.get('pairs_avg') is not none or z.get('pairs_avg') is not none %}{{ cmp('Itens que saem juntos', a.get('pairs_avg'), z.get('pairs_avg'), ' m', true, 'distância entre os pares mais frequentes') }}{% endif %}
-          {% if not POOL %}<div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">Trocas sugeridas</div>
-            <div class="fs-6 fw-semibold">{{ slot.n_pairs }} troca(s)</div><div class="text-muted" style="font-size:.72rem">{{ slot.swaps|length }} SKUs mudam · entre {{ slot.mono }} endereços com 1 SKU e as mesmas bins de outros ({{ slot.groups }} grupos) · só quando o mais procurado ganha {{ [2, 2 * (slot.info.spec.bay_m)]|max|dec(1) }} m ou mais</div></div></div>{% endif %}
+          {{ cmp(_('Caminhada média por saída'), a.get('avg_dist'), z.get('avg_dist'), ' m', true, _('ponderada pela popularidade; ao acaso: ') ~ (z.random_dist|dec(1) if z.random_dist is not none else '—') ~ ' m') }}
+          {% if a.get('avg_dist') is not none and z.get('avg_dist') is not none %}{% set sv = [params.slot_v|float(1.0), 0.05]|max %}{% set sg = params.slot_gold_s|float(5.0) %}{{ cmp(_('Tempo estimado por saída'), a.avg_dist / sv + ((1 - a.golden_picks / 100) * sg if a.get('golden_picks') is not none else 0), z.avg_dist / sv + ((1 - z.golden_picks / 100) * sg if z.get('golden_picks') is not none else 0), ' s', true, _('caminhada ÷ ') ~ (sv|dec(1)) ~ ' m/s + ' ~ (sg|dec(0)) ~ _(' s por item fora da zona de ouro')) }}{% endif %}
+          {% if a.get('golden_picks') is not none %}{{ cmp(_('Saídas na zona de ouro da pega'), a.golden_picks, z.golden_picks, '%', false, _('altura ergonômica · tem ') ~ (z.golden_positions|dec(0)) ~ _('% das posições usadas')) }}{% endif %}
+          {% if a.get('walk_picks') is not none %}{{ cmp(_('Saídas na zona de ouro da caminhada'), a.walk_picks, z.walk_picks, '%', false, _('até ') ~ (slot.info.spec.walk_limit|dec(1)) ~ _(' m da referência') ~ ((_(' · nas duas: ') ~ (a.both_picks|dec(0)) ~ '% → ' ~ (z.both_picks|dec(0)) ~ '%') if a.get('both_picks') is not none else '')) }}{% endif %}
+          {% if a.get('pairs_avg') is not none or z.get('pairs_avg') is not none %}{{ cmp(_('Itens que saem juntos'), a.get('pairs_avg'), z.get('pairs_avg'), ' m', true, _('distância entre os pares mais frequentes')) }}{% endif %}
+          {% if not POOL %}<div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Trocas sugeridas") }}</div>
+            <div class="fs-6 fw-semibold">{{ _h("{n_pairs} troca(s)", n_pairs=(slot.n_pairs)) }}</div><div class="text-muted" style="font-size:.72rem">{{ _h("{swaps} SKUs mudam · entre {mono} endereços com 1 SKU e as mesmas bins de outros ({groups} grupos) · só quando o mais procurado ganha {v} m ou mais", swaps=(slot.swaps|length), mono=(slot.mono), groups=(slot.groups), v=([2, 2 * (slot.info.spec.bay_m)]|max|dec(1))) }}</div></div></div>{% endif %}
         </div>
         {% if not POOL and slot.swaps %}
-        <details class="mt-2" open><summary>Trocas de endereço sugeridas (mais procurados primeiro)</summary>
+        <details class="mt-2" open><summary>{{ _("Trocas de endereço sugeridas (mais procurados primeiro)") }}</summary>
           <div class="table-responsive" style="max-height:340px"><table class="table table-sm mb-0 mt-1" data-no-resize>
-            <thead class="sticky-top bg-white"><tr><th>SKU</th><th>ABC</th><th class="text-end">Saída</th><th>Hoje</th><th class="text-end">Caminhada</th><th>Sugerido</th><th class="text-end">Caminhada</th></tr></thead>
+            <thead class="sticky-top bg-white"><tr><th>SKU</th><th>ABC</th><th class="text-end">{{ _("Saída") }}</th><th>{{ _("Hoje") }}</th><th class="text-end">{{ _("Caminhada") }}</th><th>{{ _("Sugerido") }}</th><th class="text-end">{{ _("Caminhada") }}</th></tr></thead>
             <tbody>{% for x in slot.swaps[:300] %}<tr><td class="mono">{{ x.sku }}</td><td>{{ x.abc }}</td><td class="text-end">{{ x.out|dec }}</td>
               <td class="mono">{{ x.from }}{% if x.from_gold %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</td><td class="text-end">{{ x.from_m|dec(1) }} m</td>
               <td class="mono">{{ x.to }}{% if x.to_gold %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</td><td class="text-end">{{ x.to_m|dec(1) }} m</td></tr>{% endfor %}</tbody>
           </table></div>
-          <div class="text-muted mt-1">As trocas não são aplicadas automaticamente: a troca de endereço move o saldo dos dois SKUs (e o endereço padrão).</div>
+          <div class="text-muted mt-1">{{ _("As trocas não são aplicadas automaticamente: a troca de endereço move o saldo dos dois SKUs (e o endereço padrão).") }}</div>
         </details>
         {% endif %}
         {% if z.get('pairs') %}
-        <details class="mt-2"><summary>Pares que mais saem juntos ({{ z.pairs|length }})</summary>
-          <table class="table table-sm w-auto mb-0 mt-1" data-no-resize><thead><tr><th>SKU</th><th>SKU</th><th class="text-end">Pedidos juntos</th><th class="text-end">Distância {{ 'no plano' if POOL else 'com as trocas' }}</th></tr></thead>
+        <details class="mt-2"><summary>{{ _h("Pares que mais saem juntos ({pairs})", pairs=(z.pairs|length)) }}</summary>
+          <table class="table table-sm w-auto mb-0 mt-1" data-no-resize><thead><tr><th>SKU</th><th>SKU</th><th class="text-end">{{ _("Pedidos juntos") }}</th><th class="text-end">{{ _h("Distância {v}", v=(_('no plano') if POOL else _('com as trocas'))) }}</th></tr></thead>
             <tbody>{% for x in z.pairs %}<tr><td class="mono">{{ x.a }}</td><td class="mono">{{ x.b }}</td><td class="text-end">{{ x.count }}</td><td class="text-end">{{ x.dist|dec(1) }} m</td></tr>{% endfor %}</tbody></table>
         </details>
         {% endif %}
@@ -445,47 +426,37 @@
     </div>
     {% endif %}
     {% if orphans %}
-    <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> <b>{{ orphans|length }} item(ns) órfão(s)</b> —
-      perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use "Realocar os itens desalojados"):
-      <ul class="mb-0 mt-1">{% for sku, addr, tag, q in orphans[:30] %}<li><span class="mono">{{ sku }}</span> · {{ q|dec }} un. · <span class="mono">{{ addr }}</span> {{ tag }}</li>{% endfor %}</ul>
+    <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> {{ _h("<b>{orphans} item(ns) órfão(s)</b> — perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use \"Realocar os itens desalojados\"):", orphans=(orphans|length)) }}
+      <ul class="mb-0 mt-1">{% for sku, addr, tag, q in orphans[:30] %}<li>{{ _h("<span class=\"mono\">{sku}</span> · {q} un. · <span class=\"mono\">{addr}</span> {tag}", sku=(sku), q=(q|dec), addr=(addr), tag=(tag)) }}</li>{% endfor %}</ul>
       {% if orphans|length > 30 %}…{% endif %}</div>{% endif %}
-    {% if displaced %}<div class="alert alert-info py-2 small"><i class="bi bi-arrow-left-right"></i> {{ displaced }} outro(s) item(ns) perderam a bin
-      para os itens filtrados e foram realocados (situação "Desalojado e realocado").</div>{% endif %}
-    {% if focus_info %}<div class="alert alert-primary py-2 small"><i class="bi bi-bullseye"></i> <b>Foco nos SKUs filtrados:</b>
-      {{ focus_info.skus|dec }} SKU(s) otimizado(s) usando as bins do escopo inteiro — {{ focus_info.free_bins|dec }} bin(s) vazia(s) disponível(is).
-      {{ focus_info.fixed_skus|dec }} outro(s) produto(s) ficam onde estão; as {{ focus_info.locked_bins|dec }} bin(s) deles não entram no plano.</div>{% endif %}
-    {% if addr_focus %}<div class="alert alert-primary py-2 small"><i class="bi bi-bullseye"></i> <b>Foco nos SKUs filtrados:</b>
-      {{ addr_focus.focus|dec }} endereço(s) filtrado(s) podem usar as bins dos outros endereços do escopo —
-      {{ addr_focus.free|dec }} sem saldo ({{ addr_focus.free_bins|dec }} bin(s)){% if params.bin_source == 'any' %} e {{ addr_focus.stocked|dec }} com saldo de outros itens{% endif %}.
-      {{ addr_focus.used|dec }} deles cedem bins (situações "Sem saldo: liberar bins"{% if params.bin_source == 'any' %}, "Cede bins e é rearranjado", "Cede bins: itens ficam fora de bin"{% endif %}).</div>{% endif %}
+    {% if displaced %}<div class="alert alert-info py-2 small"><i class="bi bi-arrow-left-right"></i> {{ _h("{displaced} outro(s) item(ns) perderam a bin para os itens filtrados e foram realocados (situação \"Desalojado e realocado\").", displaced=(displaced)) }}</div>{% endif %}
+    {% if focus_info %}<div class="alert alert-primary py-2 small"><i class="bi bi-bullseye"></i> {{ _h("<b>Foco nos SKUs filtrados:</b> {skus} SKU(s) otimizado(s) usando as bins do escopo inteiro — {free_bins} bin(s) vazia(s) disponível(is). {fixed_skus} outro(s) produto(s) ficam onde estão; as {locked_bins} bin(s) deles não entram no plano.", skus=(focus_info.skus|dec), free_bins=(focus_info.free_bins|dec), fixed_skus=(focus_info.fixed_skus|dec), locked_bins=(focus_info.locked_bins|dec)) }}</div>{% endif %}
+    {% if addr_focus %}<div class="alert alert-primary py-2 small"><i class="bi bi-bullseye"></i> {{ _h("<b>Foco nos SKUs filtrados:</b> {focus} endereço(s) filtrado(s) podem usar as bins dos outros endereços do escopo — {free} sem saldo ({free_bins} bin(s))", focus=(addr_focus.focus|dec), free=(addr_focus.free|dec), free_bins=(addr_focus.free_bins|dec)) }}{% if params.bin_source == 'any' %} {{ _h("e {stocked} com saldo de outros itens", stocked=(addr_focus.stocked|dec)) }}{% endif %}{{ _h(". {used} deles cedem bins (situações \"Sem saldo: liberar bins\"", used=(addr_focus.used|dec)) }}{% if params.bin_source == 'any' %}{{ _(", \"Cede bins e é rearranjado\", \"Cede bins: itens ficam fora de bin\"") }}{% endif %}).</div>{% endif %}
     {% for n in notes %}<div class="alert alert-info py-2 small">{{ n }}</div>{% endfor %}
-    {% if unlimited and POOL %}<div class="alert alert-info py-2 small"><i class="bi bi-infinity"></i> <b>Recurso infinito:</b> a quantidade de bins não é restrição —
-      resultado de dimensionamento (quantas bins de cada tipo seriam necessárias). Bins novas não têm endereço: não pode ser aplicado.</div>{% endif %}
+    {% if unlimited and POOL %}<div class="alert alert-info py-2 small"><i class="bi bi-infinity"></i> {{ _h("<b>Recurso infinito:</b> a quantidade de bins não é restrição — resultado de dimensionamento (quantas bins de cada tipo seriam necessárias). Bins novas não têm endereço: não pode ser aplicado.") }}</div>{% endif %}
     {% if POOL %}
-      {% if tot.no_dims %}<div class="alert alert-secondary py-2 small"><b>{{ tot.no_dims|length }} SKU(s) sem dimensões</b> ficam onde estão
-        e as bins dos seus endereços não entram no pool: {{ tot.no_dims[:15]|join(', ') }}{% if tot.no_dims|length > 15 %}…{% endif %}</div>{% endif %}
+      {% if tot.no_dims %}<div class="alert alert-secondary py-2 small">{{ _h("<b>{no_dims} SKU(s) sem dimensões</b> ficam onde estão e as bins dos seus endereços não entram no pool: {v}", no_dims=(tot.no_dims|length), v=(tot.no_dims[:15]|join(', '))) }}{% if tot.no_dims|length > 15 %}…{% endif %}</div>{% endif %}
       {% if shortage %}<div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i>
-        {% if unlimited %}Alguns SKUs não cabem em nenhum tipo de bin permitido (situação "Sem bin").
-        {% else %}Faltam bins para alguns SKUs (situação "Sem bin"): esses SKUs não podem ser aplicados — amplie o escopo, mude o objetivo,
-        cadastre mais bins ou simule com "Recurso infinito".{% endif %}</div>{% endif %}
+        {% if unlimited %}{{ _("Alguns SKUs não cabem em nenhum tipo de bin permitido (situação \"Sem bin\").") }}
+        {% else %}{{ _("Faltam bins para alguns SKUs (situação \"Sem bin\"): esses SKUs não podem ser aplicados — amplie o escopo, mude o objetivo, cadastre mais bins ou simule com \"Recurso infinito\".") }}{% endif %}</div>{% endif %}
     {% endif %}
 
     {# ---- bins por tipo (mesmo quadro nos dois modos) ---- #}
     <div class="card mb-3">
       <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <a class="text-reset text-decoration-none" data-bs-toggle="collapse" href="#byType"><strong>Bins por tipo</strong> <small class="text-muted">hoje × {{ 'necessárias' if unlimited and POOL else 'no plano' }}</small> <i class="bi bi-chevron-down small"></i></a>
-        <a class="small" href="/layout?branch_id={{ filters.branch_id }}&warehouse_id={{ filters.warehouse_id or 'none' }}" target="_blank"><i class="bi bi-bricks"></i> Ver no mapa</a>
+        <a class="text-reset text-decoration-none" data-bs-toggle="collapse" href="#byType"><strong>{{ _("Bins por tipo") }}</strong> <small class="text-muted">{{ _h("hoje × {v}", v=(_('necessárias') if unlimited and POOL else _('no plano'))) }}</small> <i class="bi bi-chevron-down small"></i></a>
+        <a class="small" href="/layout?branch_id={{ filters.branch_id }}&warehouse_id={{ filters.warehouse_id or 'none' }}" target="_blank"><i class="bi bi-bricks"></i> {{ _("Ver no mapa") }}</a>
       </div>
       <div class="collapse" id="byType"><div class="table-responsive"><table class="table table-sm mb-0 small" data-no-resize>
-        <thead><tr><th>Tipo</th><th>Dimensões (cm)</th><th class="text-end">{{ 'No pool' if POOL else 'Hoje' }}</th><th class="text-end">{{ 'Necessárias' if unlimited and POOL else ('Usadas no plano' if POOL else 'No plano') }}</th><th class="text-end">Diferença</th></tr></thead>
+        <thead><tr><th>{{ _("Tipo") }}</th><th>{{ _("Dimensões (cm)") }}</th><th class="text-end">{{ _('No pool') if POOL else _('Hoje') }}</th><th class="text-end">{{ _('Necessárias') if unlimited and POOL else (_('Usadas no plano') if POOL else _('No plano')) }}</th><th class="text-end">{{ _("Diferença") }}</th></tr></thead>
         <tbody>
         {% for t, v in by_type|dictsort %}{% set bt = types[t] if t in types else none %}
           <tr><td class="mono">{{ bt.code if bt else '?' }}</td>
             <td>{% if bt and bt.h is not none %}{{ bt.h|dec }}×{{ bt.w|dec }}×{{ bt.l|dec }}{% else %}—{% endif %}</td>
             <td class="text-end">{{ v.existing|dec }}</td><td class="text-end">{{ v.needed|dec }}</td>
             {% set dlt = v.needed - v.existing %}
-            <td class="text-end {{ 'text-danger' if dlt > 0 else ('text-success' if dlt < 0 else 'text-muted') }}">{% if dlt > 0 %}+{{ dlt|dec }}{% if not POOL %} <span class="text-muted">(a obter)</span>{% endif %}{% elif dlt < 0 %}{{ dlt|dec }}{% else %}0{% endif %}</td></tr>
-        {% else %}<tr><td colspan="5" class="text-muted text-center">Nenhuma bin.</td></tr>{% endfor %}
+            <td class="text-end {{ 'text-danger' if dlt > 0 else ('text-success' if dlt < 0 else 'text-muted') }}">{% if dlt > 0 %}+{{ dlt|dec }}{% if not POOL %} <span class="text-muted">{{ _("(a obter)") }}</span>{% endif %}{% elif dlt < 0 %}{{ dlt|dec }}{% else %}0{% endif %}</td></tr>
+        {% else %}<tr><td colspan="5" class="text-muted text-center">{{ _("Nenhuma bin.") }}</td></tr>{% endfor %}
         </tbody>
       </table></div></div>
     </div>
@@ -496,20 +467,20 @@
       <div class="card mb-3">
         <div class="card-header bg-white">
           <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
-            <div><strong>{{ 'Plano por SKU' if POOL else 'Sugestões por endereço' }}</strong>
-              <small class="text-muted">{{ n_shown|dec }} de {{ n_total|dec }}{% if pages > 1 %} · página {{ page_no }}/{{ pages }}{% endif %}</small></div>
+            <div><strong>{{ _('Plano por SKU') if POOL else _('Sugestões por endereço') }}</strong>
+              <small class="text-muted">{{ _h("{n_shown} de {n_total}", n_shown=(n_shown|dec), n_total=(n_total|dec)) }}{% if pages > 1 %} {{ _h("· página {page_no}/{pages}", page_no=(page_no), pages=(pages)) }}{% endif %}</small></div>
             <div class="d-flex flex-wrap gap-2">
               <div class="btn-group btn-group-sm" role="group">
-                <a class="btn btn-outline-primary" href="{{ base_url }}/plan?{{ request.url.query }}"><i class="bi bi-list-check"></i> Plano de ação</a>
-                <a class="btn btn-outline-success" href="{{ base_url }}/plan.xlsx?{{ request.url.query }}" title="Exportar para Excel"><i class="bi bi-file-earmark-excel"></i> Excel</a>
-                <a class="btn btn-outline-danger" href="{{ base_url }}/plan.pdf?{{ request.url.query }}" title="Exportar para PDF"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                <a class="btn btn-outline-primary" href="{{ base_url }}/plan?{{ request.url.query }}"><i class="bi bi-list-check"></i> {{ _("Plano de ação") }}</a>
+                <a class="btn btn-outline-success" href="{{ base_url }}/plan.xlsx?{{ request.url.query }}" title="{{ _("Exportar para Excel") }}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                <a class="btn btn-outline-danger" href="{{ base_url }}/plan.pdf?{{ request.url.query }}" title="{{ _("Exportar para PDF") }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
               </div>
-              <button class="btn btn-sm btn-outline-primary" name="scope" value="selected" id="applySel" {% if not can_apply %}disabled{% endif %}><i class="bi bi-check2-square"></i> Aplicar selecionados</button>
-              <button class="btn btn-sm btn-accent" name="scope" value="all" id="applyAll" {% if not can_apply or not n_applicable %}disabled{% endif %}><i class="bi bi-check2-all"></i> Aplicar todos ({{ n_applicable }})</button>
+              <button class="btn btn-sm btn-outline-primary" name="scope" value="selected" id="applySel" {% if not can_apply %}disabled{% endif %}><i class="bi bi-check2-square"></i> {{ _("Aplicar selecionados") }}</button>
+              <button class="btn btn-sm btn-accent" name="scope" value="all" id="applyAll" {% if not can_apply or not n_applicable %}disabled{% endif %}><i class="bi bi-check2-all"></i> {{ _h("Aplicar todos ({n_applicable})", n_applicable=(n_applicable)) }}</button>
             </div>
           </div>
           <div class="d-flex flex-wrap gap-1">
-            <a class="badge rounded-pill text-decoration-none {{ 'text-bg-dark' if not status_filter else 'text-bg-light border text-dark' }}" href="{{ url_with(request, status=None, page=1) }}">Todos {{ n_total }}</a>
+            <a class="badge rounded-pill text-decoration-none {{ 'text-bg-dark' if not status_filter else 'text-bg-light border text-dark' }}" href="{{ url_with(request, status=None, page=1) }}">{{ _h("Todos {n_total}", n_total=(n_total)) }}</a>
             {% for key, label, cls, n in chips %}
             <a class="badge rounded-pill text-decoration-none text-bg-{{ cls }} {% if status_filter == key %}border border-2 border-dark{% endif %}" href="{{ url_with(request, status=key, page=1) }}">{{ label }} {{ n }}</a>
             {% endfor %}
@@ -519,13 +490,13 @@
           <table class="table table-sm table-hover mb-0 small nk-opt">
             <thead class="sticky-top"><tr>
               <th style="width:28px"><input type="checkbox" class="form-check-input" data-check-all=".opt-check" {% if not can_apply %}disabled{% endif %}></th>
-              {{ sort_th('sku' if POOL else 'address', 'SKU' if POOL else 'Endereço') }}{{ sort_th('status', 'Situação') }}
-              {% if POOL %}{{ sort_th('qty', 'Quantidade', 'text-end') }}{% endif %}
-              <th style="min-width:220px">Hoje <span class="fw-normal text-muted text-lowercase">(clique para o 3D)</span></th>
-              <th style="min-width:220px">Plano</th>
-              {% if POOL %}{{ sort_th('moves', 'Movimentação') }}{% endif %}
-              {{ sort_th('bins_delta', 'Δ bins', 'text-end') }}{{ sort_th('volume_delta', 'Δ volume', 'text-end') }}{{ sort_th('width_delta', 'Δ largura', 'text-end') }}
-              {{ sort_th('fill_now', 'Ench. hoje', 'text-end') }}{{ sort_th('fill_after', 'Ench. plano', 'text-end') }}
+              {{ sort_th('sku' if POOL else 'address', 'SKU' if POOL else _('Endereço')) }}{{ sort_th('status', _('Situação')) }}
+              {% if POOL %}{{ sort_th('qty', _('Quantidade'), 'text-end') }}{% endif %}
+              <th style="min-width:220px">{{ _h("Hoje <span class=\"fw-normal text-muted text-lowercase\">(clique para o 3D)</span>") }}</th>
+              <th style="min-width:220px">{{ _("Plano") }}</th>
+              {% if POOL %}{{ sort_th('moves', _('Movimentação')) }}{% endif %}
+              {{ sort_th('bins_delta', _('Δ bins'), 'text-end') }}{{ sort_th('volume_delta', _('Δ volume'), 'text-end') }}{{ sort_th('width_delta', _('Δ largura'), 'text-end') }}
+              {{ sort_th('fill_now', _('Ench. hoje'), 'text-end') }}{{ sort_th('fill_after', _('Ench. plano'), 'text-end') }}
             </tr></thead>
             <tbody>
             {% if POOL %}
@@ -535,20 +506,20 @@
                 <td class="mono fw-semibold text-nowrap">{{ p.sku }}</td>
                 <td><span class="badge text-bg-{{ chip_cls.get(m.status, 'secondary') }}">{{ chip_lbl.get(m.status, m.status) }}</span>
                   {% if p.note %}<div class="text-danger" style="font-size:.72rem">{{ p.note }}</div>{% endif %}
-                  {% if p.shortage %}<div class="text-danger" style="font-size:.72rem">sem bin: {{ p.shortage }} un.</div>{% endif %}</td>
-                <td class="text-end">{{ p.needed|dec }}{% if p.needed != p.qty %}<div class="text-muted">base {{ p.qty|dec }}</div>{% endif %}{% set cur = p.current.values()|sum %}{% if (cur - p.needed)|abs > 0.0001 %}<div class="text-muted" title="O plano reserva espaço para o planejado; as bins recebem só o saldo físico, o resto fica como reserva.">saldo hoje {{ cur|dec }}</div>{% endif %}</td>
-                <td>{% for l, q in p.current|dictsort %}<div class="nk-line"><span class="mono">{{ locs[l][0] }}</span> · {{ q|dec }}</div>{% for b, n in p.orig_bins if b.location_id == l %}{{ pack(packs.get((p.sku, 'o', b.id)), b.tag ~ ' · ' ~ (n|dec), p.sku, 'text-bg-light') }}{% endfor %}{% else %}<span class="text-muted">sem saldo</span>{% endfor %}</td>
+                  {% if p.shortage %}<div class="text-danger" style="font-size:.72rem">{{ _h("sem bin: {shortage} un.", shortage=(p.shortage)) }}</div>{% endif %}</td>
+                <td class="text-end">{{ p.needed|dec }}{% if p.needed != p.qty %}<div class="text-muted">{{ _h("base {qty}", qty=(p.qty|dec)) }}</div>{% endif %}{% set cur = p.current.values()|sum %}{% if (cur - p.needed)|abs > 0.0001 %}<div class="text-muted" title="{{ _("O plano reserva espaço para o planejado; as bins recebem só o saldo físico, o resto fica como reserva.") }}">{{ _h("saldo hoje {cur}", cur=(cur|dec)) }}</div>{% endif %}</td>
+                <td>{% for l, q in p.current|dictsort %}<div class="nk-line"><span class="mono">{{ locs[l][0] }}</span> · {{ q|dec }}</div>{% for b, n in p.orig_bins if b.location_id == l %}{{ pack(packs.get((p.sku, 'o', b.id)), b.tag ~ ' · ' ~ (n|dec), p.sku, 'text-bg-light') }}{% endfor %}{% else %}<span class="text-muted">{{ _("sem saldo") }}</span>{% endfor %}</td>
                 <td>
                   {% if unlimited %}
                     {% set per = {} %}{% for b, n in p.allocations %}{% set _ = per.setdefault(b.type_id, []).append(n) %}{% endfor %}
-                    {% for t, ns in per.items() %}<div class="nk-line"><span class="badge text-bg-light border mono">{{ ns|length }}× {{ types[t].code if t in types else '?' }}</span> <span class="text-muted">({{ ns|join(' + ') }} un.)</span></div>{% endfor %}
+                    {% for t, ns in per.items() %}<div class="nk-line"><span class="badge text-bg-light border mono">{{ ns|length }}× {{ types[t].code if t in types else '?' }}</span> <span class="text-muted">{{ _h("({ns} un.)", ns=(ns|join(' + '))) }}</span></div>{% endfor %}
                     <div>{% for b, n in p.allocations %}{{ pack(packs.get((p.sku, b.id)), plbl(b, n, p.sku)|trim, p.sku, 'bg-primary-subtle text-primary-emphasis') }}{% endfor %}</div>
                   {% else %}
                     {% set groups = {} %}{% for b, n in p.allocations %}{% set _ = groups.setdefault(b.location_id, []).append((b, n)) %}{% endfor %}
                     {% for l, items in groups.items() %}<div class="nk-line"><span class="mono">{{ locs[l][0] }}</span>:</div>{% for b, n in items %}{{ pack(packs.get((p.sku, b.id)), plbl(b, n, p.sku)|trim, p.sku, 'text-bg-light' if p.sku in b.orig else 'bg-primary-subtle text-primary-emphasis') }}{% endfor %}{% endfor %}
                   {% endif %}
                 </td>
-                <td>{% if unlimited %}<span class="text-muted">— (dimensionamento)</span>{% else %}{% for mv in p.moves %}<div class="nk-line text-nowrap"><span class="mono">{{ locs[mv.src_loc][0] }}</span> <small class="text-muted">{{ mv.src_bin.tag if mv.src_bin else 'fora de bin' }}</small> → <span class="mono">{{ locs[mv.dst_loc][0] }}</span> <small class="text-muted">{{ mv.dst_bin.tag }}</small> · {{ mv.qty|dec }}</div>{% else %}<span class="text-muted">fica onde está</span>{% endfor %}{% endif %}</td>
+                <td>{% if unlimited %}<span class="text-muted">{{ _("— (dimensionamento)") }}</span>{% else %}{% for mv in p.moves %}<div class="nk-line text-nowrap"><span class="mono">{{ locs[mv.src_loc][0] }}</span> <small class="text-muted">{{ mv.src_bin.tag if mv.src_bin else _('fora de bin') }}</small> → <span class="mono">{{ locs[mv.dst_loc][0] }}</span> <small class="text-muted">{{ mv.dst_bin.tag }}</small> · {{ mv.qty|dec }}</div>{% else %}<span class="text-muted">{{ _("fica onde está") }}</span>{% endfor %}{% endif %}</td>
                 <td class="text-end">{{ delta(m.bins_delta) }}</td>
                 <td class="text-end">{{ delta(m.volume_delta, ' L', 1) }}</td>
                 <td class="text-end">{{ delta(m.width_delta, ' cm') }}</td>
@@ -556,7 +527,7 @@
                 <td class="text-end">{{ pct(m.fill_after) }}</td>
               </tr>
             {% else %}
-              <tr><td colspan="12" class="text-center text-muted py-4">Nenhum SKU nesta situação.</td></tr>
+              <tr><td colspan="12" class="text-center text-muted py-4">{{ _("Nenhum SKU nesta situação.") }}</td></tr>
             {% endfor %}
             {% else %}
             {% for r in rows %}{% set av = arr_views.get(r.id, {}) %}
@@ -572,7 +543,7 @@
                     <div class="nk-line">{% if r.placement and (r.placement|length > 1 or r.own_level not in r.placement) %}{{ placed(r.placement, r.own_level, types) }}{% else %}{{ cfg(r.suggested, types) }}{% endif %}</div>
                     {% for label, items, pk in (av.get('after') or [])[:8] %}{{ pack(pk, label, none, 'bg-primary-subtle text-primary-emphasis') }}{% endfor %}
                     {% if (av.get('after') or [])|length > 8 %}<span class="text-muted">+{{ av.after|length - 8 }}</span>{% endif %}
-                  {% elif r.status == 'ok' %}<span class="text-muted">manter</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                  {% elif r.status == 'ok' %}<span class="text-muted">{{ _("manter") }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
                 <td class="text-end">{{ delta(r.bins_delta) if r.applicable else '' }}</td>
                 <td class="text-end">{{ delta(r.volume_delta, ' L', 1) if r.applicable else '' }}</td>
                 <td class="text-end">{{ delta(r.width_delta, ' cm') if r.applicable else '' }}</td>
@@ -580,7 +551,7 @@
                 <td class="text-end">{{ pct(r.fill_after) if r.applicable or r.status == 'ok' else '' }}</td>
               </tr>
             {% else %}
-              <tr><td colspan="12" class="text-center text-muted py-4">Nenhum endereço nesta situação.</td></tr>
+              <tr><td colspan="12" class="text-center text-muted py-4">{{ _("Nenhum endereço nesta situação.") }}</td></tr>
             {% endfor %}
             {% endif %}
             </tbody>
@@ -595,8 +566,7 @@
     </form>
 
     {% if POOL and freed_addr and not unlimited %}
-    <div class="card mb-3"><div class="card-body small"><b>{{ freed_addr|length }} endereço(s) ficam vazios</b> (todas as bins livres):
-      <span class="mono">{{ freed_addr[:60]|join(', ') }}</span>{% if freed_addr|length > 60 %}…{% endif %}</div></div>
+    <div class="card mb-3"><div class="card-body small">{{ _h("<b>{freed_addr} endereço(s) ficam vazios</b> (todas as bins livres): <span class=\"mono\">{v}</span>", freed_addr=(freed_addr|length), v=(freed_addr[:60]|join(', '))) }}{% if freed_addr|length > 60 %}…{% endif %}</div></div>
     {% endif %}
     {% endif %}
   </div>
@@ -634,12 +604,12 @@
   if (!f) return;
   document.getElementById('applySel').addEventListener('click', e => {
     const n = f.querySelectorAll('.opt-check:checked').length;
-    if (!n) { e.preventDefault(); alert('Selecione ao menos um item com sugestão.'); return; }
+    if (!n) { e.preventDefault(); alert(_t('Selecione ao menos um item com sugestão.')); return; }
     const msg = {{ ("'Aplicar o plano para ' + n + ' SKU(s)? SKUs que precisam sair das bins de destino vão junto.'" if POOL else "'Substituir as bins de ' + n + ' endereço(s) pela sugestão?'")|safe }};
     if (!confirm(msg)) e.preventDefault();
   });
   document.getElementById('applyAll').addEventListener('click', e => {
-    if (!confirm('Aplicar TODO o plano do escopo analisado (recalculado com os mesmos parâmetros)?')) e.preventDefault();
+    if (!confirm(_t('Aplicar TODO o plano do escopo analisado (recalculado com os mesmos parâmetros)?'))) e.preventDefault();
   });
 })();
 </script>

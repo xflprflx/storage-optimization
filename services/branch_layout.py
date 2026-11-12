@@ -40,6 +40,7 @@ from services.addressing import scope_filter
 from services.layout_service import natural_key
 from services.route_sim import Node, dist
 from services.site_planner import is_floor
+from services.i18n import N_, _, tr
 
 PALLET_H = 14.0  # altura do palete de madeira (cm): no "Palete no chão" as bins ficam em cima dele
 
@@ -50,7 +51,7 @@ END_MARGIN = 60.0  # a saída do corredor fica um pouco além da ponta das filei
 DEFAULT_BAY_W = 100.0
 DEFAULT_DEPTH = 60.0
 DEFAULT_PITCH = 50.0  # altura de cada nível quando a estante não tem estrutura (cm)
-SIDES = {"odd": "ímpares", "even": "pares", "all": "todas"}
+SIDES = {"odd": N_("ímpares"), "even": "pares", "all": "todas"}
 
 
 def _num(v, default: float, lo: float = 0.0, hi: float = 1e7) -> float:
@@ -201,7 +202,7 @@ def auto_layout(bays: dict[str, list[Bay]], mode: str = "aisle", aisle_w: float 
     length = max([front + length_of(row_bays(r, bays)) for r in rows] + [front + 500.0]) + 300.0
     width = y + 150.0
     return {"L": round(length), "W": round(width), "rows": rows, "obstacles": [],
-            "ref": {"x": 100.0, "y": round(width / 2), "label": "expedição"}}
+            "ref": {"x": 100.0, "y": round(width / 2), "label": _("expedição")}}
 
 
 def clean(data: dict) -> dict:
@@ -246,11 +247,11 @@ def clean(data: dict) -> dict:
         if isinstance(o, dict):
             obstacles.append({"x": round(_num(o.get("x"), 0, 0, L), 1), "y": round(_num(o.get("y"), 0, 0, W), 1),
                               "w": round(_num(o.get("w"), 100, 1, L), 1), "d": round(_num(o.get("d"), 100, 1, W), 1),
-                              "name": str(o.get("name") or "Obstáculo")[:60]})
+                              "name": str(o.get("name") or _("Obstáculo"))[:60]})
     ref = data.get("ref") or {}
     return {"L": L, "W": W, "rows": rows, "obstacles": obstacles,
             "ref": {"x": round(_num(ref.get("x"), 100, 0, L), 1), "y": round(_num(ref.get("y"), W / 2, 0, W), 1),
-                    "label": str(ref.get("label") or "expedição")[:60]}}
+                    "label": str(ref.get("label") or _("expedição"))[:60]}}
 
 
 @dataclass
@@ -408,8 +409,7 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
                 blocked = True
                 break
         if blocked:
-            g.warn.append(f"{r['aisle']} {SIDES.get(r['side'], '')}: pega pelos dois lados ignorada — há fileira ou obstáculo "
-                          f"encostado atrás (menos de {MIN_PASSAGE / 100:g} m)")
+            g.warn.append(_("{aisle} {side}: pega pelos dois lados ignorada — há fileira ou obstáculo encostado atrás (menos de {v} m)", aisle=r['aisle'], side=SIDES.get(r['side'], ''), v=f"{MIN_PASSAGE / 100:g}"))
             continue
         info.append([ri, back, e, a0, a1, "back"])
     # corredores: faces que se olham ficam no mesmo; as demais têm o seu (cada face de fileira é uma entrada)
@@ -449,7 +449,7 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
             else:
                 covered[-1][1] = max(covered[-1][1], a1)
             reach = max(reach, a1)
-        pcs = [pc for k, *_ in members for pc in pair_c.get(k, [])]
+        pcs = [pc for k, *_x in members for pc in pair_c.get(k, [])]
         if pcs:
             c = sum(v for v, _g in pcs) / len(pcs)
             wdt = min(gp for _v, gp in pcs)
@@ -458,12 +458,12 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
             e, rf = info[k0][2], info[k0][1]
             c = e + (LONE_AISLE if rf["face"] == "+" else -LONE_AISLE)
             wdt = 2 * LONE_AISLE
-        mrows = [info[k][0] for k, *_ in members]
+        mrows = [info[k][0] for k, *_x in members]
         flow = next((rows[ri].get("flow") for ri in mrows if rows[ri].get("flow") in ("+", "-")), "")
         cor = Corridor(idx, rows[mrows[0]]["orient"], c, wdt, tuple(sorted(ends)), lo, hi,
                        {"+": 1, "-": -1}.get(flow, 0), mrows, [tuple(v) for v in covered])
         g.corridors.append(cor)
-        for k, *_ in members:
+        for k, *_x in members:
             ent_corr[(info[k][0], info[k][5])] = cor
     if with_net:
         g.net = _net(g)
@@ -493,8 +493,8 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
             odd = [b for b in miss if parity(b.bay) == 1]
             even = [b for b in miss if parity(b.bay) == 0]
             other = len(miss) - len(odd) - len(even)
-            parts = [f"{len(odd)} ímpares" if odd else "", f"{len(even)} pares" if even else "",
-                     f"{other} sem número" if other else ""]
+            parts = [_("{len} ímpares", len=len(odd)) if odd else "", f"{len(even)} pares" if even else "",
+                     _("{other} sem número", other=other) if other else ""]
             g.unplaced.append(f"{a} ({', '.join(p for p in parts if p)})")
     return g
 
@@ -566,21 +566,21 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
         out.append(f'<rect x="{p.x:.0f}" y="{p.y:.0f}" width="{p.w:.0f}" height="{p.d:.0f}" '
                    f'fill="{"url(#nkPalletB)" if fl else "#cfd8df"}" stroke="#7b8a95" '
                    f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}'
-                   f'{" · palete no chão" if fl else ""}</title></rect>')
+                   f'{_(" · palete no chão") if fl else ""}</title></rect>')
     rows = d["rows"]
     blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h, ri in g.row_rects:
         r = rows[ri]
         out.append(f'<rect x="{x:.0f}" y="{y:.0f}" width="{w:.0f}" height="{h:.0f}" fill="none" stroke="#24548c" stroke-width="{fs / 8:.1f}"/>')
-        side = {"odd": " ímp.", "even": " pares", "all": ""}[r["side"]]
+        side = {"odd": _(" ímp."), "even": " pares", "all": ""}[r["side"]]
         others = [b_ for k, b_ in enumerate(blocks) if k != ri]
         tx, ty, anchor = label_spot((x, y, w, h), r["orient"], r["aisle"] + side, fs, others, L, W)
         out.append(f'<text x="{tx:.0f}" y="{ty:.0f}" font-size="{fs:.0f}" fill="#24548c" text-anchor="{anchor}" '
                    f'font-weight="600" stroke="#fbfcfd" stroke-width="{fs / 5:.1f}" paint-order="stroke">'
                    f'{_esc(r["aisle"])}{side}</text>')
     ref = d["ref"]
-    out.append(f'<circle cx="{ref["x"]:.0f}" cy="{ref["y"]:.0f}" r="{fs * 0.6:.0f}" fill="#d62728"><title>Referência: '
-               f'{_esc(ref["label"])}</title></circle>')
+    out.append(f'<circle cx="{ref["x"]:.0f}" cy="{ref["y"]:.0f}" r="{fs * 0.6:.0f}" fill="#d62728"><title>'
+               f'{_esc(_("Referência: {label}", label=tr(ref["label"])))}</title></circle>')
     out.append("</svg>")
     return "".join(out)
 
@@ -625,7 +625,7 @@ def flow_arrows(c: Corridor, fs: float) -> list[str]:
         else:
             pts = [(c.center, tip), (c.center - a * 0.8, back), (c.center + a * 0.8, back)]
         out.append('<polygon points="' + " ".join(f"{x:.0f},{y:.0f}" for x, y in pts)
-                   + '" fill="#2f6db5" opacity=".75"><title>Mão única</title></polygon>')
+                   + _('" fill="#2f6db5" opacity=".75"><title>Mão única</title></polygon>'))
     return out
 
 
@@ -787,7 +787,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         else:
             sid = 0
             if 0 not in structs:
-                structs[0] = {"id": 0, "code": "Sem estrutura", "name": "Estante sem estrutura cadastrada", "qty": 0,
+                structs[0] = {"id": 0, "code": _("Sem estrutura"), "name": _("Estante sem estrutura cadastrada"), "qty": 0,
                               "color": "#8a96a0", "golden": None, "golden_levels": []}
         structs[sid]["qty"] += 1
         lv = level_stack(st, [r.level for r in rows_here], sh["levels"].get(ckey, {}), b.base)
@@ -834,7 +834,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
             cap = sum((float(types[tt].volume or 0) * qq) for tt, qq, _s in bl_ if tt in types)
             fill = round(vol_of[r.id] / cap * 100, 1) if r.id in vol_of and cap else None
             sku = sku_of.get(r.id, ("", ""))[0]
-            for _ in range(q):
+            for _x in range(q):
                 cur, across = state[n]
                 if cur + bw > front + 1e-6 and cur > 0:
                     cur, across = 0.0, across + bd
@@ -886,7 +886,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
     blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h_, ri in g.row_rects:
         r = d["rows"][ri]
-        lab = r["aisle"] + {"odd": " ímp.", "even": " pares", "all": ""}[r["side"]]
+        lab = r["aisle"] + {"odd": _(" ímp."), "even": " pares", "all": ""}[r["side"]]
         # o rótulo vai para um lado livre da fileira (não fica escondido atrás de outra fileira)
         tx, ty, anchor = label_spot((x, y, w, h_), r["orient"], lab, 60.0, [b_ for k, b_ in enumerate(blocks) if k != ri],
                                     d["L"], d["W"])
@@ -955,11 +955,11 @@ def from_plan(plan) -> dict:
     for i, r in enumerate(rows):
         r["id"] = i + 1
     obstacles = [{"x": round(o.x_m * 100, 1), "y": round(o.y_m * 100, 1), "w": round(o.length_m * 100, 1),
-                  "d": round(o.width_m * 100, 1), "name": (o.name or "Obstáculo")[:60]}
+                  "d": round(o.width_m * 100, 1), "name": (o.name or _("Obstáculo"))[:60]}
                  for o in (getattr(fl, "obstacles", None) or []) if getattr(o, "kind", "obstacle") == "obstacle"]
     ref = (plan.slotting or {}).get("ref") or ref_point(plan, {})
     return {"L": round(fl.length_cm, 1), "W": round(fl.width_cm, 1), "rows": rows, "obstacles": obstacles,
-            "ref": {"x": round(ref["x"], 1), "y": round(ref["y"], 1), "label": str(ref.get("label") or "expedição")[:60]}}
+            "ref": {"x": round(ref["x"], 1), "y": round(ref["y"], 1), "label": str(ref.get("label") or _("expedição"))[:60]}}
 
 
 def address_golden(db: Session, branch_id: int, warehouse_id: Optional[int], loc_ids: Optional[list] = None) -> dict:

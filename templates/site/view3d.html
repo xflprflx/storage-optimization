@@ -27,99 +27,99 @@
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
   <div>
     <a href="{{ v3.back_url }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ v3.back_label }}</a>
-    <h5 class="mb-0"><i class="bi bi-box"></i> Arranjo 3D — {{ v3.name }}</h5>
-    <div class="small text-muted" id="nk3dSummary">Carregando o plano…</div>
+    <h5 class="mb-0"><i class="bi bi-box"></i> {{ _h("Arranjo 3D — {name}", name=(v3.name)) }}</h5>
+    <div class="small text-muted" id="nk3dSummary">{{ _("Carregando o plano…") }}</div>
   </div>
   <div class="d-flex gap-1 flex-wrap">{% for href, icon, text in v3.links %}<a href="{{ href }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-{{ icon }}"></i> {{ text }}</a>{% endfor %}</div>
 </div>
 
 <div class="card mb-2"><div class="card-body py-2 d-flex flex-wrap align-items-center gap-3 small">
-  <div class="d-flex align-items-center gap-1"><span class="text-muted">Cor das bins:</span>
+  <div class="d-flex align-items-center gap-1"><span class="text-muted">{{ _("Cor das bins:") }}</span>
     <select class="form-select form-select-sm w-auto" id="nkColor">
-      <option value="type">Tipo de bin</option>
-      <option value="fill">Ocupação das bins (%)</option>
-      <option value="struct">Estrutura</option>
+      <option value="type">{{ _("Tipo de bin") }}</option>
+      <option value="fill">{{ _("Ocupação das bins (%)") }}</option>
+      <option value="struct">{{ _("Estrutura") }}</option>
       <option value="sku">SKU</option>
-      <option value="golden">Zonas de ouro (pega e caminhada)</option>
-      <option value="abc">Curva ABC (saída)</option>
+      <option value="golden">{{ _("Zonas de ouro (pega e caminhada)") }}</option>
+      <option value="abc">{{ _("Curva ABC (saída)") }}</option>
     </select></div>
-  <div class="d-flex align-items-center gap-1"><span class="text-muted">Corredor:</span>
+  <div class="d-flex align-items-center gap-1"><span class="text-muted">{{ _("Corredor:") }}</span>
     <div class="dropdown">
       <button type="button" class="form-select form-select-sm text-start" style="min-width:110px" id="nkAisleBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-              title="Mostra só os corredores marcados (um ou vários)">Todos</button>
+              title="{{ _("Mostra só os corredores marcados (um ou vários)") }}">{{ _("Todos") }}</button>
       <div class="dropdown-menu p-2 small" id="nkAisle" style="max-height:55vh;overflow:auto;min-width:180px">
-        <div class="d-flex gap-2 mb-1"><a href="#" id="nkAisleAll">Todos</a><a href="#" id="nkAisleInv">Inverter</a></div>
+        <div class="d-flex gap-2 mb-1"><a href="#" id="nkAisleAll">{{ _("Todos") }}</a><a href="#" id="nkAisleInv">{{ _("Inverter") }}</a></div>
         <div id="nkAisleList"></div>
       </div>
     </div></div>
-  <div class="d-flex align-items-center gap-1" title="Esconde o que fica acima desta altura, para ver os níveis de dentro">
-    <span class="text-muted">Altura até</span><input type="range" class="form-range" style="width:130px" id="nkCut" min="10" max="1000" step="5">
+  <div class="d-flex align-items-center gap-1" title="{{ _("Esconde o que fica acima desta altura, para ver os níveis de dentro") }}">
+    <span class="text-muted">{{ _("Altura até") }}</span><input type="range" class="form-range" style="width:130px" id="nkCut" min="10" max="1000" step="5">
     <span id="nkCutV" class="mono"></span></div>
-  <input class="form-control form-control-sm" style="max-width:210px" type="search" id="nkFind" placeholder="Buscar SKU ou endereço">
-  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">Bins</label></div>
-  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">Estruturas</label></div>
-  <div class="form-check form-switch mb-0" id="nkGoldWrap"><input class="form-check-input" type="checkbox" id="nkGold" checked><label class="form-check-label" for="nkGold" title="Faixa de altura da zona de ouro de cada estrutura">Zona de ouro</label></div>
-  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">Paredes</label></div>
+  <input class="form-control form-control-sm" style="max-width:210px" type="search" id="nkFind" placeholder="{{ _("Buscar SKU ou endereço") }}">
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">{{ _("Bins") }}</label></div>
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">{{ _("Estruturas") }}</label></div>
+  <div class="form-check form-switch mb-0" id="nkGoldWrap"><input class="form-check-input" type="checkbox" id="nkGold" checked><label class="form-check-label" for="nkGold" title="{{ _("Faixa de altura da zona de ouro de cada estrutura") }}">{{ _("Zona de ouro") }}</label></div>
+  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">{{ _("Paredes") }}</label></div>
   <div class="btn-group btn-group-sm" role="group">
-    <button type="button" class="btn btn-outline-secondary" data-view="persp" title="Vista em perspectiva"><i class="bi bi-box"></i> 3D</button>
-    <button type="button" class="btn btn-outline-secondary" data-view="top" title="Vista de cima"><i class="bi bi-grid-3x3"></i> Topo</button>
-    <button type="button" class="btn btn-outline-secondary" data-view="front" title="Vista de frente (pelas docas)"><i class="bi bi-layout-split"></i> Frente</button>
+    <button type="button" class="btn btn-outline-secondary" data-view="persp" title="{{ _("Vista em perspectiva") }}"><i class="bi bi-box"></i> 3D</button>
+    <button type="button" class="btn btn-outline-secondary" data-view="top" title="{{ _("Vista de cima") }}"><i class="bi bi-grid-3x3"></i> {{ _("Topo") }}</button>
+    <button type="button" class="btn btn-outline-secondary" data-view="front" title="{{ _("Vista de frente (pelas docas)") }}"><i class="bi bi-layout-split"></i> {{ _("Frente") }}</button>
   </div>
 </div></div>
 
 <div class="nk3d-wrap" id="nk3d">
-  <div class="nk3d-panel nk3d-help">Arraste para girar · botão direito para mover · roda para aproximar (em direção ao mouse) · duplo clique centraliza no ponto · clique numa bin para ver o endereço</div>
+  <div class="nk3d-panel nk3d-help">{{ _("Arraste para girar · botão direito para mover · roda para aproximar (em direção ao mouse) · duplo clique centraliza no ponto · clique numa bin para ver o endereço") }}</div>
   <div class="nk3d-panel nk3d-legend" id="nkLegend"></div>
   <div class="nk3d-panel nk3d-info" id="nkInfo"></div>
   <div class="nk3d-tools">
-    <button type="button" class="btn btn-sm btn-success{{ '' if v3.routes_url else ' d-none' }}" id="nkWalkBtn" title="Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)"><i class="bi bi-person-walking"></i> Simular caminhada</button>
-    <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="Maximiza a vista 3D (Esc volta)"><i class="bi bi-arrows-fullscreen"></i></button>
+    <button type="button" class="btn btn-sm btn-success{{ '' if v3.routes_url else ' d-none' }}" id="nkWalkBtn" title="{{ _("Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular caminhada") }}</button>
+    <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="{{ _("Maximiza a vista 3D (Esc volta)") }}"><i class="bi bi-arrows-fullscreen"></i></button>
   </div>
   <div class="nk3d-panel nk3d-hud" id="nkHud"></div>
   <div class="nk3d-panel nk3d-walk" id="nkWalk">
-    <div class="d-flex justify-content-between align-items-center mb-1"><b><i class="bi bi-person-walking"></i> Simulação de caminhada</b>
-      <button type="button" class="btn-close btn-sm" id="nkWalkClose" aria-label="Fechar"></button></div>
+    <div class="d-flex justify-content-between align-items-center mb-1"><b><i class="bi bi-person-walking"></i> {{ _("Simulação de caminhada") }}</b>
+      <button type="button" class="btn-close btn-sm" id="nkWalkClose" aria-label="{{ _("Fechar") }}"></button></div>
     <div class="text-muted mb-1" id="nkWalkMsg"></div>
-    <label class="form-label small mb-0" for="nkOrder">Pedido <span class="text-muted">(maiores caminhadas primeiro)</span></label>
+    <label class="form-label small mb-0" for="nkOrder">{{ _h("Pedido <span class=\"text-muted\">(maiores caminhadas primeiro)</span>") }}</label>
     <select class="form-select form-select-sm mb-1" id="nkOrder"></select>
-    <label class="form-label small mb-0" for="nkRoute">Rota</label>
+    <label class="form-label small mb-0" for="nkRoute">{{ _("Rota") }}</label>
     <select class="form-select form-select-sm mb-1" id="nkRoute">
-      <option value="all">Comparar as 3 ao mesmo tempo</option>
-      <option value="list">Lista de separação (ordem dos endereços)</option>
-      <option value="s">Serpentina (rota em S)</option>
-      <option value="opt">Otimizada</option>
+      <option value="all">{{ _("Comparar as 3 ao mesmo tempo") }}</option>
+      <option value="list">{{ _("Lista de separação (ordem dos endereços)") }}</option>
+      <option value="s">{{ _("Serpentina (rota em S)") }}</option>
+      <option value="opt">{{ _("Otimizada") }}</option>
     </select>
     <div class="d-flex gap-1 align-items-center mb-1">
-      <button type="button" class="btn btn-sm btn-primary" id="nkPlay" title="Iniciar / pausar (barra de espaço)"><i class="bi bi-play-fill"></i></button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" id="nkRestart" title="Do início"><i class="bi bi-skip-start-fill"></i></button>
-      <input type="range" class="form-range flex-grow-1" id="nkProg" min="0" max="1000" value="0" title="Arraste para avançar ou voltar">
+      <button type="button" class="btn btn-sm btn-primary" id="nkPlay" title="{{ _("Iniciar / pausar (barra de espaço)") }}"><i class="bi bi-play-fill"></i></button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="nkRestart" title="{{ _("Do início") }}"><i class="bi bi-skip-start-fill"></i></button>
+      <input type="range" class="form-range flex-grow-1" id="nkProg" min="0" max="1000" value="0" title="{{ _("Arraste para avançar ou voltar") }}">
     </div>
     <div class="row g-1 mb-1">
-      <div class="col-6"><label class="form-label small mb-0" for="nkSpeed">Velocidade do vídeo</label>
-        <select class="form-select form-select-sm" id="nkSpeed"><option value="1">tempo real</option><option value="2">2×</option><option value="5">5×</option>
+      <div class="col-6"><label class="form-label small mb-0" for="nkSpeed">{{ _("Velocidade do vídeo") }}</label>
+        <select class="form-select form-select-sm" id="nkSpeed"><option value="1">{{ _("tempo real") }}</option><option value="2">2×</option><option value="5">5×</option>
           <option value="10" selected>10×</option><option value="20">20×</option><option value="50">50×</option></select></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkCam">Câmera</label>
-        <select class="form-select form-select-sm" id="nkCam"><option value="follow">Seguir o separador</option><option value="fp">Primeira pessoa</option>
-          <option value="top">De cima (rota toda)</option><option value="free">Livre (mouse)</option></select></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="Velocidade de caminhada do separador">Caminhada (m/s)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkCam">{{ _("Câmera") }}</label>
+        <select class="form-select form-select-sm" id="nkCam"><option value="follow">{{ _("Seguir o separador") }}</option><option value="fp">{{ _("Primeira pessoa") }}</option>
+          <option value="top">{{ _("De cima (rota toda)") }}</option><option value="free">{{ _("Livre (mouse)") }}</option></select></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkWalkV" min="0.2" max="3" step="0.1" value="1.0"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="Tempo fixo parado em cada endereço (chegar, localizar, conferir)">Tempo por parada (s)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="{{ _("Tempo fixo parado em cada endereço (chegar, localizar, conferir)") }}">{{ _("Tempo por parada (s)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="10"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkPiece" title="Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo">Tempo por peça (s)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkPiece" title="{{ _("Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo") }}">{{ _("Tempo por peça (s)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkPiece" min="0" max="120" step="0.5" value="2"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkGold" title="Tempo a mais por item (linha) num nível fora da zona de ouro da pega">Fora do ouro (s/item)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkGold" title="{{ _("Tempo a mais por item (linha) num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/item)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkGold" min="0" max="120" step="0.5" value="5"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkGoldP" title="Tempo a mais por peça num nível fora da zona de ouro da pega">Fora do ouro (s/peça)</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkGoldP" title="{{ _("Tempo a mais por peça num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/peça)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="0"></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
-      <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="Grava a simulação do início ao fim e baixa o vídeo (.webm)"><i class="bi bi-record-circle"></i> Gravar vídeo</button>
+      <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="{{ _("Grava a simulação do início ao fim e baixa o vídeo (.webm)") }}"><i class="bi bi-record-circle"></i> {{ _("Gravar vídeo") }}</button>
       <span class="small text-muted" id="nkRecMsg"></span>
     </div>
     <div class="small" id="nkWalkInfo"></div>
     <div class="nk3d-stops mt-1" id="nkStops"></div>
   </div>
-  <div class="nk3d-msg" id="nkMsg">Carregando…</div>
+  <div class="nk3d-msg" id="nkMsg">{{ _("Carregando…") }}</div>
 </div>
 {% endblock %}
 
@@ -134,24 +134,22 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const host = document.getElementById('nk3d'), msg = document.getElementById('nkMsg');
 const $ = id => document.getElementById(id);
-const fmt = (v, d = 1) => v == null ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
+const fmt = (v, d = 1) => v == null ? '—' : (Math.round(v * 10 ** d) / 10 ** d).toLocaleString(NK_I18N.locale, { maximumFractionDigits: d });
 const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const M = v => v / 100;  // cm -> m (cena em metros)
 
 let data;
 try {
   data = await (await fetch({{ v3.data_url|tojson }})).json();
-} catch (e) { data = { error: 'Falha ao carregar o plano.' }; }
+} catch (e) { data = { error: _t('Falha ao carregar o plano.') }; }
 if (data.error) {
-  msg.innerHTML = `<div><i class="bi bi-info-circle fs-4"></i><br>${esc(data.error)}<br><a href="{{ v3.fix_url }}">{{ v3.fix_label }}</a></div>`;
+  msg.innerHTML = '<div><i class="bi bi-info-circle fs-4"><\/i><br>' + esc(data.error) + '<br><a href="{{ v3.fix_url }}">' + {{ (tr(v3.fix_label) or '')|tojson }} + '<\/a>' + '<\/div>';
   $('nk3dSummary').textContent = '';
   throw new Error(data.error);
 }
 msg.remove();
 const B = data.building;
-$('nk3dSummary').textContent = `${fmt(B.L / 100, 2)} × ${fmt(B.W / 100, 2)} m · pé-direito ${fmt(B.H / 100, 2)} m · ` +
-  `${data.kpis.modules} estantes · ${data.bins.length} bins · ocupação das bins ${fmt(data.kpis.bin_fill)}%` +
-  (data.kpis.level_fill != null ? ` · ocupação dos níveis ${fmt(data.kpis.level_fill)}%` : '') + (data.note ? ` · ${data.note}` : '');
+$('nk3dSummary').textContent = _t('{fmt} × {fmt2} m · pé-direito {fmt3} m · {modules} estantes · {bins} bins · ocupação das bins {fmt4}%{level_fill}{note}', {fmt: fmt(B.L / 100, 2), fmt2: fmt(B.W / 100, 2), fmt3: fmt(B.H / 100, 2), modules: data.kpis.modules, bins: data.bins.length, fmt4: fmt(data.kpis.bin_fill), level_fill: (data.kpis.level_fill != null ? ' ' + _t('· ocupação dos níveis {fmt}%', {fmt: fmt(data.kpis.level_fill)}) : ''), note: (data.note ? ` · ${data.note}` : '')});
 
 // ------------------------------------------------------------------ cena
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -232,7 +230,7 @@ let refLabel = null;
 if (data.ref) {  // ponto de referência da separação (expedição): marcador
   const pin = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 16), new THREE.MeshLambertMaterial({ color: '#d62728' }));
   pin.rotation.x = Math.PI; pin.position.set(M(data.ref.x), 0.6, M(data.ref.y)); scene.add(pin);
-  refLabel = label(`Referência: ${data.ref.label}`, M(data.ref.x), 1.6, M(data.ref.y), '#d62728');
+  refLabel = label(_t('Referência: {label}', {label: data.ref.label}), M(data.ref.x), 1.6, M(data.ref.y), '#d62728');
   scene.add(refLabel);
 }
 const aisleLabels = new THREE.Group();
@@ -243,14 +241,14 @@ scene.add(aisleLabels);
 const structById = Object.fromEntries(data.structs.map(s => [s.id, s]));
 const mods = data.modules;
 const aisleOf = m => m.code.split('-')[0];
-[...new Set(mods.map(aisleOf))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }))
+[...new Set(mods.map(aisleOf))].sort((a, b) => a.localeCompare(b, NK_I18N.locale, { numeric: true }))
   .forEach(a => $('nkAisleList').insertAdjacentHTML('beforeend', `<div class="form-check"><input class="form-check-input" type="checkbox" value="${esc(a)}" id="nkA-${esc(a)}">` +
     `<label class="form-check-label" for="nkA-${esc(a)}">${esc(a)}</label></div>`));
 // corredores marcados (nenhum marcado = todos)
 const aisleSel = () => new Set([...document.querySelectorAll('#nkAisleList input:checked')].map(i => i.value));
 function aisleText() {
   const s = [...aisleSel()];
-  $('nkAisleBtn').textContent = !s.length ? 'Todos' : s.length <= 3 ? s.join(', ') : `${s.length} corredores`;
+  $('nkAisleBtn').textContent = !s.length ? _t('Todos') : s.length <= 3 ? s.join(', ') : `${s.length} corredores`;
 }
 const maxH = Math.max(B.H, ...mods.map(m => m.h));
 $('nkCut').max = Math.ceil(maxH / 5) * 5; $('nkCut').value = $('nkCut').max;
@@ -336,29 +334,24 @@ function rebuild() {
 
 function legend(mode) {
   const el = $('nkLegend');
-  if (findSet) { el.innerHTML = `<b>Busca:</b> ${findSet.size} bin(s) encontradas <span class="nk3d-sw" style="background:#e11d48"></span>`; return; }
+  if (findSet) { el.innerHTML = _t('<b>Busca:<\/b> {findSet} bin(s) encontradas <span class="nk3d-sw" style="background:#e11d48"><\/span>', {findSet: findSet.size}); return; }
   if (mode === 'fill') {
-    el.innerHTML = `<b>Ocupação das bins</b> <span class="text-muted">(volume dos produtos ÷ volume da bin)</span>
-      <div class="nk3d-grad my-1"></div><div class="d-flex justify-content-between"><span>0%</span><span>50%</span><span>100%</span></div>
-      <div class="mt-1"><span class="nk3d-sw" style="background:#b8c0c6"></span>sem dimensões · média ${fmt(data.kpis.bin_fill)}%</div>`;
+    el.innerHTML = '<b>' + _t('Ocupação das bins') + '<\/b> <span class="text-muted">' + _t('(volume dos produtos ÷ volume da bin)') + '<\/span>\n      <div class="nk3d-grad my-1"><\/div><div class="d-flex justify-content-between"><span>0%<\/span><span>50%<\/span><span>100%<\/span><\/div>\n      <div class="mt-1">' + _t('<span class="nk3d-sw" style="background:#b8c0c6"><\/span>sem dimensões · média {fmt}%', {fmt: fmt(data.kpis.bin_fill)}) + '<\/div>';
   } else if (mode === 'struct') {
-    el.innerHTML = '<b>Estruturas</b>' + data.structs.map(s => `<div><span class="nk3d-sw" style="background:${s.color}"></span>${esc(s.code)} (${s.qty})</div>`).join('');
+    el.innerHTML = _t('<b>Estruturas<\/b>{structs}', {structs: data.structs.map(s => `<div><span class="nk3d-sw" style="background:${s.color}"></span>${esc(s.code)} (${s.qty})</div>`).join('')});
   } else if (mode === 'abc') {
     const n = c => data.bins.filter(b => b[12] === c).length;
-    el.innerHTML = '<b>Curva ABC</b> <span class="text-muted">(pela saída)</span>' +
-      [['A', '#d62728', '80% das saídas'], ['B', '#ff9f1c', 'até 95%'], ['C', '#9fb3c0', 'o resto']].map(([c, cl, t]) =>
-        `<div><span class="nk3d-sw" style="background:${cl}"></span>${c} · ${t} · ${n(c)} bins</div>`).join('') +
-      (data.bins.some(b => b[12]) ? '' : '<div class="text-muted">Sem dados de saída no projeto.</div>');
+    el.innerHTML = _t('<b>Curva ABC<\/b> <span class="text-muted">(pela saída)<\/span>{v}{some}', {v: [['A', '#d62728', _t('80% das saídas')], ['B', '#ff9f1c', _t('até 95%')], ['C', '#9fb3c0', _t('o resto')]].map(([c, cl, t]) =>
+        '<div><span class="nk3d-sw" style="background:' + cl + '"><\/span>' + _t('{c} · {t} · {n} bins', {c, t, n: n(c)}) + '<\/div>').join(''), some: (data.bins.some(b => b[12]) ? '' : '<div class="text-muted">' + _t('Sem dados de saída no projeto.') + '<\/div>')});
   } else if (mode === 'golden') {
-    el.innerHTML = '<b>Zonas de ouro</b><div class="text-muted">pega = altura por estrutura · caminhada = perto da referência</div>' + data.structs.filter(s => s.golden).map(s =>
-      `<div>${esc(s.code)}: ${fmt(s.golden[0] / 100, 2)}–${fmt(s.golden[1] / 100, 2)} m · níveis ${s.golden_levels.join(', ') || '—'}</div>`).join('') +
-      [['#e0a800', 'nas duas (pega e caminhada)', b => b[11] && b[13]], ['#f6d365', 'só pega (altura)', b => b[11] && !b[13]],
-       ['#f39c4a', 'só caminhada (perto da referência)', b => !b[11] && b[13]], ['#c3cbd1', 'fora das duas', b => !b[11] && !b[13]]]
-        .map(([c, t, f]) => `<div><span class="nk3d-sw" style="background:${c}"></span>${t} · ${data.bins.filter(f).length} bins</div>`).join('');
+    el.innerHTML = '<b>' + _t('Zonas de ouro') + '<\/b><div class="text-muted">' + _t('pega = altura por estrutura · caminhada = perto da referência') + '<\/div>' + (data.structs.filter(s => s.golden).map(s =>
+      '<div>' + _t('{esc}: {fmt}–{fmt2} m · níveis {golden_levels}', {esc: esc(s.code), fmt: fmt(s.golden[0] / 100, 2), fmt2: fmt(s.golden[1] / 100, 2), golden_levels: s.golden_levels.join(', ') || '—'}) + '<\/div>').join('')) + ([['#e0a800', _t('nas duas (pega e caminhada)'), b => b[11] && b[13]], ['#f6d365', _t('só pega (altura)'), b => b[11] && !b[13]],
+       ['#f39c4a', _t('só caminhada (perto da referência)'), b => !b[11] && b[13]], ['#c3cbd1', _t('fora das duas'), b => !b[11] && !b[13]]]
+        .map(([c, t, f]) => '<div><span class="nk3d-sw" style="background:' + c + '"><\/span>' + _t('{t} · {bins} bins', {t, bins: data.bins.filter(f).length}) + '<\/div>').join(''));
   } else if (mode === 'sku') {
-    el.innerHTML = `<b>SKU</b> <span class="text-muted">uma cor por SKU · ${Object.keys(data.skus).length} SKUs</span>`;
+    el.innerHTML = '<b>SKU<\/b> <span class="text-muted">' + _t('uma cor por SKU · {keys} SKUs', {keys: Object.keys(data.skus).length}) + '<\/span>';
   } else {
-    el.innerHTML = '<b>Tipos de bin</b>' + data.types.map(t => `<div><span class="nk3d-sw" style="background:${t.color}"></span>${esc(t.code)} · ${t.placed} bins · ocupação ${fmt(t.fill)}%</div>`).join('');
+    el.innerHTML = _t('<b>Tipos de bin<\/b>{types}', {types: data.types.map(t => '<div><span class="nk3d-sw" style="background:' + t.color + '"><\/span>' + _t('{esc} · {placed} bins · ocupação {fmt}%', {esc: esc(t.code), placed: t.placed, fmt: fmt(t.fill)}) + '<\/div>').join('')});
   }
 }
 
@@ -397,11 +390,7 @@ function select(i) {
   const b = data.bins[i], m = mods[b[8]], t = data.types[b[6]], s = structById[m.s];
   selBox.scale.set(M(b[3]), M(b[5]), M(b[4])); selBox.position.set(M(b[0] + b[3] / 2), M(b[2] + b[5] / 2), M(b[1] + b[4] / 2)); selBox.visible = true;
   const same = data.bins.filter(x => x[9] === b[9]).length;
-  info.innerHTML = `<div class="d-flex justify-content-between"><b class="mono">${esc(b[9])}</b><button type="button" class="btn-close btn-sm" aria-label="Fechar"></button></div>
-    <div><span class="mono">${esc(b[10])}</span> — ${esc(data.skus[b[10]] || '')}</div>
-    <div class="mt-1">Bin <span class="mono">${esc(t?.code)}</span> · ${same} bin(s) no endereço</div>
-    <div>Ocupação das bins: <b>${fmt(b[7])}%</b></div>${b[11] ? '<div><span class="badge text-bg-warning">Zona de ouro</span></div>' : ''}
-    <div class="text-muted">Estante ${esc(m.code)} · ${esc(s?.code)}${m.cap ? ' · cabeceira' : ''} · altura ${fmt(b[2] / 100, 2)} m</div>`;
+  info.innerHTML = '<div class="d-flex justify-content-between"><b class="mono">' + (esc(b[9])) + '<\/b><button type="button" class="btn-close btn-sm" aria-label="' + _t('Fechar') + '"><\/button><\/div>\n    <div><span class="mono">' + (esc(b[10])) + '<\/span> — ' + (esc(data.skus[b[10]] || '')) + '<\/div>\n    <div class="mt-1">' + _t('Bin <span class="mono">{esc}<\/span> · {same} bin(s) no endereço', {esc: esc(t?.code), same}) + '<\/div>\n    <div>' + _t('Ocupação das bins: <b>{fmt}%<\/b>', {fmt: fmt(b[7])}) + '<\/div>' + (b[11] ? '<div><span class="badge text-bg-warning">' + _t('Zona de ouro') + '<\/span><\/div>' : '') + '\n    <div class="text-muted">' + _t('Estante {esc} · {esc2}{cap} · altura {fmt} m', {esc: esc(m.code), esc2: esc(s?.code), cap: m.cap ? ' · cabeceira' : '', fmt: fmt(b[2] / 100, 2)}) + '<\/div>';
   info.style.display = 'block';
   info.querySelector('.btn-close').addEventListener('click', () => select(null));
 }
@@ -467,23 +456,22 @@ function openWalk(show = true, order = '') {
 }
 async function loadOrders(order) {
   if (!WK.list) {
-    $('nkWalkMsg').textContent = 'Carregando os pedidos…';
-    try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: 'Falha ao carregar os pedidos.' }; }
+    $('nkWalkMsg').textContent = _t('Carregando os pedidos…');
+    try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: _t('Falha ao carregar os pedidos.') }; }
     if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
     $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m</option>`).join('');
     const s = WK.list.summary;
-    $('nkWalkMsg').innerHTML = `${s.orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista ${fmt(s.list_avg)} m</span> · ` +
-      `<span style="color:#2f6db5">serpentina ${fmt(s.s_avg)} m</span> · <span style="color:#1a9850">otimizada ${fmt(s.opt_avg)} m</span>`;
+    $('nkWalkMsg').innerHTML = _t('{orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista {fmt} m<\/span> · <span style="color:#2f6db5">serpentina {fmt2} m<\/span> · <span style="color:#1a9850">otimizada {fmt3} m<\/span>', {orders: s.orders, fmt: fmt(s.list_avg), fmt2: fmt(s.s_avg), fmt3: fmt(s.opt_avg)});
   }
-  if (!WK.list.orders.length) { $('nkWalkInfo').textContent = 'Nenhum pedido da amostra tem SKUs no plano.'; return; }
+  if (!WK.list.orders.length) { $('nkWalkInfo').textContent = _t('Nenhum pedido da amostra tem SKUs no plano.'); return; }
   if (order && WK.list.orders.some(o => o.order === order)) $('nkOrder').value = order;
   if (!WK.data || WK.data.order !== $('nkOrder').value) await loadOrder($('nkOrder').value);
   else build();
 }
 async function loadOrder(order, autoplay = true) {
-  $('nkWalkInfo').textContent = 'Calculando as rotas…';
+  $('nkWalkInfo').textContent = _t('Calculando as rotas…');
   let d;
-  try { d = await (await fetch(routesUrl(order))).json(); } catch (e) { d = { error: 'Falha ao carregar o pedido.' }; }
+  try { d = await (await fetch(routesUrl(order))).json(); } catch (e) { d = { error: _t('Falha ao carregar o pedido.') }; }
   if (d.error) { $('nkWalkInfo').textContent = d.error; return; }
   WK.data = d; build();
   if (autoplay) play(true);
@@ -505,7 +493,7 @@ function build() {
   clearWalk();
   const d = WK.data, mode = $('nkRoute').value;
   const kinds = (mode === 'all' ? ['list', 's', 'opt'] : [mode]).filter(k => d.routes[k]);
-  if (!kinds.length) { $('nkWalkInfo').textContent = 'Rota indisponível para este pedido.'; return; }
+  if (!kinds.length) { $('nkWalkInfo').textContent = _t('Rota indisponível para este pedido.'); return; }
   const single = kinds.length === 1;
   // paradas: pino no piso e contorno das bins do endereço; ficam na cor de quem pegou primeiro
   const first = d.routes[kinds[0]];
@@ -572,15 +560,11 @@ function build() {
   WK.T = Math.max(...WK.walkers.map(w => w.T));
   const R0 = d.routes;
   const gain = R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
-  $('nkWalkInfo').innerHTML = `<b>Pedido ${esc(d.order)}</b> · ${d.lines} linha(s) · ${d.stops} parada(s)${d.units != null ? ` · ${fmt(d.units, 2)} peça(s)` : ''}<br>` +
-    kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>') +
-    (gain != null ? `<br>A rota otimizada anda <b>${fmt(gain, 0)}%</b> menos que a lista.` : '') +
-    `<br><span class="text-muted">Vídeo ≈ ${mmss(WK.T / speed())} na velocidade escolhida.</span>`;
-  $('nkStops').innerHTML = `<div class="text-muted">Paradas — ${esc(first.name)}:</div>` + first.keys.map((k, j) =>
+  $('nkWalkInfo').innerHTML = _t('<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : ''), mmss: mmss(WK.T / speed())});
+  $('nkStops').innerHTML = '<div class="text-muted">' + _t('Paradas — {esc}:', {esc: esc(first.name)}) + '<\/div>' + (first.keys.map((k, j) =>
     `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${String(first.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
-    (first.qty ? ` · <b>${fmt(first.qty[j], 2)} pç</b>` : '') + (first.out && first.out[j] ? ` · <span class="text-warning-emphasis">${first.out[j]} fora do ouro</span>` : '') +
-    ` (${fmt(stopT(first, j), 0)} s)</div>`).join('') +
-    (d.has_qty ? '' : '<div class="text-warning-emphasis">Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).</div>');
+    (first.qty ? ' ' + _t('· <b>{fmt} pç<\/b>', {fmt: fmt(first.qty[j], 2)}) : '') + (first.out && first.out[j] ? ' ' + _t('· <span class="text-warning-emphasis">{out} fora do ouro<\/span>', {out: first.out[j]}) : '') +
+    ` (${fmt(stopT(first, j), 0)} s)</div>`).join('')) + ((d.has_qty ? '' : '<div class="text-warning-emphasis">' + _t('Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).') + '<\/div>'));
   WK.t = 0; update(); camMode(true);
   $('nkHud').style.display = 'block';
 }
@@ -625,16 +609,14 @@ function update() {
 
 function hudLines() {
   const d = WK.data;
-  const pcs = d.units != null ? ` · ${fmt(d.units, 2)} peça(s)` : '';
-  const out = [{ text: `Pedido ${d.order} · ${d.lines} linha(s) · ${d.stops} parada(s)${pcs} · ${mmss(Math.min(WK.t, WK.T))}`, bold: true }];
+  const pcs = d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '';
+  const out = [{ text: _t('Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}', {order: d.order, lines: d.lines, stops: d.stops, pcs, mmss: mmss(Math.min(WK.t, WK.T))}), bold: true }];
   WK.walkers.forEach(w => {
     const dm = w.R.m * w.d / w.total, done = WK.t >= w.T, q = s => (w.R.qty ? +w.R.qty[s] || 0 : 1);
     // peças já pegas: paradas concluídas (a do momento entra quando termina a pega)
     let got = 0, all = 0;
     w.R.keys.forEach((k, s) => { all += q(s); if (w.arrive[k] + stopT(w.R, s) <= WK.t + 1e-9) got += q(s); });
-    out.push({ color: w.R.color, text: `${w.R.name.split(' ')[0]}: ${fmt(dm)} de ${fmt(w.R.m)} m · paradas ${w.picked}/${w.R.keys.length} · ` +
-      `peças ${fmt(got, 2)}/${fmt(all, 2)} · ` +
-      (done ? `✓ ${mmss(w.T)}` : w.pick != null ? `pegando ${grpOf(w.R, w.pick)} (${fmt(q(w.pick), 2)} pç)` : mmss(WK.t)) });
+    out.push({ color: w.R.color, text: _t('{split}: {fmt} de {fmt2} m · paradas {picked}/{keys} · peças {fmt3}/{fmt4} · {done}', {split: w.R.name.split(' ')[0], fmt: fmt(dm), fmt2: fmt(w.R.m), picked: w.picked, keys: w.R.keys.length, fmt3: fmt(got, 2), fmt4: fmt(all, 2), done: (done ? `✓ ${mmss(w.T)}` : w.pick != null ? _t('pegando {grpOf} ({fmt} pç)', {grpOf: grpOf(w.R, w.pick), fmt: fmt(q(w.pick), 2)}) : mmss(WK.t))}) });
   });
   return out;
 }
@@ -698,14 +680,14 @@ function camTick(dt = 1 / 60) {
 function startRec() {
   if (!WK.walkers.length) return;
   if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-    $('nkRecMsg').textContent = 'Este navegador não grava vídeo (use Chrome, Edge ou Firefox).'; return;
+    $('nkRecMsg').textContent = _t('Este navegador não grava vídeo (use Chrome, Edge ou Firefox).'); return;
   }
   const src = renderer.domElement, c = document.createElement('canvas');
   c.width = src.width - (src.width % 2); c.height = src.height - (src.height % 2);
   const type = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(x => MediaRecorder.isTypeSupported(x)) || '';
   let rec;
   try { rec = new MediaRecorder(c.captureStream(30), type ? { mimeType: type, videoBitsPerSecond: 8e6 } : {}); } catch (e) {
-    $('nkRecMsg').textContent = 'Não foi possível iniciar a gravação.'; return;
+    $('nkRecMsg').textContent = _t('Não foi possível iniciar a gravação.'); return;
   }
   const chunks = [], order = WK.data.order, mode = $('nkRoute').value;
   rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
@@ -716,18 +698,18 @@ function startRec() {
     a.href = URL.createObjectURL(blob); a.download = `caminhada_pedido_${String(order).replace(/[^\w.-]+/g, '_')}_${mode}.${ext}`;
     document.body.appendChild(a); a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-    $('nkRecMsg').textContent = `Vídeo salvo (${fmt(blob.size / 1048576)} MB).`;
+    $('nkRecMsg').textContent = _t('Vídeo salvo ({fmt} MB).', {fmt: fmt(blob.size / 1048576)});
   };
   WK.rec = { rec, c, ctx: c.getContext('2d') };
   rec.start(500);
-  $('nkRec').innerHTML = '<i class="bi bi-stop-fill"></i> Parar e salvar'; $('nkRecMsg').textContent = 'Gravando…';
+  $('nkRec').innerHTML = '<i class="bi bi-stop-fill"><\/i> ' + _t('Parar e salvar'); $('nkRecMsg').textContent = 'Gravando…';
   play(true);
 }
 function stopRec(cancel = false) {
   if (!WK.rec) return;
   WK.recCancel = cancel;
   WK.rec.rec.stop(); WK.rec = null;
-  $('nkRec').innerHTML = '<i class="bi bi-record-circle"></i> Gravar vídeo';
+  $('nkRec').innerHTML = '<i class="bi bi-record-circle"><\/i> ' + _t('Gravar vídeo');
   if (cancel) $('nkRecMsg').textContent = '';
 }
 function recFrame() {
@@ -743,7 +725,7 @@ function recFrame() {
     ctx.fillStyle = '#1f2d33'; ctx.font = `${l.bold ? 700 : 500} ${px}px system-ui, sans-serif`;
     ctx.fillText(l.text, pad * 2 + (l.color ? px * 1.2 : 0), y);
   });
-  const foot = `${B.name || ''} · caminhada ${fmt(walkV())} m/s · ${fmt(pickS(), 0)} s por parada + ${fmt(pieceS(), 1)} s por peça + ${fmt(goldS(), 1)} s/item e ${fmt(goldP(), 1)} s/peça fora do ouro · vídeo ${speed()}×`;
+  const foot = _t('{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×', {name: B.name || '', fmt: fmt(walkV()), fmt2: fmt(pickS(), 0), fmt3: fmt(pieceS(), 1), fmt4: fmt(goldS(), 1), fmt5: fmt(goldP(), 1), speed: speed()});
   ctx.font = `500 ${Math.round(px * 0.8)}px system-ui, sans-serif`;
   const fw = ctx.measureText(foot).width;
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(c.width - fw - pad * 3, c.height - px * 1.8, fw + pad * 2, px * 1.4);

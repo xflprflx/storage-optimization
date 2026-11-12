@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
-{% block title %}{{ 'Ajustar' if item else 'Lançar' }} saldo{% endblock %}
+{% block title %}{{ _h("{v} saldo", v=(_('Ajustar') if item else _('Lançar'))) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-boxes"></i> {{ 'Ajustar saldo' if item else 'Lançar saldo' }}</h1>
-  <a href="/stock" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <h1><i class="bi bi-boxes"></i> {{ _('Ajustar saldo') if item else _('Lançar saldo') }}</h1>
+  <a href="/stock" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
 </div>
 <div class="card" style="max-width: 720px">
   <div class="card-body">
@@ -12,32 +12,32 @@
     <form method="post" autocomplete="off">
       {% if item %}
       <dl class="row small">
-        <dt class="col-3">Produto</dt><dd class="col-9"><span class="mono">{{ item.product.sku }}</span> - {{ item.product.name }}</dd>
-        <dt class="col-3">Endereço</dt><dd class="col-9 mono">{{ item.location.full_label }}</dd>
+        <dt class="col-3">{{ _("Produto") }}</dt><dd class="col-9"><span class="mono">{{ item.product.sku }}</span> - {{ item.product.name }}</dd>
+        <dt class="col-3">{{ _("Endereço") }}</dt><dd class="col-9 mono">{{ item.location.full_label }}</dd>
       </dl>
       {% else %}
       <div class="mb-3">
-        <label class="form-label">Produto (SKU) *</label>
+        <label class="form-label">{{ _("Produto (SKU) *") }}</label>
         <div><input class="form-control mono text-uppercase {{ invalid(errors, 'sku') }}" name="sku" value="{{ data.get('sku') or '' }}" required
-                    data-autocomplete="/api/products/search" data-value-field="sku" placeholder="Digite SKU ou nome"></div>
+                    data-autocomplete="/api/products/search" data-value-field="sku" placeholder="{{ _("Digite SKU ou nome") }}"></div>
         {{ field_error(errors, 'sku') }}
       </div>
       <div class="mb-3">
-        <label class="form-label">Endereço *</label>
+        <label class="form-label">{{ _("Endereço *") }}</label>
         <div><input class="form-control mono {{ invalid(errors, 'location_id') }}" name="location_label" value="{{ data.get('location_label') or '' }}"
-                    data-autocomplete="/api/locations/search" data-hidden="location_id" placeholder="Digite o endereço (ex.: A-01-01-01)"></div>
+                    data-autocomplete="/api/locations/search" data-hidden="location_id" placeholder="{{ _("Digite o endereço (ex.: A-01-01-01)") }}"></div>
         <input type="hidden" name="location_id" id="location_id" value="{{ data.get('location_id') or '' }}">
         {{ field_error(errors, 'location_id') }}
       </div>
       {% endif %}
       <div class="mb-3" style="max-width: 260px">
-        <label class="form-label">Quantidade *</label>
+        <label class="form-label">{{ _("Quantidade *") }}</label>
         <input class="form-control text-end {{ invalid(errors, 'quantity') }}" name="quantity" inputmode="decimal" value="{{ data.get('quantity')|dec_input if data.get('quantity') is not string else data.get('quantity') }}" required autofocus>
         {{ field_error(errors, 'quantity') }}
-        <div class="form-text">O saldo informado substitui o atual (não é somado).</div>
+        <div class="form-text">{{ _("O saldo informado substitui o atual (não é somado).") }}</div>
       </div>
-      <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
-      <a href="/stock" class="btn btn-link">Cancelar</a>
+      <button class="btn btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+      <a href="/stock" class="btn btn-link">{{ _("Cancelar") }}</a>
     </form>
   </div>
 </div>

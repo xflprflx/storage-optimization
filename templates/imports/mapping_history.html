@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Histórico de pedidos — colunas{% endblock %}
+{% block title %}{{ _("Histórico de pedidos — colunas") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div><h1><i class="bi bi-clock-history"></i> Histórico de pedidos — conferir colunas</h1>
-    <div class="small text-muted">Filial {{ branch.code }} - {{ branch.name }} · {{ filename }}</div></div>
+  <div><h1><i class="bi bi-clock-history"></i> {{ _("Histórico de pedidos — conferir colunas") }}</h1>
+    <div class="small text-muted">{{ _h("Filial {code} - {name} · {filename}", code=(branch.code), name=(branch.name), filename=(filename)) }}</div></div>
 </div>
 <div class="mb-3">
-  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
-  <span class="badge rounded-pill text-bg-primary">2. Conferir aba e colunas</span>
-  <span class="badge rounded-pill text-bg-light border">3. Resumo salvo</span>
+  <span class="badge rounded-pill text-bg-success">{{ _("1. Arquivo enviado") }}</span>
+  <span class="badge rounded-pill text-bg-primary">{{ _("2. Conferir aba e colunas") }}</span>
+  <span class="badge rounded-pill text-bg-light border">{{ _("3. Resumo salvo") }}</span>
 </div>
 {% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
 <form method="post" action="/imports/history/confirm" id="mapForm">
@@ -17,10 +17,10 @@
   <div class="row g-3">
     <div class="col-lg-7"><div class="card"><div class="card-body">
       <div class="row g-2">
-        <div class="col-md-6"><label class="form-label small mb-1">O arquivo é</label>
+        <div class="col-md-6"><label class="form-label small mb-1">{{ _("O arquivo é") }}</label>
           <select class="form-select form-select-sm" name="kind" id="kind">
             {% for k, lbl in kinds.items() %}<option value="{{ k }}" {% if k == choice.kind %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></div>
-        <div class="col-md-6"><label class="form-label small mb-1">Aba</label>
+        <div class="col-md-6"><label class="form-label small mb-1">{{ _("Aba") }}</label>
           <select class="form-select form-select-sm" name="sheet" id="sheet">
             {% for name in sheets %}<option value="{{ name }}" {% if name == choice.sheet %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
       </div>
@@ -30,21 +30,21 @@
     </div></div></div>
     <div class="col-lg-5"><div class="card"><div class="card-body">
       <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="abs" value="1" id="abs" {% if to_abs %}checked{% endif %}>
-        <label class="form-check-label small" for="abs">Converter quantidades negativas para valor absoluto</label></div>
+        <label class="form-check-label small" for="abs">{{ _("Converter quantidades negativas para valor absoluto") }}</label></div>
       <ul class="small text-muted mb-3">
-        <li><b>Pedidos</b>: cada linha é um item de pedido. Linhas do mesmo pedido e SKU são somadas; quantidade vazia conta 1 unidade.</li>
-        <li><b>Coluna Saída</b>: uma linha por SKU com o total que saiu no período (sem pedidos: não há pares que saem juntos nem simulador de trajeto).</li>
-        <li>As colunas sugeridas vêm dos nomes do cabeçalho — confira se "Código" ou "Produto" não foram tomados pelo SKU errado.</li>
+        <li>{{ _h("<b>Pedidos</b>: cada linha é um item de pedido. Linhas do mesmo pedido e SKU são somadas; quantidade vazia conta 1 unidade.") }}</li>
+        <li>{{ _h("<b>Coluna Saída</b>: uma linha por SKU com o total que saiu no período (sem pedidos: não há pares que saem juntos nem simulador de trajeto).") }}</li>
+        <li>{{ _("As colunas sugeridas vêm dos nomes do cabeçalho — confira se \"Código\" ou \"Produto\" não foram tomados pelo SKU errado.") }}</li>
       </ul>
       <div class="d-flex gap-2">
-        <button class="btn btn-accent flex-grow-1" id="submitBtn"><i class="bi bi-check-lg"></i> Importar histórico</button>
-        <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate>Cancelar</button>
+        <button class="btn btn-accent flex-grow-1" id="submitBtn"><i class="bi bi-check-lg"></i> {{ _("Importar histórico") }}</button>
+        <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate>{{ _("Cancelar") }}</button>
       </div>
     </div></div></div>
   </div>
 </form>
 <div class="card mt-3">
-  <div class="card-header bg-white"><strong>Amostra da aba</strong> <small class="text-muted" id="pvName"></small></div>
+  <div class="card-header bg-white"><strong>{{ _("Amostra da aba") }}</strong> <small class="text-muted" id="pvName"></small></div>
   <div class="table-responsive"><table class="table table-sm table-bordered mb-0 preview-table" id="pv"></table></div>
 </div>
 {% endblock %}
@@ -63,7 +63,7 @@
     $('cols').innerHTML = Object.entries(FIELDS[kind]).map(([f, lbl]) => {
       const req = REQ[kind].includes(f);
       return `<div class="col-md-6"><label class="form-label small mb-1">${esc(lbl)}${req ? ' <span class="text-danger">*</span>' : ''}</label>
-        <select class="form-select form-select-sm map-col" name="col_${f}" ${req ? 'required' : ''}><option value="">— ${req ? 'escolha' : 'não usar'} —</option>` +
+        <select class="form-select form-select-sm map-col" name="col_${f}" ${req ? 'required' : ''}><option value="">— ${req ? 'escolha' : _t('não usar')} —</option>` +
         sh.headers.map((h, i) => `<option value="${i}" ${pick[f] === i ? 'selected' : ''}>#${i + 1} · ${esc(h)}</option>`).join('') + '</select></div>';
     }).join('');
     preview();
@@ -77,14 +77,14 @@
     $('pv').innerHTML = '<thead><tr>' + sh.headers.map((h, i) => `<th class="${used[i] != null ? 'table-primary' : ''}"><span class="text-muted">#${i + 1}</span> ${esc(h)}` +
       (used[i] != null ? `<div class="small text-primary">→ ${esc(used[i])}</div>` : '') + '</th>').join('') + '</tr></thead><tbody>' +
       sh.rows.map(r => '<tr>' + sh.headers.map((_h, i) => `<td class="${used[i] != null ? 'table-primary' : ''}" title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('') + '</tbody>';
-    $('hint').innerHTML = dup ? '<span class="text-danger">A mesma coluna está em mais de um campo.</span>' : '';
+    $('hint').innerHTML = dup ? '<span class="text-danger">' + _t('A mesma coluna está em mais de um campo.') + '<\/span>' : '';
   }
   $('kind').addEventListener('change', cols);
   $('sheet').addEventListener('change', cols);
   $('cols').addEventListener('change', preview);
   $('mapForm').addEventListener('submit', e => {
     if (e.submitter && e.submitter.value === 'cancel') return;
-    const b = $('submitBtn'); b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importando...';
+    const b = $('submitBtn'); b.disabled = true; b.innerHTML = _t('<span class="spinner-border spinner-border-sm"><\/span> Importando...');
   });
   cols();
 })();

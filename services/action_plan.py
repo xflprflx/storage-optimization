@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Optional
 
 from services.layout_service import natural_key
+from services.i18n import N_, _, localize_number_text
 
 
 def _addr_key(address: str):
@@ -25,7 +26,7 @@ def _fmt(v, places=0) -> str:
     if v is None:
         return "—"
     s = f"{v:,.{places}f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return localize_number_text(s)
 
 
 @dataclass
@@ -96,7 +97,7 @@ class ActionPlan:
 # --------------------------------------------------------------------------- #
 def _cfg_text(cfg: dict, types) -> str:
     if not cfg:
-        return "nenhuma bin"
+        return _("nenhuma bin")
     return " + ".join(f"{n}× {types[t].code if t in types else t}" for t, n in sorted(cfg.items()) if n)
 
 
@@ -113,17 +114,17 @@ def _placement_by_level(pl: Optional[dict], own) -> dict:
 
 
 def build_address_plan(results, summary, types, scope: list, params: list, contents: Optional[dict] = None,
-                       staging: str = "ÁREA DE ESPERA") -> ActionPlan:
-    plan = ActionPlan("Plano de ação — Otimização por endereço", "address", datetime.now(), scope, params)
+                       staging: str = N_("ÁREA DE ESPERA")) -> ActionPlan:
+    plan = ActionPlan(_("Plano de ação — Otimização por endereço"), "address", datetime.now(), scope, params)
     act = sorted([r for r in results if r.applicable], key=lambda r: _addr_key(r.address))
     s = summary
     changed = len(act)
     plan.kpis = [
-        Kpi("Bins", s.bins_before, s.bins_after, "", True),
-        Kpi("Volume das bins", s.volume_before, s.volume_after, " L", True, 1),
-        Kpi("Largura de frente", s.width_before, s.width_after, " cm", True),
-        Kpi("Enchimento médio", s.fill_before, s.fill_after, "%", False, 1),
-        Kpi("Endereços com ação", None, changed, "", True),
+        Kpi(N_("Bins"), s.bins_before, s.bins_after, "", True),
+        Kpi(_("Volume das bins"), s.volume_before, s.volume_after, " L", True, 1),
+        Kpi(_("Largura de frente"), s.width_before, s.width_after, " cm", True),
+        Kpi(_("Enchimento médio"), s.fill_before, s.fill_after, "%", False, 1),
+        Kpi(_("Endereços com ação"), None, changed, "", True),
     ]
     n = 0
     for r in act:
@@ -136,34 +137,33 @@ def build_address_plan(results, summary, types, scope: list, params: list, conte
         sub = []
         for lv in levels:
             b, a = before_lv.get(lv, {}), after_lv.get(lv, {})
-            where = r.address + (f" (nível {lv})" if lv else "")
+            where = r.address + (_(" (nível {lv})", lv=lv) if lv else "")
             for t in sorted(set(b) | set(a)):
                 d = a.get(t, 0) - b.get(t, 0)
                 code = types[t].code if t in types else str(t)
                 if d < 0:
-                    sub.append(("Retirar", where, f"Retirar {-d}× {code}", f"{-d}× {code}", "remove"))
+                    sub.append((N_("Retirar"), where, f"Retirar {-d}× {code}", f"{-d}× {code}", "remove"))
                 elif d > 0:
-                    sub.append(("Colocar", where, f"Colocar {d}× {code}", f"{d}× {code}", "add"))
+                    sub.append((_("Colocar"), where, f"Colocar {d}× {code}", f"{d}× {code}", "add"))
         if r.status == "liberar":
-            sub = [("Liberar", r.address, f"Retirar todas as bins ({_cfg_text(r.current, types)}) — endereço sem saldo",
+            sub = [(N_("Liberar"), r.address, _("Retirar todas as bins ({cfg_text}) — endereço sem saldo", cfg_text=_cfg_text(r.current, types)),
                     _cfg_text(r.current, types), "remove")]
         # retirar antes de colocar
         sub.sort(key=lambda x: 0 if x[0] in ("Retirar", "Liberar") else 1)
         if r.status == "orfao":
-            sub = [("Retirar", r.address, f"{tag}: retirar {_fmt(q)} un. de {sku} — fica fora de bin no endereço "
-                    "(órfão, sem destino no plano: tratar à mão)", f"{_fmt(q)} un.", "remove")
+            sub = [(N_("Retirar"), r.address, _("{tag}: retirar {fmt} un. de {sku} — fica fora de bin no endereço (órfão, sem destino no plano: tratar à mão)", tag=tag, fmt=_fmt(q), sku=sku), f"{_fmt(q)} un.", "remove")
                    for sku, addr_, tag, q in (getattr(s, "orphans", None) or []) if addr_ == r.address] + sub
         cc = (contents or {}).get(r.id)
         if cc and r.status not in ("liberar", "orfao"):
             # 1) esvaziar as bins que mudam (para a área de espera) … 3) guardar nas bins novas
-            pre = [("Esvaziar", r.address, f"Tirar {_fmt(q)} un. de {sku} da {tag} e levar para a {staging}", f"{_fmt(q)} un.",
+            pre = [(_("Esvaziar"), r.address, _("Tirar {fmt} un. de {sku} da {tag} e levar para a {staging}", fmt=_fmt(q), sku=sku, tag=tag, staging=staging), f"{_fmt(q)} un.",
                     "remove") for tag, sku, q in cc["empty"]]
-            post = [("Guardar", r.address, f"{tag}: guardar " + " + ".join(f"{_fmt(q)} un. de {sku}" for sku, q in items)
+            post = [(_("Guardar"), r.address, f"{tag}: guardar " + " + ".join(_("{fmt} un. de {sku}", fmt=_fmt(q), sku=sku) for sku, q in items)
                      + (f" (vindos da {staging})" if cc["empty"] else ""), "", "add") for tag, items in cc["store"]]
             sub = pre + sub + post
         for action, where, detail, qty, kind in sub:
             n += 1
-            plan.steps.append(Step(n, f"Corredor {aisle}", action, where, detail, "", qty, kind))
+            plan.steps.append(Step(n, _("Corredor {aisle}", aisle=aisle), action, where, detail, "", qty, kind))
         plan.depara.append([
             r.address, r.status_label, _cfg_text(r.current, types), _cfg_text(r.suggested or {}, types),
             r.bins_delta, round(r.volume_delta, 1), round(r.width_delta, 1),
@@ -178,8 +178,8 @@ def build_address_plan(results, summary, types, scope: list, params: list, conte
                 "after": [(types[t].code if t in types else str(t), n_, types[t].w if t in types else None)
                           for t, n_ in sorted((r.suggested or {}).items()) if n_],
             })
-    plan.depara_cols = ["Endereço", "Situação", "Bins antes", "Bins depois", "Δ bins", "Δ volume (L)", "Δ largura (cm)",
-                        "Enchimento antes (%)", "Enchimento depois (%)", "Observações"]
+    plan.depara_cols = [N_("Endereço"), N_("Situação"), _("Bins antes"), _("Bins depois"), "Δ bins", "Δ volume (L)", _("Δ largura (cm)"),
+                        _("Enchimento antes (%)"), _("Enchimento depois (%)"), _("Observações")]
     # bins por tipo
     before: dict[int, int] = {}
     after: dict[int, int] = {}
@@ -193,20 +193,20 @@ def build_address_plan(results, summary, types, scope: list, params: list, conte
                     for t in sorted(set(before) | set(after), key=lambda t: types[t].code if t in types else str(t))]
     others = {k: v for k, v in s.by_status.items() if k in ("inviavel", "sem_dados")}
     if getattr(s, "orphans", None):
-        plan.warnings.append(f"{len(s.orphans)} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.")
+        plan.warnings.append(_("{len} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.", len=len(s.orphans)))
     if others.get("inviavel"):
-        plan.warnings.append(f"{others['inviavel']} endereço(s) inviáveis com as restrições escolhidas — ficam como estão.")
+        plan.warnings.append(_("{inviavel} endereço(s) inviáveis com as restrições escolhidas — ficam como estão.", inviavel=others['inviavel']))
     if others.get("sem_dados"):
-        plan.warnings.append(f"{others['sem_dados']} endereço(s) com SKU sem dimensões — ficam como estão.")
+        plan.warnings.append(_("{sem_dados} endereço(s) com SKU sem dimensões — ficam como estão.", sem_dados=others['sem_dados']))
     if not act:
-        plan.warnings.append("Nenhuma ação: os endereços do escopo já estão no melhor arranjo para os parâmetros escolhidos.")
+        plan.warnings.append(_("Nenhuma ação: os endereços do escopo já estão no melhor arranjo para os parâmetros escolhidos."))
     return plan
 
 
 # --------------------------------------------------------------------------- #
 # Sequenciamento das movimentações (dependências + área de espera)
 # --------------------------------------------------------------------------- #
-def sequence_moves(moves: list, addr, staging: str = "ÁREA DE ESPERA") -> list[dict]:
+def sequence_moves(moves: list, addr, staging: str = N_("ÁREA DE ESPERA")) -> list[dict]:
     """Ordena as movimentações para que cada destino esteja livre quando chegar a vez dele.
 
     - Uma movimentação PARA a bin X depende das movimentações que TIRAM de X outros SKUs (que saem de lá).
@@ -262,8 +262,8 @@ def sequence_moves(moves: list, addr, staging: str = "ÁREA DE ESPERA") -> list[
 # Modo "Cega aos endereços" (pool de bins)
 # --------------------------------------------------------------------------- #
 def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: bool,
-                    staging: str = "ÁREA DE ESPERA") -> ActionPlan:
-    title = "Plano de ação — Pool de bins" + (" (dimensionamento com bins ilimitadas)" if unlimited else "")
+                    staging: str = N_("ÁREA DE ESPERA")) -> ActionPlan:
+    title = _("Plano de ação — Pool de bins") + (" (dimensionamento com bins ilimitadas)" if unlimited else "")
     plan = ActionPlan(title, "pool_unlimited" if unlimited else "pool", datetime.now(), scope, params)
     plan.applicable = not unlimited and not any(r.shortage for r in results)
     code = lambda t: types[t].code if t in types else str(t)  # noqa: E731
@@ -280,52 +280,49 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
     used_after = sum(r.bins_used_after for r in results)
     n = 0
     if unlimited:
-        plan.kpis = [Kpi("Bins existentes no escopo", sum(v[0] for v in by_type.values()), None),
-                     Kpi("Bins usadas hoje (estimado)", used_before, None),
-                     Kpi("Bins necessárias (ideal)", None, used_after),
-                     Kpi("Tipos de bin no plano", None, len([1 for v in by_type.values() if v[1]]), "", False)]
+        plan.kpis = [Kpi(_("Bins existentes no escopo"), sum(v[0] for v in by_type.values()), None),
+                     Kpi(_("Bins usadas hoje (estimado)"), used_before, None),
+                     Kpi(_("Bins necessárias (ideal)"), None, used_after),
+                     Kpi(_("Tipos de bin no plano"), None, len([1 for v in by_type.values() if v[1]]), "", False)]
         for c, have, need in plan.by_type:
             if need > have:
                 n += 1
-                plan.steps.append(Step(n, "Providenciar bins", "Providenciar", c, f"Providenciar {need - have}× {c} "
-                                       f"(necessárias {need}, existentes {have})", "", f"{need - have}× {c}", "add"))
+                plan.steps.append(Step(n, _("Providenciar bins"), _("Providenciar"), c, _("Providenciar {v}× {c} (necessárias {need}, existentes {have})", v=need - have, c=c, need=need, have=have), "", f"{need - have}× {c}", "add"))
             elif have > need:
                 n += 1
-                plan.steps.append(Step(n, "Bins que sobram", "Sobra", c, f"Sobram {have - need}× {c} "
-                                       f"(necessárias {need}, existentes {have})", "", f"{have - need}× {c}", "remove"))
+                plan.steps.append(Step(n, _("Bins que sobram"), _("Sobra"), c, _("Sobram {v}× {c} (necessárias {need}, existentes {have})", v=have - need, c=c, need=need, have=have), "", f"{have - need}× {c}", "remove"))
         for p in sorted(plans, key=lambda p: p.sku):
             per: dict[int, list] = {}
             for b, q in p.allocations:
                 per.setdefault(b.type_id, []).append(q)
             for t, qs in per.items():
                 n += 1
-                plan.steps.append(Step(n, "Armazenamento por SKU", "Armazenar", p.sku,
+                plan.steps.append(Step(n, _("Armazenamento por SKU"), _("Armazenar"), p.sku,
                                        f"{p.sku}: {len(qs)}× {code(t)} ({' + '.join(str(q) for q in qs)} un.)",
                                        "", f"{len(qs)}× {code(t)}", "info"))
             plan.depara.append([p.sku, p.needed, ", ".join(f"{addr(l)} ({_fmt(q)})" for l, q in sorted(p.current.items(), key=lambda kv: _addr_key(addr(kv[0])))),
                                 " + ".join(f"{len(v)}× {code(t)}" for t, v in per.items()) or "—", p.shortage or None, p.note])
-        plan.depara_cols = ["SKU", "Quantidade planejada", "Onde está hoje (saldo)", "Bins necessárias", "Sem bin (un.)", "Observação"]
+        plan.depara_cols = ["SKU", _("Quantidade planejada"), _("Onde está hoje (saldo)"), _("Bins necessárias"), _("Sem bin (un.)"), _("Observação")]
     else:
         moves = sum(r.moves for r in results)
         units = sum(r.moved_units for r in results)
-        plan.kpis = [Kpi("Bins usadas", used_before, used_after),
-                     Kpi("Endereços ocupados", sum(r.addresses_before for r in results), sum(r.addresses_after for r in results)),
-                     Kpi("Movimentações", None, moves),
-                     Kpi("Unidades movimentadas", None, units)]
+        plan.kpis = [Kpi(_("Bins usadas"), used_before, used_after),
+                     Kpi(_("Endereços ocupados"), sum(r.addresses_before for r in results), sum(r.addresses_after for r in results)),
+                     Kpi(N_("Movimentações"), None, moves),
+                     Kpi(_("Unidades movimentadas"), None, units)]
         # passo a passo: ordenado por dependência (o destino precisa estar livre) + área de espera em ciclos
         all_moves = [mv for p in plans for mv in p.moves]
-        tag = lambda b: b.tag if b is not None else "fora de bin"  # noqa: E731
+        tag = lambda b: b.tag if b is not None else _("fora de bin")  # noqa: E731
         seq = sequence_moves(all_moves, addr, staging)
         n_staged = 0
         # órfãos (opção "deixar fora de bin"): primeiro libera as bins que os itens filtrados vão ocupar
         orphans = [o for r in results for o in (r.orphans or []) if o[2] is not None]
         for sku, l, b, q in orphans:
             n += 1
-            plan.steps.append(Step(n, "Liberar bins (itens órfãos)", "Retirar", f"{addr(l)} · {b.tag}",
-                                   f"{sku}: retirar {_fmt(q)} un. da bin — fica fora de bin no endereço (órfão, sem destino "
-                                   "no plano: tratar à mão)", "fora de bin", _fmt(q), "remove"))
+            plan.steps.append(Step(n, _("Liberar bins (itens órfãos)"), N_("Retirar"), f"{addr(l)} · {b.tag}",
+                                   _("{sku}: retirar {fmt} un. da bin — fica fora de bin no endereço (órfão, sem destino no plano: tratar à mão)", sku=sku, fmt=_fmt(q)), _("fora de bin"), _fmt(q), "remove"))
         if orphans:
-            plan.warnings.append(f"{len(orphans)} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.")
+            plan.warnings.append(_("{len} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.", len=len(orphans)))
         for item in seq:
             mv, leg = item["move"], item["leg"]
             src = f"{addr(mv.src_loc)} · {tag(mv.src_bin)}"
@@ -333,33 +330,32 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
             others = [k for k in (mv.dst_bin.orig if mv.dst_bin else {}) if k != mv.sku and k in mv.dst_bin.contents]
             if leg == "to_staging":
                 n_staged += 1
-                status = "área de espera (troca circular)"
+                status = _("área de espera (troca circular)")
                 n += 1
-                plan.steps.append(Step(n, f"Onda {item['wave']}", "Para a espera", src, f"Levar {_fmt(mv.qty)} un. de {mv.sku} "
-                                       f"para {staging} (o destino {dst} ainda está ocupado — troca circular)", staging,
+                plan.steps.append(Step(n, _("Onda {wave}", wave=item['wave']), _("Para a espera"), src, _("Levar {fmt} un. de {sku} para {staging} (o destino {dst} ainda está ocupado — troca circular)", fmt=_fmt(mv.qty), sku=mv.sku, staging=staging, dst=dst), staging,
                                        _fmt(mv.qty), "remove", status))
                 continue
             if item["after"]:
-                status = "livre após o(s) passo(s) " + ", ".join(str(a) for a in item["after"])
+                status = _("livre após o(s) passo(s) ") + ", ".join(str(a) for a in item["after"])
             elif others:
-                status = "divide a bin com " + ", ".join(others) + " (que fica)"
+                status = _("divide a bin com ") + ", ".join(others) + " (que fica)"
             elif mv.dst_bin is not None and mv.sku in mv.dst_bin.orig:
-                status = "completa a bin (já tem este SKU)"
+                status = _("completa a bin (já tem este SKU)")
             else:
-                status = "livre agora"
+                status = _("livre agora")
             origin = staging if leg == "from_staging" else src
             same = mv.src_loc == mv.dst_loc and leg != "from_staging"
-            action = "Da espera" if leg == "from_staging" else ("Trocar de bin" if same else "Mover")
-            text = (f"Levar {_fmt(mv.qty)} un. de {mv.sku} da {staging} para {dst}" if leg == "from_staging" else
-                    f"Mover {_fmt(mv.qty)} un. de {mv.sku} de {src} para {dst}")
+            action = _("Da espera") if leg == "from_staging" else (_("Trocar de bin") if same else _("Mover"))
+            text = (_("Levar {fmt} un. de {sku} da {staging} para {dst}", fmt=_fmt(mv.qty), sku=mv.sku, staging=staging, dst=dst) if leg == "from_staging" else
+                    _("Mover {fmt} un. de {sku} de {src} para {dst}", fmt=_fmt(mv.qty), sku=mv.sku, src=src, dst=dst))
             n += 1
-            plan.steps.append(Step(n, f"Onda {item['wave']}", action, origin, text, dst, _fmt(mv.qty), "move", status))
+            plan.steps.append(Step(n, _("Onda {wave}", wave=item['wave']), action, origin, text, dst, _fmt(mv.qty), "move", status))
             plan.depara.append([mv.sku, addr(mv.src_loc), tag(mv.src_bin), addr(mv.dst_loc), tag(mv.dst_bin), mv.qty,
                                 "sim" if leg == "from_staging" else "", status])
-        plan.depara_cols = ["SKU", "Endereço origem", "Bin origem", "Endereço destino", "Bin destino", "Quantidade",
-                            "Passa pela área de espera", "Destino no momento do passo"]
+        plan.depara_cols = ["SKU", _("Endereço origem"), _("Bin origem"), _("Endereço destino"), _("Bin destino"), N_("Quantidade"),
+                            _("Passa pela área de espera"), _("Destino no momento do passo")]
         if n_staged:
-            plan.warnings.append(f"{n_staged} movimentação(ões) formam trocas circulares e passam pela {staging}.")
+            plan.warnings.append(_("{n_staged} movimentação(ões) formam trocas circulares e passam pela {staging}.", n_staged=n_staged, staging=staging))
         transfers = all_moves
         # endereços que ficam vazios
         freed = []
@@ -369,7 +365,7 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
             freed += sorted((addr(l) for l in before - used), key=_addr_key)
         for a in freed:
             n += 1
-            plan.steps.append(Step(n, "Ao final", "Liberado", a, f"Endereço {a} fica vazio (todas as bins livres)", "", "", "info"))
+            plan.steps.append(Step(n, _("Ao final"), _("Liberado"), a, _("Endereço {a} fica vazio (todas as bins livres)", a=a), "", "", "info"))
         # visual: bins usadas por endereço antes × depois (top endereços que mudam)
         usage: dict[str, list] = {}
         for r in results:
@@ -387,15 +383,15 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
         changed = sorted(((a, v) for a, v in usage.items() if v[0] != v[1]), key=lambda kv: _addr_key(kv[0]))[:60]
         plan.visuals = [{"label": a, "before_used": v[0], "after_used": v[1], "total": v[2]} for a, v in changed]
         if any(r.shortage for r in results):
-            plan.warnings.append("Faltam bins para alguns SKUs: o plano está incompleto e não pode ser aplicado.")
+            plan.warnings.append(_("Faltam bins para alguns SKUs: o plano está incompleto e não pode ser aplicado."))
         if not transfers:
-            plan.warnings.append("Nenhuma movimentação necessária para os parâmetros escolhidos.")
+            plan.warnings.append(_("Nenhuma movimentação necessária para os parâmetros escolhidos."))
     no_dims = [s for r in results for s in r.no_dims]
     if no_dims:
-        plan.warnings.append(f"{len(no_dims)} SKU(s) sem dimensões ficaram fora do plano: {', '.join(no_dims[:15])}"
+        plan.warnings.append(_("{len} SKU(s) sem dimensões ficaram fora do plano: {v}", len=len(no_dims), v=', '.join(no_dims[:15]))
                              + ("…" if len(no_dims) > 15 else ""))
     short = [p for p in plans if p.shortage]
     if short:
-        plan.warnings.append(f"{len(short)} SKU(s) sem bin: " + ", ".join(f"{p.sku} ({p.shortage} un.)" for p in short[:10])
+        plan.warnings.append(_("{len} SKU(s) sem bin: ", len=len(short)) + ", ".join(f"{p.sku} ({p.shortage} un.)" for p in short[:10])
                              + ("…" if len(short) > 10 else ""))
     return plan

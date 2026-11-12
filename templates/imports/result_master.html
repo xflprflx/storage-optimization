@@ -1,22 +1,21 @@
 {% extends "base.html" %}
-{% block title %}{{ title }} - Resultado{% endblock %}
+{% block title %}{{ _h("{title} - Resultado", title=(title)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-clipboard-check"></i> {{ title }} — Resultado</h1>
+  <h1><i class="bi bi-clipboard-check"></i> {{ _h("{title} — Resultado", title=(title)) }}</h1>
   <div class="d-flex gap-2">
-    <a href="/imports/{{ kind }}" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Nova importação</a>
-    <a href="{{ master.back[0] }}" class="btn btn-accent">Ver {{ master.back[1] }}</a>
+    <a href="/imports/{{ kind }}" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Nova importação") }}</a>
+    <a href="{{ master.back[0] }}" class="btn btn-accent">{{ _h("Ver {v}", v=(master.back[1])) }}</a>
   </div>
 </div>
 <div class="mb-3">
-  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
-  <span class="badge rounded-pill text-bg-success">2. Colunas mapeadas</span>
-  <span class="badge rounded-pill text-bg-primary">3. Resultado</span>
+  <span class="badge rounded-pill text-bg-success">{{ _("1. Arquivo enviado") }}</span>
+  <span class="badge rounded-pill text-bg-success">{{ _("2. Colunas mapeadas") }}</span>
+  <span class="badge rounded-pill text-bg-primary">{{ _("3. Resultado") }}</span>
 </div>
 {% set r = result %}
 <div class="alert {% if r.error_count == 0 %}alert-success{% elif r.rows_ok %}alert-warning{% else %}alert-danger{% endif %}">
-  <strong>{{ filename }}</strong>: {{ r.rows_read|dec }} linha(s) lida(s) · {{ r.rows_ok|dec }} processada(s) ·
-  {{ r.error_count|dec }} com erro · {{ (r.elapsed_ms / 1000)|round(2) }} s
+  {{ _h("<strong>{filename}</strong>: {rows_read} linha(s) lida(s) · {rows_ok} processada(s) · {error_count} com erro · {v} s", filename=(filename), rows_read=(r.rows_read|dec), rows_ok=(r.rows_ok|dec), error_count=(r.error_count|dec), v=((r.elapsed_ms / 1000)|round(2))) }}
 </div>
 <div class="row g-3 mb-3">
   {% for label, value in r.counters.items() %}
@@ -27,15 +26,15 @@
 </div>
 {% if r.notes %}
 <div class="alert alert-info small">
-  <ul class="mb-0">{% for n in r.notes[:50] %}<li>{{ n }}</li>{% endfor %}{% if r.notes|length > 50 %}<li>… e mais {{ r.notes|length - 50 }}</li>{% endif %}</ul>
+  <ul class="mb-0">{% for n in r.notes[:50] %}<li>{{ n }}</li>{% endfor %}{% if r.notes|length > 50 %}<li>{{ _h("… e mais {notes}", notes=(r.notes|length - 50)) }}</li>{% endif %}</ul>
 </div>
 {% endif %}
 {% if r.errors %}
 <div class="card mb-3">
-  <div class="card-header bg-white text-danger"><strong><i class="bi bi-x-circle"></i> Erros</strong>
-    {% if r.error_count > r.errors|length %}<small class="text-muted">(exibindo {{ r.errors|length }} de {{ r.error_count }})</small>{% endif %}</div>
+  <div class="card-header bg-white text-danger"><strong><i class="bi bi-x-circle"></i> {{ _("Erros") }}</strong>
+    {% if r.error_count > r.errors|length %}<small class="text-muted">{{ _h("(exibindo {errors} de {error_count})", errors=(r.errors|length), error_count=(r.error_count)) }}</small>{% endif %}</div>
   <div class="table-responsive" style="max-height: 400px">
-    <table class="table table-sm mb-0 small"><thead><tr><th style="width:90px">Linha</th><th>Mensagem</th></tr></thead>
+    <table class="table table-sm mb-0 small"><thead><tr><th style="width:90px">{{ _("Linha") }}</th><th>{{ _("Mensagem") }}</th></tr></thead>
       <tbody>{% for line, msg in r.errors %}<tr><td class="mono">{{ line }}</td><td>{{ msg }}</td></tr>{% endfor %}</tbody>
     </table>
   </div>

@@ -25,30 +25,31 @@ from services.addressing import LocationResolver, normalize_code
 from services.file_reader import chunked, get_cell, iter_rows, parse_decimal
 from services.material_service import MaterialResolver
 from services.stock_service import MasterDataCache, refresh_occupancy, resolve_skus
+from services.i18n import N_, _
 
 CHUNK_SIZE = 500
 
 # campo -> (rótulo, obrigatório, sinônimos para auto-mapeamento)
 PRODUCT_FIELDS: dict[str, tuple[str, bool, tuple[str, ...]]] = {
     "sku": ("SKU", True, ("sku", "codigo", "código", "cod", "codproduto", "codigoproduto", "referencia", "item")),
-    "name": ("Nome / Descrição", False, ("nome", "name", "descricao", "descrição", "produto", "description")),
-    "material_type": ("Tipo de material", False, ("tipodematerial", "tipomaterial", "tipo material", "tipo de material",
+    "name": (N_("Nome / Descrição"), False, ("nome", "name", "descricao", "descrição", "produto", "description")),
+    "material_type": (N_("Tipo de material"), False, ("tipodematerial", "tipomaterial", "tipo material", "tipo de material",
                                                    "material", "materialtype", "tpmaterial", "tipomat", "classematerial")),
-    "height": ("Altura", False, ("altura", "height", "alt")),
-    "width": ("Largura", False, ("largura", "width", "larg")),
-    "length": ("Comprimento", False, ("comprimento", "length", "profundidade", "comp")),
-    "weight": ("Peso", False, ("peso", "weight", "pesobruto", "pesoliquido")),
-    "min_level": ("Nível mínimo (min level)", False, ("minlevel", "min level", "nivelminimo", "nível mínimo", "estoqueminimo",
+    "height": (N_("Altura"), False, ("altura", "height", "alt")),
+    "width": (N_("Largura"), False, ("largura", "width", "larg")),
+    "length": (N_("Comprimento"), False, ("comprimento", "length", "profundidade", "comp")),
+    "weight": (N_("Peso"), False, ("peso", "weight", "pesobruto", "pesoliquido")),
+    "min_level": (N_("Nível mínimo (min level)"), False, ("minlevel", "min level", "nivelminimo", "nível mínimo", "estoqueminimo",
                                                      "estoque minimo", "estoque mínimo", "minimo", "mínimo", "min", "estmin")),
-    "max_level": ("Nível máximo (max level)", False, ("maxlevel", "max level", "nivelmaximo", "nível máximo", "estoquemaximo",
+    "max_level": (N_("Nível máximo (max level)"), False, ("maxlevel", "max level", "nivelmaximo", "nível máximo", "estoquemaximo",
                                                      "estoque maximo", "estoque máximo", "maximo", "máximo", "max", "estmax")),
-    "branch_code": ("Código da Filial", False, ("filial", "codfilial", "codigofilial", "branch", "loja", "empresa")),
+    "branch_code": (N_("Código da Filial"), False, ("filial", "codfilial", "codigofilial", "branch", "loja", "empresa")),
     "warehouse_code": (
-        "Código do Armazém",
+        N_("Código do Armazém"),
         False,
         ("armazem", "armazém", "deposito", "depósito", "codarmazem", "warehouse", "local estoque"),
     ),
-    "location": ("Endereço padrão", False, ("endereco", "endereço", "posicao", "posição", "location", "localizacao")),
+    "location": (N_("Endereço padrão"), False, ("endereco", "endereço", "posicao", "posição", "location", "localizacao")),
 }
 DECIMAL_FIELDS = ("height", "width", "length", "weight", "min_level", "max_level")
 PRODUCT_DECIMALS = ("height", "width", "length", "weight")  # cadastro único do produto (todas as filiais)
@@ -103,9 +104,9 @@ class ImportResult:
 def _parse_row(line: int, row: list[str], mapping: dict[str, Optional[int]], opts: ImportOptions) -> dict:
     sku = normalize_code(get_cell(row, mapping.get("sku")))
     if not sku:
-        raise ValueError("SKU vazio")
+        raise ValueError(_("SKU vazio"))
     if len(sku) > 60:
-        raise ValueError("SKU excede 60 caracteres")
+        raise ValueError(_("SKU excede 60 caracteres"))
     data: dict = {"line": line, "sku": sku, "name": get_cell(row, mapping.get("name"))[:255],
                   "material_type": get_cell(row, mapping.get("material_type"))}
     for f in DECIMAL_FIELDS:
@@ -113,9 +114,9 @@ def _parse_row(line: int, row: list[str], mapping: dict[str, Optional[int]], opt
         try:
             val = parse_decimal(raw)
         except ValueError:
-            raise ValueError(f"{PRODUCT_FIELDS[f][0]} inválido(a): {raw!r}")
+            raise ValueError(_("{v} inválido(a): {raw}", v=PRODUCT_FIELDS[f][0], raw=f"{raw!r}"))
         if val is not None and val < 0:
-            raise ValueError(f"{PRODUCT_FIELDS[f][0]} não pode ser negativo(a)")
+            raise ValueError(_("{v} não pode ser negativo(a)", v=PRODUCT_FIELDS[f][0]))
         data[f] = val
     data["branch_code"] = normalize_code(get_cell(row, mapping.get("branch_code"))) or normalize_code(
         opts.default_branch_code
@@ -132,7 +133,7 @@ def import_products(
 ) -> ImportResult:
     t0 = time.perf_counter()
     if mapping.get("sku") is None:
-        raise ValueError("A coluna SKU é obrigatória no mapeamento.")
+        raise ValueError(_("A coluna SKU é obrigatória no mapeamento."))
     result = ImportResult()
     master = MasterDataCache(db)
     resolver = LocationResolver(db)
@@ -163,7 +164,7 @@ def import_products(
             (result.products_created, result.products_updated, result.locations_created, result.rows_ok,
              result.default_locations_set) = counters
             for item in parsed:
-                result.error(item["line"], f"Lote descartado por erro inesperado: {exc}")
+                result.error(item["line"], _("Lote descartado por erro inesperado: {exc}", exc=exc))
         finally:
             db.expunge_all()  # libera memória do identity map
 
@@ -265,7 +266,7 @@ def _process_chunk(
                 create=opts.create_locations and branch_id is not None,
             )
             if err:
-                result.warn(p["line"], f"Endereço não vinculado: {err}")
+                result.warn(p["line"], _("Endereço não vinculado: {err}", err=err))
             else:
                 if created:
                     result.locations_created += 1
@@ -279,7 +280,7 @@ def _process_chunk(
                     result.default_locations_set += 1
                 branch_id = ref.branch_id
         elif w_code and not b_code:
-            result.warn(p["line"], "Armazém informado sem filial e sem endereço: nada a vincular ao produto.")
+            result.warn(p["line"], _("Armazém informado sem filial e sem endereço: nada a vincular ao produto."))
         # min/max level: política de estoque do produto na filial da linha (ou do endereço)
         if any(p[f] is not None for f in POLICY_DECIMALS):
             if branch_id:
@@ -288,7 +289,7 @@ def _process_chunk(
                     if p[f] is not None:
                         setattr(pol, f, p[f])
             else:
-                result.warn(p["line"], "Min/max level sem filial: informe a filial (coluna ou filial padrão da "
-                                       "importação) — os níveis de estoque são por filial.")
+                result.warn(p["line"], _("Min/max level sem filial: informe a filial (coluna ou filial padrão da "
+                                       "importação) — os níveis de estoque são por filial."))
         result.rows_ok += 1
     db.flush()

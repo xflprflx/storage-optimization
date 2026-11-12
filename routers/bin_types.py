@@ -22,16 +22,17 @@ from routers.common import (
 )
 from services.addressing import normalize_code
 from services.bin_type_service import derived_dims, parse_grid, refresh_children
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/bin-types", tags=["Tipos de Bin"])
+router = APIRouter(prefix="/bin-types", tags=[N_("Tipos de Bin")])
 
 NUM_FIELDS = (
-    ("height", "Altura"),
-    ("width", "Largura"),
-    ("length", "Comprimento"),
-    ("max_weight", "Capacidade de peso"),
-    ("max_volume", "Capacidade de volume"),
-    ("cost", "Custo por bin"),
+    ("height", N_("Altura")),
+    ("width", N_("Largura")),
+    ("length", N_("Comprimento")),
+    ("max_weight", N_("Capacidade de peso")),
+    ("max_volume", N_("Capacidade de volume")),
+    ("cost", N_("Custo por bin")),
 )
 
 
@@ -39,17 +40,17 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
     errors = FormErrors()
     data = {"code": normalize_code(f_str(form, "code")), "name": f_str(form, "name", 150)}
     if not data["code"]:
-        errors.add("code", "Código é obrigatório.")
+        errors.add("code", _("Código é obrigatório."))
     elif len(data["code"]) > 30:
-        errors.add("code", "Código deve ter no máximo 30 caracteres.")
+        errors.add("code", _("Código deve ter no máximo 30 caracteres."))
     else:
         stmt = select(BinType.id).where(BinType.code == data["code"])
         if bin_type_id:
             stmt = stmt.where(BinType.id != bin_type_id)
         if db.scalar(stmt):
-            errors.add("code", f"Já existe um tipo de bin com o código {data['code']}.")
+            errors.add("code", _("Já existe um tipo de bin com o código {code}.", code=data['code']))
     if not data["name"]:
-        errors.add("name", "Nome é obrigatório.")
+        errors.add("name", _("Nome é obrigatório."))
     for key, label in NUM_FIELDS:
         val = f_dec(form, key, errors, label)
         if val is not None and val == 0 and key != "cost":
@@ -66,16 +67,16 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
                 div_w=grid[0] if grid else None, div_l=grid[1] if grid else None,
                 fraction_num=1 if grid else None, fraction_den=grid[0] * grid[1] if grid else None)
     if grid and parent is None and not msg:
-        errors.add("parent_id", "Informe a bin pai do compartimento.")
+        errors.add("parent_id", _("Informe a bin pai do compartimento."))
     if parent is not None and not grid and not msg:
-        errors.add("div_w", "Informe a divisão (ex.: 2 na largura × 3 no comprimento).")
+        errors.add("div_w", _("Informe a divisão (ex.: 2 na largura × 3 no comprimento)."))
     if parent is not None:
         if bin_type_id and parent.id == bin_type_id:
-            errors.add("parent_id", "A bin pai não pode ser o próprio tipo.")
+            errors.add("parent_id", _("A bin pai não pode ser o próprio tipo."))
         elif parent.is_fraction:
-            errors.add("parent_id", "A bin pai precisa ser uma bin inteira (não um compartimento).")
+            errors.add("parent_id", _("A bin pai precisa ser uma bin inteira (não um compartimento)."))
         elif bin_type_id and db.scalar(select(BinType.id).where(BinType.parent_id == bin_type_id)):
-            errors.add("parent_id", "Este tipo é bin pai de compartimentos; não pode ser compartimento.")
+            errors.add("parent_id", _("Este tipo é bin pai de compartimentos; não pode ser compartimento."))
     data["dims_auto"] = False
     if parent is not None and grid and not errors.get("parent_id"):
         dims = derived_dims(parent, *grid)
@@ -141,14 +142,14 @@ def create_bin_type(request: Request, form: FormData = Depends(form_data), db: S
     bt = BinType(**data)
     db.add(bt)
     db.commit()
-    return redirect("/bin-types", f"Tipo de bin {bt.code} criado.")
+    return redirect("/bin-types", _("Tipo de bin {code} criado.", code=bt.code))
 
 
 @router.get("/{bin_type_id}/edit")
 def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_db)):
     bt = db.get(BinType, bin_type_id)
     if not bt:
-        return redirect("/bin-types", "Tipo de bin não encontrado.", "danger")
+        return redirect("/bin-types", _("Tipo de bin não encontrado."), "danger")
     data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
                                         "parent_id", "dims_auto")}
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")
@@ -164,7 +165,7 @@ def update_bin_type(bin_type_id: int, request: Request, form: FormData = Depends
                     db: Session = Depends(get_db)):
     bt = db.get(BinType, bin_type_id)
     if not bt:
-        return redirect("/bin-types", "Tipo de bin não encontrado.", "danger")
+        return redirect("/bin-types", _("Tipo de bin não encontrado."), "danger")
     errors, data = _validate(db, form, bin_type_id)
     if errors:
         return render(request, "bin_types/form.html", status_code=422, bin_type=bt, data=data, errors=errors,
@@ -178,25 +179,23 @@ def update_bin_type(bin_type_id: int, request: Request, form: FormData = Depends
     db.flush()
     adj = structure_message(fit_structure(db))
     db.commit()
-    return redirect("/bin-types", f"Tipo de bin {bt.code} atualizado. {adj}".strip())
+    return redirect("/bin-types", _("Tipo de bin {code} atualizado. {adj}", code=bt.code, adj=adj).strip())
 
 
 @router.post("/{bin_type_id}/delete")
 def delete_bin_type(bin_type_id: int, db: Session = Depends(get_db)):
     bt = db.get(BinType, bin_type_id)
     if not bt:
-        return redirect("/bin-types", "Tipo de bin não encontrado.", "danger")
-    n_locs, _ = _usage(db, [bt.id]).get(bt.id, (0, 0))
+        return redirect("/bin-types", _("Tipo de bin não encontrado."), "danger")
+    n_locs, _x = _usage(db, [bt.id]).get(bt.id, (0, 0))
     if n_locs:
-        return redirect("/bin-types", f"O tipo {bt.code} está em uso em {n_locs} endereço(s). Remova-o dos endereços "
-                                      "(Endereços → selecionar → Atribuir bins → Remover este tipo) antes de excluir.",
+        return redirect("/bin-types", _("O tipo {code} está em uso em {n_locs} endereço(s). Remova-o dos endereços (Endereços → selecionar → Atribuir bins → Remover este tipo) antes de excluir.", code=bt.code, n_locs=n_locs),
                         "danger")
     kids = list(db.scalars(select(BinType.code).where(BinType.parent_id == bt.id)))
     if kids:
-        return redirect("/bin-types", f"O tipo {bt.code} é bin pai das frações {', '.join(kids)}. Exclua ou altere "
-                                      "essas frações antes.", "danger")
+        return redirect("/bin-types", _("O tipo {code} é bin pai das frações {v}. Exclua ou altere essas frações antes.", code=bt.code, v=', '.join(kids)), "danger")
     code = bt.code
     db.delete(bt)
     db.commit()
-    return redirect("/bin-types", f"Tipo de bin {code} excluído.")
+    return redirect("/bin-types", _("Tipo de bin {code} excluído.", code=code))
 

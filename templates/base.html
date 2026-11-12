@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-bs-theme="light">
+<html lang="{{ get_lang() }}" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -70,6 +70,9 @@
     .nk-help-card svg { display: block; width: 100%; height: auto; background: #f7f9fa; border-radius: .35rem; }
     #nkHelpToggle { opacity: .55; } #nkHelpToggle.active { opacity: 1; }
   </style>
+  <script>window.NK_I18N = {{ js_i18n()|tojson }};</script>
+  {% if get_lang() != 'pt-BR' %}<script src="/i18n/{{ get_lang() }}.js?v={{ i18n_version() }}"></script>{% endif %}
+  <script src="/static/i18n.js?v={{ i18n_version() }}"></script>
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -80,43 +83,56 @@
     <div class="collapse navbar-collapse" id="nav">
       {% set p = request.url.path %}
       <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> Painel</a></li>
+        <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> {{ _("Painel") }}</a></li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if p.startswith('/branches') or p.startswith('/warehouses') or p.startswith('/locations') or p.startswith('/bin-types') or p.startswith('/levels') or p.startswith('/structures') or p.startswith('/products') or p.startswith('/settings') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-database"></i> Cadastros</a>
+          <a class="nav-link dropdown-toggle {% if p.startswith('/branches') or p.startswith('/warehouses') or p.startswith('/locations') or p.startswith('/bin-types') or p.startswith('/levels') or p.startswith('/structures') or p.startswith('/products') or p.startswith('/settings') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-database"></i> {{ _("Cadastros") }}</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/branches"><i class="bi bi-building"></i> Filiais</a></li>
-            <li><a class="dropdown-item" href="/warehouses"><i class="bi bi-house-gear"></i> Armazéns</a></li>
-            <li><a class="dropdown-item" href="/locations"><i class="bi bi-grid-3x3-gap"></i> Endereços</a></li>
-            <li><a class="dropdown-item" href="/locations/batch"><i class="bi bi-magic"></i> Gerar endereços em lote</a></li>
-            <li><a class="dropdown-item" href="/bin-types"><i class="bi bi-inboxes"></i> Tipos de Bin</a></li>
-            <li><a class="dropdown-item" href="/levels"><i class="bi bi-layers"></i> Capacidade dos níveis</a></li>
-            <li><a class="dropdown-item" href="/structures"><i class="bi bi-bookshelf"></i> Estruturas de armazenagem</a></li>
+            <li><a class="dropdown-item" href="/branches"><i class="bi bi-building"></i> {{ _("Filiais") }}</a></li>
+            <li><a class="dropdown-item" href="/warehouses"><i class="bi bi-house-gear"></i> {{ _("Armazéns") }}</a></li>
+            <li><a class="dropdown-item" href="/locations"><i class="bi bi-grid-3x3-gap"></i> {{ _("Endereços") }}</a></li>
+            <li><a class="dropdown-item" href="/locations/batch"><i class="bi bi-magic"></i> {{ _("Gerar endereços em lote") }}</a></li>
+            <li><a class="dropdown-item" href="/bin-types"><i class="bi bi-inboxes"></i> {{ _("Tipos de Bin") }}</a></li>
+            <li><a class="dropdown-item" href="/levels"><i class="bi bi-layers"></i> {{ _("Capacidade dos níveis") }}</a></li>
+            <li><a class="dropdown-item" href="/structures"><i class="bi bi-bookshelf"></i> {{ _("Estruturas de armazenagem") }}</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/products"><i class="bi bi-tag"></i> Produtos</a></li>
+            <li><a class="dropdown-item" href="/products"><i class="bi bi-tag"></i> {{ _("Produtos") }}</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear"></i> Configurações</a></li>
+            <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear"></i> {{ _("Configurações") }}</a></li>
           </ul>
         </li>
-        <li class="nav-item"><a class="nav-link {% if p.startswith('/layout') %}active{% endif %}" href="/layout"><i class="bi bi-bricks"></i> Mapa do estoque</a></li>
-        <li class="nav-item"><a class="nav-link {% if p.startswith('/optimization') %}active{% endif %}" href="/optimization"><i class="bi bi-sliders"></i> Otimização de bins</a></li>
-        <li class="nav-item"><a class="nav-link {% if p.startswith('/stock') %}active{% endif %}" href="/stock"><i class="bi bi-boxes"></i> Saldos</a></li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/layout') %}active{% endif %}" href="/layout"><i class="bi bi-bricks"></i> {{ _("Mapa do estoque") }}</a></li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/optimization') %}active{% endif %}" href="/optimization"><i class="bi bi-sliders"></i> {{ _("Otimização de bins") }}</a></li>
+        <li class="nav-item"><a class="nav-link {% if p.startswith('/stock') %}active{% endif %}" href="/stock"><i class="bi bi-boxes"></i> {{ _("Saldos") }}</a></li>
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle {% if p.startswith('/imports') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-upload"></i> Importações</a>
+          <a class="nav-link dropdown-toggle {% if p.startswith('/imports') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-upload"></i> {{ _("Importações") }}</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/imports"><i class="bi bi-list-ol"></i> Todas as importações</a></li>
+            <li><a class="dropdown-item" href="/imports"><i class="bi bi-list-ol"></i> {{ _("Todas as importações") }}</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/imports/branches"><i class="bi bi-building"></i> Filiais</a></li>
-            <li><a class="dropdown-item" href="/imports/warehouses"><i class="bi bi-house-gear"></i> Armazéns</a></li>
-            <li><a class="dropdown-item" href="/imports/bin_types"><i class="bi bi-inboxes"></i> Tipos de bin</a></li>
-            <li><a class="dropdown-item" href="/imports/locations"><i class="bi bi-grid-3x3-gap"></i> Endereços</a></li>
-            <li><a class="dropdown-item" href="/imports/levels"><i class="bi bi-layers"></i> Capacidade dos níveis</a></li>
+            <li><a class="dropdown-item" href="/imports/branches"><i class="bi bi-building"></i> {{ _("Filiais") }}</a></li>
+            <li><a class="dropdown-item" href="/imports/warehouses"><i class="bi bi-house-gear"></i> {{ _("Armazéns") }}</a></li>
+            <li><a class="dropdown-item" href="/imports/bin_types"><i class="bi bi-inboxes"></i> {{ _("Tipos de bin") }}</a></li>
+            <li><a class="dropdown-item" href="/imports/locations"><i class="bi bi-grid-3x3-gap"></i> {{ _("Endereços") }}</a></li>
+            <li><a class="dropdown-item" href="/imports/levels"><i class="bi bi-layers"></i> {{ _("Capacidade dos níveis") }}</a></li>
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/imports/products"><i class="bi bi-tag"></i> Produtos (CSV/Excel)</a></li>
-            <li><a class="dropdown-item" href="/imports/stock"><i class="bi bi-boxes"></i> Saldos de estoque (CSV/Excel)</a></li>
+            <li><a class="dropdown-item" href="/imports/products"><i class="bi bi-tag"></i> {{ _("Produtos (CSV/Excel)") }}</a></li>
+            <li><a class="dropdown-item" href="/imports/stock"><i class="bi bi-boxes"></i> {{ _("Saldos de estoque (CSV/Excel)") }}</a></li>
           </ul>
         </li>
       </ul>
-      <a href="#" class="nav-link text-white px-2" id="nkHelpToggle" role="button" title="Ajuda nos campos"><i class="bi bi-question-circle"></i> Ajuda nos campos</a>
+      {% set nk_next = (request.url.path ~ ('?' ~ request.url.query if request.url.query else ''))|urlencode %}
+      <div class="nav-item dropdown me-1">
+        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkLangMenu" title="{{ _("Idioma e unidades de medida") }}"><i class="bi bi-translate"></i> {{ LANGUAGES[get_lang()][0] }} · {{ unit_label('cm') }}/{{ unit_label('kg') }}</a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">{{ _("Idioma") }}</h6></li>
+          {% for code, lang in LANGUAGES.items() %}<li><a class="dropdown-item{% if code == get_lang() %} active{% endif %}" lang="{{ code }}" href="/lang/{{ code }}?next={{ nk_next }}">{{ lang[0] }}</a></li>{% endfor %}
+          <li><hr class="dropdown-divider"></li>
+          <li><h6 class="dropdown-header">{{ _("Unidades de medida") }}</h6></li>
+          <li><a class="dropdown-item{% if units_mode() == 'auto' %} active{% endif %}" href="/units/auto?next={{ nk_next }}">{{ _("Conforme o idioma") }}</a></li>
+          <li><a class="dropdown-item{% if units_mode() == 'metric' %} active{% endif %}" href="/units/metric?next={{ nk_next }}">{{ _("Métrico (cm, kg, m)") }}</a></li>
+          <li><a class="dropdown-item{% if units_mode() == 'imperial' %} active{% endif %}" href="/units/imperial?next={{ nk_next }}">{{ _("Imperial (in, lb, ft)") }}</a></li>
+        </ul>
+      </div>
+      <a href="#" class="nav-link text-white px-2" id="nkHelpToggle" role="button" title="{{ _("Ajuda nos campos") }}"><i class="bi bi-question-circle"></i> {{ _("Ajuda nos campos") }}</a>
     </div>
   </div>
 </nav>
@@ -179,7 +195,7 @@ function nkAutocomplete() {
         const data = await r.json();
         if (my !== seq) return;
         list.innerHTML = '';
-        if (!data.length) { list.innerHTML = '<div class="list-group-item small text-muted py-1">Nenhum resultado</div>'; return; }
+        if (!data.length) { list.innerHTML = '<div class="list-group-item small text-muted py-1">' + _t('Nenhum resultado') + '<\/div>'; return; }
         data.forEach(item => {
           const b = document.createElement('button');
           b.type = 'button'; b.className = 'list-group-item list-group-item-action py-1 small';
@@ -279,7 +295,7 @@ function nkTables() {
     const saved = load(key);
     if (saved && saved.length === ths.length) apply(saved);
     ths.forEach((th, j) => {
-      const h = document.createElement('span'); h.className = 'nk-resizer'; h.title = 'Arraste para ajustar a largura · duplo clique: automático';
+      const h = document.createElement('span'); h.className = 'nk-resizer'; h.title = _t('Arraste para ajustar a largura · duplo clique: automático');
       th.appendChild(h);
       h.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
       h.addEventListener('dblclick', e => {
@@ -326,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
       if (scroll) nav.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     };
     steps.forEach((s, i) => {
-      const title = s.dataset.stepTitle || ('Etapa ' + (i + 1));
+      const title = s.dataset.stepTitle || (_t('Etapa {i}', {i: (i + 1)}));
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'nk-stepper-item';
@@ -339,14 +355,14 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
       f.className = 'nk-step-footer';
       const prev = document.createElement('button');
       prev.type = 'button'; prev.className = 'btn btn-sm btn-outline-secondary';
-      prev.innerHTML = '<i class="bi bi-arrow-left"></i> Anterior';
+      prev.innerHTML = '<i class="bi bi-arrow-left"><\/i> ' + _t('Anterior');
       prev.addEventListener('click', () => show(i - 1, true));
       f.appendChild(i > 0 ? prev : document.createElement('span'));
       if (i < steps.length - 1) {
         const next = document.createElement('button');
         next.type = 'button'; next.className = 'btn btn-sm btn-primary';
         next.innerHTML = '<span></span> <i class="bi bi-arrow-right"></i>';
-        next.firstChild.textContent = 'Próximo: ' + (steps[i + 1].dataset.stepTitle || '');
+        next.firstChild.textContent = _t('Próximo: {steps}', {steps: (steps[i + 1].dataset.stepTitle || '')});
         next.addEventListener('click', () => show(i + 1, true));
         f.appendChild(next);
       }
@@ -373,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
    (SVG com class nk-floor, desenho do projeto) e para o PDF (links com data-dims-link) e fica salva no navegador.
    Seletor: qualquer elemento com data-dims-control. */
 (function () {
-  const KEY = 'nk-plan-dims', MODES = [['none', 'Ocultar', 'bi-eye-slash'], ['summary', 'Resumo', 'bi-aspect-ratio'], ['full', 'Completas', 'bi-rulers']];
+  const KEY = 'nk-plan-dims', MODES = [['none', _t('Ocultar'), 'bi-eye-slash'], ['summary', _t('Resumo'), 'bi-aspect-ratio'], ['full', _t('Completas'), 'bi-rulers']];
   const read = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const get = () => { const v = read(KEY); return ['none', 'summary', 'full'].includes(v) ? v : 'summary'; };
   const getPos = () => read(KEY + '-pos') === 'in' ? 'in' : 'out';  // cotas completas: por fora da planta ou por dentro
@@ -383,14 +399,11 @@ document.addEventListener('DOMContentLoaded', () => { try { document.querySelect
     el.dataset.dimsMounted = '1';
     const id = 'nkdims' + (++n);
     el.classList.add('nk-dims-ctl', 'd-inline-flex', 'align-items-center', 'gap-1', 'small');
-    el.innerHTML = '<span class="text-muted"><i class="bi bi-rulers"></i> Medidas:</span><div class="btn-group btn-group-sm" role="group">' +
-      MODES.map(([v, t, ic]) => `<input type="radio" class="btn-check" name="${id}" id="${id}-${v}" value="${v}" autocomplete="off">` +
-        `<label class="btn btn-outline-secondary" for="${id}-${v}" title="${v === 'none' ? 'Sem medidas' : v === 'summary' ? 'Só o tamanho do imóvel (ex.: 40 × 25 m)' : 'Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores'}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>' +
-      '<div class="btn-group btn-group-sm nk-dims-pos" role="group">' +
-      [['out', 'Por fora', 'bi-arrows-angle-expand', 'Cotas encadeadas em volta da planta (bordas de cima e da esquerda)'],
-       ['in', 'Por dentro', 'bi-arrows-angle-contract', 'Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)']]
+    el.innerHTML = '<span class="text-muted"><i class="bi bi-rulers"><\/i> ' + _t('Medidas:') + '<\/span><div class="btn-group btn-group-sm" role="group">' + (MODES.map(([v, t, ic]) => `<input type="radio" class="btn-check" name="${id}" id="${id}-${v}" value="${v}" autocomplete="off">` +
+        `<label class="btn btn-outline-secondary" for="${id}-${v}" title="${v === 'none' ? _t('Sem medidas') : v === 'summary' ? _t('Só o tamanho do imóvel (ex.: 40 × 25 m)') : _t('Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores')}"><i class="bi ${ic}"></i> ${t}</label>`).join('')) + '<\/div><div class="btn-group btn-group-sm nk-dims-pos" role="group">' + ([['out', _t('Por fora'), 'bi-arrows-angle-expand', _t('Cotas encadeadas em volta da planta (bordas de cima e da esquerda)')],
+       ['in', _t('Por dentro'), 'bi-arrows-angle-contract', _t('Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)')]]
         .map(([v, t, ic, tt]) => `<input type="radio" class="btn-check" name="${id}p" id="${id}p-${v}" value="${v}" autocomplete="off">` +
-          `<label class="btn btn-outline-secondary" for="${id}p-${v}" title="${tt}"><i class="bi ${ic}"></i> ${t}</label>`).join('') + '</div>';
+          `<label class="btn btn-outline-secondary" for="${id}p-${v}" title="${tt}"><i class="bi ${ic}"></i> ${t}</label>`).join('')) + '<\/div>';
     el.querySelectorAll(`input[name="${id}"]`).forEach(i => i.addEventListener('change', () => set(i.value)));
     el.querySelectorAll(`input[name="${id}p"]`).forEach(i => i.addEventListener('change', () => setPos(i.value)));
   }

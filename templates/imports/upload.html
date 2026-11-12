@@ -3,43 +3,43 @@
 {% block content %}
 <div class="page-header">
   <h1><i class="bi bi-upload"></i> {{ title }}</h1>
-  <a href="/imports/template/{{ kind }}.csv" class="btn btn-outline-secondary"><i class="bi bi-download"></i> Baixar modelo CSV</a>
+  <a href="/imports/template/{{ kind }}.csv" class="btn btn-outline-secondary"><i class="bi bi-download"></i> {{ _("Baixar modelo CSV") }}</a>
 </div>
 <div class="card" style="max-width: 760px">
   <div class="card-body">
     <div class="mb-3">
-      <span class="badge rounded-pill text-bg-primary">1. Enviar arquivo</span>
-      <span class="badge rounded-pill text-bg-light border">2. Mapear colunas</span>
-      <span class="badge rounded-pill text-bg-light border">3. Resultado</span>
+      <span class="badge rounded-pill text-bg-primary">{{ _("1. Enviar arquivo") }}</span>
+      <span class="badge rounded-pill text-bg-light border">{{ _("2. Mapear colunas") }}</span>
+      <span class="badge rounded-pill text-bg-light border">{{ _("3. Resultado") }}</span>
     </div>
     {% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
     <form method="post" action="/imports/{{ kind }}/upload" enctype="multipart/form-data">
       <div class="mb-3">
-        <label class="form-label">Arquivo (CSV, TXT ou XLSX)</label>
+        <label class="form-label">{{ _("Arquivo (CSV, TXT ou XLSX)") }}</label>
         <input type="file" class="form-control" name="file" accept=".csv,.txt,.xlsx,.xlsm" required>
-        <div class="form-text">CSV: delimitador (; , TAB |) e codificação (UTF-8/Latin-1) detectados automaticamente. XLSX: primeira planilha. Máx. 200 MB.</div>
+        <div class="form-text">{{ _("CSV: delimitador (; , TAB |) e codificação (UTF-8/Latin-1) detectados automaticamente. XLSX: primeira planilha. Máx. 200 MB.") }}</div>
       </div>
       <div class="form-check mb-3">
         <input class="form-check-input" type="checkbox" name="has_header" value="1" id="has_header" checked>
-        <label class="form-check-label" for="has_header">A primeira linha contém os nomes das colunas</label>
+        <label class="form-check-label" for="has_header">{{ _("A primeira linha contém os nomes das colunas") }}</label>
       </div>
-      <button class="btn btn-accent"><i class="bi bi-arrow-right"></i> Enviar e mapear colunas</button>
+      <button class="btn btn-accent"><i class="bi bi-arrow-right"></i> {{ _("Enviar e mapear colunas") }}</button>
     </form>
     <hr>
     {% if master %}
     <ul class="small text-muted mb-0">{% for h in master.help %}<li>{{ h }}</li>{% endfor %}</ul>
     {% elif kind == 'products' %}
     <ul class="small text-muted mb-0">
-      <li>Somente a coluna <b>SKU</b> é obrigatória; as demais são opcionais e mapeadas na próxima etapa.</li>
-      <li>Filiais e armazéns inexistentes são criados automaticamente apenas com o código.</li>
-      <li>Com Endereço informado, ele vira o endereço padrão do produto. Filial e Armazém (opcionais) indicam em qual depósito procurar/criar o endereço.</li>
-      <li>Processamento em lotes de 500 linhas (memória constante mesmo em arquivos grandes).</li>
+      <li>{{ _h("Somente a coluna <b>SKU</b> é obrigatória; as demais são opcionais e mapeadas na próxima etapa.") }}</li>
+      <li>{{ _("Filiais e armazéns inexistentes são criados automaticamente apenas com o código.") }}</li>
+      <li>{{ _("Com Endereço informado, ele vira o endereço padrão do produto. Filial e Armazém (opcionais) indicam em qual depósito procurar/criar o endereço.") }}</li>
+      <li>{{ _("Processamento em lotes de 500 linhas (memória constante mesmo em arquivos grandes).") }}</li>
     </ul>
     {% else %}
     <ul class="small text-muted mb-0">
-      <li>Mapeie Filial, Armazém, Posição, SKU e <b>uma ou mais colunas de quantidade</b> — elas serão <b>somadas</b>.</li>
-      <li>Filiais, armazéns e posições inexistentes são criados automaticamente.</li>
-      <li>O saldo do produto no endereço é <b>sobreposto</b> com a quantidade do arquivo.</li>
+      <li>{{ _h("Mapeie Filial, Armazém, Posição, SKU e <b>uma ou mais colunas de quantidade</b> — elas serão <b>somadas</b>.") }}</li>
+      <li>{{ _("Filiais, armazéns e posições inexistentes são criados automaticamente.") }}</li>
+      <li>{{ _h("O saldo do produto no endereço é <b>sobreposto</b> com a quantidade do arquivo.") }}</li>
     </ul>
     {% endif %}
   </div>

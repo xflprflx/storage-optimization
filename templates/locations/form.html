@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field_error, invalid, form_alert, warehouse_options, occupied_badge, bin_editor %}
-{% block title %}{{ 'Editar' if location else 'Novo' }} endereço{% endblock %}
+{% block title %}{{ _h("{v} endereço", v=(_('Editar') if location else _('Novo'))) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-grid-3x3-gap"></i> {{ 'Editar endereço ' ~ location.address if location else 'Novo endereço' }}</h1>
-  <a href="/locations" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <h1><i class="bi bi-grid-3x3-gap"></i> {{ _('Editar endereço ') ~ location.address if location else _('Novo endereço') }}</h1>
+  <a href="/locations" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
 </div>
 <div class="row g-3">
 <div class="col-lg-7">
@@ -14,21 +14,21 @@
     <form method="post">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label">Filial *</label>
+          <label class="form-label">{{ _("Filial *") }}</label>
           <select class="form-select {{ invalid(errors, 'branch_id') }}" name="branch_id" id="branch_id" required>
-            <option value="">Selecione...</option>
+            <option value="">{{ _("Selecione...") }}</option>
             {% for b in branches %}<option value="{{ b.id }}" {% if data.get('branch_id') == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
           </select>
           {{ field_error(errors, 'branch_id') }}
         </div>
         <div class="col-md-6">
-          <label class="form-label">Armazém (opcional)</label>
+          <label class="form-label">{{ _("Armazém (opcional)") }}</label>
           <select class="form-select {{ invalid(errors, 'warehouse_id') }}" name="warehouse_id" data-filter-by="branch_id">
             {{ warehouse_options(warehouses, wh_branches, data.get('warehouse_id')) }}
           </select>
           {{ field_error(errors, 'warehouse_id') }}
         </div>
-        {% for key, label in [('aisle','Corredor *'), ('bay','Estante'), ('level','Nível'), ('position','Posição'), ('compartment','Compartimento')] %}
+        {% for key, label in [('aisle',_('Corredor *')), ('bay',_('Estante')), ('level',_('Nível')), ('position',_('Posição')), ('compartment',_('Compartimento'))] %}
         <div class="col">
           <label class="form-label">{{ label }}</label>
           <input class="form-control mono text-uppercase {{ invalid(errors, key) }}" name="{{ key }}" maxlength="20" value="{{ data.get(key) or '' }}" {% if key == 'aisle' %}required{% endif %}>
@@ -38,37 +38,29 @@
         <div class="col-12">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="is_generic" value="1" id="isGeneric" {% if data.get('is_generic') %}checked{% endif %}>
-            <label class="form-check-label" for="isGeneric"><b>Endereço genérico</b>: não usa o próprio nível — as bins ficam no nível escolhido em cada linha
-              (coluna "Nível") ou ocupam os níveis da estante de baixo para cima</label>
+            <label class="form-check-label" for="isGeneric">{{ _h("<b>Endereço genérico</b>: não usa o próprio nível — as bins ficam no nível escolhido em cada linha (coluna \"Nível\") ou ocupam os níveis da estante de baixo para cima") }}</label>
           </div>
-          <div class="form-text">Hierarquia estrita: Corredor → Estante → Nível → Posição → Compartimento. Deixe o compartimento vazio para uma posição genérica.
-            Uma posição não pode ser genérica e ter compartimentos ao mesmo tempo.</div>
+          <div class="form-text">{{ _("Hierarquia estrita: Corredor → Estante → Nível → Posição → Compartimento. Deixe o compartimento vazio para uma posição genérica. Uma posição não pode ser genérica e ter compartimentos ao mesmo tempo.") }}</div>
         </div>
         <div class="col-12">
           <div class="d-flex align-items-center gap-2">
-            <span class="small">Situação:</span>
+            <span class="small">{{ _("Situação:") }}</span>
             {% if location %}{{ occupied_badge(location.is_occupied) }}{% else %}{{ occupied_badge(false) }}{% endif %}
           </div>
-          <div class="form-text">Automática: o endereço fica <b>ocupado</b> sempre que tiver algum item atrelado —
-            saldo (mesmo zero) ou produto com este endereço padrão. Fica <b>livre</b> só quando não houver nenhum.</div>
+          <div class="form-text">{{ _h("Automática: o endereço fica <b>ocupado</b> sempre que tiver algum item atrelado — saldo (mesmo zero) ou produto com este endereço padrão. Fica <b>livre</b> só quando não houver nenhum.") }}</div>
         </div>
       </div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-2"><i class="bi bi-inboxes"></i> Bins neste endereço</h6>
-      <div class="form-text mb-2">Um endereço pode ter várias bins, inclusive de tipos diferentes (ex.: 2× Caixa P + 1× Caixa G).
-        {% if level_options and location and (location.is_generic or not location.level) %}Este endereço é <b>genérico</b>{% if not location.level %} (sem nível){% endif %}: ele ocupa os níveis
-        da estante, não o próprio nível. Escolha na coluna "Nível" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a
-        estante de baixo para cima e a zona de ouro da pega considera os níveis onde as bins ficam.
-        {% elif level_options %}Se as bins passarem da capacidade do nível do endereço (ex.: cabem 3 e são 6), o excedente ocupa
-        automaticamente o(s) <b>nível(is) de cima, dedicado(s) a este endereço</b> — um nível cheio por vez.
-        Para colocar em <b>outro nível</b>, adicione uma linha e escolha o nível na coluna "Nível": essa escolha é mantida.
-        O 3D desenha as bins no nível escolhido, e a zona de ouro da pega usa o nível onde as bins estão.{% elif location and location.bay %}Para usar outro nível da estante, cadastre-o em
-        <a href="/levels?branch_id={{ location.branch_id }}&warehouse_id={{ location.warehouse_id or 'none' }}&aisle={{ location.aisle }}&bay={{ location.bay }}">Capacidade dos níveis</a>.{% endif %}</div>
-      {{ bin_editor(bin_types, data.get('bins') or [], errors, 'Nenhuma bin neste endereço.', level_options if (level_options is defined and location and location.bay) else none, own_level_info if own_level_info is defined else none) }}
+      <h6 class="text-muted text-uppercase small mb-2"><i class="bi bi-inboxes"></i> {{ _("Bins neste endereço") }}</h6>
+      <div class="form-text mb-2">{{ _("Um endereço pode ter várias bins, inclusive de tipos diferentes (ex.: 2× Caixa P + 1× Caixa G).") }}
+        {% if level_options and location and (location.is_generic or not location.level) %}{{ _h("Este endereço é <b>genérico</b>") }}{% if not location.level %} {{ _("(sem nível)") }}{% endif %}{{ _(": ele ocupa os níveis da estante, não o próprio nível. Escolha na coluna \"Nível\" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a estante de baixo para cima e a zona de ouro da pega considera os níveis onde as bins ficam.") }}
+        {% elif level_options %}{{ _h("Se as bins passarem da capacidade do nível do endereço (ex.: cabem 3 e são 6), o excedente ocupa automaticamente o(s) <b>nível(is) de cima, dedicado(s) a este endereço</b> — um nível cheio por vez. Para colocar em <b>outro nível</b>, adicione uma linha e escolha o nível na coluna \"Nível\": essa escolha é mantida. O 3D desenha as bins no nível escolhido, e a zona de ouro da pega usa o nível onde as bins estão.") }}{% elif location and location.bay %}{{ _("Para usar outro nível da estante, cadastre-o em") }}
+        <a href="/levels?branch_id={{ location.branch_id }}&warehouse_id={{ location.warehouse_id or 'none' }}&aisle={{ location.aisle }}&bay={{ location.bay }}">{{ _("Capacidade dos níveis") }}</a>.{% endif %}</div>
+      {{ bin_editor(bin_types, data.get('bins') or [], errors, _('Nenhuma bin neste endereço.'), level_options if (level_options is defined and location and location.bay) else none, own_level_info if own_level_info is defined else none) }}
       <div class="mt-4 d-flex gap-2 align-items-center">
-        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
-        {% if not location %}<button class="btn btn-outline-secondary" name="add_another" value="1"><i class="bi bi-plus"></i> Salvar e criar outro</button>{% endif %}
-        <a href="/locations" class="btn btn-link">Cancelar</a>
+        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+        {% if not location %}<button class="btn btn-outline-secondary" name="add_another" value="1"><i class="bi bi-plus"></i> {{ _("Salvar e criar outro") }}</button>{% endif %}
+        <a href="/locations" class="btn btn-link">{{ _("Cancelar") }}</a>
       </div>
     </form>
   </div>
@@ -77,17 +69,17 @@
 {% if location %}
 <div class="col-lg-5">
   <div class="card">
-    <div class="card-header bg-white d-flex justify-content-between"><strong>Itens atrelados a este endereço</strong> {{ occupied_badge(location.is_occupied) }}</div>
+    <div class="card-header bg-white d-flex justify-content-between">{{ _h("<strong>Itens atrelados a este endereço</strong> {occupied_badge}", occupied_badge=(occupied_badge(location.is_occupied))) }}</div>
     <ul class="list-group list-group-flush">
       {% for it in items %}
       <li class="list-group-item d-flex justify-content-between align-items-center">
         <span><a class="mono" href="/products/{{ it.id }}">{{ it.sku }}</a>
           {% for tg in it.tags|sort %}<span class="badge rounded-pill bg-info-subtle border border-info-subtle text-info-emphasis ms-1" style="font-size:.65rem">{{ tg }}</span>{% endfor %}
           <small class="text-muted">{{ it.name }}</small></span>
-        <span class="fw-semibold">{% if it.quantity is none %}<span class="text-muted" title="Sem saldo lançado">—</span>{% else %}{{ it.quantity|dec }}{% endif %}</span>
+        <span class="fw-semibold">{% if it.quantity is none %}<span class="text-muted" title="{{ _("Sem saldo lançado") }}">—</span>{% else %}{{ it.quantity|dec }}{% endif %}</span>
       </li>
       {% else %}
-      <li class="list-group-item text-muted">Nenhum item atrelado — endereço livre.</li>
+      <li class="list-group-item text-muted">{{ _("Nenhum item atrelado — endereço livre.") }}</li>
       {% endfor %}
     </ul>
   </div>
@@ -95,38 +87,37 @@
   {# ---------------- Conteúdo de cada bin física ---------------- #}
   <div class="card mt-3" id="conteudo">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-      <strong>Conteúdo das bins</strong>
-      {% if bin_view and bin_view|selectattr('presumed')|list %}<span class="badge bg-warning-subtle text-warning-emphasis border" title="Distribuição calculada pelo sistema (não informada)">presumido</span>
-      {% elif bin_view and bin_view|selectattr('contents')|list %}<span class="badge bg-success-subtle text-success-emphasis border">informado</span>{% endif %}
+      <strong>{{ _("Conteúdo das bins") }}</strong>
+      {% if bin_view and bin_view|selectattr('presumed')|list %}<span class="badge bg-warning-subtle text-warning-emphasis border" title="{{ _("Distribuição calculada pelo sistema (não informada)") }}">{{ _("presumido") }}</span>
+      {% elif bin_view and bin_view|selectattr('contents')|list %}<span class="badge bg-success-subtle text-success-emphasis border">{{ _("informado") }}</span>{% endif %}
     </div>
     <div class="card-body small">
-      {% if loose %}<div class="alert alert-warning py-1 mb-2"><i class="bi bi-exclamation-triangle"></i> <b>Fora de bin</b> (órfão):
-        {% for sku, q in loose %}<span class="mono">{{ sku }}</span> {{ q|dec }} un.{{ ', ' if not loop.last }}{% endfor %} — sem bin neste endereço
-        (ex.: desalojado por uma otimização). Informe a bin abaixo ou rode a otimização do item.</div>{% endif %}
-      {% if not bin_view %}<span class="text-muted">Este endereço não tem bins.</span>
+      {% if loose %}<div class="alert alert-warning py-1 mb-2"><i class="bi bi-exclamation-triangle"></i> {{ _h("<b>Fora de bin</b> (órfão):") }}
+        {% for sku, q in loose %}{{ _h("<span class=\"mono\">{sku}</span> {q} un.{v}", sku=(sku), q=(q|dec), v=(', ' if not loop.last)) }}{% endfor %} {{ _("— sem bin neste endereço (ex.: desalojado por uma otimização). Informe a bin abaixo ou rode a otimização do item.") }}</div>{% endif %}
+      {% if not bin_view %}<span class="text-muted">{{ _("Este endereço não tem bins.") }}</span>
       {% else %}
       <table class="table table-sm mb-2" data-no-resize>
-        <thead><tr><th>Bin</th><th>Conteúdo</th><th>Arranjo</th><th class="text-end">Ocupação</th></tr></thead>
+        <thead><tr><th>{{ _("Bin") }}</th><th>{{ _("Conteúdo") }}</th><th>{{ _("Arranjo") }}</th><th class="text-end">{{ _("Ocupação") }}</th></tr></thead>
         <tbody>
         {% for v in bin_view %}
           <tr><td class="mono text-nowrap">{{ v.type.code if v.type else '?' }} #{{ v.bin.seq }}{% if v.bin.level %} <span class="text-muted">↳{{ v.bin.level }}</span>{% endif %}</td>
             <td>{% for c in v.contents %}<div><span class="mono">{{ c.product.sku }}</span> · {{ c.quantity|dec }}
-              {% if v.pack and v.pack.texts.get(c.product.sku) %}<div class="text-muted" style="font-size:.7rem">{{ v.pack.texts[c.product.sku] }}</div>{% endif %}</div>{% else %}<span class="text-muted">vazia</span>{% endfor %}</td>
-            <td>{% if v.pack %}<a href="{{ v.pack.url }}" target="_blank" class="text-decoration-none" title="Ver em 3D">{{ v.pack.svg|safe }} <span class="badge text-bg-dark" style="font-size:.6rem">3D</span></a>{% endif %}</td>
+              {% if v.pack and v.pack.texts.get(c.product.sku) %}<div class="text-muted" style="font-size:.7rem">{{ v.pack.texts[c.product.sku] }}</div>{% endif %}</div>{% else %}<span class="text-muted">{{ _("vazia") }}</span>{% endfor %}</td>
+            <td>{% if v.pack %}<a href="{{ v.pack.url }}" target="_blank" class="text-decoration-none" title="{{ _("Ver em 3D") }}">{{ v.pack.svg|safe }} <span class="badge text-bg-dark" style="font-size:.6rem">3D</span></a>{% endif %}</td>
             <td class="text-end {{ 'text-danger fw-semibold' if v.fill and v.fill > 100 }}">{{ (v.fill|dec(0) ~ '%') if v.fill is not none else '?' }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
       {% if stock_items %}
       <details {% if content_error %}open{% endif %}>
-        <summary class="mb-2">Informar o que está em cada bin</summary>
+        <summary class="mb-2">{{ _("Informar o que está em cada bin") }}</summary>
         {% if content_error %}<div class="alert alert-danger py-1">{{ content_error }}</div>{% endif %}
         <form method="post" action="/locations/{{ location.id }}/contents">
           <div id="contentRows">
           {% for v in bin_view %}{% for c in v.contents %}
             <div class="d-flex gap-1 mb-1 content-row">
               <select class="form-select form-select-sm" name="c_bin">{% for w in bin_view %}<option value="{{ w.bin.type_id }}:{{ w.bin.seq }}" {% if w.bin == v.bin %}selected{% endif %}>{{ w.type.code if w.type else '?' }} #{{ w.bin.seq }}</option>{% endfor %}</select>
-              <select class="form-select form-select-sm" name="c_product">{% for s in stock_items %}<option value="{{ s.product_id }}" {% if s.product_id == c.product_id %}selected{% endif %}>{{ s.product.sku }} (saldo {{ s.quantity|dec }})</option>{% endfor %}</select>
+              <select class="form-select form-select-sm" name="c_product">{% for s in stock_items %}<option value="{{ s.product_id }}" {% if s.product_id == c.product_id %}selected{% endif %}>{{ _h("{sku} (saldo {quantity})", sku=(s.product.sku), quantity=(s.quantity|dec)) }}</option>{% endfor %}</select>
               <input class="form-control form-control-sm text-end" style="max-width:90px" name="c_qty" value="{{ c.quantity|dec_input }}" inputmode="decimal">
               <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentNode.remove()"><i class="bi bi-x"></i></button>
             </div>
@@ -134,16 +125,16 @@
           </div>
           <template id="contentTpl"><div class="d-flex gap-1 mb-1 content-row">
             <select class="form-select form-select-sm" name="c_bin">{% for w in bin_view %}<option value="{{ w.bin.type_id }}:{{ w.bin.seq }}">{{ w.type.code if w.type else '?' }} #{{ w.bin.seq }}</option>{% endfor %}</select>
-            <select class="form-select form-select-sm" name="c_product">{% for s in stock_items %}<option value="{{ s.product_id }}">{{ s.product.sku }} (saldo {{ s.quantity|dec }})</option>{% endfor %}</select>
+            <select class="form-select form-select-sm" name="c_product">{% for s in stock_items %}<option value="{{ s.product_id }}">{{ _h("{sku} (saldo {quantity})", sku=(s.product.sku), quantity=(s.quantity|dec)) }}</option>{% endfor %}</select>
             <input class="form-control form-control-sm text-end" style="max-width:90px" name="c_qty" inputmode="decimal">
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.parentNode.remove()"><i class="bi bi-x"></i></button>
           </div></template>
           <div class="d-flex gap-2 mt-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('contentRows').insertAdjacentHTML('beforeend', document.getElementById('contentTpl').innerHTML)"><i class="bi bi-plus"></i> Linha</button>
-            <button class="btn btn-sm btn-accent"><i class="bi bi-check-lg"></i> Salvar conteúdo</button>
-            <button class="btn btn-sm btn-link" name="auto" value="1">Voltar à distribuição automática</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('contentRows').insertAdjacentHTML('beforeend', document.getElementById('contentTpl').innerHTML)"><i class="bi bi-plus"></i> {{ _("Linha") }}</button>
+            <button class="btn btn-sm btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar conteúdo") }}</button>
+            <button class="btn btn-sm btn-link" name="auto" value="1">{{ _("Voltar à distribuição automática") }}</button>
           </div>
-          <div class="form-text">A soma de cada SKU nas bins precisa ser igual ao saldo do endereço.</div>
+          <div class="form-text">{{ _("A soma de cada SKU nas bins precisa ser igual ao saldo do endereço.") }}</div>
         </form>
       </details>
       {% endif %}

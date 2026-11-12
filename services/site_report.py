@@ -20,13 +20,14 @@ from datetime import datetime
 from typing import Optional
 
 from services.site_planner import DEMAND_STATUS, ORIENTATIONS, SITE_CRITERIA, STRUCT_MODES, SitePlan, struct_colors
+from services.i18n import N_, _, fmt_datetime, localize_number_text, tr, translate_workbook
 
 PHASES = {
-    1: "Compras",
-    2: "Montagem das estantes",
-    3: "Configuração dos níveis e etiquetagem",
-    4: "Abastecimento (bins e produtos)",
-    5: "Pendências",
+    1: N_("Compras"),
+    2: N_("Montagem das estantes"),
+    3: N_("Configuração dos níveis e etiquetagem"),
+    4: N_("Abastecimento (bins e produtos)"),
+    5: N_("Pendências"),
 }
 PHASE_KIND = {1: "info", 2: "move", 3: "change", 4: "add", 5: "remove"}
 
@@ -35,7 +36,7 @@ def _fmt(v, places=0) -> str:
     if v is None:
         return "—"
     s = f"{v:,.{places}f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+    return localize_number_text(s)
 
 
 def _money(v) -> str:
@@ -58,7 +59,7 @@ class Step:
 
     @property
     def phase_label(self) -> str:
-        return f"{self.phase}. {PHASES[self.phase]}"
+        return f"{self.phase}. {tr(PHASES[self.phase])}"
 
 
 @dataclass
@@ -87,7 +88,7 @@ class SiteReport:
         out: dict[int, list] = {}
         for s in self.steps:
             out.setdefault(s.phase, []).append(s)
-        return [(f"{k}. {PHASES[k]}", v) for k, v in sorted(out.items())]
+        return [(f"{k}. {tr(PHASES[k])}", v) for k, v in sorted(out.items())]
 
 
 def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_names: Optional[dict] = None) -> SiteReport:
@@ -96,82 +97,78 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     d, p = cfg.get("demand", {}), cfg.get("params", {})
     code = lambda t: types[t].code if t in types else "?"  # noqa: E731
     bin_names = bin_names or {}
-    src = "Arquivo importado" if d.get("source") == "upload" else (
-        "Cadastro de produtos" + (" / filial de referência" if d.get("branch_id") else " (todas as filiais)"))
+    src = _("Arquivo importado") if d.get("source") == "upload" else (
+        _("Cadastro de produtos") + (_(" / filial de referência") if d.get("branch_id") else " (todas as filiais)"))
     scope = [
-        ("Imóvel", f"{_fmt(b.length_m, 2)} × {_fmt(b.width_m, 2)} m · pé-direito útil {_fmt(b.clear_height_m, 2)} m "
-                   f"· {_fmt(b.area_m2, 0)} m²"),
-        ("Corredores", f"{_fmt(b.aisle_m, 2)} m · afastamento das paredes {_fmt(b.wall_gap_m, 2)} m"),
-        ("Faixas reservadas", f"frente {_fmt(b.front_reserved_m, 2)} m · fundo {_fmt(b.back_reserved_m, 2)} m"),
-        ("Corredores transversais", f"{b.cross_aisles} × {_fmt(b.cross_aisle_m, 2)} m"),
-        ("Cabeceiras", ("permitidas nas pontas com acesso" if b.end_caps else "não usar")
-         + (f" · {plan.end_caps} módulo(s) girado(s)" if plan.end_caps else "")),
-        ("Fileiras", (f"{len(fl.rows)} fileira(s) ao longo do {'comprimento' if fl.along == 'length' else 'largura'}"
-                      f" ({ORIENTATIONS.get(b.orientation, b.orientation)}) · " if not fl.mixed else
-                      f"{len(fl.rows)} fileira(s) em {len(fl.zones)} zonas · ")
+        (_("Imóvel"), _("{fmt} × {fmt2} m · pé-direito útil {fmt3} m · {fmt4} m²", fmt=_fmt(b.length_m, 2), fmt2=_fmt(b.width_m, 2), fmt3=_fmt(b.clear_height_m, 2), fmt4=_fmt(b.area_m2, 0))),
+        (_("Corredores"), _("{fmt} m · afastamento das paredes {fmt2} m", fmt=_fmt(b.aisle_m, 2), fmt2=_fmt(b.wall_gap_m, 2))),
+        (_("Faixas reservadas"), f"frente {_fmt(b.front_reserved_m, 2)} m · fundo {_fmt(b.back_reserved_m, 2)} m"),
+        (_("Corredores transversais"), f"{b.cross_aisles} × {_fmt(b.cross_aisle_m, 2)} m"),
+        (_("Cabeceiras"), (_("permitidas nas pontas com acesso") if b.end_caps else _("não usar"))
+         + (_(" · {end_caps} módulo(s) girado(s)", end_caps=plan.end_caps) if plan.end_caps else "")),
+        (_("Fileiras"), (_("{len} fileira(s) ao longo do {v} ({get}) · ", len=len(fl.rows), v='comprimento' if fl.along == 'length' else 'largura', get=ORIENTATIONS.get(b.orientation, b.orientation)) if not fl.mixed else
+                      _("{len} fileira(s) em {len2} zonas · ", len=len(fl.rows), len2=len(fl.zones)))
          + f"{fl.real_aisles} corredor(es) · profundidade {_fmt(fl.depth, 0)} cm"),
-    ] + ([("Zonas", " · ".join(
-        f"{z.name}: {_fmt(z.cross_cm / 100 if z.rot else z.run_cm / 100, 2)} m, fileiras ao longo da "
-        f"{'largura' if z.rot else 'comprimento'}, {len(z.rows)} fileira(s), corredor {_fmt(z.aisle_cm / 100, 2)} m"
-        for z in fl.zones) + f" · avenidas de {_fmt(b.avenue_m, 2)} m")] if fl.mixed else []) + [
-        ("Demanda", f"{src} · base {d.get('basis', '')} · fator {d.get('factor', '100')}% · crescimento "
+    ] + ([(_("Zonas"), " · ".join(
+        _("{name}: {fmt} m, fileiras ao longo da {v}, {len} fileira(s), corredor {fmt2} m", name=z.name, fmt=_fmt(z.cross_cm / 100 if z.rot else z.run_cm / 100, 2), v='largura' if z.rot else 'comprimento', len=len(z.rows), fmt2=_fmt(z.aisle_cm / 100, 2))
+        for z in fl.zones) + _(" · avenidas de {fmt} m", fmt=_fmt(b.avenue_m, 2)))] if fl.mixed else []) + [
+        (_("Demanda"), f"{src} · base {d.get('basis', '')} · fator {d.get('factor', '100')}% · crescimento "
                     f"{d.get('growth', '0')}%"),
-        ("SKUs", f"{len(plan.demands)} SKU(s) · {sum(1 for x in plan.demands if x.status == 'ok')} alocado(s)"),
+        ("SKUs", _("{len} SKU(s) · {sum} alocado(s)", len=len(plan.demands), sum=sum(1 for x in plan.demands if x.status == 'ok'))),
     ]
-    order = [st["label"] for st in plan.solver.get("stages", [])]
+    order = [tr(st["label"]) for st in plan.solver.get("stages", [])]
     params = [
-        ("Prioridade dos critérios", " > ".join(order) or SITE_CRITERIA.get(p.get("objective"), "")),
-        ("Bins de cada SKU", p.get("bin_objective", "")),
-        ("Enchimento máx. da bin", f"{p.get('fill_limit', '')}%"),
-        ("Uso da frente do nível", f"{p.get('level_fill', '')}%"),
-        ("Folgas", f"acima da bin {p.get('top_gap_cm', '')} cm · entre bins {p.get('side_gap_cm', '')} cm"),
-        ("Rotação / tipo único / peso", f"{'qualquer' if p.get('rotation') == 'any' else 'altura na vertical'} · "
-                                       f"{'1 tipo de bin por SKU' if p.get('single_type') else 'combina tipos'} · "
-                                       f"{'respeita peso' if p.get('weight') else 'sem peso'}"),
-        ("Estruturas", "; ".join(f"{s.struct.code}: {STRUCT_MODES[s.struct.mode].lower()}"
+        (_("Prioridade dos critérios"), " > ".join(order) or SITE_CRITERIA.get(p.get("objective"), "")),
+        (_("Bins de cada SKU"), p.get("bin_objective", "")),
+        (_("Enchimento máx. da bin"), f"{p.get('fill_limit', '')}%"),
+        (_("Uso da frente do nível"), f"{p.get('level_fill', '')}%"),
+        (_("Folgas"), _("acima da bin {top_gap_cm} cm · entre bins {side_gap_cm} cm", top_gap_cm=p.get('top_gap_cm', ''), side_gap_cm=p.get('side_gap_cm', ''))),
+        (_("Rotação / tipo único / peso"), f"{'qualquer' if p.get('rotation') == 'any' else _('altura na vertical')} · "
+                                       f"{_('1 tipo de bin por SKU') if p.get('single_type') else _('combina tipos')} · "
+                                       f"{_('respeita peso') if p.get('weight') else _('sem peso')}"),
+        (_("Estruturas"), "; ".join(f"{s.struct.code}: {STRUCT_MODES[s.struct.mode].lower()}"
                                  + (f" {s.struct.qty}" if s.struct.mode == "fixed" else "")
                                  for s in plan.structs if s.struct.mode != "off") or "—"),
-        ("Solver", f"{plan.solver.get('status', '')} em {_fmt(plan.solver.get('time', 0), 1)} s"),
+        (_("Solver"), _("{status} em {time} s", status=plan.solver.get('status', ''), time=_fmt(plan.solver.get('time', 0), 1))),
     ]
-    rep = SiteReport(title=f"Plano de implantação — {project_name}", project=project_name, created=datetime.now(),
+    rep = SiteReport(title=_("Plano de implantação — {project_name}", project_name=project_name), project=project_name, created=datetime.now(),
                      scope=scope, params=params, plan=plan)
     rep.kpis = [
-        ("Módulos de estrutura", _fmt(plan.total_modules), ", ".join(f"{s.qty}× {s.struct.code}" for s in plan.structs if s.qty)),
-        ("Bins", _fmt(plan.bins_needed), ", ".join(f"{t.needed}× {t.spec.code}" for t in plan.types if t.needed)),
-        ("Custo total", _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"
-         + (f" · sem custo (R$ 0): {', '.join(dict.fromkeys(plan.missing_costs))}" if plan.missing_costs else "")),
-        ("Endereços", _fmt(len(plan.positions)), f"{_fmt(plan.levels_total)} níveis em {len(plan.modules)} estantes"
+        (_("Módulos de estrutura"), _fmt(plan.total_modules), ", ".join(f"{s.qty}× {s.struct.code}" for s in plan.structs if s.qty)),
+        (N_("Bins"), _fmt(plan.bins_needed), ", ".join(f"{t.needed}× {t.spec.code}" for t in plan.types if t.needed)),
+        (_("Custo total"), _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"
+         + (_(" · sem custo (R$ 0): {v}", v=', '.join(dict.fromkeys(plan.missing_costs))) if plan.missing_costs else "")),
+        (_("Endereços"), _fmt(len(plan.positions)), _("{fmt} níveis em {len} estantes", fmt=_fmt(plan.levels_total), len=len(plan.modules))
          + (f" ({plan.end_caps} cabeceiras)" if plan.end_caps else "")),
-        ("Ocupação dos níveis", (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
-         f"{plan.levels_used} de {plan.levels_total} níveis em uso"),
-        ("Ocupação das bins", (_fmt(plan.bin_fill, 1) + "%") if plan.bin_fill is not None else "—",
-         "volume dos produtos ÷ volume útil das bins"),
+        (_("Ocupação dos níveis"), (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
+         _("{levels_used} de {levels_total} níveis em uso", levels_used=plan.levels_used, levels_total=plan.levels_total)),
+        (_("Ocupação das bins"), (_fmt(plan.bin_fill, 1) + "%") if plan.bin_fill is not None else "—",
+         _("volume dos produtos ÷ volume útil das bins")),
     ]
     k = plan.slotting or {}
     if k.get("avg_dist") is not None:
-        rep.kpis.append(("Caminhada por saída", _fmt(k["avg_dist"], 1) + " m",
-                         f"ao acaso {_fmt(k.get('random_dist'), 1)} m · até {(k.get('ref') or {}).get('label', '')}"))
+        rep.kpis.append((_("Caminhada por saída"), _fmt(k["avg_dist"], 1) + " m",
+                         _("ao acaso {random_dist} m · até {ref}", random_dist=_fmt(k.get('random_dist'), 1), ref=(k.get('ref') or {}).get('label', ''))))
     rep.kpis += [
-        ("Uso das fileiras", (_fmt(plan.row_use, 1) + "%") if plan.row_use is not None else "—",
-         f"{_fmt(plan.front_m, 1)} de {_fmt(fl.total_row_m, 1)} m · {_fmt(plan.footprint_m2, 1)} m² de estruturas"),
+        (_("Uso das fileiras"), (_fmt(plan.row_use, 1) + "%") if plan.row_use is not None else "—",
+         _("{fmt} de {fmt2} m · {fmt3} m² de estruturas", fmt=_fmt(plan.front_m, 1), fmt2=_fmt(fl.total_row_m, 1), fmt3=_fmt(plan.footprint_m2, 1))),
     ]
 
     # ---- compras ----
     for s in plan.structs:
         if s.qty:
-            rep.purchases.append({"kind": "Estrutura", "code": s.struct.code, "name": s.struct.name, "qty": s.qty,
+            rep.purchases.append({"kind": N_("Estrutura"), "code": s.struct.code, "name": s.struct.name, "qty": s.qty,
                                   "unit": s.struct.cost, "total": s.cost,
-                                  "note": f"{_fmt(s.struct.width)} × {_fmt(s.struct.depth)} × {_fmt(s.struct.height)} cm, "
-                                          f"{s.struct.levels} níveis × {_fmt(s.struct.level_h)} cm"})
+                                  "note": _("{fmt} × {fmt2} × {fmt3} cm, {levels} níveis × {fmt4} cm", fmt=_fmt(s.struct.width), fmt2=_fmt(s.struct.depth), fmt3=_fmt(s.struct.height), levels=s.struct.levels, fmt4=_fmt(s.struct.level_h))})
     for t in plan.types:
         if not t.needed:
             continue
         if t.parent_code:
-            rep.purchases.append({"kind": "Bin (inteira, para compartimentos)", "code": t.parent_code, "name": "",
+            rep.purchases.append({"kind": _("Bin (inteira, para compartimentos)"), "code": t.parent_code, "name": "",
                                   "qty": t.parents, "unit": t.parent_cost, "total": t.cost,
                                   "note": f"dividida em compartimentos {t.spec.code} ({t.needed} compartimentos)"})
         else:
-            rep.purchases.append({"kind": "Bin", "code": t.spec.code, "name": bin_names.get(t.spec.id, ""),
+            rep.purchases.append({"kind": _("Bin"), "code": t.spec.code, "name": bin_names.get(t.spec.id, ""),
                                   "qty": t.needed, "unit": t.unit_cost, "total": t.cost,
                                   "note": f"{_fmt(t.spec.h)} × {_fmt(t.spec.w)} × {_fmt(t.spec.l)} cm"})
 
@@ -180,14 +177,14 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
 
     def side_of(m) -> str:
         if m.rotated:
-            return f"cabeceira (girada 90°, de frente para {m.faces})"
+            return _("cabeceira (girada 90°, de frente para {faces})", faces=m.faces)
         zn = m.zone
         if zn is not None and zn.aisles[m.row.aisle][1] <= 0:  # fileira de frente para a avenida/faixa
-            return f"de frente para {zn.edge_names.get(m.row.aisle, 'a área livre')}"
+            return _("de frente para {get}", get=zn.edge_names.get(m.row.aisle, 'a área livre'))
         return side_lbl.get(m.row.side, m.row.side)
 
     for m in plan.modules:
-        X, Y, _, _ = m.grect
+        X, Y, _x, _x = m.grect
         rep.modules.append({"bay": f"{m.aisle}-{m.bay}", "aisle": m.aisle, "struct": m.struct.code,
                             "zone": m.zone.name if m.zone is not None else "",
                             "row": m.row.index + 1, "side": side_of(m),
@@ -220,42 +217,38 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
         rep.steps.append(Step(n, phase, group, action, where, detail, qty))
 
     for pc in rep.purchases:
-        add(1, pc["kind"], "Comprar", pc["code"], f"{pc['name'] or pc['code']} — {pc['note']}"
+        add(1, pc["kind"], _("Comprar"), pc["code"], f"{pc['name'] or pc['code']} — {pc['note']}"
             + (f" · {_money(pc['total'])}" if pc["total"] is not None else ""), _fmt(pc["qty"]))
-    add(1, "Etiquetas", "Providenciar", "Endereços",
-        f"Etiquetas de {len(plan.positions)} endereço(s) e de {len(plan.modules)} estante(s)", _fmt(len(plan.positions)))
+    add(1, _("Etiquetas"), _("Providenciar"), _("Endereços"),
+        _("Etiquetas de {len} endereço(s) e de {len2} estante(s)", len=len(plan.positions), len2=len(plan.modules)), _fmt(len(plan.positions)))
     for m in plan.modules:
-        X, Y, _, _ = m.grect
+        X, Y, _x, _x = m.grect
         where = f"X = {_fmt(X / 100, 2)} m, Y = {_fmt(Y / 100, 2)} m"
         zone = f"{m.zone.name}, " if fl.mixed and m.zone is not None else ""
         if m.rotated:
             blk = m.zone.blocks[m.row.block] if m.zone is not None and m.zone.blocks else None
             kind = "dupla" if blk and len(blk.rows) > 1 else "simples"
-            add(2, f"Corredor {m.aisle}", "Montar", f"Cabeceira {m.aisle}-{m.bay}",
-                f"{m.struct.code} GIRADA 90° na ponta da fileira {kind} ({zone}fileiras "
-                f"{', '.join(str(r + 1) for r in (blk.rows if blk else [m.row.index]))}), de frente para {m.faces}: "
-                f"{where}; {m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
+            add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), f"Cabeceira {m.aisle}-{m.bay}",
+                _("{code} GIRADA 90° na ponta da fileira {kind} ({zone}fileiras {v}), de frente para {faces}: {where}; {levels} níveis com vão de {fmt} cm", code=m.struct.code, kind=kind, zone=zone, v=', '.join(str(r + 1) for r in (blk.rows if blk else [m.row.index])), faces=m.faces, where=where, levels=m.struct.levels, fmt=_fmt(m.struct.level_h)))
             continue
         s_txt = side_of(m)
-        face = s_txt if s_txt.startswith("de frente") else f"lado {s_txt} do corredor {m.aisle}"
-        add(2, f"Corredor {m.aisle}", "Montar", f"Estante {m.aisle}-{m.bay}",
-            f"{m.struct.code} na fileira {m.row.index + 1} ({zone}{face}"
-            f"{'; fileira ao longo da largura' if m.zone is not None and m.zone.rot else ''}): {where}; "
-            f"{m.struct.levels} níveis com vão de {_fmt(m.struct.level_h)} cm")
+        face = s_txt if s_txt.startswith("de frente") else _("lado {s_txt} do corredor {aisle}", s_txt=s_txt, aisle=m.aisle)
+        add(2, _("Corredor {aisle}", aisle=m.aisle), _("Montar"), f"Estante {m.aisle}-{m.bay}",
+            _("{code} na fileira {v} ({zone}{face}{v2}): {where}; {levels} níveis com vão de {fmt} cm", code=m.struct.code, v=m.row.index + 1, zone=zone, face=face, v2=N_('; fileira ao longo da largura') if m.zone is not None and m.zone.rot else '', where=where, levels=m.struct.levels, fmt=_fmt(m.struct.level_h)))
     for m in plan.modules:
         used = [lv for lv in m.levels if lv.positions]
-        add(3, f"Corredor {m.aisle}", "Configurar", f"Estante {m.aisle}-{m.bay}",
+        add(3, _("Corredor {aisle}", aisle=m.aisle), _("Configurar"), f"Estante {m.aisle}-{m.bay}",
             "; ".join(f"N{lv.n}: {lv.cap}× {code(lv.type_id)}" if lv.type_id is not None else f"N{lv.n}: livre"
                       for lv in m.levels)
-            + f" · etiquetar {sum(len(lv.positions) for lv in used)} endereço(s)")
+            + _(" · etiquetar {sum} endereço(s)", sum=sum(len(lv.positions) for lv in used)))
     for m in plan.modules:
         for lv in m.levels:
             for pos in lv.positions:
-                add(4, f"Corredor {m.aisle}", "Abastecer", pos.address,
-                    f"{pos.bins}× {code(pos.type_id)} com {pos.sku} — {pos.name}", f"{_fmt(pos.units)} un.")
+                add(4, _("Corredor {aisle}", aisle=m.aisle), _("Abastecer"), pos.address,
+                    _("{bins}× {code} com {sku} — {name}", bins=pos.bins, code=code(pos.type_id), sku=pos.sku, name=pos.name), f"{_fmt(pos.units)} un.")
     for dm in plan.demands:
         if dm.status not in ("ok", "sem_qtd"):
-            add(5, DEMAND_STATUS.get(dm.status, dm.status), "Resolver", dm.sku, f"{dm.name} — {dm.note or dm.status_label}")
+            add(5, DEMAND_STATUS.get(dm.status, dm.status), _("Resolver"), dm.sku, f"{dm.name} — {dm.note or dm.status_label}")
     return rep
 
 
@@ -295,12 +288,12 @@ def to_xlsx(rep: SiteReport) -> bytes:
 
     # Resumo
     ws = wb.active
-    ws.title = "Resumo"
+    ws.title = _("Resumo")
     ws.append([rep.title])
     ws["A1"].font = Font(bold=True, size=14, color="0F766E")
-    ws.append([f"Gerado em {rep.created:%d/%m/%Y %H:%M}"])
-    for title, rows in (("Imóvel e demanda", rep.scope), ("Regras e critérios", rep.params),
-                        ("Indicadores", [(k, v, c) for k, v, c in rep.kpis])):
+    ws.append([_("Gerado em {created}", created=fmt_datetime(rep.created))])
+    for title, rows in ((_("Imóvel e demanda"), rep.scope), (_("Regras e critérios"), rep.params),
+                        (_("Indicadores"), [(k, v, c) for k, v, c in rep.kpis])):
         ws.append([])
         ws.append([title])
         ws.cell(ws.max_row, 1).font = Font(bold=True)
@@ -308,7 +301,7 @@ def to_xlsx(rep: SiteReport) -> bytes:
             ws.append(list(r))
     if rep.warnings:
         ws.append([])
-        ws.append(["Avisos"])
+        ws.append([_("Avisos")])
         ws.cell(ws.max_row, 1).font = Font(bold=True)
         for w in rep.warnings:
             ws.append([w])
@@ -316,46 +309,47 @@ def to_xlsx(rep: SiteReport) -> bytes:
     ws.column_dimensions["B"].width = 70
     ws.column_dimensions["C"].width = 60
 
-    ws = wb.create_sheet("Lista de compras")
-    table(ws, ["Item", "Código", "Nome", "Quantidade", "Custo unit.", "Custo total", "Especificação"],
+    ws = wb.create_sheet(_("Lista de compras"))
+    table(ws, [_("Item"), _("Código"), _("Nome"), N_("Quantidade"), _("Custo unit."), _("Custo total"), _("Especificação")],
           [(pc["kind"], pc["code"], pc["name"], pc["qty"], pc["unit"], pc["total"], pc["note"]) for pc in rep.purchases]
-          + [("Total", "", "", None, None, rep.purchase_total, "")], {3: 34, 7: 50}, money_cols=(5, 6))
+          + [(_("Total"), "", "", None, None, rep.purchase_total, "")], {3: 34, 7: 50}, money_cols=(5, 6))
     ws.cell(ws.max_row, 1).font = Font(bold=True)
     ws.cell(ws.max_row, 6).font = Font(bold=True)
 
-    ws = wb.create_sheet("Passo a passo")
-    table(ws, ["Nº", "Fase", "Grupo", "Ação", "Onde", "Descrição", "Qtd.", "Feito"],
+    ws = wb.create_sheet(_("Passo a passo"))
+    table(ws, ["Nº", _("Fase"), _("Grupo"), _("Ação"), _("Onde"), _("Descrição"), "Qtd.", _("Feito")],
           [(s.n, s.phase_label, s.group, s.action, s.where, s.detail, s.qty, "☐") for s in rep.steps],
           {1: 6, 2: 30, 3: 16, 4: 12, 5: 18, 6: 90, 7: 10, 8: 7})
     for i, s in enumerate(rep.steps, start=2):
         ws.cell(i, 2).fill = phase_fill.get(s.phase)
     ws.auto_filter.ref = f"A1:H{len(rep.steps) + 1}"
 
-    ws = wb.create_sheet("Montagem")
-    table(ws, ["Estante", "Corredor", "Zona", "Estrutura", "Fileira", "Posição em relação ao corredor",
-               "X: ao longo do comprimento (m)", "Y: ao longo da largura (m)", "Frente (cm)", "Profundidade (cm)",
-               "Níveis", "Vão (cm)", "Níveis × bins"],
+    ws = wb.create_sheet(_("Montagem"))
+    table(ws, [_("Estante"), _("Corredor"), _("Zona"), N_("Estrutura"), _("Fileira"), _("Posição em relação ao corredor"),
+               _("X: ao longo do comprimento (m)"), _("Y: ao longo da largura (m)"), _("Frente (cm)"), _("Profundidade (cm)"),
+               N_("Níveis"), _("Vão (cm)"), _("Níveis × bins")],
           [(r["bay"], r["aisle"], r["zone"], r["struct"], r["row"], r["side"], round(r["x"], 2), round(r["y"], 2),
             r["w"], r["d"], r["levels"], r["level_h"], r["config"]) for r in rep.modules], {6: 40, 13: 70})
-    ws = wb.create_sheet("Níveis")
-    table(ws, ["Estante", "Nível", "Estrutura", "Tipo de bin", "Capacidade (bins)", "Em uso", "Endereços",
-               "Carga (kg)", "Carga máx. (kg)", "Zona de ouro"],
+    ws = wb.create_sheet(N_("Níveis"))
+    table(ws, [_("Estante"), _("Nível"), N_("Estrutura"), N_("Tipo de bin"), _("Capacidade (bins)"), _("Em uso"), _("Endereços"),
+               _("Carga (kg)"), _("Carga máx. (kg)"), _("Zona de ouro")],
           [(r["bay"], r["level"], r["struct"], r["type"], r["cap"], r["used"], r["positions"], round(r["load"], 1),
             r["max_load"], "sim" if r.get("golden") else "") for r in rep.levels])
-    ws = wb.create_sheet("Endereços")
+    ws = wb.create_sheet(_("Endereços"))
     pc = lambda v: round(v, 1) if v is not None else None  # noqa: E731
-    table(ws, ["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocupação das bins (%)",
-               "Peso (kg)", "Caminhada (m)", "Zona de ouro"],
+    table(ws, [N_("Endereço"), N_("Estrutura"), N_("Tipo de bin"), N_("Bins"), "SKU", N_("Produto"), _("Unidades"), N_("Ocupação das bins (%)"),
+               _("Peso (kg)"), "Caminhada (m)", _("Zona de ouro")],
           [(r["address"], r["struct"], r["type"], r["bins"], r["sku"], r["name"], r["units"], pc(r["fill"]),
             round(r["weight"], 2), r.get("dist"), "sim" if r.get("golden") else "")
            for r in rep.addresses], {6: 40})
     ws = wb.create_sheet("SKUs")
-    table(ws, ["SKU", "Produto", "Material", "Quantidade", "Bins", "Ocupação das bins (%)", "Saída (período)", "Curva ABC",
-               "Situação", "Observação"],
+    table(ws, ["SKU", N_("Produto"), _("Material"), N_("Quantidade"), N_("Bins"), N_("Ocupação das bins (%)"), _("Saída (período)"), _("Curva ABC"),
+               N_("Situação"), _("Observação")],
           [(r["sku"], r["name"], r["material"], r["units"], r["bins"], pc(r["fill"]), r.get("pop"), r.get("abc") or None,
             r["status"], r["note"]) for r in rep.skus],
           {2: 40, 10: 40})
     buf = io.BytesIO()
+    translate_workbook(wb)
     wb.save(buf)
     return buf.getvalue()
 
@@ -423,10 +417,9 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
             st.x, st.y = X * sc, 14 + H - Y * sc - 2
             dw.add(st)
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
-            f"fileiras ao longo do {'comprimento' if fl.along == 'length' else 'largura'}")
-    size = f"{_fmt(b.length_m, 1)} m × {_fmt(b.width_m, 1)} m (comprimento na horizontal) · " if dims != "none" else ""
-    dw.add(String(0, 2, f"{size}{desc} · "
-                        "amarelo = docas/áreas reservadas · azul = avenidas · verde = setores · preto = obstáculos · tracejado = cabeceiras",
+            _("fileiras ao longo do {v}", v='comprimento' if fl.along == 'length' else 'largura'))
+    size = _("{fmt} m × {fmt2} m (comprimento na horizontal) · ", fmt=_fmt(b.length_m, 1), fmt2=_fmt(b.width_m, 1)) if dims != "none" else ""
+    dw.add(String(0, 2, _("{size}{desc} · amarelo = docas/áreas reservadas · azul = avenidas · verde = setores · preto = obstáculos · tracejado = cabeceiras", size=size, desc=desc),
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
     if inside:
         blue = colors.HexColor("#24548C")
@@ -450,7 +443,7 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
         ink = colors.HexColor("#5B6770")
         top = 14 + H  # borda de cima do imóvel no desenho
         xs, ys = dim_chains(fl, 16 / sc, 16 / sc)
-        for _, X, Y, w, d, _ in (k for k in fl.shapes() if k[0] == "obstacle"):  # zonas: as cotas encadeadas bastam
+        for _x, X, Y, w, d, _x in (k for k in fl.shapes() if k[0] == "obstacle"):  # zonas: as cotas encadeadas bastam
             if w * sc >= 30 and d * sc >= 14:
                 dw.add(String(X * sc + 2, Yp(Y, d) + 2, f"{_m(w)} × {_m(d)} m", fontSize=5,
                               fillColor=colors.HexColor("#DFE5EA")))
@@ -512,11 +505,12 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
         canvas.saveState()
         canvas.setFont("Helvetica", 7)
         canvas.setFillColor(colors.grey)
-        canvas.drawString(12 * mm, 7 * mm, _t(f"{rep.title} - gerado em {rep.created:%d/%m/%Y %H:%M}").replace("&amp;", "&"))
-        canvas.drawRightString(page[0] - 12 * mm, 7 * mm, f"Página {d.page}")
+        canvas.drawString(12 * mm, 7 * mm, _t(f"{rep.title} - " + _("gerado em {created}", created=fmt_datetime(rep.created))).replace("&amp;", "&"))
+        canvas.drawRightString(page[0] - 12 * mm, 7 * mm, _("Página {page}", page=d.page))
         canvas.restoreState()
 
     def table(data, widths, header=True, zebra=True, extra=()):
+        data = [[tr(c) if isinstance(c, str) else c for c in row] for row in data]  # textos fixos no idioma atual
         t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
         st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
               ("FONTSIZE", (0, 0), (-1, -1), 7.2), ("TOPPADDING", (0, 0), (-1, -1), 1.6),
@@ -530,8 +524,8 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
         return t
 
     story = [Paragraph(_t(rep.title), h1),
-             Paragraph(_t(f"Gerado em {rep.created:%d/%m/%Y %H:%M} · {len(rep.steps)} passo(s)"), small), Spacer(1, 4)]
-    sp = [[P("Imóvel e demanda", small), "", P("Regras e critérios", small), ""]]
+             Paragraph(_t(_("Gerado em {created} · {len} passo(s)", created=fmt_datetime(rep.created), len=len(rep.steps))), small), Spacer(1, 4)]
+    sp = [[P(_("Imóvel e demanda"), small), "", P(_("Regras e critérios"), small), ""]]
     for i in range(max(len(rep.scope), len(rep.params))):
         a = rep.scope[i] if i < len(rep.scope) else ("", "")
         c = rep.params[i] if i < len(rep.params) else ("", "")
@@ -545,33 +539,33 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
                             ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story.append(kt)
     if rep.warnings:
-        story.append(Paragraph("Avisos", h2))
+        story.append(Paragraph(_("Avisos"), h2))
         story += [Paragraph("• " + _t(w), small) for w in rep.warnings]
 
     # planta + compras
     story.append(PageBreak())
-    story.append(Paragraph("Planta (vista de cima)", h2))
+    story.append(Paragraph(_("Planta (vista de cima)"), h2))
     fd = _floor_drawing(rep.plan, width, 105 * mm, dims, pos) if rep.plan else None
     if fd is not None:
         story.append(fd)
         leg = " · ".join(f"{s.struct.code} ({s.qty})" for s in rep.plan.structs if s.qty)
         story.append(Paragraph(_t("Estruturas: " + leg), small))
-    story.append(Paragraph("Lista de compras", h2))
-    pd_ = [["Item", "Código", "Nome", "Qtd.", "Custo unit.", "Custo total", "Especificação"]]
+    story.append(Paragraph(_("Lista de compras"), h2))
+    pd_ = [[_("Item"), _("Código"), _("Nome"), "Qtd.", _("Custo unit."), _("Custo total"), _("Especificação")]]
     for pc in rep.purchases:
         pd_.append([P(pc["kind"]), P(pc["code"]), P(pc["name"]), _fmt(pc["qty"]), _money(pc["unit"]),
                     _money(pc["total"]), P(pc["note"])])
-    pd_.append([P("Total", small), "", "", "", "", _money(rep.purchase_total), ""])
+    pd_.append([P(_("Total"), small), "", "", "", "", _money(rep.purchase_total), ""])
     story.append(table(pd_, [42 * mm, 25 * mm, 45 * mm, 15 * mm, 25 * mm, 27 * mm, width - 179 * mm],
                        extra=[("ALIGN", (3, 1), (5, -1), "RIGHT"), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")]))
 
     # passo a passo
     story.append(PageBreak())
-    story.append(Paragraph("Passo a passo", h2))
+    story.append(Paragraph(_("Passo a passo"), h2))
     bg = {1: "#F4F6F8", 2: "#E8F0FE", 3: "#FFF4E5", 4: "#E7F5EC", 5: "#FDECEA"}
     for label, steps in rep.steps_by_phase():
         story.append(Paragraph(_t(label) + f" ({len(steps)})", h3))
-        sd = [["Nº", "Grupo", "Ação", "Onde", "Descrição", "Qtd.", "Feito"]]
+        sd = [["Nº", _("Grupo"), _("Ação"), _("Onde"), _("Descrição"), "Qtd.", _("Feito")]]
         for s in steps:
             sd.append([str(s.n), P(s.group), P(s.action), P(s.where), P(s.detail), P(s.qty), ""])
         ph = steps[0].phase
@@ -580,16 +574,16 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
 
     # montagem e endereços
     story.append(PageBreak())
-    story.append(Paragraph("Montagem das estantes", h2))
-    md = [["Estante", "Estrutura", "Fileira", "Lado", "X (m)", "Y (m)", "Níveis × vão", "Níveis × bins"]]
+    story.append(Paragraph(_("Montagem das estantes"), h2))
+    md = [[_("Estante"), N_("Estrutura"), _("Fileira"), _("Lado"), "X (m)", "Y (m)", _("Níveis × vão"), _("Níveis × bins")]]
     for r in rep.modules:
         md.append([r["bay"], r["struct"], str(r["row"]), r["side"], _fmt(r["x"], 2), _fmt(r["y"], 2),
                    f"{r['levels']} × {_fmt(r['level_h'])} cm", P(r["config"])])
     story.append(table(md, [18 * mm, 24 * mm, 13 * mm, 15 * mm, 15 * mm, 15 * mm, 22 * mm, width - 122 * mm]))
-    story.append(Paragraph("X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo).", small))
+    story.append(Paragraph(_("X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo)."), small))
     story.append(PageBreak())
-    story.append(Paragraph("Endereços", h2))
-    ad = [["Endereço", "Estrutura", "Tipo de bin", "Bins", "SKU", "Produto", "Unidades", "Ocup. bins", "Peso (kg)"]]
+    story.append(Paragraph(_("Endereços"), h2))
+    ad = [[N_("Endereço"), N_("Estrutura"), N_("Tipo de bin"), N_("Bins"), "SKU", N_("Produto"), _("Unidades"), _("Ocup. bins"), _("Peso (kg)")]]
     for r in rep.addresses:
         ad.append([r["address"], r["struct"], r["type"], str(r["bins"]), r["sku"], P(r["name"]), _fmt(r["units"]),
                    (_fmt(r["fill"], 0) + "%") if r["fill"] is not None else "—", _fmt(r["weight"], 1)])
@@ -597,8 +591,8 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
                        extra=[("ALIGN", (6, 1), (8, -1), "RIGHT")]))
     pend = [r for r in rep.skus if not r["ok"]]
     if pend:
-        story.append(Paragraph("SKUs não alocados", h2))
-        sd = [["SKU", "Produto", "Situação", "Observação"]] + [[r["sku"], P(r["name"]), P(r["status"]), P(r["note"])]
+        story.append(Paragraph(_("SKUs não alocados"), h2))
+        sd = [["SKU", N_("Produto"), N_("Situação"), _("Observação")]] + [[r["sku"], P(r["name"]), P(r["status"]), P(r["note"])]
                                                               for r in pend]
         story.append(table(sd, [28 * mm, 90 * mm, 45 * mm, width - 163 * mm]))
     doc.build(story, onFirstPage=footer, onLaterPages=footer)

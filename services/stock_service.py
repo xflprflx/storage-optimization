@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from models import Branch, StockItem, StorageLocation, Warehouse, branch_warehouse
 from services.addressing import normalize_code
+from services.i18n import _
 
 CHUNK = 900  # abaixo do limite de variáveis do SQLite
 
@@ -107,16 +108,16 @@ class MasterDataCache:
         matches = [c for c in existing if c.isdigit() and (c.lstrip("0") or "0") == target]
         if len(matches) == 1:
             existing[code] = existing[matches[0]]
-            self.notes.append(f"{label} '{code}' associado(a) ao código existente '{matches[0]}'.")
+            self.notes.append(_("{label} '{code}' associado(a) ao código existente '{v}'.", label=label, code=code, v=matches[0]))
             return True
         return False
 
     def ensure_branches(self, codes: Iterable[str]) -> None:
         missing = sorted({normalize_code(c) for c in codes if c} - self.branches.keys())
-        missing = [c for c in missing if not self._alias(c, self.branches, "Filial")]
+        missing = [c for c in missing if not self._alias(c, self.branches, _("Filial"))]
         for code in missing:
             if len(code) > 30:
-                raise ValueError(f"Código de filial muito longo: {code}")
+                raise ValueError(_("Código de filial muito longo: {code}", code=code))
             b = Branch(code=code, name=code)
             self.db.add(b)
             self.db.flush()
@@ -125,10 +126,10 @@ class MasterDataCache:
 
     def ensure_warehouses(self, codes: Iterable[str]) -> None:
         missing = sorted({normalize_code(c) for c in codes if c} - self.warehouses.keys())
-        missing = [c for c in missing if not self._alias(c, self.warehouses, "Armazém")]
+        missing = [c for c in missing if not self._alias(c, self.warehouses, _("Armazém"))]
         for code in missing:
             if len(code) > 30:
-                raise ValueError(f"Código de armazém muito longo: {code}")
+                raise ValueError(_("Código de armazém muito longo: {code}", code=code))
             w = Warehouse(code=code, name=code)
             self.db.add(w)
             self.db.flush()
@@ -168,7 +169,7 @@ def resolve_skus(db: Session, skus: Iterable[str]) -> tuple[dict[str, int], list
                 cands = by_key.get(key, [])
                 if len(cands) == 1:
                     found[s] = cands[0][1]
-                    notes.append(f"SKU '{s}' associado ao SKU existente '{cands[0][0]}'.")
+                    notes.append(_("SKU '{s}' associado ao SKU existente '{v}'.", s=s, v=cands[0][0]))
     return found, notes
 
 

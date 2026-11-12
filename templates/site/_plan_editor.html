@@ -23,7 +23,7 @@
     const n = parseFloat(v);
     return isNaN(n) ? null : n;
   };
-  const fmt = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString('pt-BR', { maximumFractionDigits: d });
+  const fmt = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString(NK_I18N.locale, { maximumFractionDigits: d });
   const snap = v => Math.round(v * 10) / 10;
   const val = name => num(form.querySelector(`[name="${name}"]`)?.value);
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -51,7 +51,7 @@
     const gap = val('b_wall_gap_m') || 0, front = val('b_front_reserved_m') || 0, back = val('b_back_reserved_m') || 0;
     const av = val('b_avenue_m') || 0;
     const zones = rowsOf('zone').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || `Zona ${i + 1}`, x: num(field(tr, 'x')?.value), y: num(field(tr, 'y')?.value),
+      tr, i, name: field(tr, 'name')?.value || _t('Zona {i}', {i: i + 1}), x: num(field(tr, 'x')?.value), y: num(field(tr, 'y')?.value),
       len: num(field(tr, 'len')?.value), wid: num(field(tr, 'wid')?.value), ori: field(tr, 'ori')?.value || 'along' }));
     const positioned = zones.some(z => z.x != null && z.y != null);
     const avenues = [];
@@ -69,11 +69,11 @@
       });
     }
     const obstacles = rowsOf('obstacle').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || `Obstáculo ${i + 1}`, X: num(field(tr, 'x')?.value),
+      tr, i, name: field(tr, 'name')?.value || _t('Obstáculo {i}', {i: i + 1}), X: num(field(tr, 'x')?.value),
       Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
     const sectors = rowsOf('sector').filter(tr => field(tr, 'place')?.value === 'fixed').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || `Setor ${i + 1}`, X: num(field(tr, 'x')?.value),
+      tr, i, name: field(tr, 'name')?.value || _t('Setor {i}', {i: i + 1}), X: num(field(tr, 'x')?.value),
       Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
     // ponto de referência da posição pela saída (etapa Posição dos SKUs), quando informado por X/Y
@@ -100,7 +100,7 @@
     tb.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', nextIndex(kind)));
     const tr = tb.lastElementChild;
     const n = rowsOf(kind).length;
-    field(tr, 'name').value = { zone: `Zona ${n}`, obstacle: `Obstáculo ${n}`, sector: `Setor ${n}` }[kind];
+    field(tr, 'name').value = { zone: _t('Zona {n}', {n}), obstacle: _t('Obstáculo {n}', {n}), sector: _t('Setor {n}', {n}) }[kind];
     if (kind === 'sector') { const p = field(tr, 'place'); p.value = 'fixed'; p.dispatchEvent(new Event('change', { bubbles: true })); }
     ['x', 'y', 'len', 'wid'].forEach(k => setField(tr, k, r[k]));
     return tr;
@@ -124,7 +124,7 @@
     if (key === serverKey) return;
     serverKey = key;
     fetch(`/optimization/site/${pid}/layout.json`, { method: 'POST', body: fd })
-      .then(r => r.json()).then(j => { server = j; renderAll(); }).catch(() => { server = { error: 'Falha ao calcular as fileiras.' }; renderAll(); });
+      .then(r => r.json()).then(j => { server = j; renderAll(); }).catch(() => { server = { error: _t('Falha ao calcular as fileiras.') }; renderAll(); });
   }
   const scheduleServer = () => { clearTimeout(timer); timer = setTimeout(refreshServer, 500); };
 
@@ -142,7 +142,7 @@
     const body = host.querySelector('.nk-plan-body'), note = host.querySelector('.nk-plan-note');
     body.innerHTML = ''; note.textContent = '';
     const st = state();
-    if (!st) { body.innerHTML = '<div class="small text-muted py-3 text-center">Informe comprimento e largura do imóvel para ver a planta.</div>'; return; }
+    if (!st) { body.innerHTML = '<div class="small text-muted py-3 text-center">' + _t('Informe comprimento e largura do imóvel para ver a planta.') + '<\/div>'; return; }
     const { L, W } = st, m = Math.max(L, W) * 0.07;
     const fs = Math.max(L, W) / 55;  // tamanho de fonte em metros
     const dims = window.nkDims ? window.nkDims.get() : 'summary';  // none | summary | full
@@ -182,9 +182,9 @@
       const cx = x + w / 2, cy = W / 2;
       text(svg, cx, cy, label, { 'font-size': fs * 0.9, 'text-anchor': 'middle', fill: '#5b6770', transform: `rotate(-90 ${cx} ${cy})` });
     };
-    strip(st.gap, st.front, `Docas · ${fmt(st.front, 2)} m`, '#fff3cd', '#e0c068');
-    strip(L - st.gap - st.back, st.back, `Reservada · ${fmt(st.back, 2)} m`, '#fff3cd', '#e0c068');
-    st.avenues.forEach(a => strip(a.X, a.w, `Avenida ${a.n} · ${fmt(a.w, 2)} m`, '#e3ecf7', '#b9cbe3'));
+    strip(st.gap, st.front, _t("Docas · {m} m", {m: fmt(st.front, 2)}), '#fff3cd', '#e0c068');
+    strip(L - st.gap - st.back, st.back, _t("Reservada · {m} m", {m: fmt(st.back, 2)}), '#fff3cd', '#e0c068');
+    st.avenues.forEach(a => strip(a.X, a.w, _t('Avenida {a} · {fmt} m', {a: a.n, fmt: fmt(a.w, 2)}), '#e3ecf7', '#b9cbe3'));
     // fileiras e corredores (servidor)
     if (server && server.shapes) {
       const sty = { aisle: ['#eef2f4', 'none'], cross: ['#eef2f4', 'none'], lane: ['#e8f0fe', '#9ab7e6'] };
@@ -195,7 +195,7 @@
           el('rect', { x: x / 100, y: y / 100, width: w / 100, height: d / 100, fill: 'rgba(59,140,90,.16)', stroke: '#3b8c5a',
             'stroke-width': fs * 0.1, 'stroke-dasharray': `${fs * 0.5} ${fs * 0.3}` }, svg);
           const cx = (x + w / 2) / 100, cy = (y + d / 2) / 100;
-          text(svg, cx, cy, `${name} · ${fmt(w * d / 10000)} m² (automático)`, { 'font-size': fs * 0.7, 'text-anchor': 'middle',
+          text(svg, cx, cy, _t('{name} · {fmt} m² (automático)', {name, fmt: fmt(w * d / 10000)}), { 'font-size': fs * 0.7, 'text-anchor': 'middle',
             'dominant-baseline': 'middle', fill: '#24613a', transform: d > w * 1.6 ? `rotate(-90 ${cx} ${cy})` : '' });
           return;
         }
@@ -244,7 +244,7 @@
       const g = el('g', { style: 'pointer-events:none' }, svg);
       el('circle', { cx: st.ref.x, cy: st.ref.y, r: fs * 0.6, fill: '#d62728', stroke: '#fff', 'stroke-width': fs * 0.15 }, g);
       el('circle', { cx: st.ref.x, cy: st.ref.y, r: fs * 1.4, fill: 'none', stroke: '#d62728', 'stroke-width': fs * 0.1 }, g);
-      text(g, st.ref.x + fs * 1.7, st.ref.y + fs * 0.35, `Referência · X ${fmt(st.ref.x)} · Y ${fmt(st.ref.y)}`,
+      text(g, st.ref.x + fs * 1.7, st.ref.y + fs * 0.35, _t('Referência · X {fmt} · Y {fmt2}', {fmt: fmt(st.ref.x), fmt2: fmt(st.ref.y)}),
         { 'font-size': fs * 0.8, fill: '#d62728', 'font-weight': 'bold' });
     }
     if (host.dataset.planMode === 'ref') {
@@ -263,7 +263,7 @@
     // notas
     const parts = [];
     if (server && server.error) parts.push(server.error);
-    else if (server && server.shapes) parts.push(`${server.rows} fileira(s), ${server.aisles} corredor(es), ${fmt(server.row_m)} m de fileira disponíveis.`);
+    else if (server && server.shapes) parts.push(_t('{rows} fileira(s), {aisles} corredor(es), {fmt} m de fileira disponíveis.', {rows: server.rows, aisles: server.aisles, fmt: fmt(server.row_m)}));
     if (server && server.errors && server.errors.length) parts.push(...server.errors.filter(e => /zona|Zona|sobrep|fora/.test(e)));
     if (server && server.notes && server.notes.length) parts.push(...server.notes);
     note.textContent = parts.join(' · ');
@@ -395,20 +395,7 @@
   function renderAll() { hosts.forEach(h => { if (h !== dragHost && h.querySelector('.nk-plan-body').style.display !== 'none') render(h); }); }
   hosts.forEach(h => {
     const edit = h.dataset.planMode === 'edit';
-    h.innerHTML = `
-      <div class="d-flex flex-wrap align-items-center gap-3 small mb-2">
-        <div class="form-check form-switch mb-0"><input class="form-check-input nk-show" type="checkbox"><label class="form-check-label">Mostrar planta</label></div>
-        <span data-dims-control class="nk-dims-wrap"></span>
-        <div class="form-check form-switch mb-0 nk-rows-wrap"><input class="form-check-input nk-rows" type="checkbox"><label class="form-check-label" title="Calcula as fileiras e corredores com o mesmo motor da otimização (sem salvar)">Mostrar fileiras</label></div>
-        ${edit ? `<div class="btn-group btn-group-sm nk-tools" role="group">
-          <input type="radio" class="btn-check" name="nk-tool" value="select" id="nkt-sel" checked><label class="btn btn-outline-secondary" for="nkt-sel"><i class="bi bi-cursor"></i> Selecionar/mover</label>
-          <input type="radio" class="btn-check" name="nk-tool" value="zone" id="nkt-zone"><label class="btn btn-outline-primary" for="nkt-zone"><i class="bi bi-bounding-box"></i> Desenhar zona</label>
-          <input type="radio" class="btn-check" name="nk-tool" value="obstacle" id="nkt-obs"><label class="btn btn-outline-dark" for="nkt-obs"><i class="bi bi-square-fill"></i> Desenhar obstáculo</label>
-          <input type="radio" class="btn-check" name="nk-tool" value="sector" id="nkt-sec"><label class="btn btn-outline-success" for="nkt-sec" title="Setor em posição fixa (para o sistema escolher o lugar, informe só a área na tabela de setores)"><i class="bi bi-door-open"></i> Desenhar setor</label>
-        </div><span class="text-muted nk-help">Arraste para desenhar · arraste a forma para mover · canto para redimensionar · Delete apaga a selecionada · medidas de 10 em 10 cm</span>` : ''}
-      </div>
-      <div class="nk-plan-body"></div>
-      <div class="nk-plan-note small text-muted mt-1"></div>`;
+    h.innerHTML = '\n      <div class="d-flex flex-wrap align-items-center gap-3 small mb-2">\n        <div class="form-check form-switch mb-0"><input class="form-check-input nk-show" type="checkbox"><label class="form-check-label">' + _t('Mostrar planta') + '<\/label><\/div>\n        <span data-dims-control class="nk-dims-wrap"><\/span>\n        <div class="form-check form-switch mb-0 nk-rows-wrap"><input class="form-check-input nk-rows" type="checkbox"><label class="form-check-label" title="' + _t('Calcula as fileiras e corredores com o mesmo motor da otimização (sem salvar)') + '">' + _t('Mostrar fileiras') + '<\/label><\/div>\n        ' + (edit ? '<div class="btn-group btn-group-sm nk-tools" role="group">\n          <input type="radio" class="btn-check" name="nk-tool" value="select" id="nkt-sel" checked><label class="btn btn-outline-secondary" for="nkt-sel"><i class="bi bi-cursor"><\/i> ' + _t('Selecionar/mover') + '<\/label>\n          <input type="radio" class="btn-check" name="nk-tool" value="zone" id="nkt-zone"><label class="btn btn-outline-primary" for="nkt-zone"><i class="bi bi-bounding-box"><\/i> ' + _t('Desenhar zona') + '<\/label>\n          <input type="radio" class="btn-check" name="nk-tool" value="obstacle" id="nkt-obs"><label class="btn btn-outline-dark" for="nkt-obs"><i class="bi bi-square-fill"><\/i> ' + _t('Desenhar obstáculo') + '<\/label>\n          <input type="radio" class="btn-check" name="nk-tool" value="sector" id="nkt-sec"><label class="btn btn-outline-success" for="nkt-sec" title="' + _t('Setor em posição fixa (para o sistema escolher o lugar, informe só a área na tabela de setores)') + '"><i class="bi bi-door-open"><\/i> ' + _t('Desenhar setor') + '<\/label>\n        <\/div><span class="text-muted nk-help">' + _t('Arraste para desenhar · arraste a forma para mover · canto para redimensionar · Delete apaga a selecionada · medidas de 10 em 10 cm') + '<\/span>' : '') + '\n      <\/div>\n      <div class="nk-plan-body"><\/div>\n      <div class="nk-plan-note small text-muted mt-1"><\/div>';
     const show = h.querySelector('.nk-show'), rows = h.querySelector('.nk-rows'), body = h.querySelector('.nk-plan-body');
     const apply = () => {
       const on = ls.get('nk-plan-show') !== '0';

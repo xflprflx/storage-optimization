@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
-{% block title %}Filiais{% endblock %}
+{% block title %}{{ _("Filiais") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-building"></i> Filiais</h1>
-<div class="d-flex gap-2"><a href="/imports/branches" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar</a>
-  <a href="/branches/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Nova filial</a></div>
+  <h1><i class="bi bi-building"></i> {{ _("Filiais") }}</h1>
+<div class="d-flex gap-2"><a href="/imports/branches" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Importar") }}</a>
+  <a href="/branches/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Nova filial") }}</a></div>
 </div>
 <div class="card">
   {{ bulk_delete_bar(request, "branches", ".bulk-branches") }}
 <div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
-      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome"></div>
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por código ou nome") }}"></div>
       {{ filter_buttons(request) }}
     </form>
   </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr>
-        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-branches" title="Selecionar todos da página"></th>
-        {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}
-        {{ th(request, sort, 'warehouses', 'Armazéns') }}{{ th(request, sort, 'locations', 'Endereços', 'text-end') }}
-        <th class="text-end" style="width:120px">Ações</th>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-branches" title="{{ _("Selecionar todos da página") }}"></th>
+        {{ th(request, sort, 'code', _('Código')) }}{{ th(request, sort, 'name', _('Nome')) }}
+        {{ th(request, sort, 'warehouses', _('Armazéns')) }}{{ th(request, sort, 'locations', _('Endereços'), 'text-end') }}
+        <th class="text-end" style="width:120px">{{ _("Ações") }}</th>
       </tr></thead>
       <tbody>
       {% for b in page.items %}
@@ -33,12 +33,12 @@
           <td>{% for w in b.warehouses %}<span class="badge text-bg-secondary me-1">{{ w.code }}</span>{% else %}<span class="text-muted small">—</span>{% endfor %}</td>
           <td class="text-end"><a href="/locations?branch_id={{ b.id }}">{{ loc_counts.get(b.id, 0) }}</a></td>
           <td class="text-end text-nowrap">
-            <a class="btn btn-sm btn-outline-primary" href="/branches/{{ b.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
-            {{ delete_button('/branches/' ~ b.id ~ '/delete', '', 'Excluir a filial ' ~ b.code ~ '?') }}
+            <a class="btn btn-sm btn-outline-primary" href="/branches/{{ b.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/branches/' ~ b.id ~ '/delete', '', _('Excluir a filial ') ~ b.code ~ '?') }}
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma filial cadastrada.</td></tr>
+        <tr><td colspan="6" class="text-center text-muted py-4">{{ _("Nenhuma filial cadastrada.") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

@@ -20,18 +20,19 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from services.bin_optimizer import BinSpec, Params, ProductUnit, capacity
+from services.i18n import N_, _
 
 EPS = 1e-9
 POOL_OBJECTIVES = {
-    "min_bins": "Menos bins",
-    "min_volume": "Menos volume de bins (menos ar)",
-    "max_fill": "Maior ocupação das bins (volume das unidades ÷ volume das bins)",
-    "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
-    "min_moves": "Mínimo de movimentações (mantém o que já está nas bins)",
-    "min_cost": "Menor custo de bins (R$)",
-    "min_walk": "Menor caminhada na separação (mais procurados perto da expedição)",
-    "max_pick": "Mais saídas na zona de ouro da pega (mais procurados nos níveis de ouro)",
-    "min_time": "Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)",
+    "min_bins": N_("Menos bins"),
+    "min_volume": N_("Menos volume de bins (menos ar)"),
+    "max_fill": N_("Maior ocupação das bins (volume das unidades ÷ volume das bins)"),
+    "min_width": N_("Menor largura de frente (mais espaço livre na prateleira)"),
+    "min_moves": N_("Mínimo de movimentações (mantém o que já está nas bins)"),
+    "min_cost": N_("Menor custo de bins (R$)"),
+    "min_walk": N_("Menor caminhada na separação (mais procurados perto da expedição)"),
+    "max_pick": N_("Mais saídas na zona de ouro da pega (mais procurados nos níveis de ouro)"),
+    "min_time": N_("Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)"),
 }
 SLOT_OBJECTIVES = {"min_walk", "max_pick", "min_time"}  # objetivos de posição pela saída (precisam do histórico de saídas)
 
@@ -53,7 +54,7 @@ class PoolBin:
 
     @property
     def label(self) -> str:
-        return f"{self.address} #{self.seq}" + (f" (nível {self.level})" if self.level else "")
+        return f"{self.address} #{self.seq}" + (_(" (nível {level})", level=self.level) if self.level else "")
 
     @property
     def tag(self) -> str:
@@ -481,7 +482,7 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                 chosen = max((t for t, c in cap.items() if c > 0), key=lambda t: free_n[t] * cap[t])
             cap = {t: (c if t == chosen else 0) for t, c in cap.items()}
         if not any(cap.values()):
-            plan.shortage, plan.note = need, "Não cabe em nenhum tipo de bin do escopo."
+            plan.shortage, plan.note = need, _("Não cabe em nenhum tipo de bin do escopo.")
             continue
         here = set(d.current) | ({d.default_location_id} if d.default_location_id else set())
 
@@ -563,8 +564,8 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                     only["loc"] = min(ok_locs, key=k)
                 else:
                     only["loc"] = max(per_loc, key=lambda l: (ev[l][0], -ev[l][2]))
-                    plan.note = ("Nenhum endereço do escopo comporta todo o SKU (o mesmo SKU em mais de um endereço "
-                                 "não está permitido).")
+                    plan.note = (_("Nenhum endereço do escopo comporta todo o SKU (o mesmo SKU em mais de um endereço "
+                                 "não está permitido)."))
         if prm.objective == "min_moves" and not prm.unlimited:
             # mínimo de movimentações: o que já está numa bin fica nela (até a capacidade física da bin)
             for b, q in sorted(plan.orig_bins, key=lambda bq: -bq[1]):
@@ -588,7 +589,7 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
         while need > 0:
             if prm.max_bins and len({b.id for b, _m in plan.allocations}) >= prm.max_bins:
                 plan.shortage = need
-                plan.note = plan.note or f"Atingiu o máximo de {prm.max_bins} bin(s) por SKU."
+                plan.note = plan.note or _("Atingiu o máximo de {max_bins} bin(s) por SKU.", max_bins=prm.max_bins)
                 break
             pool_c = [b for b in partials if only["loc"] is None or b.location_id == only["loc"]]
             for t, c in cap.items():
@@ -597,7 +598,7 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
             cands = [(b, e) for b, e in ((b, eff(b)) for b in pool_c) if e > 0]
             if not cands:
                 plan.shortage = need
-                plan.note = plan.note or "Faltam bins no escopo para este SKU."
+                plan.note = plan.note or _("Faltam bins no escopo para este SKU.")
                 break
             fits = [(b, e) for b, e in cands if e >= need]
             if prm.objective == "min_moves":

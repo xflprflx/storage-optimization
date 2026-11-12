@@ -94,7 +94,7 @@ def _pages(client, ids) -> dict[str, str]:
              f"/optimization/slotting/routes?branch_id={b}&warehouse_id={w}", f"/optimization/slotting/skus?branch_id={b}",
              "/optimization/site", f"/optimization/site/{ids['prj']}", f"/optimization/site/{ids['prj']}/3d",
              "/optimization/runs"]
-    skip = re.compile(r"\.(xlsx|pdf|csv|json)|/delete|/export|template|seed\.xlsx|examples/|run=1")
+    skip = re.compile(r"\.(xlsx|pdf|csv|json)|/delete|/export|template|seed\.xlsx|examples/|run=1|^/lang/|^/units/")
     out: dict[str, str] = {}
     queue = collections.deque(start)
     while queue and len(out) < 140:

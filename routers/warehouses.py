@@ -20,8 +20,9 @@ from routers.common import (
     to_int,
 )
 from services.addressing import normalize_code
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/warehouses", tags=["Armazéns"])
+router = APIRouter(prefix="/warehouses", tags=[N_("Armazéns")])
 
 
 def _all_branches(db: Session) -> list[Branch]:
@@ -33,17 +34,17 @@ def _validate(db: Session, form: FormData, warehouse_id: int | None):
     code = normalize_code(f_str(form, "code"))
     name = f_str(form, "name", 150)
     if not code:
-        errors.add("code", "Código é obrigatório.")
+        errors.add("code", _("Código é obrigatório."))
     elif len(code) > 30:
-        errors.add("code", "Código deve ter no máximo 30 caracteres.")
+        errors.add("code", _("Código deve ter no máximo 30 caracteres."))
     else:
         stmt = select(Warehouse.id).where(Warehouse.code == code)
         if warehouse_id:
             stmt = stmt.where(Warehouse.id != warehouse_id)
         if db.scalar(stmt):
-            errors.add("code", f"Já existe um armazém com o código {code}.")
+            errors.add("code", _("Já existe um armazém com o código {code}.", code=code))
     if not name:
-        errors.add("name", "Nome é obrigatório.")
+        errors.add("name", _("Nome é obrigatório."))
     branch_ids = [i for i in (to_int(v) for v in form.getlist("branch_ids")) if i]
     return errors, {"code": code, "name": name, "branch_ids": branch_ids}
 
@@ -94,14 +95,14 @@ def create_warehouse(request: Request, form: FormData = Depends(form_data), db: 
         wh.branches = list(db.scalars(select(Branch).where(Branch.id.in_(data["branch_ids"]))))
     db.add(wh)
     db.commit()
-    return redirect("/warehouses", f"Armazém {wh.code} criado com sucesso.")
+    return redirect("/warehouses", _("Armazém {code} criado com sucesso.", code=wh.code))
 
 
 @router.get("/{warehouse_id}/edit")
 def edit_warehouse(warehouse_id: int, request: Request, db: Session = Depends(get_db)):
     wh = db.get(Warehouse, warehouse_id)
     if not wh:
-        return redirect("/warehouses", "Armazém não encontrado.", "danger")
+        return redirect("/warehouses", _("Armazém não encontrado."), "danger")
     data = {"code": wh.code, "name": wh.name, "branch_ids": [b.id for b in wh.branches]}
     return render(request, "warehouses/form.html", warehouse=wh, data=data, errors={}, branches=_all_branches(db))
 
@@ -110,7 +111,7 @@ def edit_warehouse(warehouse_id: int, request: Request, db: Session = Depends(ge
 def update_warehouse(warehouse_id: int, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     wh = db.get(Warehouse, warehouse_id)
     if not wh:
-        return redirect("/warehouses", "Armazém não encontrado.", "danger")
+        return redirect("/warehouses", _("Armazém não encontrado."), "danger")
     errors, data = _validate(db, form, warehouse_id)
     current = {b.id for b in wh.branches}
     removed = current - set(data["branch_ids"])
@@ -120,26 +121,25 @@ def update_warehouse(warehouse_id: int, request: Request, form: FormData = Depen
             .where(StorageLocation.warehouse_id == warehouse_id, Branch.id.in_(removed)).distinct()
         ).all()
         if blocked:
-            errors.add("branch_ids", f"Não é possível desvincular filiais que possuem endereços neste armazém: {', '.join(blocked)}.")
+            errors.add("branch_ids", _("Não é possível desvincular filiais que possuem endereços neste armazém: {v}.", v=', '.join(blocked)))
     if errors:
         return render(request, "warehouses/form.html", status_code=422, warehouse=wh, data=data, errors=errors,
                       branches=_all_branches(db))
     wh.code, wh.name = data["code"], data["name"]
     wh.branches = list(db.scalars(select(Branch).where(Branch.id.in_(data["branch_ids"])))) if data["branch_ids"] else []
     db.commit()
-    return redirect("/warehouses", f"Armazém {wh.code} atualizado.")
+    return redirect("/warehouses", _("Armazém {code} atualizado.", code=wh.code))
 
 
 @router.post("/{warehouse_id}/delete")
 def delete_warehouse(warehouse_id: int, db: Session = Depends(get_db)):
     wh = db.get(Warehouse, warehouse_id)
     if not wh:
-        return redirect("/warehouses", "Armazém não encontrado.", "danger")
+        return redirect("/warehouses", _("Armazém não encontrado."), "danger")
     n_locs = db.scalar(select(func.count()).where(StorageLocation.warehouse_id == warehouse_id))
     if n_locs:
-        return redirect("/warehouses", f"Armazém {wh.code} possui {n_locs} endereço(s). "
-                                       "Exclua os endereços antes de excluir o armazém.", "danger")
+        return redirect("/warehouses", _("Armazém {code} possui {n_locs} endereço(s). Exclua os endereços antes de excluir o armazém.", code=wh.code, n_locs=n_locs), "danger")
     code = wh.code
     db.delete(wh)
     db.commit()
-    return redirect("/warehouses", f"Armazém {code} excluído.")
+    return redirect("/warehouses", _("Armazém {code} excluído.", code=code))

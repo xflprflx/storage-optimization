@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from models import (BayStructure, BinContent, BinType, Branch, BranchLayout, LevelCapacity, LocationBin,
                     OptimizationRun, PickHistory, Product, ShelfLevel, SiteProject, StockItem, StockPolicy,
                     StorageLocation, StructureType, Warehouse)
+from services.i18n import N_, _
 
 CHUNK = 800
 
@@ -73,11 +74,11 @@ def _impact_branches(db, ids):
     out = {}
     for b in db.scalars(select(Branch).where(Branch.id.in_(ids))):
         out[b.id] = {"name": f"{b.code} - {b.name}",
-                     "rel": {"endereços": locs.get(b.id, 0), "saldos": stock.get(b.id, 0), "níveis": lv.get(b.id, 0),
-                             "estantes com estrutura": bs.get(b.id, 0), "políticas de estoque": pol.get(b.id, 0),
-                             "plantas": lay.get(b.id, 0), "histórico de pedidos": hist.get(b.id, 0),
-                             "resultados de otimização": runs.get(b.id, 0)},
-                     "block": f"tem {locs[b.id]} endereço(s)" if locs.get(b.id) else None}
+                     "rel": {N_("endereços"): locs.get(b.id, 0), "saldos": stock.get(b.id, 0), N_("níveis"): lv.get(b.id, 0),
+                             N_("estantes com estrutura"): bs.get(b.id, 0), N_("políticas de estoque"): pol.get(b.id, 0),
+                             "plantas": lay.get(b.id, 0), N_("histórico de pedidos"): hist.get(b.id, 0),
+                             N_("resultados de otimização"): runs.get(b.id, 0)},
+                     "block": _("tem {v} endereço(s)", v=locs[b.id]) if locs.get(b.id) else None}
     return out
 
 
@@ -104,9 +105,9 @@ def _impact_warehouses(db, ids):
     out = {}
     for w in db.scalars(select(Warehouse).where(Warehouse.id.in_(ids))):
         out[w.id] = {"name": f"{w.code} - {w.name}",
-                     "rel": {"endereços": locs.get(w.id, 0), "saldos": stock.get(w.id, 0), "níveis": lv.get(w.id, 0),
-                             "estantes com estrutura": bs.get(w.id, 0), "plantas": lay.get(w.id, 0)},
-                     "block": f"tem {locs[w.id]} endereço(s)" if locs.get(w.id) else None}
+                     "rel": {N_("endereços"): locs.get(w.id, 0), "saldos": stock.get(w.id, 0), N_("níveis"): lv.get(w.id, 0),
+                             N_("estantes com estrutura"): bs.get(w.id, 0), "plantas": lay.get(w.id, 0)},
+                     "block": _("tem {v} endereço(s)", v=locs[w.id]) if locs.get(w.id) else None}
     return out
 
 
@@ -141,11 +142,11 @@ def _impact_bin_types(db, ids):
     caps = _count_by(db, LevelCapacity.bin_type_id, ids)
     out = {}
     for t in db.scalars(select(BinType).where(BinType.id.in_(ids))):
-        why = [f"usado em {used[t.id]} endereço(s)" if used.get(t.id) else "",
-               f"é bin pai de {kids[t.id]} fração(ões)" if kids.get(t.id) else ""]
+        why = [_("usado em {v} endereço(s)", v=used[t.id]) if used.get(t.id) else "",
+               _("é bin pai de {v} fração(ões)", v=kids[t.id]) if kids.get(t.id) else ""]
         out[t.id] = {"name": f"{t.code} - {t.name}",
-                     "rel": {"endereços com a bin": used.get(t.id, 0), "frações filhas": kids.get(t.id, 0),
-                             "capacidades de nível": caps.get(t.id, 0)},
+                     "rel": {N_("endereços com a bin"): used.get(t.id, 0), N_("frações filhas"): kids.get(t.id, 0),
+                             N_("capacidades de nível"): caps.get(t.id, 0)},
                      "block": "; ".join(w for w in why if w) or None}
     return out
 
@@ -168,8 +169,8 @@ def _run_bin_types(db, ids, cascade):
 
 def _impact_structures(db, ids):
     used = _count_by(db, BayStructure.structure_type_id, ids)
-    return {s.id: {"name": f"{s.code} - {s.name}", "rel": {"estantes com a estrutura": used.get(s.id, 0)},
-                   "block": f"está em {used[s.id]} estante(s)" if used.get(s.id) else None}
+    return {s.id: {"name": f"{s.code} - {s.name}", "rel": {N_("estantes com a estrutura"): used.get(s.id, 0)},
+                   "block": _("está em {v} estante(s)", v=used[s.id]) if used.get(s.id) else None}
             for s in db.scalars(select(StructureType).where(StructureType.id.in_(ids)))}
 
 
@@ -186,9 +187,9 @@ def _impact_products(db, ids):
     for ch in _chunks(ids):
         for p in db.scalars(select(Product).where(Product.id.in_(ch))):
             out[p.id] = {"name": f"{p.sku} - {p.name}",
-                         "rel": {"saldos": stock.get(p.id, 0), "atribuições sem saldo": zero.get(p.id, 0),
-                                 "políticas de estoque": pol.get(p.id, 0)},
-                         "block": f"tem saldo em {stock[p.id]} endereço(s)" if stock.get(p.id) else None}
+                         "rel": {"saldos": stock.get(p.id, 0), N_("atribuições sem saldo"): zero.get(p.id, 0),
+                                 N_("políticas de estoque"): pol.get(p.id, 0)},
+                         "block": _("tem saldo em {v} endereço(s)", v=stock[p.id]) if stock.get(p.id) else None}
     return out
 
 
@@ -236,7 +237,7 @@ def _run_stock(db, ids, cascade):
 
 def _impact_projects(db, ids):
     runs = _count_by(db, OptimizationRun.project_id, ids)
-    return {p.id: {"name": p.name, "rel": {"resultados de otimização": runs.get(p.id, 0)}, "block": None}
+    return {p.id: {"name": p.name, "rel": {N_("resultados de otimização"): runs.get(p.id, 0)}, "block": None}
             for p in db.scalars(select(SiteProject).where(SiteProject.id.in_(ids)))}
 
 
@@ -248,20 +249,20 @@ def _run_projects(db, ids, cascade):
 
 KINDS: dict[str, dict] = {
     "branches": {"label": "filiais", "back": "/branches", "impact": _impact_branches, "run": _run_branches,
-                 "cascade": "endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico "
-                            "de pedidos e resultados de otimização da filial"},
-    "warehouses": {"label": "armazéns", "back": "/warehouses", "impact": _impact_warehouses, "run": _run_warehouses,
-                   "cascade": "endereços do armazém (com saldos e bins), níveis, estruturas das estantes e planta"},
-    "bin_types": {"label": "tipos de bin", "back": "/bin-types", "impact": _impact_bin_types, "run": _run_bin_types,
-                  "cascade": "as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis"},
+                 "cascade": N_("endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico "
+                            "de pedidos e resultados de otimização da filial")},
+    "warehouses": {"label": N_("armazéns"), "back": "/warehouses", "impact": _impact_warehouses, "run": _run_warehouses,
+                   "cascade": N_("endereços do armazém (com saldos e bins), níveis, estruturas das estantes e planta")},
+    "bin_types": {"label": N_("tipos de bin"), "back": "/bin-types", "impact": _impact_bin_types, "run": _run_bin_types,
+                  "cascade": N_("as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis")},
     "structures": {"label": "estruturas", "back": "/structures", "impact": _impact_structures, "run": _run_structures,
-                   "cascade": "a atribuição da estrutura às estantes"},
+                   "cascade": N_("a atribuição da estrutura às estantes")},
     "products": {"label": "produtos", "back": "/products", "impact": _impact_products, "run": _run_products,
-                 "cascade": "os saldos dos produtos (e as políticas de estoque)"},
-    "stock": {"label": "registros de saldo", "back": "/stock", "impact": _impact_stock, "run": _run_stock,
+                 "cascade": N_("os saldos dos produtos (e as políticas de estoque)")},
+    "stock": {"label": N_("registros de saldo"), "back": "/stock", "impact": _impact_stock, "run": _run_stock,
               "cascade": ""},
-    "projects": {"label": "projetos de filial nova", "back": "/optimization/site", "impact": _impact_projects,
-                 "run": _run_projects, "cascade": "os resultados de otimização guardados dos projetos"},
+    "projects": {"label": N_("projetos de filial nova"), "back": "/optimization/site", "impact": _impact_projects,
+                 "run": _run_projects, "cascade": N_("os resultados de otimização guardados dos projetos")},
 }
 
 

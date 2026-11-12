@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Comparar resultados{% endblock %}
+{% block title %}{{ _("Comparar resultados") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div><h1><i class="bi bi-layout-three-columns"></i> Comparar resultados</h1>
-    <div class="small text-muted">Diferença em relação ao 1º resultado (verde = melhor, vermelho = pior, quando o indicador tem um sentido).</div></div>
-  <a href="/optimization/runs" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Resultados</a>
+  <div><h1><i class="bi bi-layout-three-columns"></i> {{ _("Comparar resultados") }}</h1>
+    <div class="small text-muted">{{ _("Diferença em relação ao 1º resultado (verde = melhor, vermelho = pior, quando o indicador tem um sentido).") }}</div></div>
+  <a href="/optimization/runs" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Resultados") }}</a>
 </div>
 <div class="card mb-3">
   <div class="table-responsive"><table class="table table-sm mb-0 align-middle">
-    <thead><tr><th>Indicador</th>{% for r in runs %}<th class="text-end" style="min-width:170px">
+    <thead><tr><th>{{ _("Indicador") }}</th>{% for r in runs %}<th class="text-end" style="min-width:170px">
       <a href="/optimization/runs/{{ r.id }}">nº {{ r.id }}</a> <span class="badge text-bg-light border fw-normal">{{ kinds.get(r.kind, r.kind) }}</span>
       <div class="small fw-normal text-muted text-truncate" style="max-width:260px" title="{{ r.title }}">{{ r.note or r.title }}</div>
-      <div class="small fw-normal text-muted">{{ r.updated_at.strftime('%d/%m %H:%M') if r.updated_at else '' }}</div></th>{% endfor %}</tr></thead>
+      <div class="small fw-normal text-muted">{{ fmt_datetime(r.updated_at, year=False) if r.updated_at else '' }}</div></th>{% endfor %}</tr></thead>
     <tbody>
-      <tr class="table-light"><td class="small">Origem do resultado</td>{% for r in runs %}<td class="text-end small">{{ (r.summary or {}).get('solver') or '—' }}</td>{% endfor %}</tr>
+      <tr class="table-light"><td class="small">{{ _("Origem do resultado") }}</td>{% for r in runs %}<td class="text-end small">{{ (r.summary or {}).get('solver') or '—' }}</td>{% endfor %}</tr>
     {% for row in rows %}
       <tr><td class="small">{{ row.label }}</td>
         {% for c in row.cells %}
@@ -22,17 +22,17 @@
             {% set good = (c.delta < 0) if row.better == 'low' else ((c.delta > 0) if row.better == 'high' else none) %}
             <div class="small {{ 'text-success' if good == true else ('text-danger' if good == false else 'text-muted') }}">{{ '+' if c.delta > 0 }}{{ c.delta|dec(row.places or 0) }}{{ row.unit }}</div>
           {% endif %}
-          {% if c.k and c.k.get('before') is not none %}<div class="small text-muted">antes {{ c.k.get('before')|dec(row.places or 0) }}</div>{% endif %}</td>
+          {% if c.k and c.k.get('before') is not none %}<div class="small text-muted">{{ _h("antes {before}", before=(c.k.get('before')|dec(row.places or 0))) }}</div>{% endif %}</td>
         {% endfor %}</tr>
     {% endfor %}
     </tbody>
   </table></div>
 </div>
 <div class="card">
-  <div class="card-header bg-white"><strong>Parâmetros diferentes</strong> <span class="small text-muted">({{ diff|length }})</span></div>
+  <div class="card-header bg-white"><strong>{{ _("Parâmetros diferentes") }}</strong> <span class="small text-muted">({{ diff|length }})</span></div>
   {% if diff %}<div class="table-responsive"><table class="table table-sm mb-0 small">
-    <thead><tr><th>Parâmetro</th>{% for r in runs %}<th>nº {{ r.id }}</th>{% endfor %}</tr></thead>
+    <thead><tr><th>{{ _("Parâmetro") }}</th>{% for r in runs %}<th>nº {{ r.id }}</th>{% endfor %}</tr></thead>
     <tbody>{% for d in diff %}<tr><td class="mono">{{ d.key }}</td>{% for v in d['values'] %}<td class="mono" style="font-size:.72rem; max-width:360px; word-break:break-all">{{ v|tojson if v is mapping or (v is iterable and v is not string) else (v if v is not none else '—') }}</td>{% endfor %}</tr>{% endfor %}</tbody>
-  </table></div>{% else %}<div class="card-body small text-muted">Os parâmetros são iguais (os dados mudaram entre as execuções).</div>{% endif %}
+  </table></div>{% else %}<div class="card-body small text-muted">{{ _("Os parâmetros são iguais (os dados mudaram entre as execuções).") }}</div>{% endif %}
 </div>
 {% endblock %}

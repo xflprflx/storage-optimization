@@ -28,8 +28,9 @@ from services.addressing import normalize_code
 from services.material_service import material_condition
 from services.bin_content_service import refresh_contents
 from services.stock_service import refresh_occupancy, sync_default_locations
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/stock", tags=["Estoque"])
+router = APIRouter(prefix="/stock", tags=[N_("Estoque")])
 
 
 def _lookups(db: Session) -> dict:
@@ -112,16 +113,16 @@ def create_stock(request: Request, form: FormData = Depends(form_data), db: Sess
     data = {"sku": sku, "location_id": f_int(form, "location_id"), "location_label": f_str(form, "location_label")}
     product = db.scalar(select(Product).where(Product.sku == sku)) if sku else None
     if not product:
-        errors.add("sku", "SKU não encontrado.")
+        errors.add("sku", _("SKU não encontrado."))
     loc = db.get(StorageLocation, data["location_id"]) if data["location_id"] else None
     if not loc:
-        errors.add("location_id", "Selecione um endereço válido.")
-    qty = f_dec(form, "quantity", errors, "Quantidade")
+        errors.add("location_id", _("Selecione um endereço válido."))
+    qty = f_dec(form, "quantity", errors, N_("Quantidade"))
     data["quantity"] = qty
     if qty is None and "quantity" not in errors:
-        errors.add("quantity", "Quantidade é obrigatória.")
+        errors.add("quantity", _("Quantidade é obrigatória."))
     if not errors and db.scalar(select(StockItem.id).where(StockItem.product_id == product.id, StockItem.location_id == loc.id)):
-        errors.add("__all__", "Já existe saldo deste produto neste endereço. Edite o registro existente.")
+        errors.add("__all__", _("Já existe saldo deste produto neste endereço. Edite o registro existente."))
     if errors:
         return render(request, "stock/form.html", status_code=422, item=None, data=data, errors=errors)
     db.add(StockItem(product_id=product.id, location_id=loc.id, quantity=qty))
@@ -130,14 +131,14 @@ def create_stock(request: Request, form: FormData = Depends(form_data), db: Sess
     sync_default_locations(db, [product.id])
     refresh_contents(db, [loc.id])
     db.commit()
-    return redirect("/stock", f"Saldo de {sku} em {loc.address} registrado.")
+    return redirect("/stock", _("Saldo de {sku} em {address} registrado.", sku=sku, address=loc.address))
 
 
 @router.get("/{item_id}/edit")
 def edit_stock(item_id: int, request: Request, db: Session = Depends(get_db)):
     item = db.get(StockItem, item_id)
     if not item:
-        return redirect("/stock", "Saldo não encontrado.", "danger")
+        return redirect("/stock", _("Saldo não encontrado."), "danger")
     return render(request, "stock/form.html", item=item, data={"quantity": item.quantity}, errors={})
 
 
@@ -145,11 +146,11 @@ def edit_stock(item_id: int, request: Request, db: Session = Depends(get_db)):
 def update_stock(item_id: int, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     item = db.get(StockItem, item_id)
     if not item:
-        return redirect("/stock", "Saldo não encontrado.", "danger")
+        return redirect("/stock", _("Saldo não encontrado."), "danger")
     errors = FormErrors()
-    qty = f_dec(form, "quantity", errors, "Quantidade")
+    qty = f_dec(form, "quantity", errors, N_("Quantidade"))
     if qty is None and "quantity" not in errors:
-        errors.add("quantity", "Quantidade é obrigatória.")
+        errors.add("quantity", _("Quantidade é obrigatória."))
     if errors:
         return render(request, "stock/form.html", status_code=422, item=item, data={"quantity": form.get("quantity")}, errors=errors)
     item.quantity = qty
@@ -158,14 +159,14 @@ def update_stock(item_id: int, request: Request, form: FormData = Depends(form_d
     sync_default_locations(db, [item.product_id])
     refresh_contents(db, [item.location_id])
     db.commit()
-    return redirect("/stock", f"Saldo de {item.product.sku} em {item.location.address} atualizado.")
+    return redirect("/stock", _("Saldo de {sku} em {address} atualizado.", sku=item.product.sku, address=item.location.address))
 
 
 @router.post("/{item_id}/delete")
 def delete_stock(item_id: int, db: Session = Depends(get_db)):
     item = db.get(StockItem, item_id)
     if not item:
-        return redirect("/stock", "Saldo não encontrado.", "danger")
+        return redirect("/stock", _("Saldo não encontrado."), "danger")
     loc_id, pid = item.location_id, item.product_id
     db.delete(item)
     db.flush()
@@ -173,4 +174,4 @@ def delete_stock(item_id: int, db: Session = Depends(get_db)):
     sync_default_locations(db, [pid])
     refresh_contents(db, [loc_id])
     db.commit()
-    return redirect("/stock", "Registro de saldo excluído.")
+    return redirect("/stock", _("Registro de saldo excluído."))

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Plano de implantação — {{ project.name }}{% endblock %}
+{% block title %}{{ _h("Plano de implantação — {name}", name=(project.name)) }}{% endblock %}
 {% block head %}
 <style>
   .kpi-card .v { font-size: 1.35rem; font-weight: 700; }
@@ -20,14 +20,14 @@
 <div class="page-header">
   <div>
     <h1><i class="bi bi-list-check"></i> {{ rep.title }}</h1>
-    <div class="small text-muted">Gerado em {{ rep.created.strftime('%d/%m/%Y %H:%M') }} · {{ rep.steps|length }} passo(s) em {{ rep.steps_by_phase()|length }} fase(s) · mesmo plano aprovado na tela do projeto</div>
+    <div class="small text-muted">{{ _h("Gerado em {strftime} · {steps} passo(s) em {steps_by_phase} fase(s) · mesmo plano aprovado na tela do projeto", strftime=(fmt_datetime(rep.created)), steps=(rep.steps|length), steps_by_phase=(rep.steps_by_phase()|length)) }}</div>
   </div>
   <div class="d-flex gap-2 no-print">
-    <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
-    {% if plan and plan.modules %}<a href="/optimization/site/{{ project.id }}/3d" class="btn btn-outline-primary"><i class="bi bi-box"></i> Ver em 3D</a>{% endif %}
+    <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar ao projeto") }}</a>
+    {% if plan and plan.modules %}<a href="/optimization/site/{{ project.id }}/3d" class="btn btn-outline-primary"><i class="bi bi-box"></i> {{ _("Ver em 3D") }}</a>{% endif %}
     <a href="/optimization/site/{{ project.id }}/plan.xlsx" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
     <a href="/optimization/site/{{ project.id }}/plan.pdf" data-dims-link class="btn btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
-    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _("Imprimir") }}</button>
   </div>
 </div>
 
@@ -35,11 +35,11 @@
 
 <div class="row g-3 mb-3">
   <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
-    <div class="fw-semibold mb-1">Imóvel e demanda</div>
+    <div class="fw-semibold mb-1">{{ _("Imóvel e demanda") }}</div>
     <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in rep.scope %}<tr><td class="text-muted" style="width:30%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
   </div></div></div>
   <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
-    <div class="fw-semibold mb-1">Regras e critérios</div>
+    <div class="fw-semibold mb-1">{{ _("Regras e critérios") }}</div>
     <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in rep.params %}<tr><td class="text-muted" style="width:30%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
   </div></div></div>
 </div>
@@ -55,16 +55,16 @@
 <div class="row g-3 mb-3">
   <div class="col-xl-7">
     <div class="card h-100">
-      <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>Planta (vista de cima)</strong> <span data-dims-control></span>
+      <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>{{ _("Planta (vista de cima)") }}</strong> <span data-dims-control></span>
         <span class="small">{% for s in plan.structs if s.qty %}<span class="me-3"><span class="d-inline-block rounded-1 align-middle" style="width:12px;height:12px;background:{{ colors[s.struct.id] }}"></span> {{ s.struct.code }} ({{ s.qty }})</span>{% endfor %}</span></div>
       <div class="card-body">{{ svg|safe }}</div>
     </div>
   </div>
   <div class="col-xl-5">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong><i class="bi bi-cart"></i> Lista de compras</strong></div>
+      <div class="card-header bg-white"><strong><i class="bi bi-cart"></i> {{ _("Lista de compras") }}</strong></div>
       <div class="table-responsive"><table class="table table-sm mb-0 small align-middle" data-no-resize>
-        <thead><tr><th>Item</th><th>Código</th><th class="text-end">Qtd.</th><th class="text-end">Unit.</th><th class="text-end">Total</th></tr></thead>
+        <thead><tr><th>{{ _("Item") }}</th><th>{{ _("Código") }}</th><th class="text-end">{{ _("Qtd.") }}</th><th class="text-end">{{ _("Unit.") }}</th><th class="text-end">{{ _("Total") }}</th></tr></thead>
         <tbody>
         {% for pc in rep.purchases %}
           <tr><td>{{ pc.kind }}<div class="text-muted" style="font-size:.72rem">{{ pc.note }}</div></td>
@@ -74,7 +74,7 @@
             <td class="text-end">{{ ('R$ ' ~ pc.total|dec(2)) if pc.total is not none else '—' }}</td></tr>
         {% endfor %}
         </tbody>
-        <tfoot><tr class="fw-semibold"><td colspan="4">Total</td><td class="text-end">{{ ('R$ ' ~ rep.purchase_total|dec(2)) if rep.purchase_total is not none else '—' }}</td></tr></tfoot>
+        <tfoot><tr class="fw-semibold"><td colspan="4">{{ _("Total") }}</td><td class="text-end">{{ ('R$ ' ~ rep.purchase_total|dec(2)) if rep.purchase_total is not none else '—' }}</td></tr></tfoot>
       </table></div>
     </div>
   </div>
@@ -82,18 +82,18 @@
 
 <div class="card mb-3 page-break">
   <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <strong><i class="bi bi-check2-square"></i> Passo a passo</strong>
+    <strong><i class="bi bi-check2-square"></i> {{ _("Passo a passo") }}</strong>
     <div class="d-flex gap-2 align-items-center no-print small">
-      <span class="text-muted"><span id="doneCount">0</span>/{{ rep.steps|length }} feito(s)</span>
-      <input class="form-control form-control-sm" style="max-width:220px" type="search" placeholder="Filtrar passos" id="stepFilter">
-      <button class="btn btn-sm btn-outline-secondary" type="button" id="clearDone">Desmarcar tudo</button>
+      <span class="text-muted">{{ _h("<span id=\"doneCount\">0</span>/{steps} feito(s)", steps=(rep.steps|length)) }}</span>
+      <input class="form-control form-control-sm" style="max-width:220px" type="search" placeholder="{{ _("Filtrar passos") }}" id="stepFilter">
+      <button class="btn btn-sm btn-outline-secondary" type="button" id="clearDone">{{ _("Desmarcar tudo") }}</button>
     </div>
   </div>
-  <div class="card-body py-2 small text-muted">Marque os passos concluídos (fica salvo neste navegador). As fases seguem a ordem de implantação:
+  <div class="card-body py-2 small text-muted">{{ _("Marque os passos concluídos (fica salvo neste navegador). As fases seguem a ordem de implantação:") }}
     {% for label, steps in rep.steps_by_phase() %}<span class="badge ph-{{ steps[0].phase }} text-dark border me-1">{{ label }} ({{ steps|length }})</span>{% endfor %}</div>
   <div class="nk-scroll">
     <table class="table table-sm table-hover mb-0 small align-middle" id="steps" data-no-resize>
-      <thead class="sticky-top bg-white"><tr><th style="width:40px"></th><th style="width:50px">Nº</th><th>Ação</th><th>Onde</th><th>Descrição</th><th class="text-end">Qtd.</th></tr></thead>
+      <thead class="sticky-top bg-white"><tr><th style="width:40px"></th><th style="width:50px">Nº</th><th>{{ _("Ação") }}</th><th>{{ _("Onde") }}</th><th>{{ _("Descrição") }}</th><th class="text-end">{{ _("Qtd.") }}</th></tr></thead>
       <tbody>
       {% for label, steps in rep.steps_by_phase() %}
         <tr class="grp-row"><td colspan="6">{{ label }}</td></tr>
@@ -116,10 +116,10 @@
 </div>
 
 <div class="card mb-3 page-break">
-  <div class="card-header bg-white"><strong><i class="bi bi-bookshelf"></i> Montagem das estantes ({{ rep.modules|length }})</strong>
-    <span class="small text-muted">— X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo)</span></div>
+  <div class="card-header bg-white"><strong><i class="bi bi-bookshelf"></i> {{ _h("Montagem das estantes ({modules})", modules=(rep.modules|length)) }}</strong>
+    <span class="small text-muted">{{ _("— X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo)") }}</span></div>
   <div class="table-responsive nk-scroll"><table class="table table-sm table-hover mb-0 small" data-no-resize>
-    <thead class="sticky-top bg-white"><tr><th>Estante</th><th>Estrutura</th><th class="text-end">Fileira</th><th>Lado</th><th class="text-end">X (m)</th><th class="text-end">Y (m)</th><th class="text-end">Níveis × vão</th><th>Níveis × bins</th></tr></thead>
+    <thead class="sticky-top bg-white"><tr><th>{{ _("Estante") }}</th><th>{{ _("Estrutura") }}</th><th class="text-end">{{ _("Fileira") }}</th><th>{{ _("Lado") }}</th><th class="text-end">X (m)</th><th class="text-end">Y (m)</th><th class="text-end">{{ _("Níveis × vão") }}</th><th>{{ _("Níveis × bins") }}</th></tr></thead>
     <tbody>{% for r in rep.modules %}<tr><td class="mono fw-semibold">{{ r.bay }}</td><td class="mono">{{ r.struct }}</td><td class="text-end">{{ r.row }}</td><td>{{ r.side }}</td>
       <td class="text-end">{{ r.x|dec(2) }}</td><td class="text-end">{{ r.y|dec(2) }}</td><td class="text-end text-nowrap">{{ r.levels }} × {{ r.level_h|dec }} cm</td><td class="mono" style="font-size:.75rem">{{ r.config }}</td></tr>{% endfor %}</tbody>
   </table></div>
@@ -128,20 +128,20 @@
 <div class="row g-3 mb-4">
   <div class="col-xl-7">
     <div class="card h-100">
-      <div class="card-header bg-white d-flex justify-content-between"><strong><i class="bi bi-geo-alt"></i> Endereços ({{ rep.addresses|length }})</strong>
-        <input class="form-control form-control-sm no-print" style="max-width:220px" type="search" placeholder="Filtrar endereço/SKU" id="addrFilter"></div>
+      <div class="card-header bg-white d-flex justify-content-between"><strong><i class="bi bi-geo-alt"></i> {{ _h("Endereços ({addresses})", addresses=(rep.addresses|length)) }}</strong>
+        <input class="form-control form-control-sm no-print" style="max-width:220px" type="search" placeholder="{{ _("Filtrar endereço/SKU") }}" id="addrFilter"></div>
       <div class="table-responsive nk-scroll"><table class="table table-sm table-hover mb-0 small" id="addrTable" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>Endereço</th><th>Tipo de bin</th><th class="text-end">Bins</th><th>SKU</th><th>Produto</th><th class="text-end">Unid.</th><th class="text-end" title="Volume dos produtos ÷ volume útil das bins">Ocup. bins</th><th class="text-end">Peso</th></tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>{{ _("Endereço") }}</th><th>{{ _("Tipo de bin") }}</th><th class="text-end">{{ _("Bins") }}</th><th>SKU</th><th>{{ _("Produto") }}</th><th class="text-end">{{ _("Unid.") }}</th><th class="text-end" title="{{ _("Volume dos produtos ÷ volume útil das bins") }}">{{ _("Ocup. bins") }}</th><th class="text-end">{{ _("Peso") }}</th></tr></thead>
         <tbody>{% for r in rep.addresses %}<tr><td class="mono">{{ r.address }}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.bins }}</td><td class="mono">{{ r.sku }}</td><td>{{ r.name }}</td><td class="text-end">{{ r.units|dec }}</td><td class="text-end">{{ (r.fill|dec(0) ~ "%") if r.fill is not none else "—" }}</td><td class="text-end">{{ r.weight|dec(1) }}</td></tr>{% endfor %}</tbody>
       </table></div>
     </div>
   </div>
   <div class="col-xl-5">
     <div class="card h-100">
-      <div class="card-header bg-white"><strong><i class="bi bi-layers"></i> Níveis ({{ rep.levels|length }})</strong></div>
+      <div class="card-header bg-white"><strong><i class="bi bi-layers"></i> {{ _h("Níveis ({levels})", levels=(rep.levels|length)) }}</strong></div>
       <div class="table-responsive nk-scroll"><table class="table table-sm mb-0 small" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>Nível</th><th>Tipo</th><th class="text-end">Cap.</th><th class="text-end">Uso</th><th class="text-end">Carga</th></tr></thead>
-        <tbody>{% for r in rep.levels %}<tr class="{{ 'text-muted' if r.type == 'livre' else '' }}"><td class="mono">{{ r.bay }}-{{ r.level }}{% if r.golden %} <i class="bi bi-star-fill text-warning" title="Zona de ouro"></i>{% endif %}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.cap }}</td>
+        <thead class="sticky-top bg-white"><tr><th>{{ _("Nível") }}</th><th>{{ _("Tipo") }}</th><th class="text-end">{{ _("Cap.") }}</th><th class="text-end">{{ _("Uso") }}</th><th class="text-end">{{ _("Carga") }}</th></tr></thead>
+        <tbody>{% for r in rep.levels %}<tr class="{{ 'text-muted' if r.type == 'livre' else '' }}"><td class="mono">{{ r.bay }}-{{ r.level }}{% if r.golden %} <i class="bi bi-star-fill text-warning" title="{{ _("Zona de ouro") }}"></i>{% endif %}</td><td class="mono">{{ r.type }}</td><td class="text-end">{{ r.cap }}</td>
           <td class="text-end">{{ r.used }}{% if r.cap %} <span class="text-muted">({{ (r.used / r.cap * 100)|round|int }}%)</span>{% endif %}</td>
           <td class="text-end">{{ r.load|dec(1) }}{% if r.max_load %} <span class="text-muted">/ {{ r.max_load|dec }} kg</span>{% endif %}</td></tr>{% endfor %}</tbody>
       </table></div>
@@ -167,7 +167,7 @@
     if (e.target.checked) done[e.target.dataset.n] = 1; else delete done[e.target.dataset.n];
     save(); paint();
   });
-  document.getElementById('clearDone').addEventListener('click', () => { if (confirm('Desmarcar todos os passos?')) { done = {}; save(); paint(); } });
+  document.getElementById('clearDone').addEventListener('click', () => { if (confirm(_t('Desmarcar todos os passos?'))) { done = {}; save(); paint(); } });
   paint();
   const filt = (input, rows) => input && input.addEventListener('input', () => {
     const q = input.value.trim().toLowerCase();

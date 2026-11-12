@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Excluir {{ cfg.label }}{% endblock %}
+{% block title %}{{ _h("Excluir {label}", label=(cfg.label)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-trash text-danger"></i> Excluir {{ ids|length }} {{ cfg.label }}</h1>
-  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar sem excluir</a>
+  <h1><i class="bi bi-trash text-danger"></i> {{ _h("Excluir {ids} {label}", ids=(ids|length), label=(cfg.label)) }}</h1>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar sem excluir") }}</a>
 </div>
 <form method="post" action="/bulk-delete/{{ kind }}/run" id="runForm">
   <input type="hidden" name="back" value="{{ back }}">
@@ -12,29 +12,28 @@
   <div class="row g-3">
     <div class="col-lg-5">
       <div class="card"><div class="card-body">
-        <h6>Registros relacionados</h6>
+        <h6>{{ _("Registros relacionados") }}</h6>
         {% if imp.totals %}
         <table class="table table-sm small mb-2">{% for k, n in imp.totals.items() %}<tr><td>{{ k }}</td><td class="text-end fw-semibold">{{ n }}</td></tr>{% endfor %}</table>
-        {% else %}<p class="small text-muted">Nenhum registro relacionado.</p>{% endif %}
+        {% else %}<p class="small text-muted">{{ _("Nenhum registro relacionado.") }}</p>{% endif %}
         {% if cfg.cascade %}
         <div class="form-check mb-2">
           <input class="form-check-input" type="checkbox" name="cascade" value="1" id="cascade" {% if not imp.blocked %}checked{% endif %}>
-          <label class="form-check-label" for="cascade"><b>Excluir também os relacionados</b>: {{ cfg.cascade }}.</label>
+          <label class="form-check-label" for="cascade">{{ _h("<b>Excluir também os relacionados</b>: {cascade}.", cascade=(cfg.cascade)) }}</label>
         </div>
         {% endif %}
         {% if imp.blocked %}
-        <div class="alert alert-warning small py-2" id="blockMsg">{{ imp.blocked|length }} item(ns) têm registros relacionados que impedem a
-          exclusão simples. Sem a opção acima, eles ficam de fora; com ela, saem junto com os relacionados.</div>
+        <div class="alert alert-warning small py-2" id="blockMsg">{{ _h("{blocked} item(ns) têm registros relacionados que impedem a exclusão simples. Sem a opção acima, eles ficam de fora; com ela, saem junto com os relacionados.", blocked=(imp.blocked|length)) }}</div>
         {% endif %}
-        <div class="alert alert-danger small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> A exclusão não pode ser desfeita.</div>
-        <button class="btn btn-danger w-100" id="runBtn"><i class="bi bi-trash"></i> Excluir</button>
+        <div class="alert alert-danger small py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> {{ _("A exclusão não pode ser desfeita.") }}</div>
+        <button class="btn btn-danger w-100" id="runBtn"><i class="bi bi-trash"></i> {{ _("Excluir") }}</button>
       </div></div>
     </div>
     <div class="col-lg-7">
       <div class="card">
-        <div class="card-header bg-white"><strong>Itens</strong>{% if ids|length > shown|length %} <small class="text-muted">(primeiros {{ shown|length }} de {{ ids|length }})</small>{% endif %}</div>
+        <div class="card-header bg-white"><strong>{{ _("Itens") }}</strong>{% if ids|length > shown|length %} <small class="text-muted">{{ _h("(primeiros {shown} de {ids})", shown=(shown|length), ids=(ids|length)) }}</small>{% endif %}</div>
         <div class="table-responsive" style="max-height:60vh"><table class="table table-sm small mb-0">
-          <thead class="sticky-top bg-white"><tr><th>Item</th><th>Relacionados</th></tr></thead>
+          <thead class="sticky-top bg-white"><tr><th>{{ _("Item") }}</th><th>{{ _("Relacionados") }}</th></tr></thead>
           <tbody>{% for i, it in shown %}<tr class="{{ 'table-warning' if it.block }}">
             <td>{{ it.name }}{% if it.block %}<div class="text-warning-emphasis">{{ it.block }}</div>{% endif %}</td>
             <td class="text-muted">{% for k, n in it.rel.items() if n %}{{ k }}: {{ n }}{% if not loop.last %} · {% endif %}{% else %}—{% endfor %}</td>
@@ -50,9 +49,9 @@
 (function () {
   const f = document.getElementById('runForm'), c = document.getElementById('cascade');
   f.addEventListener('submit', e => {
-    const msg = c && c.checked ? 'Excluir os itens E os registros relacionados? Não dá para desfazer.' : 'Excluir os itens? Não dá para desfazer.';
+    const msg = c && c.checked ? _t('Excluir os itens E os registros relacionados? Não dá para desfazer.') : _t('Excluir os itens? Não dá para desfazer.');
     if (!confirm(msg)) { e.preventDefault(); return; }
-    const b = document.getElementById('runBtn'); b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Excluindo...';
+    const b = document.getElementById('runBtn'); b.disabled = true; b.innerHTML = _t('<span class="spinner-border spinner-border-sm"><\/span> Excluindo...');
   });
 })();
 </script>

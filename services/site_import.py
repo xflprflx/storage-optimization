@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from models import BinType, StructureType
 from services.addressing import normalize_code
 from services.file_reader import cell_to_str, iter_rows, normalize_header, parse_decimal
+from services.i18n import N_, _
 
 MAX_ITEMS = 200_000
 
@@ -167,10 +168,10 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
     try:
         v = parse_decimal(raw)
     except ValueError:
-        errs.append(f"linha {line}: {label} inválido ({raw!r}).")
+        errs.append(_("linha {line}: {label} inválido ({raw}).", line=line, label=label, raw=f"{raw!r}"))
         return None
     if v is not None and v < 0:
-        errs.append(f"linha {line}: {label} negativo.")
+        errs.append(_("linha {line}: {label} negativo.", line=line, label=label))
         return None
     return float(v) if v is not None else None
 
@@ -178,31 +179,31 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
 BUILDING_COLS = {"field": ["campo", "parametro", "item", "descricao"], "value": ["valor", "value", "medida"]}
 SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS,
          "zones": ZONE_COLS, "obstacles": OBSTACLE_COLS, "sectors": SECTOR_COLS, "orders": ORDER_COLS}
-KIND_LABELS = {"building": "Imóvel", "structures": "Estruturas", "bins": "Bins", "skus": "SKUs", "zones": "Zonas",
-               "obstacles": "Obstáculos", "sectors": "Setores", "orders": "Pedidos (histórico de saídas)"}
+KIND_LABELS = {"building": N_("Imóvel"), "structures": N_("Estruturas"), "bins": N_("Bins"), "skus": "SKUs", "zones": N_("Zonas"),
+               "obstacles": N_("Obstáculos"), "sectors": N_("Setores"), "orders": N_("Pedidos (histórico de saídas)")}
 FIELD_LABELS = {
-    "building": {"field": "Campo (nome do parâmetro)", "value": "Valor"},
-    "structures": {"code": "Código", "name": "Nome", "kind": "Tipo", "width": "Frente (cm)", "depth": "Profundidade (cm)",
-                   "height": "Altura total (cm)", "levels": "Nº de níveis", "level_height": "Vão útil (cm)",
-                   "max_load": "Carga por nível (kg)", "cost": "Custo por módulo (R$)", "mode": "Modo",
-                   "qty": "Qtd fixa", "min_qty": "Mínimo", "max_qty": "Máximo",
-                   "golden_from": "Zona de ouro início (cm)", "golden_to": "Zona de ouro fim (cm)",
-                   "first_level": "Altura do 1º nível (cm)", "level_heights": "Vãos por nível (cm, ex.: 45; 40; 35)"},
-    "bins": {"code": "Código", "name": "Nome", "height": "Altura (cm)", "width": "Largura (cm)",
-             "length": "Comprimento (cm)", "max_weight": "Peso máx. (kg)", "max_volume": "Volume (L)",
-             "cost": "Custo por bin (R$)"},
-    "skus": {"sku": "SKU", "name": "Produto", "material": "Tipo de material", "h": "Altura (cm)", "w": "Largura (cm)",
-             "l": "Comprimento (cm)", "wt": "Peso unitário (kg)", "stock": "Saldo", "min": "Min level",
-             "max": "Max level", "out": "Saída (linhas ou unid./período)"},
-    "zones": {"name": "Nome", "length": "Comprimento em X (m)", "orientation": "Orientação das fileiras",
-              "aisle": "Corredor (m)", "cross": "Corredores transversais", "structures": "Estruturas permitidas (códigos)",
-              "x": "X (m)", "y": "Y (m)", "width": "Largura em Y (m)"},
-    "obstacles": {"name": "Nome", "x": "X (m)", "y": "Y (m)", "length": "Comprimento em X (m)",
-                  "width": "Largura em Y (m)"},
-    "sectors": {"name": "Nome", "area": "Área necessária (m²)", "min_side": "Lado mínimo (m)",
-                "place": "Onde (automático, docas, fundo, lateral, fixa)", "x": "X (m)", "y": "Y (m)",
-                "length": "Comprimento em X (m)", "width": "Largura em Y (m)"},
-    "orders": {"order": "Pedido (identificador)", "sku": "SKU", "qty": "Quantidade", "date": "Data"},
+    "building": {"field": N_("Campo (nome do parâmetro)"), "value": N_("Valor")},
+    "structures": {"code": N_("Código"), "name": N_("Nome"), "kind": N_("Tipo"), "width": N_("Frente (cm)"), "depth": N_("Profundidade (cm)"),
+                   "height": N_("Altura total (cm)"), "levels": N_("Nº de níveis"), "level_height": N_("Vão útil (cm)"),
+                   "max_load": N_("Carga por nível (kg)"), "cost": N_("Custo por módulo (R$)"), "mode": N_("Modo"),
+                   "qty": N_("Qtd fixa"), "min_qty": N_("Mínimo"), "max_qty": N_("Máximo"),
+                   "golden_from": N_("Zona de ouro início (cm)"), "golden_to": N_("Zona de ouro fim (cm)"),
+                   "first_level": N_("Altura do 1º nível (cm)"), "level_heights": N_("Vãos por nível (cm, ex.: 45; 40; 35)")},
+    "bins": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
+             "length": N_("Comprimento (cm)"), "max_weight": N_("Peso máx. (kg)"), "max_volume": "Volume (L)",
+             "cost": N_("Custo por bin (R$)")},
+    "skus": {"sku": "SKU", "name": N_("Produto"), "material": N_("Tipo de material"), "h": N_("Altura (cm)"), "w": N_("Largura (cm)"),
+             "l": N_("Comprimento (cm)"), "wt": N_("Peso unitário (kg)"), "stock": N_("Saldo"), "min": N_("Min level"),
+             "max": N_("Max level"), "out": N_("Saída (linhas ou unid./período)")},
+    "zones": {"name": N_("Nome"), "length": N_("Comprimento em X (m)"), "orientation": N_("Orientação das fileiras"),
+              "aisle": "Corredor (m)", "cross": N_("Corredores transversais"), "structures": N_("Estruturas permitidas (códigos)"),
+              "x": "X (m)", "y": "Y (m)", "width": N_("Largura em Y (m)")},
+    "obstacles": {"name": N_("Nome"), "x": "X (m)", "y": "Y (m)", "length": N_("Comprimento em X (m)"),
+                  "width": N_("Largura em Y (m)")},
+    "sectors": {"name": N_("Nome"), "area": N_("Área necessária (m²)"), "min_side": N_("Lado mínimo (m)"),
+                "place": N_("Onde (automático, docas, fundo, lateral, fixa)"), "x": "X (m)", "y": "Y (m)",
+                "length": N_("Comprimento em X (m)"), "width": N_("Largura em Y (m)")},
+    "orders": {"order": N_("Pedido (identificador)"), "sku": "SKU", "qty": N_("Quantidade"), "date": N_("Data")},
 }
 REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"],
             "zones": ["orientation"], "obstacles": ["x", "y", "length", "width"],
@@ -215,7 +216,7 @@ def read_sheets(path: Path, limit: Optional[int] = None) -> dict[str, list[list[
     from itertools import islice
 
     if path.suffix.lower() in {".csv", ".txt"}:
-        return {"CSV": [r for _, r in islice(iter_rows(path, has_header=False), limit)]}
+        return {"CSV": [r for _x, r in islice(iter_rows(path, has_header=False), limit)]}
     from openpyxl import load_workbook
 
     wb = load_workbook(path, read_only=True, data_only=True)
@@ -314,7 +315,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             continue
         sheets[kind], cms[kind] = all_sheets[m["sheet"]], cols
     if not sheets:
-        return cfg, msgs, errs or ["Nenhuma aba para importar (use Imóvel, Estruturas, Bins e SKUs — baixe o modelo)."]
+        return cfg, msgs, errs or [_("Nenhuma aba para importar (use Imóvel, Estruturas, Bins e SKUs — baixe o modelo).")]
     cfg["import_mapping"] = {**(cfg.get("import_mapping") or {}), **remember(
         {k: m for k, m in mapping.items() if k in sheets}, all_sheets)}
 
@@ -324,7 +325,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         from services.site_service import BUILDING_FIELDS
 
         lookup = {normalize_header(s): k for k, syns in BUILDING_KEYS.items() for s in syns}
-        lookup.update({normalize_header(label): k for k, label, _, _ in BUILDING_FIELDS})
+        lookup.update({normalize_header(label): k for k, label, _x, _x in BUILDING_FIELDS})
         lookup[normalize_header("Orientação das fileiras")] = "orientation"
         fi, vi = cms["building"]["field"], cms["building"]["value"]
         for row in sheets["building"]:
@@ -347,18 +348,18 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 try:
                     parse_decimal(val)
                 except ValueError:
-                    errs.append(f"Imóvel: valor inválido para {_cell(row, fi)} ({val!r}).")
+                    errs.append(_("Imóvel: valor inválido para {cell} ({val}).", cell=_cell(row, fi), val=f"{val!r}"))
                     continue
                 cfg["building"][key] = val.replace(".", ",") if val.count(".") == 1 and "," not in val else val
             n += 1
-        msgs.append(f"Imóvel: {n} campo(s) atualizado(s).")
+        msgs.append(_("Imóvel: {n} campo(s) atualizado(s).", n=n))
 
     # ---- Bins ----
     if "bins" in sheets and len(sheets["bins"]) > 1:
         hdr, *rows = sheets["bins"]
         cm = cms["bins"]
         if cm["code"] is None:
-            errs.append("Bins: coluna Código não encontrada.")
+            errs.append(_("Bins: coluna Código não encontrada."))
         else:
             created = kept = priced = 0
             by_code = {bt.code: bt for bt in db.scalars(select(BinType))}
@@ -379,14 +380,14 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 vals = {k: _dec(row, cm[k], k, e, i) for k in ("height", "width", "length", "max_weight", "max_volume")}
                 vals["cost"] = cost
                 if e or not all(vals[k] for k in ("height", "width", "length")):
-                    errs.append(f"Bins linha {i} ({code}): informe altura, largura e comprimento válidos.")
+                    errs.append(_("Bins linha {i} ({code}): informe altura, largura e comprimento válidos.", i=i, code=code))
                     continue
                 db.add(BinType(code=code[:30], name=(_cell(row, cm["name"]) or code)[:150],
                                **{k: Decimal(str(v)) if v is not None else None for k, v in vals.items()}))
                 existing.add(code)
                 created += 1
             db.flush()
-            msgs.append(f"Bins: {created} tipo(s) cadastrado(s), {kept} já existente(s) mantido(s)"
+            msgs.append(_("Bins: {created} tipo(s) cadastrado(s), {kept} já existente(s) mantido(s)", created=created, kept=kept)
                         + (f" ({priced} com custo atualizado)." if priced else "."))
 
     # ---- Estruturas ----
@@ -394,7 +395,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         hdr, *rows = sheets["structures"]
         cm = cms["structures"]
         if cm["code"] is None:
-            errs.append("Estruturas: coluna Código não encontrada.")
+            errs.append(_("Estruturas: coluna Código não encontrada."))
         else:
             created = updated = 0
             by_code = {s.code: s for s in db.scalars(select(StructureType))}
@@ -411,7 +412,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 st = by_code.get(code)
                 req = ("width", "depth", "height", "levels", "level_height")
                 if e or (st is None and not all(v[k] for k in req)):
-                    errs.append(f"Estruturas linha {i} ({code}): informe frente, profundidade, altura, níveis e vão.")
+                    errs.append(_("Estruturas linha {i} ({code}): informe frente, profundidade, altura, níveis e vão.", i=i, code=code))
                     continue
                 if st is None:
                     st = StructureType(code=code[:30], name="", kind="")
@@ -430,20 +431,19 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 if v["golden_from"] is not None and v["golden_to"] is not None and v["golden_to"] > v["golden_from"]:
                     st.golden_from, st.golden_to = Decimal(str(v["golden_from"])), Decimal(str(v["golden_to"]))
                 elif v["golden_from"] is not None or v["golden_to"] is not None:
-                    errs.append(f"Estruturas linha {i} ({code}): zona de ouro precisa de início e fim (fim maior).")
+                    errs.append(_("Estruturas linha {i} ({code}): zona de ouro precisa de início e fim (fim maior).", i=i, code=code))
                 if cm.get("first_level") is not None and _cell(row, cm["first_level"]):
-                    fl = _dec(row, cm["first_level"], "1º nível", errs, i)
+                    fl = _dec(row, cm["first_level"], _("1º nível"), errs, i)
                     st.first_level_cm = Decimal(str(fl)) if fl is not None else st.first_level_cm
                 if cm.get("level_heights") is not None and _cell(row, cm["level_heights"]):
                     try:
                         hs = [float(x.replace(",", ".")) for x in re.split(r"[;/|\s]+", _cell(row, cm["level_heights"])) if x]
                         st.level_heights = [h for h in hs if h > 0][:st.levels or 50] or None
                     except ValueError:
-                        errs.append(f"Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).")
+                        errs.append(_("Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).", i=i, code=code))
                 total = float(st.first_level_cm or 0) + sum(st.vaos())
                 if st.height and total > float(st.height) + 1e-6:
-                    errs.append(f"Estruturas linha {i} ({code}): 1º nível + vãos ({total:g} cm) passam da altura total "
-                                f"({float(st.height):g} cm) — altura do 1º nível e vãos por nível não foram gravados.")
+                    errs.append(_("Estruturas linha {i} ({code}): 1º nível + vãos ({total} cm) passam da altura total ({float} cm) — altura do 1º nível e vãos por nível não foram gravados.", i=i, code=code, total=f"{total:g}", float=f"{float(st.height):g}"))
                     st.first_level_cm, st.level_heights = None, None
                 db.flush()
                 mode = mode_of.get(normalize_header(_cell(row, cm["mode"])))
@@ -460,8 +460,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             for st in by_code.values():
                 if st.id and str(st.id) not in cfg["structures"]:
                     cfg["structures"][str(st.id)] = {"mode": "off", "qty": "", "min_qty": "", "max_qty": ""}
-            msgs.append(f"Estruturas: {created} cadastrada(s), {updated} atualizada(s)"
-                        + (f", {len(off)} fora da planilha marcada(s) como \"Não usar\"." if off else "."))
+            msgs.append(_("Estruturas: {created} cadastrada(s), {updated} atualizada(s)", created=created, updated=updated)
+                        + (_(", {len} fora da planilha marcada(s) como \"Não usar\".", len=len(off)) if off else "."))
 
     # ---- Zonas (depois das estruturas: as estruturas permitidas são códigos) ----
     if "zones" in sheets:
@@ -477,24 +477,24 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             e: list[str] = []
             ln, al, cr, zx, zy, zw = (_dec(row, cm[k], k, e, i) for k in ("length", "aisle", "cross", "x", "y", "width"))
             if e:
-                errs.extend(f"Zonas {x}" for x in e)
+                errs.extend(_("Zonas {x}", x=x) for x in e)
                 continue
             codes = [normalize_code(c) for c in re.split(r"[,;/ ]+", _cell(row, cm["structures"])) if c.strip()]
             unknown = [c for c in codes if c not in code_id]
             if unknown:
-                bad.append(f"linha {i}: estrutura(s) {', '.join(unknown)} não cadastrada(s)")
+                bad.append(_("linha {i}: estrutura(s) {v} não cadastrada(s)", i=i, v=', '.join(unknown)))
             fmt = lambda v: (f"{v:g}".replace(".", ",") if v is not None else "")  # noqa: E731
-            zones.append({"name": (_cell(row, cm["name"]) or f"Zona {len(zones) + 1}")[:40], "length_m": fmt(ln),
+            zones.append({"name": (_cell(row, cm["name"]) or _("Zona {v}", v=len(zones) + 1))[:40], "length_m": fmt(ln),
                           "orientation": ori, "aisle_m": fmt(al), "cross_aisles": str(int(cr)) if cr else "",
                           "x_m": fmt(zx), "y_m": fmt(zy), "width_m": fmt(zw),
                           "structures": [str(code_id[c]) for c in codes if c in code_id]})
         if bad:
             errs.append("Zonas: " + "; ".join(bad) + ".")
         if len(zones) == 1 and not (zones[0]["x_m"] and zones[0]["y_m"]):
-            errs.append("Zonas: com zonas empilhadas (sem X/Y), informe ao menos duas; a zona foi ignorada.")
+            errs.append(_("Zonas: com zonas empilhadas (sem X/Y), informe ao menos duas; a zona foi ignorada."))
             zones = []
         cfg["building"]["zones"] = zones
-        msgs.append(f"Zonas: {len(zones)} zona(s) definida(s)." if zones else "Zonas: nenhuma (planta de zona única).")
+        msgs.append(_("Zonas: {len} zona(s) definida(s).", len=len(zones)) if zones else _("Zonas: nenhuma (planta de zona única)."))
 
     # ---- Obstáculos ----
     if "obstacles" in sheets:
@@ -507,13 +507,13 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             if all(v is None for v in vals.values()):
                 continue
             if e or any(v is None for v in vals.values()) or not vals["length"] or not vals["width"]:
-                errs.append(f"Obstáculos linha {i}: informe X, Y, comprimento e largura válidos.")
+                errs.append(_("Obstáculos linha {i}: informe X, Y, comprimento e largura válidos.", i=i))
                 continue
             fmt = lambda v: f"{v:g}".replace(".", ",")  # noqa: E731
-            obs.append({"name": (_cell(row, cm["name"]) or f"Obstáculo {len(obs) + 1}")[:40], "x_m": fmt(vals["x"]),
+            obs.append({"name": (_cell(row, cm["name"]) or _("Obstáculo {v}", v=len(obs) + 1))[:40], "x_m": fmt(vals["x"]),
                         "y_m": fmt(vals["y"]), "length_m": fmt(vals["length"]), "width_m": fmt(vals["width"])})
         cfg["building"]["obstacles"] = obs
-        msgs.append(f"Obstáculos: {len(obs)} área(s) bloqueada(s).")
+        msgs.append(_("Obstáculos: {len} área(s) bloqueada(s).", len=len(obs)))
 
     # ---- Setores ----
     if "sectors" in sheets:
@@ -533,13 +533,13 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 place = "fixed" if all(vals[k] is not None for k in ("x", "y", "length", "width")) else "auto"
             if e or (place == "fixed" and any(vals[k] is None for k in ("x", "y", "length", "width"))) \
                     or (place != "fixed" and not vals["area"]):
-                errs.append(f"Setores linha {i}: informe a área (ou X, Y, comprimento e largura para posição fixa).")
+                errs.append(_("Setores linha {i}: informe a área (ou X, Y, comprimento e largura para posição fixa).", i=i))
                 continue
-            secs.append({"name": name or f"Setor {len(secs) + 1}", "area_m2": fmt(vals["area"]),
+            secs.append({"name": name or _("Setor {v}", v=len(secs) + 1), "area_m2": fmt(vals["area"]),
                          "min_side_m": fmt(vals["min_side"]), "place": place, "x_m": fmt(vals["x"]), "y_m": fmt(vals["y"]),
                          "length_m": fmt(vals["length"]), "width_m": fmt(vals["width"])})
         cfg["building"]["sectors"] = secs
-        msgs.append(f"Setores: {len(secs)} setor(es).")
+        msgs.append(_("Setores: {len} setor(es).", len=len(secs)))
 
     # ---- Pedidos (histórico de saídas) ----
     if "orders" in sheets:
@@ -549,21 +549,20 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
         else:
             cfg["orders"] = res
             neg = (f" {res['neg']} quantidade(s) negativa(s) "
-                   + ("convertida(s) para valor absoluto." if res["abs"] else "ignorada(s) (sem a conversão).")) if res["neg"] else ""
-            msgs.append(f"Pedidos: {res['orders']} pedido(s), {res['lines']} linha(s), {len(res['skus'])} SKU(s), "
-                        f"{len(res['pairs'])} par(es) que saem juntos.{neg}")
+                   + ("convertida(s) para valor absoluto." if res["abs"] else _("ignorada(s) (sem a conversão)."))) if res["neg"] else ""
+            msgs.append(_("Pedidos: {orders} pedido(s), {lines} linha(s), {skus} SKU(s), {pairs} par(es) que saem juntos.{neg}", orders=res['orders'], lines=res['lines'], skus=len(res['skus']), pairs=len(res['pairs']), neg=neg))
 
     # ---- SKUs ----
     if "skus" in sheets:
         if len(sheets["skus"]) < 2:
-            errs.append("SKUs: a aba não tem linhas.")
+            errs.append(_("SKUs: a aba não tem linhas."))
         else:
             hdr, *rows = sheets["skus"]
             cm = cms["skus"]
             if cm["sku"] is None:
-                errs.append("SKUs: coluna SKU não encontrada.")
+                errs.append(_("SKUs: coluna SKU não encontrada."))
             elif all(cm[k] is None for k in ("stock", "min", "max")):
-                errs.append("SKUs: informe ao menos uma coluna de quantidade (Saldo, Min level ou Max level).")
+                errs.append(_("SKUs: informe ao menos uma coluna de quantidade (Saldo, Min level ou Max level)."))
             else:
                 items: dict[str, dict] = {}
                 bad = 0
@@ -575,7 +574,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     it = {"sku": sku[:60], "name": _cell(row, cm["name"])[:255], "material": _cell(row, cm["material"])[:60]}
                     for k in ("h", "w", "l", "wt", "stock", "min", "max"):
                         it[k] = _dec(row, cm[k], k, e, i)
-                    out = _dec(row, cm.get("out"), "saída", e, i)
+                    out = _dec(row, cm.get("out"), _("saída"), e, i)
                     if out is not None:
                         it["out"] = out
                     if e:
@@ -591,13 +590,13 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                         continue
                     items[sku] = it
                     if len(items) >= MAX_ITEMS:
-                        errs.append(f"SKUs: limite de {MAX_ITEMS} SKUs atingido; o resto foi ignorado.")
+                        errs.append(_("SKUs: limite de {MAX_ITEMS} SKUs atingido; o resto foi ignorado.", MAX_ITEMS=MAX_ITEMS))
                         break
                 if bad > 10:
-                    errs.append(f"SKUs: mais {bad - 10} linha(s) com erro.")
+                    errs.append(_("SKUs: mais {v} linha(s) com erro.", v=bad - 10))
                 cfg["items"] = list(items.values())
                 cfg["demand"]["source"] = "upload"
-                msgs.append(f"SKUs: {len(items)} SKU(s) carregado(s) no projeto (fonte da demanda = arquivo).")
+                msgs.append(_("SKUs: {len} SKU(s) carregado(s) no projeto (fonte da demanda = arquivo).", len=len(items)))
     return cfg, msgs, errs
 
 
@@ -625,7 +624,7 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
     from itertools import combinations
 
     if len(rows_all) < 2:
-        return {"error": "Pedidos: a aba não tem linhas."}
+        return {"error": _("Pedidos: a aba não tem linhas.")}
     _hdr, *rows = rows_all
     lines: dict[tuple, float] = {}
     neg = ignored = bad = 0
@@ -655,8 +654,8 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
             if d:
                 dates.append(d)
     if not lines:
-        return {"error": "Pedidos: nenhuma linha válida (pedido, SKU e quantidade)"
-                         + (f"; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto."
+        return {"error": _("Pedidos: nenhuma linha válida (pedido, SKU e quantidade)")
+                         + (_("; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto.", neg=neg)
                             if ignored else ".")}
     skus: dict[str, list] = {}
     orders: dict[str, list] = {}
@@ -709,68 +708,68 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
             c.font, c.fill = head
         for r in rows:
             ws.append(list(r))
-        for i, _ in enumerate(cols, start=1):
+        for i, _x in enumerate(cols, start=1):
             ws.column_dimensions[get_column_letter(i)].width = (widths or {}).get(i, 16)
         ws.freeze_panes = "A2"
 
     ws = wb.active
-    ws.title = "Instruções"
+    ws.title = _("Instruções")
     for line in [
-        "Modelo de importação — Projeto de filial nova",
+        _("Modelo de importação — Projeto de filial nova"),
         "",
-        "Todas as abas são opcionais: envie só o que quiser atualizar. Não renomeie as abas.",
-        "Imóvel: medidas em metros. Orientação: automática, comprimento ou largura.",
-        "Estruturas: medidas em cm. Modo: Otimizar (o sistema decide a quantidade, com Mín./Máx. opcionais), "
-        "Fixa (usa exatamente Qtd fixa) ou Não usar. Códigos existentes são atualizados.",
-        "Bins: medidas internas em cm, peso máx. em kg, volume em litros (vazio = calculado), custo em R$ por bin. "
-        "Códigos já cadastrados mantêm as medidas; só o custo é atualizado.",
-        "SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. "
-        "Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades.",
-        "Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior).",
-        "Zonas (opcional): com X e Y, cada zona é um retângulo em qualquer lugar do imóvel (X, Y, comprimento em X e "
+        _("Todas as abas são opcionais: envie só o que quiser atualizar. Não renomeie as abas."),
+        _("Imóvel: medidas em metros. Orientação: automática, comprimento ou largura."),
+        _("Estruturas: medidas em cm. Modo: Otimizar (o sistema decide a quantidade, com Mín./Máx. opcionais), "
+        "Fixa (usa exatamente Qtd fixa) ou Não usar. Códigos existentes são atualizados."),
+        _("Bins: medidas internas em cm, peso máx. em kg, volume em litros (vazio = calculado), custo em R$ por bin. "
+        "Códigos já cadastrados mantêm as medidas; só o custo é atualizado."),
+        _("SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. "
+        "Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades."),
+        _("Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior)."),
+        _("Zonas (opcional): com X e Y, cada zona é um retângulo em qualquer lugar do imóvel (X, Y, comprimento em X e "
         "largura em Y; largura vazia = até a parede) e o espaço entre elas é a circulação. Sem X e Y, as zonas (ao menos "
         "duas) são faixas empilhadas a partir da frente, na ordem das linhas, separadas por avenidas (largura na aba "
         "Imóvel); comprimento vazio = o que sobrar. Orientação = 'ao longo do comprimento' ou 'perpendicular'; Corredor "
-        "vazio = o do imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Aba vazia = sem zonas.",
-        "Obstáculos (opcional): áreas bloqueadas (escritório, pilar, sala…) em metros a partir do canto superior "
-        "esquerdo da planta: X ao longo do comprimento, Y ao longo da largura. As fileiras que passariam por elas são cortadas.",
+        "vazio = o do imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Aba vazia = sem zonas."),
+        _("Obstáculos (opcional): áreas bloqueadas (escritório, pilar, sala…) em metros a partir do canto superior "
+        "esquerdo da planta: X ao longo do comprimento, Y ao longo da largura. As fileiras que passariam por elas são cortadas."),
     ]:
         ws.append([line])
     ws["A1"].font = Font(bold=True, size=13)
     ws.column_dimensions["A"].width = 130
 
     b = cfg["building"]
-    orient = {"auto": "automática", "length": "comprimento", "width": "largura"}
-    sheet(wb.create_sheet("Imóvel"), ["Campo", "Valor"],
-          [(label, b.get(k, "")) for k, label, _, _ in BUILDING_FIELDS]
-          + [("Orientação das fileiras", orient.get(b.get("orientation") or "auto", "automática")),
-             ("Cabeceiras (sim/não)", "sim" if b.get("end_caps") else "não"),
-             ("Posição da cabeceira (encostada/borda)", "borda" if b.get("cap_align") == "edge" else "encostada"),
-             ("Endereçamento (corredor/rua)", "rua" if b.get("address_mode") == "row" else "corredor"),
-             ("Ruas em serpentina (sim/não)", "sim" if b.get("serpentine") else "não")],
+    orient = {"auto": _("automática"), "length": "comprimento", "width": "largura"}
+    sheet(wb.create_sheet(_("Imóvel")), [_("Campo"), _("Valor")],
+          [(label, b.get(k, "")) for k, label, _x, _x in BUILDING_FIELDS]
+          + [(_("Orientação das fileiras"), orient.get(b.get("orientation") or "auto", _("automática"))),
+             (_("Cabeceiras (sim/não)"), "sim" if b.get("end_caps") else _("não")),
+             (_("Posição da cabeceira (encostada/borda)"), "borda" if b.get("cap_align") == "edge" else "encostada"),
+             (_("Endereçamento (corredor/rua)"), "rua" if b.get("address_mode") == "row" else "corredor"),
+             (_("Ruas em serpentina (sim/não)"), "sim" if b.get("serpentine") else _("não"))],
           {1: 50, 2: 16})
     id_code = {str(s.id): s.code for s in db.scalars(select(StructureType))}
-    ori_lbl = {"along": "ao longo do comprimento", "across": "perpendicular (ao longo da largura)"}
-    sheet(wb.create_sheet("Zonas"),
-          ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)", "Orientação das fileiras",
-           "Corredor (m)", "Corredores transversais", "Estruturas permitidas (códigos)"],
+    ori_lbl = {"along": _("ao longo do comprimento"), "across": "perpendicular (ao longo da largura)"}
+    sheet(wb.create_sheet(_("Zonas")),
+          [_("Nome"), "X (m)", "Y (m)", _("Comprimento em X (m)"), _("Largura em Y (m)"), _("Orientação das fileiras"),
+           "Corredor (m)", _("Corredores transversais"), _("Estruturas permitidas (códigos)")],
           [(z.get("name"), z.get("x_m") or None, z.get("y_m") or None, z.get("length_m") or None,
-            z.get("width_m") or None, ori_lbl.get(z.get("orientation"), "ao longo do comprimento"),
+            z.get("width_m") or None, ori_lbl.get(z.get("orientation"), _("ao longo do comprimento")),
             z.get("aisle_m") or None, z.get("cross_aisles") or None,
             ", ".join(id_code.get(x, "") for x in z.get("structures") or [] if x in id_code) or None)
            for z in b.get("zones") or []], {1: 22, 6: 36, 9: 34})
-    sheet(wb.create_sheet("Obstáculos"),
-          ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
+    sheet(wb.create_sheet(_("Obstáculos")),
+          [_("Nome"), "X (m)", "Y (m)", _("Comprimento em X (m)"), _("Largura em Y (m)")],
           [(o.get("name"), o.get("x_m"), o.get("y_m"), o.get("length_m"), o.get("width_m"))
            for o in b.get("obstacles") or []], {1: 24})
-    place_lbl = {"auto": "automático", "front": "docas", "back": "fundo", "side": "lateral", "fixed": "fixa"}
-    sheet(wb.create_sheet("Setores"),
-          ["Nome", "Área necessária (m²)", "Lado mínimo (m)", "Onde (automático, docas, fundo, lateral, fixa)",
-           "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)"],
-          [(sc.get("name"), sc.get("area_m2") or None, sc.get("min_side_m") or None, place_lbl.get(sc.get("place"), "automático"),
+    place_lbl = {"auto": _("automático"), "front": "docas", "back": "fundo", "side": "lateral", "fixed": "fixa"}
+    sheet(wb.create_sheet(_("Setores")),
+          [_("Nome"), _("Área necessária (m²)"), _("Lado mínimo (m)"), _("Onde (automático, docas, fundo, lateral, fixa)"),
+           "X (m)", "Y (m)", _("Comprimento em X (m)"), _("Largura em Y (m)")],
+          [(sc.get("name"), sc.get("area_m2") or None, sc.get("min_side_m") or None, place_lbl.get(sc.get("place"), _("automático")),
             sc.get("x_m") or None, sc.get("y_m") or None, sc.get("length_m") or None, sc.get("width_m") or None)
            for sc in b.get("sectors") or []], {1: 22, 4: 40})
-    mode_lbl = {"auto": "Otimizar", "fixed": "Fixa", "off": "Não usar"}
+    mode_lbl = {"auto": _("Otimizar"), "fixed": _("Fixa"), "off": _("Não usar")}
     rows = []
     for st in db.scalars(select(StructureType).order_by(StructureType.code)):
         sc = cfg["structures"].get(str(st.id), {})
@@ -779,24 +778,24 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
                      f(st.max_load), f(st.cost), mode_lbl.get(sc.get("mode") or "off"), sc.get("qty") or None,
                      sc.get("min_qty") or None, sc.get("max_qty") or None, f(st.golden_from), f(st.golden_to),
                      f(st.first_level_cm), "; ".join(f"{h:g}" for h in (st.level_heights or [])) or None))
-    sheet(wb.create_sheet("Estruturas"),
-          ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
-           "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx.",
-           "Zona de ouro início (cm)", "Zona de ouro fim (cm)", "Altura do 1º nível (cm)", "Vãos por nível (cm)"],
+    sheet(wb.create_sheet(_("Estruturas")),
+          [_("Código"), _("Nome"), _("Tipo"), _("Frente (cm)"), _("Profundidade (cm)"), _("Altura (cm)"), N_("Níveis"), _("Vão útil (cm)"),
+           _("Carga por nível (kg)"), _("Custo por módulo (R$)"), _("Modo"), _("Qtd fixa"), _("Mín."), _("Máx."),
+           _("Zona de ouro início (cm)"), _("Zona de ouro fim (cm)"), _("Altura do 1º nível (cm)"), _("Vãos por nível (cm)")],
           rows, {2: 30})
-    sheet(wb.create_sheet("Bins"),
-          ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
-           "Custo por bin (R$)"],
+    sheet(wb.create_sheet(N_("Bins")),
+          [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso máx. (kg)"), "Volume (L)",
+           _("Custo por bin (R$)")],
           [(bt.code, bt.name, *(float(v) if v is not None else None for v in
                                 (bt.height, bt.width, bt.length, bt.max_weight, bt.max_volume, bt.cost)))
            for bt in db.scalars(select(BinType).where(BinType.parent_id.is_(None)).order_by(BinType.code))], {2: 30})
     sheet(wb.create_sheet("SKUs"),
-          ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level", "Saída (linhas ou unid./período)"],
+          ["SKU", N_("Produto"), _("Material"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso (kg)"), _("Saldo"),
+           _("Min level"), _("Max level"), _("Saída (linhas ou unid./período)")],
           [(it["sku"], it.get("name"), it.get("material"), it.get("h"), it.get("w"), it.get("l"), it.get("wt"),
             it.get("stock"), it.get("min"), it.get("max"), it.get("out")) for it in cfg.get("items") or []], {2: 36, 11: 18})
     # o projeto guarda só o resumo dos pedidos: a aba vem vazia, no formato esperado
-    sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade"], [], {1: 14, 2: 12})
+    sheet(wb.create_sheet(_("Pedidos")), [_("Pedido"), _("Data"), "SKU", N_("Quantidade")], [], {1: 14, 2: 12})
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()

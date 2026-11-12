@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% from "_macros.html" import pagination, delete_button, warehouse_options, occupied_badge, th, keep_params, filter_buttons, bins_summary, material_select %}
-{% block title %}Endereços{% endblock %}
+{% block title %}{{ _("Endereços") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-grid-3x3-gap"></i> Locais de Armazenamento</h1>
+  <h1><i class="bi bi-grid-3x3-gap"></i> {{ _("Locais de Armazenamento") }}</h1>
   <div class="d-flex gap-2">
-    <form method="post" action="/locations/recalculate-occupancy" onsubmit="return confirm('Recalcular a ocupação de todos os endereços a partir dos saldos?');">
-      <button class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Recalcular ocupação</button>
+    <form method="post" action="/locations/recalculate-occupancy" onsubmit="return confirm(_t('Recalcular a ocupação de todos os endereços a partir dos saldos?'));">
+      <button class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> {{ _("Recalcular ocupação") }}</button>
     </form>
-    <a href="/imports/locations" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar</a>
-  <a href="/locations/batch" class="btn btn-outline-primary"><i class="bi bi-magic"></i> Gerar em lote</a>
-    <a href="/locations/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Novo endereço</a>
+    <a href="/imports/locations" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Importar") }}</a>
+  <a href="/locations/batch" class="btn btn-outline-primary"><i class="bi bi-magic"></i> {{ _("Gerar em lote") }}</a>
+    <a href="/locations/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo endereço") }}</a>
   </div>
 </div>
 <div class="card">
@@ -19,33 +19,33 @@
       {{ keep_params(request) }}
       <div class="col-md-3">
         <select class="form-select" name="branch_id" id="branch_id">
-          <option value="">Todas as filiais</option>
+          <option value="">{{ _("Todas as filiais") }}</option>
           {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="col-md-3">
         <select class="form-select" name="warehouse_id">
-          <option value="">Todos os armazéns</option>
-          <option value="none" {% if warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          <option value="">{{ _("Todos os armazéns") }}</option>
+          <option value="none" {% if warehouse_id == 'none' %}selected{% endif %}>{{ _("— Sem armazém —") }}</option>
           {% for w in warehouses %}<option value="{{ w.id }}" {% if warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
         </select>
       </div>
-      <div class="col-md-2"><input class="form-control mono" type="search" name="q" value="{{ q }}" placeholder="Endereço (ex.: A-01 ou A01)" title="A01 encontra A-01 · A-01* começa com · =A-01-1-1 igual"></div>
-      <div class="col-md-2"><input class="form-control" type="search" name="sku" value="{{ sku }}" placeholder="SKU ou nome do produto" title="10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · &quot;frase inteira&quot; · sku:10* só no SKU, nome:… só no nome"></div>
+      <div class="col-md-2"><input class="form-control mono" type="search" name="q" value="{{ q }}" placeholder="{{ _("Endereço (ex.: A-01 ou A01)") }}" title="{{ _("A01 encontra A-01 · A-01* começa com · =A-01-1-1 igual") }}"></div>
+      <div class="col-md-2"><input class="form-control" type="search" name="sku" value="{{ sku }}" placeholder="{{ _("SKU ou nome do produto") }}" title="{{ _("10* começa com · *10 termina com · 14*87 começa com 14 e termina com 87 · =10 igual · \"frase inteira\" · sku:10* só no SKU, nome:… só no nome") }}"></div>
       <div class="col-md-2">{{ material_select(material) }}</div>
       <div class="col-md-2">
         <select class="form-select" name="occupied">
-          <option value="">Ocupação: todas</option>
-          <option value="1" {% if occupied == '1' %}selected{% endif %}>Somente ocupados</option>
-          <option value="0" {% if occupied == '0' %}selected{% endif %}>Somente livres</option>
+          <option value="">{{ _("Ocupação: todas") }}</option>
+          <option value="1" {% if occupied == '1' %}selected{% endif %}>{{ _("Somente ocupados") }}</option>
+          <option value="0" {% if occupied == '0' %}selected{% endif %}>{{ _("Somente livres") }}</option>
         </select>
       </div>
       <div class="col-md-2">
         <select class="form-select" name="bin_type_id">
-          <option value="">Bins: todas</option>
-          <option value="any" {% if bin_type_id == 'any' %}selected{% endif %}>Com alguma bin</option>
-          <option value="none" {% if bin_type_id == 'none' %}selected{% endif %}>Sem bin</option>
-          {% for bt in bin_types %}<option value="{{ bt.id }}" {% if bin_type_id == bt.id|string %}selected{% endif %}>Tipo {{ bt.code }}</option>{% endfor %}
+          <option value="">{{ _("Bins: todas") }}</option>
+          <option value="any" {% if bin_type_id == 'any' %}selected{% endif %}>{{ _("Com alguma bin") }}</option>
+          <option value="none" {% if bin_type_id == 'none' %}selected{% endif %}>{{ _("Sem bin") }}</option>
+          {% for bt in bin_types %}<option value="{{ bt.id }}" {% if bin_type_id == bt.id|string %}selected{% endif %}>{{ _h("Tipo {code}", code=(bt.code)) }}</option>{% endfor %}
         </select>
       </div>
       {{ filter_buttons(request) }}
@@ -59,11 +59,11 @@
       <table class="table table-sm table-hover mb-0">
         <thead><tr>
           <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".loc-check"></th>
-          {{ th(request, sort, 'branch', 'Filial') }}{{ th(request, sort, 'warehouse', 'Armazém') }}{{ th(request, sort, 'address', 'Endereço') }}
-          {{ th(request, sort, 'aisle', 'Corredor') }}{{ th(request, sort, 'bay', 'Estante') }}{{ th(request, sort, 'level', 'Nível') }}
-          {{ th(request, sort, 'position', 'Posição') }}{{ th(request, sort, 'compartment', 'Compart.') }}
-          {{ th(request, sort, 'occupied', 'Ocupação') }}{{ th(request, sort, 'bins', 'Bins') }}{{ th(request, sort, 'material', 'Tipo de material') }}{{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'quantity', 'Quantidade', 'text-end') }}
-          <th class="text-end" style="width:110px">Ações</th>
+          {{ th(request, sort, 'branch', _('Filial')) }}{{ th(request, sort, 'warehouse', _('Armazém')) }}{{ th(request, sort, 'address', _('Endereço')) }}
+          {{ th(request, sort, 'aisle', _('Corredor')) }}{{ th(request, sort, 'bay', _('Estante')) }}{{ th(request, sort, 'level', _('Nível')) }}
+          {{ th(request, sort, 'position', _('Posição')) }}{{ th(request, sort, 'compartment', _('Compart.')) }}
+          {{ th(request, sort, 'occupied', _('Ocupação')) }}{{ th(request, sort, 'bins', _('Bins')) }}{{ th(request, sort, 'material', _('Tipo de material')) }}{{ th(request, sort, 'sku', 'SKU') }}{{ th(request, sort, 'quantity', _('Quantidade'), 'text-end') }}
+          <th class="text-end" style="width:110px">{{ _("Ações") }}</th>
         </tr></thead>
         <tbody>
         {% for l in page.items %}
@@ -71,7 +71,7 @@
             <td><input type="checkbox" class="form-check-input loc-check" name="ids" value="{{ l.id }}"></td>
             <td>{{ l.branch.code }}</td>
             <td>{{ l.warehouse.code if l.warehouse else '—' }}</td>
-            <td class="mono fw-semibold">{{ l.address }}{% if l.is_generic %} <span class="badge text-bg-info fw-normal" title="Endereço genérico: ocupa os níveis da estante, não o próprio nível">genérico</span>{% endif %}</td>
+            <td class="mono fw-semibold">{{ l.address }}{% if l.is_generic %} <span class="badge text-bg-info fw-normal" title="{{ _("Endereço genérico: ocupa os níveis da estante, não o próprio nível") }}">{{ _("genérico") }}</span>{% endif %}</td>
             <td class="mono">{{ l.aisle }}</td><td class="mono">{{ l.bay }}</td><td class="mono">{{ l.level }}</td><td class="mono">{{ l.position }}</td>
             <td class="mono">{{ l.compartment or '—' }}</td>
             <td>{{ occupied_badge(l.is_occupied) }}</td>
@@ -81,24 +81,24 @@
             {% set mats = items|map(attribute='material')|reject('equalto', '')|unique|sort %}
             <td class="small">{% for m in mats %}<span class="badge text-bg-light border me-1">{{ m }}</span>{% else %}<span class="text-muted">—</span>{% endfor %}</td>
             <td class="small">
-              {% for it in shown %}<div class="nk-line"><a class="mono" href="/products/{{ it.id }}" title="{{ it.name }}">{{ it.sku }}</a>{% for tg in it.tags|sort %} <span class="badge rounded-pill bg-info-subtle border border-info-subtle text-info-emphasis" style="font-size:.65rem" title="Endereço padrão do produto">{{ tg }}</span>{% endfor %} <span class="text-muted">{{ it.name }}</span></div>{% endfor %}
+              {% for it in shown %}<div class="nk-line"><a class="mono" href="/products/{{ it.id }}" title="{{ it.name }}">{{ it.sku }}</a>{% for tg in it.tags|sort %} <span class="badge rounded-pill bg-info-subtle border border-info-subtle text-info-emphasis" style="font-size:.65rem" title="{{ _("Endereço padrão do produto") }}">{{ tg }}</span>{% endfor %} <span class="text-muted">{{ it.name }}</span></div>{% endfor %}
               {% if items|length > 5 %}<div class="nk-line"><a href="/stock?address={{ l.address|urlencode }}&branch_id={{ l.branch_id }}{% if l.warehouse_id %}&warehouse_id={{ l.warehouse_id }}{% endif %}">+{{ items|length - 5 }} SKU(s)…</a></div>{% endif %}
-              {% if items|length > 1 %}<div class="nk-line fw-semibold text-muted">Total ({{ items|length }} SKUs)</div>{% endif %}
+              {% if items|length > 1 %}<div class="nk-line fw-semibold text-muted">{{ _h("Total ({items} SKUs)", items=(items|length)) }}</div>{% endif %}
               {% if not items %}<span class="text-muted">—</span>{% endif %}
             </td>
             <td class="small text-end">
-              {% for it in shown %}{% if it.quantity is none %}<div class="nk-line text-muted" title="Produto ligado ao endereço, sem saldo lançado">—</div>{% else %}<div class="nk-line {% if it.quantity < 0 %}text-danger{% elif it.quantity == 0 %}text-muted{% endif %}">{{ it.quantity|dec }}</div>{% endif %}{% endfor %}
+              {% for it in shown %}{% if it.quantity is none %}<div class="nk-line text-muted" title="{{ _("Produto ligado ao endereço, sem saldo lançado") }}">—</div>{% else %}<div class="nk-line {% if it.quantity < 0 %}text-danger{% elif it.quantity == 0 %}text-muted{% endif %}">{{ it.quantity|dec }}</div>{% endif %}{% endfor %}
               {% if items|length > 5 %}<div class="nk-line">&nbsp;</div>{% endif %}
               {% if items|length > 1 %}<div class="nk-line fw-semibold">{{ totals[l.id]|dec }}</div>{% endif %}
               {% if not items %}<span class="text-muted">—</span>{% endif %}
             </td>
             <td class="text-end text-nowrap">
-              <a class="btn btn-sm btn-outline-primary" href="/locations/{{ l.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
-              <button class="btn btn-sm btn-outline-danger" type="submit" form="del{{ l.id }}" {% if l.is_occupied %}disabled{% endif %} title="Excluir"><i class="bi bi-trash"></i></button>
+              <a class="btn btn-sm btn-outline-primary" href="/locations/{{ l.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+              <button class="btn btn-sm btn-outline-danger" type="submit" form="del{{ l.id }}" {% if l.is_occupied %}disabled{% endif %} title="{{ _("Excluir") }}"><i class="bi bi-trash"></i></button>
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="15" class="text-center text-muted py-4">Nenhum endereço encontrado. Use <a href="/locations/batch">Gerar em lote</a> para criar vários de uma vez.</td></tr>
+          <tr><td colspan="15" class="text-center text-muted py-4">{{ _h("Nenhum endereço encontrado. Use <a href=\"/locations/batch\">Gerar em lote</a> para criar vários de uma vez.") }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
@@ -106,27 +106,27 @@
     {% if page.items %}
     <div class="card-footer bg-white">
       <div class="d-flex flex-wrap gap-2 align-items-center mb-2" id="binBulk">
-        <strong class="small"><i class="bi bi-inboxes"></i> Atribuir bins:</strong>
+        <strong class="small"><i class="bi bi-inboxes"></i> {{ _("Atribuir bins:") }}</strong>
         <select class="form-select form-select-sm w-auto" name="mode" id="bulkMode">
           {% for key, label in bulk_modes.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
         </select>
         <select class="form-select form-select-sm w-auto" name="bin_type_id" id="bulkType">
-          {% for bt in bin_types %}<option value="{{ bt.id }}">{{ bt.code }} - {{ bt.name }}</option>{% else %}<option value="">(cadastre um tipo de bin)</option>{% endfor %}
+          {% for bt in bin_types %}<option value="{{ bt.id }}">{{ bt.code }} - {{ bt.name }}</option>{% else %}<option value="">{{ _("(cadastre um tipo de bin)") }}</option>{% endfor %}
         </select>
         <span class="small text-muted">×</span>
         <input class="form-control form-control-sm" type="number" name="bin_qty" id="bulkQty" min="1" max="100000" value="1" style="width: 80px">
         <select class="form-select form-select-sm w-auto" name="scope" id="bulkScope">
-          <option value="selected">nos endereços selecionados</option>
-          <option value="filtered">em TODOS os {{ total_filtered }} endereço(s) filtrados</option>
+          <option value="selected">{{ _("nos endereços selecionados") }}</option>
+          <option value="filtered">{{ _h("em TODOS os {total_filtered} endereço(s) filtrados", total_filtered=(total_filtered)) }}</option>
         </select>
-        <button class="btn btn-sm btn-accent" formaction="/locations/bins" id="bulkApply"><i class="bi bi-check2-all"></i> Aplicar</button>
+        <button class="btn btn-sm btn-accent" formaction="/locations/bins" id="bulkApply"><i class="bi bi-check2-all"></i> {{ _("Aplicar") }}</button>
       </div>
       <div class="d-flex justify-content-between align-items-center">
       <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-danger" id="bulkDelete"><i class="bi bi-trash"></i> Excluir selecionados</button>
-        <button class="btn btn-sm btn-outline-danger" id="bulkDeleteAll" title="Todos os endereços do filtro atual"><i class="bi bi-trash3"></i> Excluir todos os filtrados ({{ total_filtered }})</button>
+        <button class="btn btn-sm btn-outline-danger" id="bulkDelete"><i class="bi bi-trash"></i> {{ _("Excluir selecionados") }}</button>
+        <button class="btn btn-sm btn-outline-danger" id="bulkDeleteAll" title="{{ _("Todos os endereços do filtro atual") }}"><i class="bi bi-trash3"></i> {{ _h("Excluir todos os filtrados ({total_filtered})", total_filtered=(total_filtered)) }}</button>
       </div>
-      <small class="text-muted">Itens por página:
+      <small class="text-muted">{{ _("Itens por página:") }}
         {% for n in [50, 100, 250, 500] %}<a class="ms-1 {% if per_page == n %}fw-bold{% endif %}" href="{{ url_with(request, per_page=n, page=1) }}">{{ n }}</a>{% endfor %}
       </small>
       </div>
@@ -139,24 +139,23 @@
   {% endfor %}
   <div class="modal fade" id="delModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
-      <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-trash text-danger"></i> <span id="delTitle">Excluir endereço</span></h6>
+      <div class="modal-header py-2"><h6 class="modal-title"><i class="bi bi-trash text-danger"></i> <span id="delTitle">{{ _("Excluir endereço") }}</span></h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body small">
         <p id="delText" class="mb-2"></p>
         <div class="form-check">
           <input class="form-check-input" type="checkbox" id="delLevels">
-          <label class="form-check-label" for="delLevels"><b>Excluir também a posição física</b> (o nível da estante: vão e capacidades)</label>
+          <label class="form-check-label" for="delLevels">{{ _h("<b>Excluir também a posição física</b> (o nível da estante: vão e capacidades)") }}</label>
         </div>
-        <div class="form-text">Só sai do mapa o nível que ficar <b>sem nenhum endereço</b> e sem bins de outros endereços guardadas nele.
-          Sem esta opção, o nível continua no mapa como espaço reservado (vazio).</div>
+        <div class="form-text">{{ _h("Só sai do mapa o nível que ficar <b>sem nenhum endereço</b> e sem bins de outros endereços guardadas nele. Sem esta opção, o nível continua no mapa como espaço reservado (vazio).") }}</div>
         <div class="form-check mt-2" id="delCascadeBox">
           <input class="form-check-input" type="checkbox" id="delCascade">
-          <label class="form-check-label" for="delCascade"><b>Excluir também os ocupados</b>, com os saldos que estão neles (o endereço padrão dos produtos é recalculado)</label>
+          <label class="form-check-label" for="delCascade">{{ _h("<b>Excluir também os ocupados</b>, com os saldos que estão neles (o endereço padrão dos produtos é recalculado)") }}</label>
         </div>
       </div>
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-sm btn-danger" id="delOk"><i class="bi bi-trash"></i> Excluir</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">{{ _("Cancelar") }}</button>
+        <button type="button" class="btn btn-sm btn-danger" id="delOk"><i class="bi bi-trash"></i> {{ _("Excluir") }}</button>
       </div>
     </div></div>
   </div>
@@ -178,24 +177,24 @@
   mode.addEventListener('change', sync); sync();
   document.getElementById('bulkApply').addEventListener('click', e => {
     const n = scope.value === 'filtered' ? {{ total_filtered }} : selected();
-    if (!n) { e.preventDefault(); alert('Selecione ao menos um endereço (ou escolha "todos os filtrados").'); return; }
+    if (!n) { e.preventDefault(); alert(_t('Selecione ao menos um endereço (ou escolha "todos os filtrados").')); return; }
     const what = mode.options[mode.selectedIndex].text;
-    if (!confirm(`${what}\n\nAplicar em ${n} endereço(s)?`)) e.preventDefault();
+    if (!confirm(_t('{what}\n\nAplicar em {n} endereço(s)?', {what, n}))) e.preventDefault();
   });
   document.getElementById('bulkDelete').addEventListener('click', e => {
     e.preventDefault();
-    if (!selected()) { alert('Selecione ao menos um endereço.'); return; }
+    if (!selected()) { alert(_t('Selecione ao menos um endereço.')); return; }
     form.querySelectorAll('input[name=scope_del]').forEach(i => i.remove());
-    askDelete(form, document.getElementById('bulkDelete'), 'Excluir endereços',
-              `Excluir os ${selected()} endereço(s) selecionado(s)? Sem a última opção, os ocupados são ignorados.`, true);
+    askDelete(form, document.getElementById('bulkDelete'), _t('Excluir endereços'),
+              _t('Excluir os {selected} endereço(s) selecionado(s)? Sem a última opção, os ocupados são ignorados.', {selected: selected()}), true);
   });
   document.getElementById('bulkDeleteAll').addEventListener('click', e => {
     e.preventDefault();
-    if (!{{ total_filtered }}) { alert('Nenhum endereço no filtro.'); return; }
+    if (!{{ total_filtered }}) { alert(_t('Nenhum endereço no filtro.')); return; }
     form.querySelectorAll('input[name=scope_del]').forEach(i => i.remove());
     const h = document.createElement('input'); h.type = 'hidden'; h.name = 'scope_del'; h.value = 'filtered'; form.appendChild(h);
-    askDelete(form, document.getElementById('bulkDelete'), 'Excluir endereços do filtro',
-              `Excluir TODOS os {{ total_filtered }} endereço(s) do filtro atual? Sem a última opção, os ocupados são ignorados.`, true);
+    askDelete(form, document.getElementById('bulkDelete'), _t('Excluir endereços do filtro'),
+              _t('Excluir TODOS os {n} endereço(s) do filtro atual? Sem a última opção, os ocupados são ignorados.', {n: {{ total_filtered|tojson }}}), true);
   });
 })();
 let delTarget = null, delSubmitter = null;
@@ -215,7 +214,7 @@ document.getElementById('delOk').addEventListener('click', () => {
   try { localStorage.setItem('nk_del_levels', on ? '1' : '0'); } catch (_) {}
   delTarget.querySelectorAll('input[name=drop_levels],input[name=cascade]').forEach(i => i.remove());
   if (document.getElementById('delCascade').checked && document.getElementById('delCascadeBox').style.display !== 'none') {
-    if (!confirm('Os endereços ocupados e os saldos neles também serão excluídos. Continuar?')) return;
+    if (!confirm(_t('Os endereços ocupados e os saldos neles também serão excluídos. Continuar?'))) return;
     const c = document.createElement('input'); c.type = 'hidden'; c.name = 'cascade'; c.value = '1'; delTarget.appendChild(c);
   }
   if (on) {
@@ -227,7 +226,7 @@ document.getElementById('delOk').addEventListener('click', () => {
 document.querySelectorAll('form.nk-del').forEach(f => {
   document.querySelectorAll(`button[form="${f.id}"]`).forEach(btn => btn.addEventListener('click', e => {
     e.preventDefault();
-    askDelete(f, null, 'Excluir endereço', `Excluir o endereço ${f.dataset.address}?`);
+    askDelete(f, null, _t('Excluir endereço'), _t('Excluir o endereço {address}?', {address: f.dataset.address}));
   }));
 });
 </script>

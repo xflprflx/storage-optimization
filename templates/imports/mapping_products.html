@@ -5,12 +5,12 @@
 {% macro chk(name, default) -%}{% if fv is not none %}{% if fv.get(name) %}checked{% endif %}{% elif default %}checked{% endif %}{%- endmacro %}
 <div class="page-header">
   <h1><i class="bi bi-upload"></i> {{ title }}</h1>
-  <a href="/imports/products" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Outro arquivo</a>
+  <a href="/imports/products" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Outro arquivo") }}</a>
 </div>
 <div class="mb-3">
-  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
-  <span class="badge rounded-pill text-bg-primary">2. Mapear colunas</span>
-  <span class="badge rounded-pill text-bg-light border">3. Resultado</span>
+  <span class="badge rounded-pill text-bg-success">{{ _("1. Arquivo enviado") }}</span>
+  <span class="badge rounded-pill text-bg-primary">{{ _("2. Mapear colunas") }}</span>
+  <span class="badge rounded-pill text-bg-light border">{{ _("3. Resultado") }}</span>
 </div>
 {% if errors %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ errors }}</div>{% endif %}
 
@@ -21,14 +21,14 @@
   <div class="row g-3">
     <div class="col-lg-7">
       <div class="card">
-        <div class="card-header bg-white"><strong>Mapeamento de colunas</strong> <small class="text-muted">(sugerido automaticamente pelo nome)</small></div>
+        <div class="card-header bg-white"><strong>{{ _("Mapeamento de colunas") }}</strong> <small class="text-muted">{{ _("(sugerido automaticamente pelo nome)") }}</small></div>
         <div class="card-body">
           <div class="row g-2">
           {% for key, (label, required, _syn) in fields.items() %}
             <div class="col-md-6">
               <label class="form-label small mb-1">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
               <select class="form-select form-select-sm" name="map_{{ key }}" {% if required %}required{% endif %}>
-                <option value="">— não importar —</option>
+                <option value="">{{ _("— não importar —") }}</option>
                 {% for h in headers %}<option value="{{ loop.index0 }}" {% if mapping.get(key) == loop.index0 %}selected{% endif %}>#{{ loop.index }} · {{ h }}</option>{% endfor %}
               </select>
             </div>
@@ -39,44 +39,42 @@
     </div>
     <div class="col-lg-5">
       <div class="card">
-        <div class="card-header bg-white"><strong>Opções</strong></div>
+        <div class="card-header bg-white"><strong>{{ _("Opções") }}</strong></div>
         <div class="card-body">
           <div class="mb-2">
-            <label class="form-label small mb-1">Filial padrão (quando a coluna estiver vazia/ausente)</label>
-            <input class="form-control form-control-sm mono text-uppercase" name="default_branch_code" list="branchCodes" value="{{ fv.get('default_branch_code', '') if fv is not none else '' }}" placeholder="Código (criada se não existir)">
+            <label class="form-label small mb-1">{{ _("Filial padrão (quando a coluna estiver vazia/ausente)") }}</label>
+            <input class="form-control form-control-sm mono text-uppercase" name="default_branch_code" list="branchCodes" value="{{ fv.get('default_branch_code', '') if fv is not none else '' }}" placeholder="{{ _("Código (criada se não existir)") }}">
             <datalist id="branchCodes">{% for b in branches %}<option value="{{ b.code }}">{{ b.name }}</option>{% endfor %}</datalist>
           </div>
           <div class="mb-3">
-            <label class="form-label small mb-1">Armazém padrão</label>
-            <input class="form-control form-control-sm mono text-uppercase" name="default_warehouse_code" list="whCodes" value="{{ fv.get('default_warehouse_code', '') if fv is not none else '' }}" placeholder="Código (criado se não existir)">
+            <label class="form-label small mb-1">{{ _("Armazém padrão") }}</label>
+            <input class="form-control form-control-sm mono text-uppercase" name="default_warehouse_code" list="whCodes" value="{{ fv.get('default_warehouse_code', '') if fv is not none else '' }}" placeholder="{{ _("Código (criado se não existir)") }}">
             <datalist id="whCodes">{% for w in warehouses %}<option value="{{ w.code }}">{{ w.name }}</option>{% endfor %}</datalist>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="update_existing" value="1" id="upd" {{ chk('update_existing', True) }}>
-            <label class="form-check-label small" for="upd">Atualizar produtos já existentes (somente campos preenchidos)</label>
+            <label class="form-check-label small" for="upd">{{ _("Atualizar produtos já existentes (somente campos preenchidos)") }}</label>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="create_locations" value="1" id="cl" {{ chk('create_locations', True) }}>
-            <label class="form-check-label small" for="cl">Criar endereços informados que não existirem</label>
+            <label class="form-check-label small" for="cl">{{ _("Criar endereços informados que não existirem") }}</label>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="update_default_location" value="1" id="udl" {{ chk('update_default_location', True) }}>
-            <label class="form-check-label small" for="udl">Substituir o endereço padrão dos produtos que já têm um</label>
+            <label class="form-check-label small" for="udl">{{ _("Substituir o endereço padrão dos produtos que já têm um") }}</label>
           </div>
           <div class="border border-danger-subtle rounded p-2 my-2">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" name="sync" value="1" id="sync" {{ chk('sync', False) }}>
-              <label class="form-check-label small" for="sync"><b class="text-danger">Sincronizar:</b> excluir os produtos que <b>não estão no arquivo</b></label>
+              <label class="form-check-label small" for="sync">{{ _h("<b class=\"text-danger\">Sincronizar:</b> excluir os produtos que <b>não estão no arquivo</b>") }}</label>
             </div>
-            <div class="form-text">Produto com saldo é mantido. Só roda se <b>nenhuma linha</b> do arquivo der erro (senão nada é excluído).</div>
+            <div class="form-text">{{ _h("Produto com saldo é mantido. Só roda se <b>nenhuma linha</b> do arquivo der erro (senão nada é excluído).") }}</div>
           </div>
-          <div class="form-text">Endereços são associados aos existentes mesmo com pequenas diferenças de escrita
-            (<span class="mono">A-1-1-1</span> = <span class="mono">A-01-01-01</span>, <span class="mono">A010101</span> = <span class="mono">A-01-01-01</span>).
-            Sem armazém, o endereço é procurado nos armazéns da filial; sem filial, em todos os depósitos.</div>
+          <div class="form-text">{{ _h("Endereços são associados aos existentes mesmo com pequenas diferenças de escrita (<span class=\"mono\">A-1-1-1</span> = <span class=\"mono\">A-01-01-01</span>, <span class=\"mono\">A010101</span> = <span class=\"mono\">A-01-01-01</span>). Sem armazém, o endereço é procurado nos armazéns da filial; sem filial, em todos os depósitos.") }}</div>
         </div>
         <div class="card-footer bg-white">
-          <button class="btn btn-accent w-100" onclick="if (this.form.sync && this.form.sync.checked && !confirm('Sincronizar: o que não está no arquivo (e não está em uso) será EXCLUÍDO. Continuar?')) return false; this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Processando...'; this.form.submit();">
-            <i class="bi bi-play-fill"></i> Processar importação</button>
+          <button class="btn btn-accent w-100" onclick="if (this.form.sync && this.form.sync.checked && !confirm(_t('Sincronizar: o que não está no arquivo (e não está em uso) será EXCLUÍDO. Continuar?'))) return false; this.disabled=true; this.innerHTML=_t('<span class=\'spinner-border spinner-border-sm\'><\/span> Processando...'); this.form.submit();">
+            <i class="bi bi-play-fill"></i> {{ _("Processar importação") }}</button>
         </div>
       </div>
     </div>

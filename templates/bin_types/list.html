@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 {% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
-{% block title %}Tipos de Bin{% endblock %}
+{% block title %}{{ _("Tipos de Bin") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-inboxes"></i> Tipos de Bin</h1>
-<div class="d-flex gap-2"><a href="/imports/bin_types" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> Importar</a>
-  <a href="/bin-types/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> Novo tipo de bin</a></div>
+  <h1><i class="bi bi-inboxes"></i> {{ _("Tipos de Bin") }}</h1>
+<div class="d-flex gap-2"><a href="/imports/bin_types" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Importar") }}</a>
+  <a href="/bin-types/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo tipo de bin") }}</a></div>
 </div>
 <div class="card">
   {{ bulk_delete_bar(request, "bin_types", ".bulk-bin_types") }}
 <div class="card-body border-bottom">
     <form class="row g-2" method="get" data-autofilter>
       {{ keep_params(request) }}
-      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Buscar por código ou nome"></div>
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por código ou nome") }}"></div>
       {{ filter_buttons(request) }}
     </form>
   </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0">
       <thead><tr>
-        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-bin_types" title="Selecionar todos da página"></th>
-        {{ th(request, sort, 'code', 'Código') }}{{ th(request, sort, 'name', 'Nome') }}
-        {{ th(request, sort, 'height', 'Alt. (cm)', 'text-end') }}{{ th(request, sort, 'width', 'Larg. (cm)', 'text-end') }}
-        {{ th(request, sort, 'length', 'Comp. (cm)', 'text-end') }}
-        {{ th(request, sort, 'max_weight', 'Cap. peso (kg)', 'text-end') }}{{ th(request, sort, 'volume', 'Cap. volume (L)', 'text-end') }}{{ th(request, sort, 'cost', 'Custo (R$)', 'text-end') }}
-        {{ th(request, sort, 'locations', 'Endereços', 'text-end') }}{{ th(request, sort, 'bins', 'Bins em uso', 'text-end') }}
-        <th class="text-end" style="width:110px">Ações</th>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-bin_types" title="{{ _("Selecionar todos da página") }}"></th>
+        {{ th(request, sort, 'code', _('Código')) }}{{ th(request, sort, 'name', _('Nome')) }}
+        {{ th(request, sort, 'height', _('Alt. (cm)'), 'text-end') }}{{ th(request, sort, 'width', _('Larg. (cm)'), 'text-end') }}
+        {{ th(request, sort, 'length', _('Comp. (cm)'), 'text-end') }}
+        {{ th(request, sort, 'max_weight', _('Cap. peso (kg)'), 'text-end') }}{{ th(request, sort, 'volume', _('Cap. volume (L)'), 'text-end') }}{{ th(request, sort, 'cost', _('Custo (R$)'), 'text-end') }}
+        {{ th(request, sort, 'locations', _('Endereços'), 'text-end') }}{{ th(request, sort, 'bins', _('Bins em uso'), 'text-end') }}
+        <th class="text-end" style="width:110px">{{ _("Ações") }}</th>
       </tr></thead>
       <tbody>
       {% for b in page.items %}
@@ -33,22 +33,22 @@
         <tr>
           <td><input type="checkbox" class="form-check-input bulk-bin_types" value="{{ b.id }}"></td>
           <td class="mono fw-semibold">{{ b.code }}</td>
-          <td>{{ b.name }}{% if b.is_fraction %} <span class="badge bg-info-subtle text-info-emphasis border" title="Compartimento: bin {{ b.parent.code }} dividida em {{ b.grid[0] }} na largura × {{ b.grid[1] }} no comprimento"><i class="bi bi-grid-3x2"></i> {{ b.fraction_label }} de {{ b.parent.code }} ({{ b.grid_label }})</span>{% endif %}</td>
+          <td>{{ b.name }}{% if b.is_fraction %} <span class="badge bg-info-subtle text-info-emphasis border" title="{{ _("Compartimento: bin {code} dividida em {v} na largura × {v2} no comprimento", code=(b.parent.code), v=(b.grid[0]), v2=(b.grid[1])) }}"><i class="bi bi-grid-3x2"></i> {{ _h("{fraction_label} de {code} ({grid_label})", fraction_label=(b.fraction_label), code=(b.parent.code), grid_label=(b.grid_label)) }}</span>{% endif %}</td>
           <td class="text-end">{{ b.height|dec }}</td>
           <td class="text-end">{{ b.width|dec }}</td>
           <td class="text-end">{{ b.length|dec }}</td>
           <td class="text-end">{{ b.max_weight|dec }}</td>
-          <td class="text-end">{{ b.volume|dec(2) if b.volume is not none else '' }}{% if b.max_volume is none and b.volume is not none %} <i class="bi bi-calculator text-muted" title="Calculado pelas dimensões"></i>{% endif %}</td>
+          <td class="text-end">{{ b.volume|dec(2) if b.volume is not none else '' }}{% if b.max_volume is none and b.volume is not none %} <i class="bi bi-calculator text-muted" title="{{ _("Calculado pelas dimensões") }}"></i>{% endif %}</td>
           <td class="text-end">{{ b.cost|dec(2) if b.cost is not none else '' }}</td>
           <td class="text-end"><a href="/locations?bin_type_id={{ b.id }}">{{ u[0] }}</a></td>
           <td class="text-end">{{ u[1] }}</td>
           <td class="text-end text-nowrap">
-            <a class="btn btn-sm btn-outline-primary" href="/bin-types/{{ b.id }}/edit" title="Editar"><i class="bi bi-pencil"></i></a>
-            {{ delete_button('/bin-types/' ~ b.id ~ '/delete', '', 'Excluir o tipo de bin ' ~ b.code ~ '?') }}
+            <a class="btn btn-sm btn-outline-primary" href="/bin-types/{{ b.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/bin-types/' ~ b.id ~ '/delete', '', _('Excluir o tipo de bin ') ~ b.code ~ '?') }}
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="12" class="text-center text-muted py-4">Nenhum tipo de bin cadastrado.</td></tr>
+        <tr><td colspan="12" class="text-center text-muted py-4">{{ _("Nenhum tipo de bin cadastrado.") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

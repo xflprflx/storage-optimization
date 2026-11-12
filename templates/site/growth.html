@@ -1,34 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Quanto posso crescer — {{ project.name }}{% endblock %}
+{% block title %}{{ _h("Quanto posso crescer — {name}", name=(project.name)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-graph-up-arrow"></i> Quanto posso crescer?</h1>
-    <div class="small text-muted">{{ project.name }} · demanda atual: fator {{ res.factor|dec(1) }}%</div>
+    <h1><i class="bi bi-graph-up-arrow"></i> {{ _("Quanto posso crescer?") }}</h1>
+    <div class="small text-muted">{{ _h("{name} · demanda atual: fator {factor}%", name=(project.name), factor=(res.factor|dec(1))) }}</div>
   </div>
-  <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+  <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar ao projeto") }}</a>
 </div>
-{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> Busca cancelada: o limite abaixo é o melhor fator achado até ali (pode ser menor que o real).</div>{% endif %}
+{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> {{ _("Busca cancelada: o limite abaixo é o melhor fator achado até ali (pode ser menor que o real).") }}</div>{% endif %}
 {% if res.shortage %}
-<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> A demanda atual <b>não cabe</b> ({{ res.shortage|dec }} bin(s) sem lugar): não há folga de crescimento.
-  Use <b>Sugerir redução da demanda</b> ou aumente as estruturas e o imóvel.</div>
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ _h("A demanda atual <b>não cabe</b> ({shortage} bin(s) sem lugar): não há folga de crescimento. Use <b>Sugerir redução da demanda</b> ou aumente as estruturas e o imóvel.", shortage=(res.shortage|dec)) }}</div>
 {% else %}
 <div class="row g-3">
   <div class="col-lg-6"><div class="card h-100"><div class="card-body">
-    <div class="small text-muted">A demanda pode crescer, mantendo as estruturas e o imóvel (busca com o próprio otimizador):</div>
-    <div class="display-6 fw-semibold my-2">{% if res.capped %}mais de {% endif %}+{{ res.growth_pct|dec(1) }}%</div>
-    <div class="small text-muted mb-2">fator de demanda de {{ res.factor|dec(1) }}% até {% if res.capped %}pelo menos {% endif %}{{ res.max_factor|dec(1) }}%
-      — todos os SKUs crescendo na mesma proporção.{% if res.capped %} A busca parou no limite de {{ (res.max_factor / res.factor)|dec(0) }}× a demanda atual.{% endif %}</div>
+    <div class="small text-muted">{{ _("A demanda pode crescer, mantendo as estruturas e o imóvel (busca com o próprio otimizador):") }}</div>
+    <div class="display-6 fw-semibold my-2">{% if res.capped %}{{ _("mais de") }} {% endif %}+{{ res.growth_pct|dec(1) }}%</div>
+    <div class="small text-muted mb-2">{{ _h("fator de demanda de {factor}% até", factor=(res.factor|dec(1))) }} {% if res.capped %}{{ _("pelo menos") }} {% endif %}{{ _h("{max_factor}% — todos os SKUs crescendo na mesma proporção.", max_factor=(res.max_factor|dec(1))) }}{% if res.capped %} {{ _h("A busca parou no limite de {v}× a demanda atual.", v=((res.max_factor / res.factor)|dec(0))) }}{% endif %}</div>
     <form method="post" action="/optimization/site/{{ project.id }}/demand-apply">
       <input type="hidden" name="action" value="factor"><input type="hidden" name="factor" value="{{ res.max_factor|dec_input }}">
-      <button class="btn btn-outline-primary"><i class="bi bi-check-lg"></i> Aplicar fator {{ res.max_factor|dec(1) }}% e otimizar</button>
+      <button class="btn btn-outline-primary"><i class="bi bi-check-lg"></i> {{ _h("Aplicar fator {max_factor}% e otimizar", max_factor=(res.max_factor|dec(1))) }}</button>
     </form>
   </div></div></div>
   <div class="col-lg-6"><div class="card h-100"><div class="card-body">
-    <div class="small text-muted">No plano atual</div>
-    <div class="fs-5 fw-semibold my-1">{{ res.levels_free }} nível(is) de armazenagem livres</div>
-    <div class="small text-muted mb-2">Níveis das estruturas do plano que ainda não têm bins. Com o objetivo <b>Maior capacidade do imóvel</b>, o plano enche o imóvel e esse número cresce.</div>
-    {% if res.limits %}<div class="small">O que limita o crescimento: {{ res.limits|join('; ') }}.</div>{% endif %}
+    <div class="small text-muted">{{ _("No plano atual") }}</div>
+    <div class="fs-5 fw-semibold my-1">{{ _h("{levels_free} nível(is) de armazenagem livres", levels_free=(res.levels_free)) }}</div>
+    <div class="small text-muted mb-2">{{ _h("Níveis das estruturas do plano que ainda não têm bins. Com o objetivo <b>Maior capacidade do imóvel</b>, o plano enche o imóvel e esse número cresce.") }}</div>
+    {% if res.limits %}<div class="small">{{ _h("O que limita o crescimento: {limits}.", limits=(res.limits|join('; '))) }}</div>{% endif %}
   </div></div></div>
 </div>
 {% endif %}

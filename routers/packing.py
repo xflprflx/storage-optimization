@@ -13,8 +13,9 @@ from database import get_db
 from models import BinType, Product
 from routers.common import render, to_int
 from services.packing import arrange, svg_mini
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/packing", tags=["Arranjo nas bins"])
+router = APIRouter(prefix="/packing", tags=[N_("Arranjo nas bins")])
 
 
 def _f(v):
@@ -53,10 +54,10 @@ def _tok(item) -> str:
 
 
 def _parse_tok(tok: str):
-    sku, _, q = tok.rpartition(":")
+    sku, _x, q = tok.rpartition(":")
     if not sku:
         return None
-    q, _, r = q.replace(",", ".").partition("+")
+    q, _x, r = q.replace(",", ".").partition("+")
     try:
         return (sku, float(q), float(r or 0))
     except ValueError:
@@ -138,7 +139,7 @@ def case_url(title: str, rotation: str, bins: list[tuple]) -> str:
     return "/packing/case?" + urlencode(q)
 
 
-def bin_card(arranger: "Arranger", type_id: int, label: str, items: list, seq: Optional[int] = None) -> dict:
+def bin_card(arranger: N_("Arranger"), type_id: int, label: str, items: list, seq: Optional[int] = None) -> dict:
     """Uma bin da tela do caso: arranjo, desenho 2D e dados do 3D. items = [(SKU, qtd[, reserva])]."""
     items = [i for i in items if (i[1] or 0) > 0 or (len(i) > 2 and i[2])]
     bt = arranger.types.get(type_id)
@@ -153,7 +154,7 @@ def bin_card(arranger: "Arranger", type_id: int, label: str, items: list, seq: O
             "json": json.dumps(arr.as_json()) if arr.dims else "null", "empty": not items}
 
 
-def section(sid: str, label: str, icon: str, bins: Optional[list], note: str = "", empty: str = "Nenhuma bin.") -> dict:
+def section(sid: str, label: str, icon: str, bins: Optional[list], note: str = "", empty: str = N_("Nenhuma bin.")) -> dict:
     """Bloco do acordeão da tela do caso. bins None = sem mudança."""
     return {"id": sid, "label": label, "icon": icon, "bins": bins or [], "unchanged": bins is None, "note": note,
             "empty": empty}
@@ -172,7 +173,7 @@ def view_case(request: Request, title: str = "", rot: str = "upright", db: Sessi
         items = [x for x in map(_parse_tok, filter(None, items_raw.split(";"))) if x]
         m = re.search(r"#(\d+)", label)
         sides[side].append(bin_card(arranger, to_int(t) or 0, label, items, int(m.group(1)) if m else None))
-    sections = [section("before", "Antes (hoje)", "bi-clock-history", sides["before"])]
+    sections = [section("before", _("Antes (hoje)"), "bi-clock-history", sides["before"])]
     if "after" in {r.split("|", 1)[0] for r in request.query_params.getlist("b")}:
-        sections.append(section("after", "Depois (sugestão)", "bi-arrow-right-circle", sides["after"]))
+        sections.append(section("after", _("Depois (sugestão)"), "bi-arrow-right-circle", sides["after"]))
     return render(request, "packing/case.html", title=title, rot=arranger.rotation, sections=sections, scenarios=None)

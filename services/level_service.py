@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from models import BinType, LevelCapacity, LocationBin, ShelfLevel, StorageLocation
 from services.addressing import normalize_code
+from services.i18n import N_, _, seps
 
 EPS = 1e-9
 LevelKey = tuple  # (branch_id, warehouse_id|None, aisle, bay, level)
@@ -204,18 +205,18 @@ def location_level_options(db: Session, loc: StorageLocation) -> list[dict]:
 def validate_bin_levels(db: Session, loc_scope: dict, rows: list[tuple[int, int, Optional[int]]]):
     """Confere se os níveis escolhidos pertencem à mesma estante do endereço.
     Retorna (erro | None, linhas normalizadas) — nível igual ao do próprio endereço vira None."""
-    used = {lid for _, _, lid in rows if lid}
+    used = {lid for _x, _x, lid in rows if lid}
     if not used:
         return None, rows
     if not loc_scope.get("bay"):
-        return "Este endereço não está em uma estante; as bins só podem ficar no próprio endereço.", rows
+        return _("Este endereço não está em uma estante; as bins só podem ficar no próprio endereço."), rows
     levels = {sl.id: sl for sl in db.scalars(select(ShelfLevel).where(ShelfLevel.id.in_(used)))}
     own: set[int] = set()
     for lid in used:
         sl = levels.get(lid)
         if (sl is None or sl.branch_id != loc_scope["branch_id"] or sl.warehouse_id != loc_scope["warehouse_id"]
                 or _ck((sl.aisle, sl.bay)) != _ck((loc_scope["aisle"], loc_scope["bay"]))):
-            return "Nível extra inválido: precisa ser um nível da mesma estante do endereço.", rows
+            return _("Nível extra inválido: precisa ser um nível da mesma estante do endereço."), rows
         if _ck((sl.level,)) == _ck((loc_scope.get("level") or "",)):
             own.add(lid)
     merged: dict[tuple, int] = {}
@@ -279,9 +280,9 @@ def fit_structure(db: Session, keys: Optional[Iterable[LevelKey]] = None) -> lis
 def structure_message(changes: list[tuple[str, float, float]]) -> str:
     if not changes:
         return ""
-    parts = [f"{c} {old:g}→{new:g} cm".replace(".", ",") for c, old, new in changes[:8]]
-    more = f" e mais {len(changes) - 8}" if len(changes) > 8 else ""
-    return f"Estrutura ajustada à altura das bins — vão subiu em {len(changes)} nível(is): {', '.join(parts)}{more}."
+    parts = [f"{c} {old:g}→{new:g} cm".replace(".", seps()[0]) for c, old, new in changes[:8]]
+    more = _(" e mais {v}", v=len(changes) - 8) if len(changes) > 8 else ""
+    return _("Estrutura ajustada à altura das bins — vão subiu em {len} nível(is): {v}{more}.", len=len(changes), v=', '.join(parts), more=more)
 
 
 def capacity_warnings(db: Session, keys: Iterable[LevelKey], type_codes: dict[int, str]) -> list[str]:
@@ -291,10 +292,9 @@ def capacity_warnings(db: Session, keys: Iterable[LevelKey], type_codes: dict[in
         if u.over:
             parts = " + ".join(f"{n}× {type_codes.get(t, t)}" for t, n in u.used.items() if n)
             caps = " ou ".join(f"{m}× {type_codes.get(t, t)}" for t, m in u.capacity.items())
-            msgs.append(f"Nível {code} acima da capacidade: {parts} = {u.fraction * 100:.0f}% (cabem {caps}).")
+            msgs.append(_("Nível {code} acima da capacidade: {parts} = {v}% (cabem {caps}).", code=code, parts=parts, v=f"{u.fraction * 100:.0f}", caps=caps))
         elif u.has_capacity and u.unknown_types:
-            msgs.append(f"Nível {code} tem bins de tipo sem capacidade cadastrada "
-                        f"({', '.join(type_codes.get(t, str(t)) for t in u.unknown_types)}).")
+            msgs.append(_("Nível {code} tem bins de tipo sem capacidade cadastrada ({v}).", code=code, v=', '.join(type_codes.get(t, str(t)) for t in u.unknown_types)))
     return msgs
 
 
@@ -305,8 +305,8 @@ def matching_levels(db: Session, branch_id: int, warehouse_id: Optional[int],
                     aisle_expr: str, bay_expr: str, level_expr: str) -> list[LevelKey]:
     from services.batch_generator import ValueMatcher
 
-    ma, mb, ml = (ValueMatcher(aisle_expr, "Corredor"), ValueMatcher(bay_expr, "Estante"),
-                  ValueMatcher(level_expr, "Nível"))
+    ma, mb, ml = (ValueMatcher(aisle_expr, _("Corredor")), ValueMatcher(bay_expr, _("Estante")),
+                  ValueMatcher(level_expr, _("Nível")))
     keys: set[LevelKey] = set()
     for a, bay, lv in db.execute(_scope(select(StorageLocation.aisle, StorageLocation.bay, StorageLocation.level)
                                         .distinct(), StorageLocation, branch_id, warehouse_id)
@@ -357,7 +357,7 @@ def _fraction(caps: dict[int, int], used: dict[int, int]) -> Optional[float]:
     return sum(n / caps[t] for t, n in used.items() if n)
 
 
-DEDICATED_NOTE = "Nível dedicado a"
+DEDICATED_NOTE = N_("Nível dedicado a")
 
 
 def remove_empty_dedicated(db: Session, bay: tuple) -> int:
@@ -488,7 +488,7 @@ def spill_overflow(db: Session, bays: Optional[Iterable[tuple]] = None) -> list[
                     u = usage_for(db, [cand])[cand]
                     dcap = u.capacity or {}
                     f = u.fraction if u.capacity else (0.0 if not any(u.used.values()) else None)
-                    if f is not None and all(dcap.get(t) for t, _ in chunk):
+                    if f is not None and all(dcap.get(t) for t, _x in chunk):
                         if sum(m / dcap[t] for t, m in chunk) <= (1.0 - f) + EPS:
                             dst = cand
                 # 2) senão, cria um nível DEDICADO logo acima (ex.: 01D1 entre 01 e 02)
@@ -535,10 +535,10 @@ def spill_message(db: Session, moves) -> str:
 
     codes = dict(db.execute(select(BinType.id, BinType.code)).all())
     parts = [f"{ad}: {n}× {codes.get(t, t)} {s}→{d}" for ad, n, t, s, d in moves[:8]]
-    more = f" e mais {len(moves) - 8}" if len(moves) > 8 else ""
-    return ("Bins acima da capacidade do nível foram para o nível de cima (quando ele suporta todo o excedente) "
-            "ou para um nível dedicado criado ao endereço — "
-            + "; ".join(parts) + more + ". Para usar outro nível, escolha-o na linha da bin no cadastro do endereço.")
+    more = _(" e mais {v}", v=len(moves) - 8) if len(moves) > 8 else ""
+    return (_("Bins acima da capacidade do nível foram para o nível de cima (quando ele suporta todo o excedente) "
+            "ou para um nível dedicado criado ao endereço — ")
+            + "; ".join(parts) + more + _(". Para usar outro nível, escolha-o na linha da bin no cadastro do endereço."))
 
 
 def bays_of_locations(db: Session, location_ids: Iterable[int]) -> set[tuple]:
@@ -564,10 +564,10 @@ def drop_unused_levels(db: Session, keys: Iterable[LevelKey]) -> tuple[list[str]
         b, w, a, bay, lv = key
         if db.scalar(_scope(select(StorageLocation.id), StorageLocation, b, w).where(
                 StorageLocation.aisle == a, StorageLocation.bay == bay, StorageLocation.level == lv).limit(1)):
-            kept.append(f"{sl.code} (ainda tem endereços)")
+            kept.append(_("{code} (ainda tem endereços)", code=sl.code))
             continue
         if db.scalar(select(LocationBin.id).where(LocationBin.shelf_level_id == sl.id).limit(1)):
-            kept.append(f"{sl.code} (guarda bins de outros endereços)")
+            kept.append(_("{code} (guarda bins de outros endereços)", code=sl.code))
             continue
         dropped.append(sl.code)
         db.delete(sl)

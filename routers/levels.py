@@ -17,8 +17,9 @@ from services.addressing import normalize_code
 from services.file_reader import parse_decimal
 from services.level_service import (ensure_level, fit_structure, matching_levels, set_capacity, set_height,
                                    spill_message, spill_overflow, structure_message, usage_for)
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/levels", tags=["Capacidade dos níveis"])
+router = APIRouter(prefix="/levels", tags=[N_("Capacidade dos níveis")])
 PER_PAGE = 100
 
 
@@ -113,14 +114,14 @@ def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(g
         if not name.startswith("cap_"):
             continue
         try:
-            _, lid, tid = name.split("_")
+            _x, lid, tid = name.split("_")
             lid, tid = int(lid), int(tid)
         except ValueError:
             continue
         raw = str(raw).strip()
         val = to_int(raw) if raw else 0
         if raw and (val is None or val < 0 or val > 100_000):
-            errors.append(f"Valor inválido: {raw!r}")
+            errors.append(_("Valor inválido: {raw}", raw=f"{raw!r}"))
             continue
         cap = db.scalar(select(LevelCapacity).where(LevelCapacity.shelf_level_id == lid, LevelCapacity.bin_type_id == tid))
         if val:
@@ -142,10 +143,10 @@ def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(g
             try:
                 val = parse_decimal(raw)
             except ValueError:
-                errors.append(f"Altura inválida: {raw!r}")
+                errors.append(_("Altura inválida: {raw}", raw=f"{raw!r}"))
                 continue
             if val is not None and (val <= 0 or val > 5000):
-                errors.append(f"Altura fora do intervalo (0–5000 cm): {raw!r}")
+                errors.append(_("Altura fora do intervalo (0–5000 cm): {raw}", raw=f"{raw!r}"))
                 continue
             if sl.height_cm != val:
                 sl.height_cm = val
@@ -158,8 +159,8 @@ def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(g
     adj = (spill_message(db, spill_overflow(db)) + " " + structure_message(fit_structure(db))).strip()
     db.commit()
     if errors:
-        return redirect(_back(form), f"{changed} alteração(ões) salva(s). {adj} Ignorados: " + "; ".join(errors[:5]), "warning")
-    return redirect(_back(form), f"{changed} alteração(ões) salva(s). {adj}".strip(), "info" if adj else "success")
+        return redirect(_back(form), _("{changed} alteração(ões) salva(s). {adj} Ignorados: ", changed=changed, adj=adj) + "; ".join(errors[:5]), "warning")
+    return redirect(_back(form), _("{changed} alteração(ões) salva(s). {adj}", changed=changed, adj=adj).strip(), "info" if adj else "success")
 
 
 @router.post("/bulk")
@@ -174,33 +175,33 @@ def bulk_capacity(form: FormData = Depends(form_data), db: Session = Depends(get
     try:
         height = parse_decimal(raw_h)
     except ValueError:
-        return redirect(_back(form), "Altura do vão inválida.", "danger")
+        return redirect(_back(form), _("Altura do vão inválida."), "danger")
     if height is not None and (height <= 0 or height > 5000):
-        return redirect(_back(form), "Altura do vão deve estar entre 0 e 5000 cm.", "danger")
+        return redirect(_back(form), _("Altura do vão deve estar entre 0 e 5000 cm."), "danger")
     if not bid:
-        return redirect(_back(form), "Selecione a filial.", "danger")
+        return redirect(_back(form), _("Selecione a filial."), "danger")
     if tid and not db.get(BinType, tid):
-        return redirect(_back(form), "Tipo de bin inválido.", "danger")
+        return redirect(_back(form), _("Tipo de bin inválido."), "danger")
     if not tid and height is None and not clear_h:
-        return redirect(_back(form), "Informe um tipo de bin com a quantidade e/ou a altura do vão.", "warning")
+        return redirect(_back(form), _("Informe um tipo de bin com a quantidade e/ou a altura do vão."), "warning")
     if raw and (max_bins is None or max_bins < 0):
-        return redirect(_back(form), "Quantidade de bins inválida.", "danger")
+        return redirect(_back(form), _("Quantidade de bins inválida."), "danger")
     try:
         keys = matching_levels(db, bid, wid, f_str(form, "b_aisle"), f_str(form, "b_bay"), f_str(form, "b_level"))
     except ValueError as exc:
         return redirect(_back(form), str(exc), "danger")
     if not keys:
-        return redirect(_back(form), "Nenhum nível corresponde às condições.", "warning")
+        return redirect(_back(form), _("Nenhum nível corresponde às condições."), "warning")
     msgs = []
     if tid:
         n = set_capacity(db, keys, tid, max_bins or None)
         code = db.get(BinType, tid).code
-        msgs.append(f"Capacidade de {max_bins}× {code} definida em {n} nível(is)." if max_bins
-                    else f"Capacidade de {code} removida de {n} nível(is).")
+        msgs.append(_("Capacidade de {max_bins}× {code} definida em {n} nível(is).", max_bins=max_bins, code=code, n=n) if max_bins
+                    else _("Capacidade de {code} removida de {n} nível(is).", code=code, n=n))
     if height is not None or clear_h:
         n = set_height(db, keys, height)
-        msgs.append(f"Altura do vão de {height:g} cm definida em {n} nível(is)." if height is not None
-                    else f"Altura do vão removida de {n} nível(is).")
+        msgs.append(_("Altura do vão de {height} cm definida em {n} nível(is).", height=f"{height:g}", n=n) if height is not None
+                    else _("Altura do vão removida de {n} nível(is).", n=n))
         adj = structure_message(fit_structure(db, keys))
         if adj:
             msgs.append(adj)
@@ -220,18 +221,18 @@ def add_reserved(form: FormData = Depends(form_data), db: Session = Depends(get_
     wid = _wid(form.get("f_warehouse_id"))
     aisle, bay, level = (normalize_code(f_str(form, k)) for k in ("r_aisle", "r_bay", "r_level"))
     if not bid or not aisle or not bay or not level:
-        return redirect(_back(form), "Informe corredor, estante e nível.", "danger")
+        return redirect(_back(form), _("Informe corredor, estante e nível."), "danger")
     if any(len(v) > 20 for v in (aisle, bay, level)):
-        return redirect(_back(form), "Códigos com no máximo 20 caracteres.", "danger")
+        return redirect(_back(form), _("Códigos com no máximo 20 caracteres."), "danger")
     has_bay = db.scalar(select(func.count()).select_from(StorageLocation).where(
         StorageLocation.branch_id == bid, StorageLocation.aisle == aisle, StorageLocation.bay == bay,
         StorageLocation.warehouse_id.is_(None) if wid is None else StorageLocation.warehouse_id == wid))
     sl = ensure_level(db, (bid, wid, aisle, bay, level))
     sl.notes = f_str(form, "r_notes", 200) or sl.notes
     db.commit()
-    msg = f"Nível {aisle}-{bay}-{level} cadastrado."
+    msg = _("Nível {aisle}-{bay}-{level} cadastrado.", aisle=aisle, bay=bay, level=level)
     if not has_bay:
-        return redirect(_back(form), msg + " Atenção: ainda não há endereços na estante " f"{aisle}-{bay}.", "warning")
+        return redirect(_back(form), msg + _(" Atenção: ainda não há endereços na estante {aisle}-{bay}.", aisle=aisle, bay=bay), "warning")
     return redirect(_back(form), msg)
 
 
@@ -239,11 +240,10 @@ def add_reserved(form: FormData = Depends(form_data), db: Session = Depends(get_
 def delete_level(level_id: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     sl = db.get(ShelfLevel, level_id)
     if not sl:
-        return redirect(_back(form), "Nível não encontrado.", "danger")
+        return redirect(_back(form), _("Nível não encontrado."), "danger")
     n_bins = db.scalar(select(func.count()).select_from(LocationBin).where(LocationBin.shelf_level_id == level_id))
     if n_bins:
-        return redirect(_back(form), f"O nível {sl.code} guarda bins de outros endereços ({n_bins} linha(s)). "
-                                     "Mova-as antes de excluir.", "danger")
+        return redirect(_back(form), _("O nível {code} guarda bins de outros endereços ({n_bins} linha(s)). Mova-as antes de excluir.", code=sl.code, n_bins=n_bins), "danger")
     n_locs = db.scalar(select(func.count()).select_from(StorageLocation).where(
         StorageLocation.branch_id == sl.branch_id, StorageLocation.aisle == sl.aisle, StorageLocation.bay == sl.bay,
         StorageLocation.level == sl.level,
@@ -252,8 +252,8 @@ def delete_level(level_id: int, form: FormData = Depends(form_data), db: Session
     db.delete(sl)
     db.commit()
     if n_locs:
-        return redirect(_back(form), f"Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).")
-    return redirect(_back(form), f"Nível reservado {code} excluído.")
+        return redirect(_back(form), _("Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).", code=code))
+    return redirect(_back(form), _("Nível reservado {code} excluído.", code=code))
 
 
 @router.post("/structure")
@@ -264,45 +264,44 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
     bid = f_int(form, "f_branch_id")
     wid = _wid(form.get("f_warehouse_id"))
     if not bid:
-        return redirect(_back(form), "Selecione a filial.", "danger")
+        return redirect(_back(form), _("Selecione a filial."), "danger")
     try:
         bays = matching_bays(db, bid, wid, f_str(form, "s_aisle"), f_str(form, "s_bay"))
     except ValueError as exc:
         return redirect(_back(form), str(exc), "danger")
     if not bays:
-        return redirect(_back(form), "Nenhuma estante corresponde às condições.", "warning")
+        return redirect(_back(form), _("Nenhuma estante corresponde às condições."), "warning")
     sid = form.get("structure_type_id") or ""
     if sid == "remove":
         n = remove_structure(db, bays)
         db.commit()
-        return redirect(_back(form), f"Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos.")
+        return redirect(_back(form), _("Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos.", n=n))
     st = db.get(StructureType, int(sid)) if str(sid).isdigit() else None
     if st is None:
-        return redirect(_back(form), "Escolha a estrutura de armazenagem.", "danger")
+        return redirect(_back(form), _("Escolha a estrutura de armazenagem."), "danger")
     on = lambda k: str(form.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
     try:
         gap = float(parse_decimal(form.get("top_gap") or "5") or 0)
     except ValueError:
-        return redirect(_back(form), "Folga acima da bin inválida.", "danger")
+        return redirect(_back(form), _("Folga acima da bin inválida."), "danger")
     try:
         fl = parse_decimal(form.get("first_level") or "")
     except ValueError:
-        return redirect(_back(form), "Altura do 1º nível inválida.", "danger")
+        return redirect(_back(form), _("Altura do 1º nível inválida."), "danger")
     if fl is not None and fl < 0:
-        return redirect(_back(form), "Altura do 1º nível não pode ser negativa.", "danger")
+        return redirect(_back(form), _("Altura do 1º nível não pode ser negativa."), "danger")
     stats = apply_structure(db, bays, st, create_levels=on("create_levels"), set_heights=on("set_heights"),
                             set_caps=on("set_caps"), replace_caps=on("replace_caps"), top_gap_cm=gap,
                             first_level_cm=fl)
-    msgs = [f"Estrutura {st.code} aplicada a {stats['bays']} estante(s) ({stats['levels']} níveis"
+    msgs = [_("Estrutura {code} aplicada a {bays} estante(s) ({levels} níveis", code=st.code, bays=stats['bays'], levels=stats['levels'])
             + (f", {stats['levels_created']} criados" if stats["levels_created"] else "") + ")"
-            + (f", 1º nível a {fl:g} cm do piso nessas estantes" if fl is not None else "") + "."]
+            + (_(", 1º nível a {fl} cm do piso nessas estantes", fl=f"{fl:g}") if fl is not None else "") + "."]
     if on("set_caps"):
-        msgs.append("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins.")
+        msgs.append(_("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins."))
     if fl is not None and float(fl) + sum(st.vaos()) > float(st.height) + 1e-6:
-        msgs.append(f"Atenção: 1º nível a {fl:g} cm + vãos ({sum(st.vaos()):g} cm) passam da altura da estrutura "
-                    f"({float(st.height):g} cm).")
+        msgs.append(_("Atenção: 1º nível a {fl} cm + vãos ({sum} cm) passam da altura da estrutura ({float} cm).", fl=f"{fl:g}", sum=f"{sum(st.vaos()):g}", float=f"{float(st.height):g}"))
     if stats["extra_levels"]:
-        msgs.append(f"Atenção: {stats['extra_levels']} nível(is) além dos {st.levels} da estrutura.")
+        msgs.append(_("Atenção: {extra_levels} nível(is) além dos {levels} da estrutura.", extra_levels=stats['extra_levels'], levels=st.levels))
     adj = structure_message(stats["fit"])
     if adj:
         msgs.append(adj)

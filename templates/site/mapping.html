@@ -1,14 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Mapear colunas — {{ project.name }}{% endblock %}
+{% block title %}{{ _h("Mapear colunas — {name}", name=(project.name)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-diagram-3"></i> Mapear colunas da planilha</h1>
-  <a href="/optimization/site/{{ project.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
+  <h1><i class="bi bi-diagram-3"></i> {{ _("Mapear colunas da planilha") }}</h1>
+  <a href="/optimization/site/{{ project.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar ao projeto") }}</a>
 </div>
 <div class="small text-muted mb-3">
-  Arquivo <b>{{ filename }}</b> · projeto <b>{{ project.name }}</b>. Para cada tipo de dado, escolha a aba e a coluna de cada campo.
-  As sugestões vêm dos nomes das colunas e da última importação deste projeto. Use <i>— não importar —</i> para pular um tipo
-  e <i>— não usar —</i> para ignorar um campo. Campos com * são obrigatórios. A primeira linha de cada aba é o cabeçalho.
+  {{ _h("Arquivo <b>{filename}</b> · projeto <b>{name}</b>. Para cada tipo de dado, escolha a aba e a coluna de cada campo. As sugestões vêm dos nomes das colunas e da última importação deste projeto. Use <i>— não importar —</i> para pular um tipo e <i>— não usar —</i> para ignorar um campo. Campos com * são obrigatórios. A primeira linha de cada aba é o cabeçalho.", filename=(filename), name=(project.name)) }}
 </div>
 
 <form method="post" action="/optimization/site/{{ project.id }}/upload/confirm" id="mapForm">
@@ -19,16 +17,16 @@
       <div class="card h-100" data-kind="{{ kind }}">
         <div class="card-header bg-white d-flex align-items-center gap-2 flex-wrap">
           <strong class="me-auto">{{ label }}</strong>
-          <label class="small text-muted mb-0">Aba</label>
+          <label class="small text-muted mb-0">{{ _("Aba") }}</label>
           <select class="form-select form-select-sm sheet-sel" name="sheet_{{ kind }}" style="max-width:240px">
-            <option value="">— não importar —</option>
+            <option value="">{{ _("— não importar —") }}</option>
             {% for name in sheets %}<option value="{{ name }}" {% if mapping.get(kind, {}).get('sheet') == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
           </select>
         </div>
         <div class="card-body py-2">
-          <div class="text-muted small skip-msg">Não será importado.</div>
+          <div class="text-muted small skip-msg">{{ _("Não será importado.") }}</div>
           <div class="fields">
-            {% if kind == 'building' %}<div class="small text-muted mb-2">Formato Campo | Valor: uma linha por parâmetro (ex.: “Comprimento (m)” | 40). Os nomes reconhecidos são os mesmos do formulário do projeto.</div>{% endif %}
+            {% if kind == 'building' %}<div class="small text-muted mb-2">{{ _("Formato Campo | Valor: uma linha por parâmetro (ex.: “Comprimento (m)” | 40). Os nomes reconhecidos são os mesmos do formulário do projeto.") }}</div>{% endif %}
             <div class="row g-2">
             {% for field, flabel in FIELD_LABELS[kind].items() %}
               <div class="col-md-6 d-flex align-items-center gap-2">
@@ -37,14 +35,12 @@
               </div>
             {% endfor %}
             </div>
-            {% if kind == 'skus' %}<div class="small text-muted mt-2">Informe ao menos uma quantidade (Saldo, Min level ou Max level). Dimensões vazias são completadas pelo cadastro de produtos.</div>{% endif %}
+            {% if kind == 'skus' %}<div class="small text-muted mt-2">{{ _("Informe ao menos uma quantidade (Saldo, Min level ou Max level). Dimensões vazias são completadas pelo cadastro de produtos.") }}</div>{% endif %}
             {% if kind == 'orders' %}
-            <div class="small text-muted mt-2">Uma linha por item de pedido (pedido, SKU, quantidade). Serve para saber o que sai mais (linhas de pedido)
-              e o que sai junto. Só o resumo fica no projeto.</div>
+            <div class="small text-muted mt-2">{{ _("Uma linha por item de pedido (pedido, SKU, quantidade). Serve para saber o que sai mais (linhas de pedido) e o que sai junto. Só o resumo fica no projeto.") }}</div>
             <div class="form-check mt-2">
               <input class="form-check-input" type="checkbox" name="orders_abs" value="1" id="ordersAbs">
-              <label class="form-check-label small" for="ordersAbs"><b>Converter quantidades para valor absoluto</b>
-                (relatórios em que a saída vem com sinal negativo). Sem marcar, linhas com quantidade negativa são ignoradas.</label>
+              <label class="form-check-label small" for="ordersAbs">{{ _h("<b>Converter quantidades para valor absoluto</b> (relatórios em que a saída vem com sinal negativo). Sem marcar, linhas com quantidade negativa são ignoradas.") }}</label>
               <div class="small text-warning" id="ordersNeg"></div>
             </div>
             {% endif %}
@@ -57,8 +53,8 @@
   </div>
   <div class="alert alert-danger py-2 mt-3 d-none" id="mapErr"></div>
   <div class="d-flex gap-2 mt-3">
-    <button class="btn btn-accent" name="action" value="import"><i class="bi bi-check-lg"></i> Importar</button>
-    <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate><i class="bi bi-x-lg"></i> Cancelar</button>
+    <button class="btn btn-accent" name="action" value="import"><i class="bi bi-check-lg"></i> {{ _("Importar") }}</button>
+    <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate><i class="bi bi-x-lg"></i> {{ _("Cancelar") }}</button>
   </div>
 </form>
 {% endblock %}
@@ -78,10 +74,10 @@
     const sh = SHEETS[sheet], cols = (initial && MAP[kind] && MAP[kind].sheet === sheet) ? MAP[kind].cols : GUESS[kind][sheet];
     card.querySelectorAll('.col-sel').forEach(sel => {
       const f = sel.dataset.field, cur = cols[f];
-      let html = '<option value="">— não usar —</option>';
+      let html = '<option value="">' + _t('— não usar —') + '<\/option>';
       sh.headers.forEach((h, i) => {
         const ex = sh.rows.map(r => r[i]).find(v => v !== '' && v != null);
-        html += `<option value="${i}" ${cur === i ? 'selected' : ''}>${letter(i)} · ${esc(h || '(sem título)')}${ex !== undefined ? ' — ex.: ' + esc(String(ex).slice(0, 24)) : ''}</option>`;
+        html += `<option value="${i}" ${cur === i ? 'selected' : ''}>${letter(i)} · ${esc(h || _t('(sem título)'))}${ex !== undefined ? ' — ex.: ' + esc(String(ex).slice(0, 24)) : ''}</option>`;
       });
       sel.innerHTML = html;
     });
@@ -95,7 +91,7 @@
     if (!sheet || !sel || sel.value === '') { msg.textContent = ''; return; }
     const i = +sel.value, rows = SHEETS[sheet].rows;
     const neg = rows.filter(r => /^\s*-/.test(String(r[i] ?? ''))).length;
-    msg.textContent = neg ? `${neg} de ${rows.length} linha(s) da prévia com quantidade negativa.` : '';
+    msg.textContent = neg ? _t('{neg} de {rows} linha(s) da prévia com quantidade negativa.', {neg, rows: rows.length}) : '';
     if (neg && !box.dataset.touched) box.checked = true;
   }
   document.getElementById('ordersAbs')?.addEventListener('change', e => { e.target.dataset.touched = '1'; });
@@ -105,7 +101,7 @@
     const sheet = card.querySelector('.sheet-sel').value; if (!sheet) return;
     const sh = SHEETS[sheet], used = {};
     card.querySelectorAll('.col-sel').forEach(s => { if (s.value !== '') used[s.value] = s.selectedOptions[0] && s.closest('div').querySelector('label').textContent.replace(' *', ''); });
-    let h = '<thead><tr>' + sh.headers.map((c, i) => `<th class="${used[i] ? 'table-success' : 'text-muted'}" title="${esc(used[i] || 'não usada')}">${letter(i)} ${esc(c)}${used[i] ? '<div class="fw-normal text-success">→ ' + esc(used[i]) + '</div>' : ''}</th>`).join('') + '</tr></thead><tbody>';
+    let h = '<thead><tr>' + sh.headers.map((c, i) => `<th class="${used[i] ? 'table-success' : 'text-muted'}" title="${esc(used[i] || _t('não usada'))}">${letter(i)} ${esc(c)}${used[i] ? '<div class="fw-normal text-success">→ ' + esc(used[i]) + '</div>' : ''}</th>`).join('') + '</tr></thead><tbody>';
     sh.rows.forEach(r => { h += '<tr>' + sh.headers.map((_, i) => `<td class="${used[i] ? '' : 'text-muted'}">${esc(r[i])}</td>`).join('') + '</tr>'; });
     card.querySelector('.preview').innerHTML = h + '</tbody>';
   }
@@ -122,13 +118,13 @@
       const title = card.querySelector('strong').textContent, seen = {};
       card.querySelectorAll('.col-sel').forEach(s => {
         const lbl = s.closest('div').querySelector('label').textContent.replace(' *', '');
-        if (s.hasAttribute('data-required') && s.value === '') errs.push(`${title}: escolha a coluna de ${lbl}.`);
-        if (s.value !== '') { if (seen[s.value]) errs.push(`${title}: a coluna ${letter(+s.value)} está em ${seen[s.value]} e ${lbl}.`); seen[s.value] = lbl; }
+        if (s.hasAttribute('data-required') && s.value === '') errs.push(_t('{title}: escolha a coluna de {lbl}.', {title, lbl}));
+        if (s.value !== '') { if (seen[s.value]) errs.push(_t('{title}: a coluna {letter} está em {seen} e {lbl}.', {title, letter: letter(+s.value), seen: seen[s.value], lbl})); seen[s.value] = lbl; }
       });
       if (card.dataset.kind === 'skus' && ['stock', 'min', 'max'].every(f => card.querySelector(`[data-field="${f}"]`).value === ''))
-        errs.push('SKUs: escolha ao menos uma coluna de quantidade (Saldo, Min level ou Max level).');
+        errs.push(_t('SKUs: escolha ao menos uma coluna de quantidade (Saldo, Min level ou Max level).'));
     });
-    if (![...document.querySelectorAll('.sheet-sel')].some(s => s.value)) errs.push('Escolha ao menos uma aba para importar.');
+    if (![...document.querySelectorAll('.sheet-sel')].some(s => s.value)) errs.push(_t('Escolha ao menos uma aba para importar.'));
     const box = document.getElementById('mapErr');
     if (errs.length) { e.preventDefault(); box.innerHTML = errs.map(esc).join('<br>'); box.classList.remove('d-none'); box.scrollIntoView({block: 'center'}); }
   });

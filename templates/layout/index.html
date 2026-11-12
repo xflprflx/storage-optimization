@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Mapa do estoque{% endblock %}
+{% block title %}{{ _("Mapa do estoque") }}{% endblock %}
 {% block head %}
 <style>
   .nk-map-toolbar { position: sticky; top: 0; z-index: 20; }
@@ -24,11 +24,11 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-bricks"></i> Mapa do estoque</h1>
-    <div class="small text-muted">Elevação frontal em escala: cada endereço tem a largura e a altura das suas bins.</div>
+    <h1><i class="bi bi-bricks"></i> {{ _("Mapa do estoque") }}</h1>
+    <div class="small text-muted">{{ _("Elevação frontal em escala: cada endereço tem a largura e a altura das suas bins.") }}</div>
   </div>
   <div class="d-flex gap-2">
-    <a class="btn btn-outline-primary" id="planLink" href="/layout/plan" title="Planta vista de cima: onde ficam as estantes (usada na caminhada, no simulador de trajeto e no 3D)"><i class="bi bi-vector-pen"></i> Planta da filial</a>
+    <a class="btn btn-outline-primary" id="planLink" href="/layout/plan" title="{{ _("Planta vista de cima: onde ficam as estantes (usada na caminhada, no simulador de trajeto e no 3D)") }}"><i class="bi bi-vector-pen"></i> {{ _("Planta da filial") }}</a>
     <a class="btn btn-outline-secondary" id="plan3dLink" href="/layout/plan/3d"><i class="bi bi-box"></i> 3D</a>
   </div>
 </div>
@@ -37,39 +37,39 @@
   <div class="card-body py-2">
     <form class="row g-2 align-items-end" id="mapForm" onsubmit="return false">
       <div class="col-6 col-md-2">
-        <label class="form-label small mb-0">Filial</label>
+        <label class="form-label small mb-0">{{ _("Filial") }}</label>
         <select class="form-select form-select-sm" id="branch_id">
           {% for b in branches %}<option value="{{ b.id }}" {% if branch_id == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label small mb-0">Armazém</label>
+        <label class="form-label small mb-0">{{ _("Armazém") }}</label>
         <select class="form-select form-select-sm" id="warehouse_id">
-          <option value="none" data-branches="{{ branches_no_wh|join(',') }}" {% if warehouse_id == 'none' %}selected{% endif %}>— Sem armazém —</option>
+          <option value="none" data-branches="{{ branches_no_wh|join(',') }}" {% if warehouse_id == 'none' %}selected{% endif %}>{{ _("— Sem armazém —") }}</option>
           {% for w in warehouses %}<option value="{{ w.id }}" data-branches="{{ (wh_branches.get(w.id) or [])|join(',') }}" {% if warehouse_id == w.id|string %}selected{% endif %}>{{ w.code }} - {{ w.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="col-4 col-md-1">
-        <label class="form-label small mb-0">Corredor</label>
-        <select class="form-select form-select-sm" id="aisle"><option value="">Todos</option></select>
+        <label class="form-label small mb-0">{{ _("Corredor") }}</label>
+        <select class="form-select form-select-sm" id="aisle"><option value="">{{ _("Todos") }}</option></select>
       </div>
       <div class="col-8 col-md-2">
-        <label class="form-label small mb-0">Destacar (endereço ou SKU)</label>
-        <input class="form-control form-control-sm" type="search" id="highlight" placeholder="Ex.: A-01 ou PRD-001">
+        <label class="form-label small mb-0">{{ _("Destacar (endereço ou SKU)") }}</label>
+        <input class="form-control form-control-sm" type="search" id="highlight" placeholder="{{ _("Ex.: A-01 ou PRD-001") }}">
       </div>
       <div class="col-12 col-md-3">
-        <label class="form-label small mb-0">Colorir por</label>
+        <label class="form-label small mb-0">{{ _("Colorir por") }}</label>
         <div class="btn-group btn-group-sm w-100" role="group">
-          <input type="radio" class="btn-check" name="mode" id="mOcc" value="occ" checked><label class="btn btn-outline-secondary" for="mOcc">Ocupação</label>
-          <input type="radio" class="btn-check" name="mode" id="mFill" value="fill"><label class="btn btn-outline-secondary" for="mFill">% enchimento</label>
-          <input type="radio" class="btn-check" name="mode" id="mBin" value="bin"><label class="btn btn-outline-secondary" for="mBin">Tipo de bin</label>
+          <input type="radio" class="btn-check" name="mode" id="mOcc" value="occ" checked><label class="btn btn-outline-secondary" for="mOcc">{{ _("Ocupação") }}</label>
+          <input type="radio" class="btn-check" name="mode" id="mFill" value="fill"><label class="btn btn-outline-secondary" for="mFill">{{ _("% enchimento") }}</label>
+          <input type="radio" class="btn-check" name="mode" id="mBin" value="bin"><label class="btn btn-outline-secondary" for="mBin">{{ _("Tipo de bin") }}</label>
         </div>
       </div>
       <div class="col-12 col-md-2">
-        <label class="form-label small mb-0">Escala: <span id="zoomLabel" class="mono"></span></label>
+        <label class="form-label small mb-0">{{ _h("Escala: <span id=\"zoomLabel\" class=\"mono\"></span>") }}</label>
         <div class="d-flex gap-1 align-items-center">
           <input type="range" class="form-range" id="zoom" min="0.3" max="8" step="0.1" value="2">
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="fit" title="Ajustar à largura"><i class="bi bi-arrows-angle-contract"></i></button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="fit" title="{{ _("Ajustar à largura") }}"><i class="bi bi-arrows-angle-contract"></i></button>
         </div>
       </div>
     </form>
@@ -80,10 +80,7 @@
   </div>
 </div>
 
-{% if preview %}<div class="alert alert-primary py-2 small mb-2" id="pvBanner"><i class="bi bi-eye"></i> <b>Pré-visualização do cadastro em lote</b> — nada foi gravado.
-  <span class="ms-2"><span class="nk-legend-swatch" style="background:#cfe2ff;border:1.5px dashed #0d6efd"></span>novo</span>
-  <span class="ms-2"><span class="nk-legend-swatch" style="background:#fff;border:2px solid #d6336c"></span>existente em conflito</span>
-  <span id="pvCounts" class="ms-2"></span></div>{% endif %}
+{% if preview %}<div class="alert alert-primary py-2 small mb-2" id="pvBanner"><i class="bi bi-eye"></i> {{ _h("<b>Pré-visualização do cadastro em lote</b> — nada foi gravado. <span class=\"ms-2\"><span class=\"nk-legend-swatch\" style=\"background:#cfe2ff;border:1.5px dashed #0d6efd\"></span>novo</span> <span class=\"ms-2\"><span class=\"nk-legend-swatch\" style=\"background:#fff;border:2px solid #d6336c\"></span>existente em conflito</span> <span id=\"pvCounts\" class=\"ms-2\"></span>") }}</div>{% endif %}
 <div id="mapMsg"></div>
 <div id="map"></div>
 <div id="nkTip"></div>
@@ -107,7 +104,7 @@
 (function () {
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt = (n, d = 0) => n == null ? '—' : Number(n).toLocaleString('pt-BR', { maximumFractionDigits: d });
+  const fmt = (n, d = 0) => n == null ? '—' : Number(n).toLocaleString(NK_I18N.locale, { maximumFractionDigits: d });
   const fold = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toUpperCase();
   const compact = s => fold(s).replace(/[-./\s|\\]+/g, '');
 
@@ -132,22 +129,20 @@
     const params = new URLSearchParams({ branch_id: $('branch_id').value, warehouse_id: $('warehouse_id').value, aisle: $('aisle').value });
     if (PREVIEW) params.set('preview', PREVIEW);
     history.replaceState(null, '', '/layout?' + params.toString() + ({{ 'true' if embed else 'false' }} ? '&embed=1' : ''));
-    $('map').innerHTML = '<div class="text-center text-muted py-5"><span class="spinner-border spinner-border-sm"></span> Carregando…</div>';
+    $('map').innerHTML = '<div class="text-center text-muted py-5">' + _t('<span class="spinner-border spinner-border-sm"><\/span> Carregando…') + '<\/div>';
     $('mapMsg').innerHTML = '';
     try {
       const r = await fetch('/layout/data?' + params.toString());
       data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'Erro ao carregar');
+      if (!r.ok) throw new Error(data.detail || _t('Erro ao carregar'));
     } catch (e) { $('map').innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; return; }
     binTypes = Object.fromEntries((data.bin_types || []).map(b => [b.id, b]));
-    if (data.preview && $('pvCounts')) $('pvCounts').innerHTML = `· <b>${fmt(data.preview.new)}</b> novo(s)` +
-      (data.preview.removed ? ` · <b>${fmt(data.preview.removed)}</b> antigo(s) removido(s) (não aparecem)` : '') +
-      (data.preview.conflicts ? ` · <b class="text-danger">${fmt(data.preview.conflicts)}</b> em conflito` : '');
+    if (data.preview && $('pvCounts')) $('pvCounts').innerHTML = _t('· <b>{fmt}<\/b> novo(s){removed}{conflicts}', {fmt: fmt(data.preview.new), removed: (data.preview.removed ? ' ' + _t('· <b>{fmt}<\/b> antigo(s) removido(s) (não aparecem)', {fmt: fmt(data.preview.removed)}) : ''), conflicts: (data.preview.conflicts ? ' ' + _t('· <b class="text-danger">{fmt}<\/b> em conflito', {fmt: fmt(data.preview.conflicts)}) : '')});
     // Corredores disponíveis
     const cur = $('aisle').value;
-    $('aisle').innerHTML = '<option value="">Todos</option>' + (data.aisles_all || []).map(a => `<option ${a === cur ? 'selected' : ''}>${esc(a)}</option>`).join('');
+    $('aisle').innerHTML = '<option value="">' + _t('Todos') + '<\/option>' + ((data.aisles_all || []).map(a => `<option ${a === cur ? 'selected' : ''}>${esc(a)}</option>`).join(''));
     if (data.too_many) {
-      $('mapMsg').innerHTML = `<div class="alert alert-warning">Este depósito tem ${fmt(data.total)} endereços (limite de ${fmt(data.limit)} por desenho). Escolha um corredor.</div>`;
+      $('mapMsg').innerHTML = '<div class="alert alert-warning">' + _t('Este depósito tem {fmt} endereços (limite de {fmt2} por desenho). Escolha um corredor.', {fmt: fmt(data.total), fmt2: fmt(data.limit)}) + '<\/div>';
       $('map').innerHTML = ''; renderStats(); return;
     }
     renderStats(); render();
@@ -259,7 +254,7 @@
           for (let r = 1; r < nz; r++) out.push(`<line x1="${bx + 1}" y1="${bottom - rh * r}" x2="${bx + pw - 1}" y2="${bottom - rh * r}" stroke="rgba(0,0,0,.3)" stroke-width=".6" stroke-dasharray="1 1.5" pointer-events="none"/>`);
           for (let s = used; s < k; s++) {
             const col = s % nx, row = Math.floor(s / nx);
-            out.push(`<rect x="${bx + cw * col + .5}" y="${bottom - rh * (row + 1) + .5}" width="${cw - 1}" height="${rh - 1}" fill="#fff" opacity=".65" stroke="#9aa5ad" stroke-dasharray="2 1.5" pointer-events="none"><title>Compartimento ${s + 1} de ${k} (${esc(fr.grid)}) vazio nesta ${esc(fr.parent)}</title></rect>`);
+            out.push('<rect x="' + (bx + cw * col + .5) + '" y="' + (bottom - rh * (row + 1) + .5) + '" width="' + (cw - 1) + '" height="' + (rh - 1) + '" fill="#fff" opacity=".65" stroke="#9aa5ad" stroke-dasharray="2 1.5" pointer-events="none"><title>' + _t('Compartimento {s} de {k} ({esc}) vazio nesta {esc2}', {s: s + 1, k, esc: esc(fr.grid), esc2: esc(fr.parent)}) + '<\/title><\/rect>');
           }
           if (pw >= 16 && ph >= 9) out.push(`<text x="${bx + 2}" y="${bottom - ph + 6}" font-size="6" fill="#3b5b8c" pointer-events="none" font-family="ui-monospace,monospace">${esc(fr.label)}</text>`);
           bx += pw;
@@ -281,13 +276,13 @@
     // Vão do nível (distância até o nível de cima): linha pontilhada na altura cadastrada
     if (lv.height) {
       const vy = bottom - lv.height * S;
-      out.push(`<line x1="${x}" y1="${vy}" x2="${x + s.w}" y2="${vy}" stroke="${lv.tall.length ? COLORS.over : '#9aa5ad'}" stroke-width="1" stroke-dasharray="1 3"><title>Vão do nível: ${fmt(lv.height, 1)} cm</title></line>`);
+      out.push('<line x1="' + x + '" y1="' + vy + '" x2="' + (x + s.w) + '" y2="' + vy + '" stroke="' + (lv.tall.length ? COLORS.over : '#9aa5ad') + '" stroke-width="1" stroke-dasharray="1 3"><title>' + _t('Vão do nível: {fmt} cm', {fmt: fmt(lv.height, 1)}) + '<\/title><\/line>');
     }
     // Área de capacidade cadastrada (quanto cabe no nível)
     if (lv.usable_w || lv.reserved) {
       const aw = lv.usable_w ? lv.usable_w * S : s.w;
       out.push(`<rect x="${x}" y="${bottom - s.h}" width="${aw}" height="${s.h}" fill="${lv.reserved ? '#f1f3f5' : '#f4f7f9'}" stroke="${over ? COLORS.over : '#aeb8c0'}" stroke-width="${over ? 1.5 : 1}" stroke-dasharray="4 3"/>`);
-      if (lv.reserved && !lv.extra.length) out.push(`<text x="${x + aw / 2}" y="${bottom - s.h / 2}" font-size="9" text-anchor="middle" dominant-baseline="central" fill="#8a96a0" font-style="italic">nível reservado</text>`);
+      if (lv.reserved && !lv.extra.length) out.push('<text x="' + (x + aw / 2) + '" y="' + (bottom - s.h / 2) + '" font-size="9" text-anchor="middle" dominant-baseline="central" fill="#8a96a0" font-style="italic">' + _t('nível reservado') + '<\/text>');
     }
     let cx = x;
     // 1) Bins de endereços de outros níveis desta estante (ex.: transbordo do nível de baixo).
@@ -317,15 +312,15 @@
     // Uso do nível (fração da capacidade) à direita do montante
     const ux = x + (node._bayW || s.w) + G.UP + 3, uy = bottom - s.h / 2;
     if (lv.fraction != null) {
-      out.push(`<text x="${ux}" y="${uy}" font-size="9" font-weight="600" dominant-baseline="central" fill="${usageColor(lv.fraction)}" font-family="ui-monospace,monospace"><title>Uso do nível: ${fmt(lv.fraction * 100, 0)}% da capacidade</title>${fmt(lv.fraction * 100, 0)}%</text>`);
+      out.push('<text x="' + ux + '" y="' + uy + '" font-size="9" font-weight="600" dominant-baseline="central" fill="' + (usageColor(lv.fraction)) + '" font-family="ui-monospace,monospace"><title>' + _t('Uso do nível: {fmt}% da capacidade', {fmt: fmt(lv.fraction * 100, 0)}) + '<\/title>' + (fmt(lv.fraction * 100, 0)) + '%<\/text>');
     } else if (Object.keys(lv.caps).length && lv.unknown.length) {
-      out.push(`<text x="${ux}" y="${uy}" font-size="9" dominant-baseline="central" fill="#8a96a0"><title>Há bins de tipo sem capacidade cadastrada neste nível</title>?%</text>`);
+      out.push('<text x="' + ux + '" y="' + uy + '" font-size="9" dominant-baseline="central" fill="#8a96a0"><title>' + _t('Há bins de tipo sem capacidade cadastrada neste nível') + '<\/title>?%<\/text>');
     }
     if (node._stretch) {
       const eff = s.h / S;
-      out.push(`<text x="${ux}" y="${uy + 11}" font-size="8" dominant-baseline="central" fill="#8a96a0" font-family="ui-monospace,monospace"><title>Distância entre níveis compensada para o porta-palete ter a mesma altura das outras estantes do corredor (${fmt(eff, 0)} cm)</title>↕${fmt(eff, 0)}</text>`);
+      out.push('<text x="' + ux + '" y="' + (uy + 11) + '" font-size="8" dominant-baseline="central" fill="#8a96a0" font-family="ui-monospace,monospace"><title>' + _t('Distância entre níveis compensada para o porta-palete ter a mesma altura das outras estantes do corredor ({fmt} cm)', {fmt: fmt(eff, 0)}) + '<\/title>↕' + (fmt(eff, 0)) + '<\/text>');
     } else if (lv.height) {
-      out.push(`<text x="${ux}" y="${uy + 11}" font-size="8" dominant-baseline="central" fill="${lv.tall.length ? COLORS.over : '#8a96a0'}" font-family="ui-monospace,monospace"><title>${lv.tall.length ? 'Bin mais alta que o vão: ' + esc(lv.tall.join(', ')) : 'Vão do nível (distância até o nível de cima)'}</title>↕${fmt(lv.height, 0)}</text>`);
+      out.push(`<text x="${ux}" y="${uy + 11}" font-size="8" dominant-baseline="central" fill="${lv.tall.length ? COLORS.over : '#8a96a0'}" font-family="ui-monospace,monospace"><title>${lv.tall.length ? _t('Bin mais alta que o vão: {esc}', {esc: esc(lv.tall.join(', '))}) : _t('Vão do nível (distância até o nível de cima)')}</title>↕${fmt(lv.height, 0)}</text>`);
     }
   }
   function drawNode(out, node, x, bottom) {
@@ -394,7 +389,7 @@
       out.push(`<text x="${bx + s.w / 2}" y="${floor + 15}" font-size="11" font-weight="600" text-anchor="middle" fill="#1f2d33" font-family="ui-monospace,monospace">${esc(b.leaf ? b.leaf.address : aisle.code + '-' + b.code)}</text>`);
       if (b.struct) {   // estrutura de armazenagem da estante
         const st = b.struct;
-        out.push(`<text x="${bx + s.w / 2}" y="${floor + 28}" font-size="9" text-anchor="middle" fill="#3b5b8c" font-family="ui-monospace,monospace"><title>${esc(st.name)} — frente ${fmt(st.width)} cm, prof. ${fmt(st.depth)} cm, altura ${fmt(st.height)} cm, ${st.levels} níveis × ${fmt(st.level_h)} cm</title>▤ ${esc(st.code)}</text>`);
+        out.push('<text x="' + (bx + s.w / 2) + '" y="' + (floor + 28) + '" font-size="9" text-anchor="middle" fill="#3b5b8c" font-family="ui-monospace,monospace"><title>' + _t('{esc} — frente {fmt} cm, prof. {fmt2} cm, altura {fmt3} cm, {levels} níveis × {fmt4} cm', {esc: esc(st.name), fmt: fmt(st.width), fmt2: fmt(st.depth), fmt3: fmt(st.height), levels: st.levels, fmt4: fmt(st.level_h)}) + '<\/title>▤ ' + (esc(st.code)) + '<\/text>');
       }
     }
     (function count(n) { if (n.leaf) { nLeaves++; if (n.leaf.occupied) nOcc++; } (n.children || []).forEach(count); })(aisle);
@@ -409,14 +404,11 @@
     if (!data || data.too_many) return;
     leafIndex = {}; indexLeaves();
     $('zoomLabel').textContent = `${state.zoom.toFixed(1)} px/cm`;
-    if (!data.aisles.length) { $('map').innerHTML = '<div class="alert alert-info">Nenhum endereço neste depósito. <a href="/locations/batch">Gerar endereços em lote</a></div>'; return; }
+    if (!data.aisles.length) { $('map').innerHTML = '<div class="alert alert-info">' + _t('Nenhum endereço neste depósito. <a href="/locations/batch">Gerar endereços em lote<\/a>') + '<\/div>'; return; }
     const html = [];
     for (const a of data.aisles) {
       const r = renderAisle(a);
-      html.push(`<div class="card mb-3"><div class="card-header bg-white py-1 d-flex justify-content-between small">
-        <strong>Corredor ${esc(a.code)}</strong>
-        <span class="text-muted">${fmt(r.nLeaves)} endereço(s) · ${fmt(r.nOcc)} ocupado(s) · ${fmt(r.nLeaves - r.nOcc)} livre(s)</span></div>
-        <div class="nk-aisle p-2">${r.svg}</div></div>`);
+      html.push('<div class="card mb-3"><div class="card-header bg-white py-1 d-flex justify-content-between small">\n        <strong>' + _t('Corredor {esc}', {esc: esc(a.code)}) + '<\/strong>\n        <span class="text-muted">' + _t('{fmt} endereço(s) · {fmt2} ocupado(s) · {fmt3} livre(s)', {fmt: fmt(r.nLeaves), fmt2: fmt(r.nOcc), fmt3: fmt(r.nLeaves - r.nOcc)}) + '<\/span><\/div>\n        <div class="nk-aisle p-2">' + r.svg + '<\/div><\/div>');
     }
     $('map').innerHTML = html.join('');
     renderLegend();
@@ -445,34 +437,30 @@
     const s = data && data.stats || {};
     if (!s.locations && !(data && data.too_many)) { $('stats').innerHTML = ''; return; }
     $('stats').innerHTML = data.too_many ? '' : [
-      `<span class="nk-stat"><b>${fmt(s.locations)}</b> endereços</span>`,
-      `<span class="nk-stat"><b>${fmt(s.occupied)}</b> ocupados</span>`,
-      `<span class="nk-stat"><b>${fmt(s.free)}</b> livres</span>`,
-      `<span class="nk-stat" title="Endereços sem bin (ou bin sem dimensões): desenhados com tamanho padrão e borda tracejada"><b>${fmt(s.no_dims)}</b> sem dimensão</span>`,
-      `<span class="nk-stat" title="Volume das unidades ÷ volume das bins (produtos com dimensões)">enchimento médio <b>${s.fill_avg == null ? '—' : fmt(s.fill_avg, 1) + '%'}</b></span>`,
-      s.over ? `<span class="nk-stat text-danger"><b>${fmt(s.over)}</b> acima de 100%</span>` : '',
-      s.levels_over ? `<span class="nk-stat text-danger" title="Níveis com mais bins do que a capacidade cadastrada"><b>${fmt(s.levels_over)}</b> nível(is) acima da capacidade</span>` : '',
-      s.extra_blocks ? `<span class="nk-stat text-primary" title="Grupos de bins alocados em outro nível da estante"><b>${fmt(s.extra_blocks)}</b> alocação(ões) em nível extra</span>` : '',
-      s.levels_tall ? `<span class="nk-stat text-danger" title="Níveis com bin mais alta que o vão cadastrado"><b>${fmt(s.levels_tall)}</b> nível(is) com bin mais alta que o vão</span>` : '',
+      '<span class="nk-stat">' + _t('<b>{fmt}<\/b> endereços', {fmt: fmt(s.locations)}) + '<\/span>',
+      '<span class="nk-stat">' + _t('<b>{fmt}<\/b> ocupados', {fmt: fmt(s.occupied)}) + '<\/span>',
+      '<span class="nk-stat">' + _t('<b>{fmt}<\/b> livres', {fmt: fmt(s.free)}) + '<\/span>',
+      '<span class="nk-stat" title="' + _t('Endereços sem bin (ou bin sem dimensões): desenhados com tamanho padrão e borda tracejada') + '">' + _t('<b>{fmt}<\/b> sem dimensão', {fmt: fmt(s.no_dims)}) + '<\/span>',
+      '<span class="nk-stat" title="' + _t('Volume das unidades ÷ volume das bins (produtos com dimensões)') + '">' + _t('enchimento médio <b>{fill_avg}<\/b>', {fill_avg: s.fill_avg == null ? '—' : fmt(s.fill_avg, 1) + '%'}) + '<\/span>',
+      s.over ? '<span class="nk-stat text-danger">' + _t('<b>{fmt}<\/b> acima de 100%', {fmt: fmt(s.over)}) + '<\/span>' : '',
+      s.levels_over ? '<span class="nk-stat text-danger" title="' + _t('Níveis com mais bins do que a capacidade cadastrada') + '">' + _t('<b>{fmt}<\/b> nível(is) acima da capacidade', {fmt: fmt(s.levels_over)}) + '<\/span>' : '',
+      s.extra_blocks ? '<span class="nk-stat text-primary" title="' + _t('Grupos de bins alocados em outro nível da estante') + '">' + _t('<b>{fmt}<\/b> alocação(ões) em nível extra', {fmt: fmt(s.extra_blocks)}) + '<\/span>' : '',
+      s.levels_tall ? '<span class="nk-stat text-danger" title="' + _t('Níveis com bin mais alta que o vão cadastrado') + '">' + _t('<b>{fmt}<\/b> nível(is) com bin mais alta que o vão', {fmt: fmt(s.levels_tall)}) + '<\/span>' : '',
     ].join('');
   }
   function renderLegend() {
     let h = '';
     if (state.mode === 'occ') {
-      h = `<span><span class="nk-legend-swatch" style="background:${COLORS.occ}"></span>Ocupado</span>
-           <span><span class="nk-legend-swatch" style="background:${COLORS.free}"></span>Livre</span>`;
+      h = '<span><span class="nk-legend-swatch" style="background:' + COLORS.occ + '"><\/span>' + _t('Ocupado') + '<\/span>\n           <span><span class="nk-legend-swatch" style="background:' + COLORS.free + '"><\/span>' + _t('Livre') + '<\/span>';
     } else if (state.mode === 'fill') {
-      h = [0, 25, 50, 75, 100].map(p => `<span><span class="nk-legend-swatch" style="background:${heat(p)}"></span>${p}%</span>`).join('') +
-          `<span><span class="nk-legend-swatch" style="background:${COLORS.over}"></span>&gt;100%</span>
-           <span><span class="nk-legend-swatch" style="background:${COLORS.none}"></span>sem bin / sem dados</span>`;
+      h = ([0, 25, 50, 75, 100].map(p => `<span><span class="nk-legend-swatch" style="background:${heat(p)}"></span>${p}%</span>`).join('')) + '<span><span class="nk-legend-swatch" style="background:' + COLORS.over + '"><\/span>&gt;100%<\/span>\n           <span><span class="nk-legend-swatch" style="background:' + COLORS.none + '"><\/span>' + _t('sem bin / sem dados') + '<\/span>';
     } else {
       const used = new Set(); Object.values(leafIndex).forEach(l => l.bins.forEach(b => used.add(b.type)));
-      h = [...used].map(id => binTypes[id]).filter(Boolean).map(t => `<span title="${esc(t.name)}"><span class="nk-legend-swatch" style="background:${t.color}"></span>${esc(t.code)}</span>`).join('') +
-          `<span><span class="nk-legend-swatch" style="background:${COLORS.none}"></span>sem bin</span>`;
+      h = ([...used].map(id => binTypes[id]).filter(Boolean).map(t => `<span title="${esc(t.name)}"><span class="nk-legend-swatch" style="background:${t.color}"></span>${esc(t.code)}</span>`).join('')) + '<span><span class="nk-legend-swatch" style="background:' + COLORS.none + '"><\/span>' + _t('sem bin') + '<\/span>';
     }
-    h += `<span class="text-muted"><span class="nk-legend-swatch" style="background:#fff;border:1px dashed #9aa5ad"></span>sem dimensão</span>`;
-    h += `<span class="text-muted" title="Bins de um endereço alocadas em outro nível da mesma estante"><span class="nk-legend-swatch" style="background:repeating-linear-gradient(45deg,#cfe2ff 0 3px,#fff 3px 6px);border:1px dashed #0d6efd"></span>bins em outro nível</span>`;
-    h += `<span class="text-muted" title="Área = capacidade cadastrada do nível; % à direita = uso"><span class="nk-legend-swatch" style="background:#f4f7f9;border:1px dashed #aeb8c0"></span>capacidade do nível</span>`;
+    h += '<span class="text-muted">' + _t('<span class="nk-legend-swatch" style="background:#fff;border:1px dashed #9aa5ad"><\/span>sem dimensão') + '<\/span>';
+    h += '<span class="text-muted" title="' + _t('Bins de um endereço alocadas em outro nível da mesma estante') + '">' + _t('<span class="nk-legend-swatch" style="background:repeating-linear-gradient(45deg,#cfe2ff 0 3px,#fff 3px 6px);border:1px dashed #0d6efd"><\/span>bins em outro nível') + '<\/span>';
+    h += '<span class="text-muted" title="' + _t('Área = capacidade cadastrada do nível; % à direita = uso') + '">' + _t('<span class="nk-legend-swatch" style="background:#f4f7f9;border:1px dashed #aeb8c0"><\/span>capacidade do nível') + '<\/span>';
     $('legend').innerHTML = h;
   }
 
@@ -493,19 +481,19 @@
     const ownerId = ex ? ex.dataset.owner : g.dataset.id;
     const lf = leafIndexAll[ownerId] || leafIndex[ownerId]; if (!lf) return;
     link(ownerId);
-    const extraHead = ex ? `<div class="mb-1 p-1 rounded" style="background:#e7f1ff">Bins <b>${esc(ex.dataset.qty)}× ${esc((binTypes[ex.dataset.type] || {}).code)}</b> deste endereço alocadas no <b>nível ${esc(ex.dataset.level)}</b></div>` : '';
-    const extraList = (lf.extra || []).map(x => `${x.qty}× <b>${esc((binTypes[x.type] || {}).code)}</b> <span class="text-primary">↳ nível ${esc(x.level)}</span>`).join('<br>');
-    const bins = lf.bins.map(b => { const t = binTypes[b.type] || {}; return `${b.qty}× <b>${esc(t.code)}</b>${t.w != null ? ` <span class="text-muted">${fmt(t.w,1)}×${fmt(t.h,1)}×${fmt(t.d,1)} cm</span>` : ''}`; }).join('<br>') || '<span class="text-muted">sem bin</span>';
-    const items = lf.items.slice(0, 8).map(it => `<tr><td class="mono">${esc(it.sku)}</td><td class="text-end">${it.qty == null ? '<span class="text-muted">padrão</span>' : fmt(it.qty, 3)}</td></tr>`).join('');
-    const markHead = lf.mark === 'new' ? '<div class="mb-1 p-1 rounded" style="background:#cfe2ff"><b>Novo</b> — será criado pelo lote</div>'
+    const extraHead = ex ? '<div class="mb-1 p-1 rounded" style="background:#e7f1ff">' + _t('Bins <b>{esc}× {esc2}<\/b> deste endereço alocadas no <b>nível {esc3}<\/b>', {esc: esc(ex.dataset.qty), esc2: esc((binTypes[ex.dataset.type] || {}).code), esc3: esc(ex.dataset.level)}) + '<\/div>' : '';
+    const extraList = (lf.extra || []).map(x => _t('{qty}× <b>{esc}<\/b> <span class="text-primary">↳ nível {esc2}<\/span>', {qty: x.qty, esc: esc((binTypes[x.type] || {}).code), esc2: esc(x.level)})).join('<br>');
+    const bins = lf.bins.map(b => { const t = binTypes[b.type] || {}; return `${b.qty}× <b>${esc(t.code)}</b>${t.w != null ? ` <span class="text-muted">${fmt(t.w,1)}×${fmt(t.h,1)}×${fmt(t.d,1)} cm</span>` : ''}`; }).join('<br>') || '<span class="text-muted">' + _t('sem bin') + '<\/span>';
+    const items = lf.items.slice(0, 8).map(it => `<tr><td class="mono">${esc(it.sku)}</td><td class="text-end">${it.qty == null ? '<span class="text-muted">' + _t('padrão') + '<\/span>' : fmt(it.qty, 3)}</td></tr>`).join('');
+    const markHead = lf.mark === 'new' ? '<div class="mb-1 p-1 rounded" style="background:#cfe2ff">' + _t('<b>Novo<\/b> — será criado pelo lote') + '<\/div>'
       : lf.mark ? `<div class="mb-1 p-1 rounded text-danger" style="background:#fbe3ea">${esc(lf.mark)}</div>` : '';
     tip.innerHTML = markHead + extraHead + `<div class="d-flex justify-content-between gap-3"><b class="mono">${esc(lf.address)}</b>
-        <span class="badge ${lf.occupied ? 'text-bg-warning' : 'text-bg-light border'}">${lf.occupied ? 'Ocupado' : 'Livre'}</span></div>
-      <div class="text-muted">${lf.dims ? `${fmt(lf.w,1)} × ${fmt(lf.h,1)} cm (L×A) · prof. ${fmt(lf.d,1)} cm` : 'Sem dimensão (tamanho padrão no desenho)'}</div>
+        <span class="badge ${lf.occupied ? 'text-bg-warning' : 'text-bg-light border'}">${lf.occupied ? _t('Ocupado') : _t('Livre')}</span></div>
+      <div class="text-muted">${lf.dims ? `${fmt(lf.w,1)} × ${fmt(lf.h,1)} cm (L×A) · prof. ${fmt(lf.d,1)} cm` : _t('Sem dimensão (tamanho padrão no desenho)')}</div>
       <div class="mt-1">${bins}${extraList ? '<br>' + extraList : ''}</div>
-      ${lf.fill != null ? `<div class="mt-1">Enchimento: <b>${fmt(lf.fill, 1)}%</b> <span class="text-muted">(vol. ${fmt(lf.fill_vol, 1)}%${lf.fill_w != null ? ` · peso ${fmt(lf.fill_w, 1)}%` : ''})${lf.fill_partial ? ' · parcial: há produto sem dimensão/peso' : ''}</span></div>` : ''}
+      ${lf.fill != null ? '<div class="mt-1">' + _t('Enchimento: <b>{fmt}%<\/b> <span class="text-muted">(vol. {fmt2}%{fill_w}){fill_partial}<\/span>', {fmt: fmt(lf.fill, 1), fmt2: fmt(lf.fill_vol, 1), fill_w: lf.fill_w != null ? ` · peso ${fmt(lf.fill_w, 1)}%` : '', fill_partial: lf.fill_partial ? ' ' + _t('· parcial: há produto sem dimensão/peso') : ''}) + '<\/div>' : ''}
       ${items ? `<table class="mt-1">${items}</table>${lf.n_items > 8 ? `<div class="text-muted">+${lf.n_items - 8} SKU(s)</div>` : ''}` : ''}
-      ${lf.id > 0 ? '<div class="text-muted mt-1" style="font-size:.7rem">Clique para abrir o endereço</div>' : ''}`;
+      ${lf.id > 0 ? '<div class="text-muted mt-1" style="font-size:.7rem">' + _t('Clique para abrir o endereço') + '<\/div>' : ''}`;
     tip.style.display = 'block';
     const pad = 14, r = tip.getBoundingClientRect();
     let x = e.clientX + pad, y = e.clientY + pad;
@@ -533,7 +521,7 @@
 
   try { const m = localStorage.getItem('nk-map-mode'); if (m) { state.mode = m; const el = document.querySelector(`input[name=mode][value="${m}"]`); if (el) el.checked = true; } } catch (e) {}
   if ($('branch_id').value) { filterWarehouses(); const initAisle = {{ aisle|tojson }}; if (initAisle) $('aisle').innerHTML = `<option value="${esc(initAisle)}" selected>${esc(initAisle)}</option>`; load(); }
-  else $('map').innerHTML = '<div class="alert alert-info">Cadastre uma filial e endereços para ver o mapa.</div>';
+  else $('map').innerHTML = '<div class="alert alert-info">' + _t('Cadastre uma filial e endereços para ver o mapa.') + '<\/div>';
 })();
 </script>
 {% endblock %}

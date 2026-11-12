@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from models import BinType
+from services.i18n import _
 
 MAX_CELLS = 48
 Q = Decimal("0.0001")
@@ -27,21 +28,21 @@ def parse_grid(cols: str, rows: str, fraction: str = "", axis: str = "width") ->
     try:
         c, r = num(cols), num(rows)
     except ValueError:
-        return None, "Divisões: use números inteiros a partir de 1."
+        return None, _("Divisões: use números inteiros a partir de 1.")
     if c is None and r is None:
         f = (fraction or "").replace(" ", "")
         if not f:
             return None, ""
         m = re.fullmatch(r"1/(\d+)", f)
         if not m or int(m.group(1)) < 2:
-            return None, "Fração inválida: use 1/2, 1/3, 1/4… (ou informe as divisões)."
+            return None, _("Fração inválida: use 1/2, 1/3, 1/4… (ou informe as divisões).")
         n = int(m.group(1))
         c, r = (1, n) if axis == "length" else (n, 1)
     c, r = c or 1, r or 1
     if c * r < 2:
-        return None, "A divisão precisa ter ao menos 2 compartimentos (ex.: 2 × 1)."
+        return None, _("A divisão precisa ter ao menos 2 compartimentos (ex.: 2 × 1).")
     if c * r > MAX_CELLS:
-        return None, f"No máximo {MAX_CELLS} compartimentos por bin."
+        return None, _("No máximo {MAX_CELLS} compartimentos por bin.", MAX_CELLS=MAX_CELLS)
     return (c, r), ""
 
 

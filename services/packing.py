@@ -13,6 +13,7 @@ import itertools
 import math
 from dataclasses import dataclass, field
 from typing import Optional
+from services.i18n import _, seps
 
 EPS = 1e-9
 PALETTE = ["#2f7ed8", "#e8743b", "#19a979", "#ed4a7b", "#945ecf", "#13a4b4", "#c3a32c", "#6f7c87"]
@@ -59,16 +60,15 @@ class ItemArrangement:
     @property
     def text(self) -> str:
         if not self.oriented:
-            return "sem dimensões: orientação não calculada"
+            return _("sem dimensões: orientação não calculada")
         oh, ow, ol = self.oriented
         if not self.per_bin:
-            return "não cabe nesta bin com a rotação permitida"
-        t = (f"{self.vertical} na vertical · base {_n(ow)}×{_n(ol)} cm · {self.nx}×{self.nz} por camada"
-             f" · {self.layers_used} de {self.ny} camada(s)")
+            return _("não cabe nesta bin com a rotação permitida")
+        t = (_("{vertical} na vertical · base {n}×{n2} cm · {nx}×{nz} por camada · {layers_used} de {ny} camada(s)", vertical=self.vertical, n=_n(ow), n2=_n(ol), nx=self.nx, nz=self.nz, layers_used=self.layers_used, ny=self.ny))
         if self.reserved:
-            t += f" · + espaço reservado para mais {self.reserved} un. do plano"
+            t += _(" · + espaço reservado para mais {reserved} un. do plano", reserved=self.reserved)
         if self.overflow:
-            t += f" · {self.overflow} un. não cabem"
+            t += _(" · {overflow} un. não cabem", overflow=self.overflow)
         return t
 
 
@@ -94,7 +94,7 @@ class BinArrangement:
 
 
 def _n(v) -> str:
-    return f"{v:g}".replace(".", ",")
+    return f"{v:g}".replace(".", seps()[0])
 
 
 def _orientations(dims: tuple, rotation: str):
@@ -122,7 +122,7 @@ def best_orientation(dims: tuple, box: tuple, rotation: str = "upright"):
         key = (total, -vert)
         if best is None or key > best[0]:
             best = (key, o, vert, nx, nz, ny, total)
-    _, o, vert, nx, nz, ny, total = best
+    _x, o, vert, nx, nz, ny, total = best
     return o, vert, nx, nz, ny, total
 
 
@@ -204,7 +204,7 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
                 if abs(c * cw_ - ox) < 1e-6 and abs(r * cl_ - oz) < 1e-6:
                     continue
                 parts.append(f'<rect x="{0.5 + c * cw_ * sc:.1f}" y="{oy + .5 + r * cl_ * sc:.1f}" width="{cw_ * sc:.1f}" '
-                             f'height="{cl_ * sc:.1f}" fill="#e3e7ea"><title>outro compartimento {pr["label"]} da {pr["code"]}</title></rect>')
+                             f'height="{cl_ * sc:.1f}" fill="#e3e7ea"><title>{_("outro compartimento {label} da {code}", label=pr["label"], code=pr["code"])}</title></rect>')
             if c != my_col:  # de frente, as outras colunas
                 parts.append(f'<rect x="{fx + .5 + c * cw_ * sc:.1f}" y="{oy + .5:.1f}" width="{cw_ * sc:.1f}" height="{th:.1f}" fill="#e3e7ea"/>')
         for c in range(1, nx):
@@ -216,7 +216,7 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
             parts.append(f'<line x1="0.5" y1="{yy:.1f}" x2="{0.5 + tw:.1f}" y2="{yy:.1f}" stroke="#3b5b8c" stroke-width=".9" stroke-dasharray="2 1.2"/>')
     numbered: set = set()
     for it in arr.items:
-        layer_no = {y: n for n, y, *_ in it.layers()}
+        layer_no = {y: n for n, y, *_x in it.layers()}
         top: dict = {}  # (x, z) -> (dx, dz, nº da camada mais alta, reserva?)
         front: dict = {}
         for k, (x, y, z, dx, dy, dz) in enumerate(it.boxes):
@@ -248,6 +248,7 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
                 continue
             numbered.add(round(yy, 1))
             parts.append(f'<text x="{fx - 1.5:.1f}" y="{yy:.1f}" font-size="{min(fs, max(dy * sc, 3.5)):.1f}" text-anchor="end" '
-                         f'dominant-baseline="central" fill="#1f2d33"><title>Camada {n}: {cnt} un. de {it.sku}{f" + {gh} de reserva" if gh else ""}</title>{n}</text>')
+                         f'dominant-baseline="central" fill="#1f2d33"><title>{_("Camada {n}: {cnt} un. de {sku}", n=n, cnt=cnt, sku=it.sku)}'
+                         f'{_(" + {gh} de reserva", gh=gh) if gh else ""}</title>{n}</text>')
     parts.append("</svg>")
     return "".join(parts)

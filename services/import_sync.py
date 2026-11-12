@@ -16,16 +16,16 @@ from sqlalchemy.orm import Session
 from models import (BinContent, BinType, Branch, LevelCapacity, LocationBin, Product, ShelfLevel, StockItem,
                     StorageLocation, Warehouse)
 from models.entities import branch_warehouse
+from services.i18n import N_, _
 
 CHUNK = 900
 
 
 def blocked_reason(error_count: int, rows_ok: int) -> Optional[str]:
     if error_count:
-        return (f"Sincronização NÃO executada: o arquivo teve {error_count} linha(s) com erro. Corrija e importe de "
-                "novo — nada foi excluído.")
+        return (_("Sincronização NÃO executada: o arquivo teve {error_count} linha(s) com erro. Corrija e importe de novo — nada foi excluído.", error_count=error_count))
     if not rows_ok:
-        return "Sincronização NÃO executada: nenhuma linha válida no arquivo — nada foi excluído."
+        return _("Sincronização NÃO executada: nenhuma linha válida no arquivo — nada foi excluído.")
     return None
 
 
@@ -40,13 +40,13 @@ def _chunks(ids: list) -> Iterable[list]:
 
 
 def _kept_note(what: str, kept: dict[str, list[str]]) -> list[str]:
-    return [f"{what} fora do arquivo mantido(s) — {reason}: {_few(codes)}." for reason, codes in kept.items() if codes]
+    return [_("{what} fora do arquivo mantido(s) — {reason}: {few}.", what=what, reason=reason, few=_few(codes)) for reason, codes in kept.items() if codes]
 
 
 # --------------------------------------------------------------------------- #
 def sync_branches(db: Session, seen: set[int]) -> tuple[int, list[str]]:
     used = set(db.scalars(select(StorageLocation.branch_id).distinct())) | set(db.scalars(select(ShelfLevel.branch_id).distinct()))
-    gone, kept = [], {"tem endereços ou níveis": []}
+    gone, kept = [], {N_("tem endereços ou níveis"): []}
     for b in db.scalars(select(Branch).where(Branch.id.not_in(seen) if seen else True)):
         if b.id in used:
             kept["tem endereços ou níveis"].append(b.code)
@@ -54,7 +54,7 @@ def sync_branches(db: Session, seen: set[int]) -> tuple[int, list[str]]:
             gone.append(b.id)
     for ch in _chunks(gone):
         db.execute(delete(Branch).where(Branch.id.in_(ch)))
-    return len(gone), _kept_note("Filial(is)", kept)
+    return len(gone), _kept_note(_("Filial(is)"), kept)
 
 
 def sync_warehouses(db: Session, seen: set[int], links: Optional[dict[int, set[int]]] = None) -> tuple[dict, list[str]]:
@@ -63,7 +63,7 @@ def sync_warehouses(db: Session, seen: set[int], links: Optional[dict[int, set[i
     used_pairs = set(db.execute(select(StorageLocation.branch_id, StorageLocation.warehouse_id).distinct()).all()) | \
         set(db.execute(select(ShelfLevel.branch_id, ShelfLevel.warehouse_id).distinct()).all())
     used = {w for _b, w in used_pairs if w is not None}
-    gone, kept = [], {"tem endereços ou níveis": []}
+    gone, kept = [], {N_("tem endereços ou níveis"): []}
     for w in db.scalars(select(Warehouse).where(Warehouse.id.not_in(seen) if seen else True)):
         if w.id in used:
             kept["tem endereços ou níveis"].append(w.code)
@@ -85,17 +85,17 @@ def sync_warehouses(db: Session, seen: set[int], links: Optional[dict[int, set[i
             db.execute(delete(branch_warehouse).where(branch_warehouse.c.branch_id == bid,
                                                       branch_warehouse.c.warehouse_id == wid))
             n_links += 1
-    notes = _kept_note("Armazém(ns)", kept)
+    notes = _kept_note(_("Armazém(ns)"), kept)
     if kept_links:
-        notes.append(f"Associação(ões) filial×armazém fora do arquivo mantida(s) — têm endereços ou níveis: {_few(kept_links)}.")
-    return {"Armazéns excluídos": len(gone), "Filial×Armazém desassociados": n_links}, notes
+        notes.append(_("Associação(ões) filial×armazém fora do arquivo mantida(s) — têm endereços ou níveis: {few}.", few=_few(kept_links)))
+    return {N_("Armazéns excluídos"): len(gone), N_("Filial×Armazém desassociados"): n_links}, notes
 
 
 def sync_bin_types(db: Session, seen_codes: set[str]) -> tuple[int, list[str]]:
     used = set(db.scalars(select(LocationBin.bin_type_id).distinct())) | set(db.scalars(select(BinContent.bin_type_id).distinct()))
     types = list(db.scalars(select(BinType)))
     cand = {t.id: t for t in types if t.code not in seen_codes}
-    kept = {"usado em endereços": [t.code for t in cand.values() if t.id in used]}
+    kept = {N_("usado em endereços"): [t.code for t in cand.values() if t.id in used]}
     cand = {i: t for i, t in cand.items() if i not in used}
     # bin pai só sai se todos os compartimentos dela também saírem
     changed = True
@@ -112,7 +112,7 @@ def sync_bin_types(db: Session, seen_codes: set[str]) -> tuple[int, list[str]]:
         for ch in _chunks(group):
             db.execute(delete(LevelCapacity).where(LevelCapacity.bin_type_id.in_(ch)))
             db.execute(delete(BinType).where(BinType.id.in_(ch)))
-    return len(cand), _kept_note("Tipo(s) de bin", kept)
+    return len(cand), _kept_note(_("Tipo(s) de bin"), kept)
 
 
 def sync_locations(db: Session, scopes: set[tuple], seen: set[int], drop_levels: bool) -> tuple[dict, list[str]]:
@@ -120,7 +120,7 @@ def sync_locations(db: Session, scopes: set[tuple], seen: set[int], drop_levels:
     from services.level_service import drop_unused_levels, level_key_of
     from services.stock_service import has_items_expr
 
-    out = {"Endereços excluídos": 0, "Posições físicas (níveis) excluídas": 0}
+    out = {N_("Endereços excluídos"): 0, N_("Posições físicas (níveis) excluídas"): 0}
     kept: list[str] = []
     gone: list[StorageLocation] = []
     for bid, wid in scopes:
@@ -142,12 +142,12 @@ def sync_locations(db: Session, scopes: set[tuple], seen: set[int], drop_levels:
     out["Endereços excluídos"] = len(ids)
     notes = []
     if kept:
-        notes.append(f"{len(kept)} endereço(s) fora do arquivo mantido(s) — ocupados ou com item atrelado: {_few(kept)}.")
+        notes.append(_("{len} endereço(s) fora do arquivo mantido(s) — ocupados ou com item atrelado: {few}.", len=len(kept), few=_few(kept)))
     if drop_levels and keys:
         dropped, lv_kept = drop_unused_levels(db, keys)
         out["Posições físicas (níveis) excluídas"] = len(dropped)
         if lv_kept:
-            notes.append(f"Nível(is) mantido(s): {_few(lv_kept)}.")
+            notes.append(_("Nível(is) mantido(s): {few}.", few=_few(lv_kept)))
     return out, notes
 
 
@@ -156,7 +156,7 @@ def sync_levels(db: Session, scopes: set[tuple], cap_seen: set[tuple], height_se
     com a coluna Vão mapeada, o vão dos níveis que o arquivo não informou. Níveis dedicados (automáticos) ficam."""
     from services.level_service import DEDICATED_NOTE
 
-    out = {"Capacidades removidas": 0, "Vãos removidos": 0}
+    out = {N_("Capacidades removidas"): 0, N_("Vãos removidos"): 0}
     for bid, wid in scopes:
         lv = list(db.scalars(select(ShelfLevel).where(
             ShelfLevel.branch_id == bid, ShelfLevel.warehouse_id.is_(None) if wid is None else ShelfLevel.warehouse_id == wid)))
@@ -186,7 +186,7 @@ def sync_products(db: Session, seen: set[int]) -> tuple[int, list[str]]:
         (kept.append(sku) if pid in with_stock else gone.append(pid))
     for ch in _chunks(gone):
         db.execute(delete(Product).where(Product.id.in_(ch)))
-    notes = [f"{len(kept)} produto(s) fora do arquivo mantido(s) — têm saldo: {_few(kept)}."] if kept else []
+    notes = [_("{len} produto(s) fora do arquivo mantido(s) — têm saldo: {few}.", len=len(kept), few=_few(kept))] if kept else []
     return len(gone), notes
 
 

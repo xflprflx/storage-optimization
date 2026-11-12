@@ -13,6 +13,7 @@ import random
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
+from services.i18n import N_
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 EXAMPLES_DIR = BASE_DIR / "samples" / "exemplos"
@@ -90,10 +91,10 @@ def _skus(rng: random.Random, families: list, per_family: tuple, variants: list,
 EXAMPLES = [
     {
         "slug": "galpao-medio",
-        "title": "Galpão médio de picking",
-        "description": "Galpão de 48 × 30 m com docas na frente, um corredor transversal e estantes de 3 tamanhos "
-                       "(porta-palete desligado). Zona única, orientação automática.",
-        "tags": ["48 × 30 m", "zona única", "~400 SKUs", "cabeceiras", "pedidos"],
+        "title": N_("Galpão médio de picking"),
+        "description": N_("Galpão de 48 × 30 m com docas na frente, um corredor transversal e estantes de 3 tamanhos "
+                       "(porta-palete desligado). Zona única, orientação automática."),
+        "tags": ["48 × 30 m", N_("zona única"), "~400 SKUs", N_("cabeceiras"), N_("pedidos")],
         "building": {"length_m": 48, "width_m": 30, "clear_height_m": 7.5, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 8, "back_reserved_m": 3, "cross_aisles": 1, "cross_aisle_m": 2,
                      "avenue_m": 2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -106,11 +107,11 @@ EXAMPLES = [
     },
     {
         "slug": "perimetro-escritorio",
-        "title": "Fileiras nas paredes + escritório no canto",
-        "description": "Imóvel de 24 × 26 m com zonas posicionadas por X/Y: fileiras perpendiculares encostadas nas "
+        "title": N_("Fileiras nas paredes + escritório no canto"),
+        "description": N_("Imóvel de 24 × 26 m com zonas posicionadas por X/Y: fileiras perpendiculares encostadas nas "
                        "paredes da esquerda e da direita (esta abaixo do escritório), fileiras horizontais no meio (mais "
-                       "curtas no alto), uma fileira curta perpendicular junto ao escritório e circulação entre as zonas.",
-        "tags": ["24 × 26 m", "5 zonas X/Y", "obstáculo", "~350 SKUs", "pedidos"],
+                       "curtas no alto), uma fileira curta perpendicular junto ao escritório e circulação entre as zonas."),
+        "tags": ["24 × 26 m", N_("5 zonas X/Y"), N_("obstáculo"), "~350 SKUs", N_("pedidos")],
         "building": {"length_m": 24, "width_m": 26, "clear_height_m": 6, "aisle_m": 1.5, "wall_gap_m": 0.1,
                      "front_reserved_m": 0, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -128,11 +129,11 @@ EXAMPLES = [
     },
     {
         "slug": "imovel-estreito",
-        "title": "Imóvel estreito com avenida no fundo",
-        "description": "Loja/depósito de 14 × 3,2 m onde só cabe um corredor. Em vez de o corredor terminar na parede "
+        "title": N_("Imóvel estreito com avenida no fundo"),
+        "description": N_("Loja/depósito de 14 × 3,2 m onde só cabe um corredor. Em vez de o corredor terminar na parede "
                        "(o colaborador vai até o fundo e volta), uma zona no fundo com fileira perpendicular de frente "
-                       "para a avenida abre a circulação.",
-        "tags": ["14 × 3,2 m", "2 zonas", "avenida", "~110 SKUs", "pedidos"],
+                       "para a avenida abre a circulação."),
+        "tags": ["14 × 3,2 m", N_("2 zonas"), N_("avenida"), "~110 SKUs", N_("pedidos")],
         "building": {"length_m": 14, "width_m": 3.2, "clear_height_m": 4.5, "aisle_m": 1.2, "wall_gap_m": 0.1,
                      "front_reserved_m": 1.5, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 1.2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -146,12 +147,12 @@ EXAMPLES = [
     },
     {
         "slug": "cd-paletes-picking",
-        "title": "CD com porta-paletes e picking",
-        "description": "Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de "
+        "title": N_("CD com porta-paletes e picking"),
+        "description": N_("Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de "
                        "empilhadeira de 3,2 m, e zona de picking em estantes com corredor de 1,2 m e um transversal, "
                        "separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins. "
-                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas.",
-        "tags": ["60 × 36 m", "2 zonas", "porta-paletes", "setores", "~350 SKUs", "pedidos"],
+                       "Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas."),
+        "tags": ["60 × 36 m", N_("2 zonas"), N_("porta-paletes"), N_("setores"), "~350 SKUs", N_("pedidos")],
         "building": {"length_m": 60, "width_m": 36, "clear_height_m": 9, "aisle_m": 1.2, "wall_gap_m": 0.3,
                      "front_reserved_m": 10, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                      "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},

@@ -27,10 +27,11 @@ from routers.common import (
 from services.addressing import normalize_code
 from services.material_service import MaterialResolver, material_condition
 from services.stock_service import refresh_occupancy, sync_default_locations
+from services.i18n import N_, _, seps
 
-router = APIRouter(prefix="/products", tags=["Produtos"])
+router = APIRouter(prefix="/products", tags=[N_("Produtos")])
 
-DIM_FIELDS = (("height", "Altura"), ("width", "Largura"), ("length", "Comprimento"), ("weight", "Peso"))
+DIM_FIELDS = (("height", N_("Altura")), ("width", N_("Largura")), ("length", N_("Comprimento")), ("weight", N_("Peso")))
 
 
 def _validate(db: Session, form: FormData, product_id: int | None):
@@ -42,17 +43,17 @@ def _validate(db: Session, form: FormData, product_id: int | None):
         "material_type": MaterialResolver(db)(f_str(form, "material_type")),
     }
     if not data["sku"]:
-        errors.add("sku", "SKU é obrigatório.")
+        errors.add("sku", _("SKU é obrigatório."))
     elif len(data["sku"]) > 60:
-        errors.add("sku", "SKU deve ter no máximo 60 caracteres.")
+        errors.add("sku", _("SKU deve ter no máximo 60 caracteres."))
     else:
         stmt = select(Product.id).where(Product.sku == data["sku"])
         if product_id:
             stmt = stmt.where(Product.id != product_id)
         if db.scalar(stmt):
-            errors.add("sku", f"SKU {data['sku']} já cadastrado.")
+            errors.add("sku", _("SKU {sku} já cadastrado.", sku=data['sku']))
     if not data["name"]:
-        errors.add("name", "Nome é obrigatório.")
+        errors.add("name", _("Nome é obrigatório."))
     for key, label in DIM_FIELDS:
         data[key] = f_dec(form, key, errors, label)
     data["policies"] = _policy_rows(db, form, errors)
@@ -68,29 +69,29 @@ def _policy_rows(db: Session, form: FormData, errors: FormErrors) -> list[dict]:
         bid = f_int(form, f"pol_branch_{i}")
         row = {"idx": i, "branch_id": bid, "location_id": f_int(form, f"pol_loc_{i}"),
                "location_label": f_str(form, f"pol_loc_label_{i}"), "delete": bool(form.get(f"pol_del_{i}"))}
-        row["min_level"] = f_dec(form, f"pol_min_{i}", errors, "Nível mínimo")
-        row["max_level"] = f_dec(form, f"pol_max_{i}", errors, "Nível máximo")
+        row["min_level"] = f_dec(form, f"pol_min_{i}", errors, _("Nível mínimo"))
+        row["max_level"] = f_dec(form, f"pol_max_{i}", errors, _("Nível máximo"))
         empty = not row["location_id"] and row["min_level"] is None and row["max_level"] is None
         if not bid:
             if not empty:
-                errors.add("policies", "Escolha a filial de cada política de estoque.")
+                errors.add("policies", _("Escolha a filial de cada política de estoque."))
             continue
         br = db.get(Branch, bid)
         if br is None:
-            errors.add("policies", "Filial inválida.")
+            errors.add("policies", _("Filial inválida."))
             continue
         if bid in seen:
-            errors.add("policies", f"Filial {br.code} aparece mais de uma vez: uma política por filial.")
+            errors.add("policies", _("Filial {code} aparece mais de uma vez: uma política por filial.", code=br.code))
             continue
         seen.add(bid)
         if row["location_label"] and not row["location_id"]:
-            errors.add("policies", f"{br.code}: escolha o endereço padrão na lista (ou deixe vazio).")
+            errors.add("policies", _("{code}: escolha o endereço padrão na lista (ou deixe vazio).", code=br.code))
         if row["location_id"]:
             loc = db.get(StorageLocation, row["location_id"])
             if loc is None or loc.branch_id != bid:
-                errors.add("policies", f"{br.code}: o endereço padrão precisa ser da própria filial.")
+                errors.add("policies", _("{code}: o endereço padrão precisa ser da própria filial.", code=br.code))
         if row["min_level"] is not None and row["max_level"] is not None and row["min_level"] > row["max_level"]:
-            errors.add("policies", f"{br.code}: nível máximo deve ser maior ou igual ao mínimo.")
+            errors.add("policies", _("{code}: nível máximo deve ser maior ou igual ao mínimo.", code=br.code))
         row["empty"] = empty
         rows.append(row)
     return rows
@@ -138,7 +139,7 @@ def _policy_form_rows(db: Session, prod: Optional[Product]) -> list[dict]:
     return rows
 
 
-SEARCH_FIELDS = {"": "Tudo", "sku": "SKU", "name": "Nome", "material": "Tipo de material", "address": "Endereço"}
+SEARCH_FIELDS = {"": N_("Tudo"), "sku": "SKU", "name": N_("Nome"), "material": N_("Tipo de material"), "address": N_("Endereço")}
 
 
 def _search_fields(default_addresses, stock_addresses) -> dict:
@@ -186,7 +187,7 @@ def bulk_dims(form: FormData = Depends(form_data), db: Session = Depends(get_db)
     if model_sku:
         src = db.scalar(select(Product).where(Product.sku == model_sku))
         if src is None:
-            return redirect(back, f"Produto modelo {model_sku} não encontrado.", "danger")
+            return redirect(back, _("Produto modelo {model_sku} não encontrado.", model_sku=model_sku), "danger")
         for k, _l in DIM_FIELDS:
             if vals[k] is None:
                 vals[k] = getattr(src, k)
@@ -194,17 +195,17 @@ def bulk_dims(form: FormData = Depends(form_data), db: Session = Depends(get_db)
         return redirect(back, " ".join(m for ms in errors.values() for m in (ms if isinstance(ms, list) else [ms])), "danger")
     for k, label in DIM_FIELDS:
         if vals[k] is not None and vals[k] == 0:
-            return redirect(back, f"{label}: informe um valor maior que zero (vazio = não muda).", "danger")
+            return redirect(back, _("{label}: informe um valor maior que zero (vazio = não muda).", label=label), "danger")
     vals = {k: v for k, v in vals.items() if v is not None}
     if not vals:
-        return redirect(back, "Informe ao menos uma medida (altura, largura, comprimento ou peso) ou um produto modelo.", "warning")
+        return redirect(back, _("Informe ao menos uma medida (altura, largura, comprimento ou peso) ou um produto modelo."), "warning")
     if f_str(form, "scope") == "filtered":
         ids = list(db.scalars(_filtered(f_str(form, "f_q"), f_str(form, "f_material"), f_str(form, "f_field"),
                                         f_str(form, "f_mode") or "contains")))
     else:
         ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
     if not ids:
-        return redirect(back, "Nenhum produto selecionado.", "warning")
+        return redirect(back, _("Nenhum produto selecionado."), "warning")
     n = 0
     for i in range(0, len(ids), 900):
         for prod in db.scalars(select(Product).where(Product.id.in_(ids[i:i + 900]))):
@@ -225,8 +226,8 @@ def bulk_dims(form: FormData = Depends(form_data), db: Session = Depends(get_db)
     db.commit()
     labels = dict(DIM_FIELDS)
     unit = {"weight": " kg"}
-    what = ", ".join(f"{labels[k].lower()} {float(v):g}{unit.get(k, ' cm')}".replace(".", ",") for k, v in vals.items())
-    return redirect(back, f"{n} produto(s) atualizado(s) ({what})." + (f" {len(ids) - n} já tinham essas medidas." if len(ids) > n else ""))
+    what = ", ".join(f"{labels[k].lower()} {float(v):g}{unit.get(k, ' cm')}".replace(".", seps()[0]) for k, v in vals.items())
+    return redirect(back, f"{n} produto(s) atualizado(s) ({what})." + (_(" {v} já tinham essas medidas.", v=len(ids) - n) if len(ids) > n else ""))
 
 
 def filtered_products(q: str = "", material: str = "", field: str = "", mode: str = "contains"):
@@ -354,14 +355,14 @@ def create_product(request: Request, form: FormData = Depends(form_data), db: Se
     refresh_occupancy(db, _save_policies(db, prod, rows))
     sync_default_locations(db, [prod.id])
     db.commit()
-    return redirect(f"/products/{prod.id}", f"Produto {prod.sku} criado.")
+    return redirect(f"/products/{prod.id}", _("Produto {sku} criado.", sku=prod.sku))
 
 
 @router.get("/{product_id}")
 def product_detail(product_id: int, request: Request, db: Session = Depends(get_db)):
     prod = db.get(Product, product_id)
     if not prod:
-        return redirect("/products", "Produto não encontrado.", "danger")
+        return redirect("/products", _("Produto não encontrado."), "danger")
     stock = list(db.scalars(
         select(StockItem).join(StorageLocation)
         .options(joinedload(StockItem.location).joinedload(StorageLocation.branch),
@@ -383,7 +384,7 @@ def product_detail(product_id: int, request: Request, db: Session = Depends(get_
 def edit_product(product_id: int, request: Request, db: Session = Depends(get_db)):
     prod = db.get(Product, product_id)
     if not prod:
-        return redirect("/products", "Produto não encontrado.", "danger")
+        return redirect("/products", _("Produto não encontrado."), "danger")
     data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "height", "width", "length", "weight")}
     data["policies"] = _policy_form_rows(db, prod)
     return _form(request, db, prod, data, {})
@@ -393,7 +394,7 @@ def edit_product(product_id: int, request: Request, db: Session = Depends(get_db
 def update_product(product_id: int, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     prod = db.get(Product, product_id)
     if not prod:
-        return redirect("/products", "Produto não encontrado.", "danger")
+        return redirect("/products", _("Produto não encontrado."), "danger")
     errors, data = _validate(db, form, product_id)
     if errors:
         return _form(request, db, prod, data, errors, 422)
@@ -404,18 +405,16 @@ def update_product(product_id: int, request: Request, form: FormData = Depends(f
     refresh_occupancy(db, _save_policies(db, prod, rows))
     if sync_default_locations(db, [prod.id]):
         db.commit()
-        return redirect(f"/products/{prod.id}", f"Produto {prod.sku} atualizado. Em filial(is) onde ele tem saldo, o "
-                        "endereço padrão é o endereço onde o produto está (o de maior saldo, se o escolhido não tinha "
-                        "saldo).", "warning")
+        return redirect(f"/products/{prod.id}", _("Produto {sku} atualizado. Em filial(is) onde ele tem saldo, o endereço padrão é o endereço onde o produto está (o de maior saldo, se o escolhido não tinha saldo).", sku=prod.sku), "warning")
     db.commit()
-    return redirect(f"/products/{prod.id}", f"Produto {prod.sku} atualizado.")
+    return redirect(f"/products/{prod.id}", _("Produto {sku} atualizado.", sku=prod.sku))
 
 
 @router.post("/{product_id}/delete")
 def delete_product(product_id: int, db: Session = Depends(get_db)):
     prod = db.get(Product, product_id)
     if not prod:
-        return redirect("/products", "Produto não encontrado.", "danger")
+        return redirect("/products", _("Produto não encontrado."), "danger")
     from models import StockPolicy
 
     location_ids = list(db.scalars(select(StockItem.location_id).where(StockItem.product_id == product_id)))
@@ -425,4 +424,4 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     db.flush()
     refresh_occupancy(db, location_ids)
     db.commit()
-    return redirect("/products", f"Produto {sku} excluído (saldos removidos).")
+    return redirect("/products", _("Produto {sku} excluído (saldos removidos).", sku=sku))

@@ -39,19 +39,20 @@ from sqlalchemy.orm import Session
 from models import LocationBin, StorageLocation
 from services.addressing import build_address, normalize_code, scope_filter, segments
 from services.stock_service import has_items_expr
+from services.i18n import N_, _
 
 MAX_COMBINATIONS = 50_000
 INSERT_CHUNK = 1_000
 LEVELS = ("aisle", "bay", "level", "position", "compartment")
 LEVEL_LABELS = {
-    "aisle": "Corredor (Aisle)",
-    "bay": "Estante (Bay)",
-    "level": "Nível (Level)",
-    "position": "Posição (Position)",
-    "compartment": "Compartimento",
+    "aisle": N_("Corredor (Aisle)"),
+    "bay": N_("Estante (Bay)"),
+    "level": N_("Nível (Level)"),
+    "position": N_("Posição (Position)"),
+    "compartment": N_("Compartimento"),
 }
-SHORT_LABELS = {"aisle": "Corredor", "bay": "Estante", "level": "Nível", "position": "Posição",
-                "compartment": "Compartimento"}
+SHORT_LABELS = {"aisle": N_("Corredor"), "bay": N_("Estante"), "level": N_("Nível"), "position": N_("Posição"),
+                "compartment": N_("Compartimento")}
 
 
 class RangeType(str, Enum):
@@ -68,9 +69,9 @@ class ConflictKind(str, Enum):
 
 
 CONFLICT_LABELS = {
-    ConflictKind.EXACT: "Endereço idêntico já existe",
-    ConflictKind.GENERIC_EXISTS: "Já existe endereço genérico acima deste",
-    ConflictKind.COMPARTMENTS_EXIST: "Já existem sub-endereços abaixo deste",
+    ConflictKind.EXACT: N_("Endereço idêntico já existe"),
+    ConflictKind.GENERIC_EXISTS: N_("Já existe endereço genérico acima deste"),
+    ConflictKind.COMPARTMENTS_EXIST: N_("Já existem sub-endereços abaixo deste"),
 }
 
 
@@ -80,7 +81,7 @@ CONFLICT_LABELS = {
 def letters_to_int(text: str) -> int:
     text = text.strip().upper()
     if not text or not text.isalpha() or not text.isascii():
-        raise ValueError(f"Valor alfabético inválido: {text!r}")
+        raise ValueError(_("Valor alfabético inválido: {text}", text=f"{text!r}"))
     n = 0
     for ch in text:
         n = n * 26 + (ord(ch) - 64)
@@ -89,7 +90,7 @@ def letters_to_int(text: str) -> int:
 
 def int_to_letters(n: int) -> str:
     if n <= 0:
-        raise ValueError("Índice alfabético deve ser positivo")
+        raise ValueError(_("Índice alfabético deve ser positivo"))
     out = []
     while n > 0:
         n, rem = divmod(n - 1, 26)
@@ -114,32 +115,32 @@ class LevelRule:
         label = label or LEVEL_LABELS.get(self.name, self.name)
         if self.range_type == RangeType.NONE:
             if self.name == "aisle":
-                raise ValueError(f"{label}: o Corredor é obrigatório.")
+                raise ValueError(_("{label}: o Corredor é obrigatório.", label=label))
             return []
         if self.range_type == RangeType.EXACT:
             val = normalize_code(self.value)
             if not val:
-                raise ValueError(f"{label}: informe o valor fixo.")
+                raise ValueError(_("{label}: informe o valor fixo.", label=label))
             if len(val) > 20:
-                raise ValueError(f"{label}: valor excede 20 caracteres.")
+                raise ValueError(_("{label}: valor excede 20 caracteres.", label=label))
             return [val]
 
         start, end = normalize_code(self.start), normalize_code(self.end)
         if not start or not end:
-            raise ValueError(f"{label}: informe início e fim da faixa.")
+            raise ValueError(_("{label}: informe início e fim da faixa.", label=label))
 
         if self.range_type == RangeType.ALPHABETIC:
             a, b = letters_to_int(start), letters_to_int(end)
             if a > b:
-                raise ValueError(f"{label}: início ({start}) maior que fim ({end}).")
+                raise ValueError(_("{label}: início ({start}) maior que fim ({end}).", label=label, start=start, end=end))
             return [int_to_letters(i) for i in range(a, b + 1)]
 
         if self.range_type == RangeType.NUMERIC:
             if not (start.isdigit() and end.isdigit()):
-                raise ValueError(f"{label}: faixa numérica deve conter apenas dígitos.")
+                raise ValueError(_("{label}: faixa numérica deve conter apenas dígitos.", label=label))
             a, b = int(start), int(end)
             if a > b:
-                raise ValueError(f"{label}: início ({start}) maior que fim ({end}).")
+                raise ValueError(_("{label}: início ({start}) maior que fim ({end}).", label=label, start=start, end=end))
             if self.padding is not None:
                 width = max(0, int(self.padding))
             elif len(start) > 1 and start.startswith("0"):
@@ -148,11 +149,11 @@ class LevelRule:
                 width = 0
             return [str(i).zfill(width) for i in range(a, b + 1)]
 
-        raise ValueError(f"{label}: tipo de faixa desconhecido.")  # pragma: no cover
+        raise ValueError(_("{label}: tipo de faixa desconhecido.", label=label))  # pragma: no cover
 
     def describe(self) -> str:
         if self.range_type == RangeType.NONE:
-            return "não utilizar"
+            return _("não utilizar")
         if self.range_type == RangeType.EXACT:
             return f"= {normalize_code(self.value)}"
         return f"{normalize_code(self.start)} a {normalize_code(self.end)}"
@@ -184,15 +185,15 @@ class ValueMatcher:
             if not token:
                 continue
             if "-" in token:
-                lo, _, hi = token.partition("-")
+                lo, _x, hi = token.partition("-")
                 lo, hi = lo.strip(), hi.strip()
                 if not lo or not hi:
-                    raise ValueError(f"{label}: faixa inválida '{token}'.")
+                    raise ValueError(_("{label}: faixa inválida '{token}'.", label=label, token=token))
                 klo, khi = _cmp_key(lo), _cmp_key(hi)
                 if klo[0] != khi[0] or klo[0] == 2:
-                    raise ValueError(f"{label}: faixa '{token}' deve ser só números ou só letras.")
+                    raise ValueError(_("{label}: faixa '{token}' deve ser só números ou só letras.", label=label, token=token))
                 if klo > khi:
-                    raise ValueError(f"{label}: faixa '{token}' com início maior que o fim.")
+                    raise ValueError(_("{label}: faixa '{token}' com início maior que o fim.", label=label, token=token))
                 self.items.append(("range", klo, khi))
             else:
                 self.items.append(("eq", token))
@@ -225,16 +226,16 @@ class BatchException:
 
     def prepare(self) -> None:
         if self.target not in LEVELS[1:]:
-            raise ValueError(f"Exceção {self.index + 1}: nível afetado inválido.")
+            raise ValueError(_("Exceção {v}: nível afetado inválido.", v=self.index + 1))
         parents = LEVELS[: LEVELS.index(self.target)]
         self._matchers = {}
         for lvl in parents:
             expr = self.conditions.get(lvl, "")
-            m = ValueMatcher(expr, f"Exceção {self.index + 1} ({SHORT_LABELS[lvl]})")
+            m = ValueMatcher(expr, _("Exceção {v} ({v2})", v=self.index + 1, v2=SHORT_LABELS[lvl]))
             if not m.any:
                 self._matchers[lvl] = m
         # valida a regra já na preparação (mensagem com o número da exceção)
-        self.rule.values(label=f"Exceção {self.index + 1} ({SHORT_LABELS[self.target]})")
+        self.rule.values(label=_("Exceção {v} ({v2})", v=self.index + 1, v2=SHORT_LABELS[self.target]))
 
     def matches(self, path: tuple[str, ...]) -> bool:
         for lvl, m in self._matchers.items():
@@ -244,7 +245,7 @@ class BatchException:
 
     def describe(self) -> str:
         conds = [f"{SHORT_LABELS[l]} = {m.expr}" for l, m in self._matchers.items()]
-        when = " e ".join(conds) if conds else "todos os caminhos"
+        when = " e ".join(conds) if conds else _("todos os caminhos")
         return f"{SHORT_LABELS[self.target]}: {self.rule.describe()} quando {when}"
 
 
@@ -269,7 +270,7 @@ class BatchConflict:
     def message(self) -> str:
         base = CONFLICT_LABELS[self.kind]
         if self.blocked_by_occupied:
-            return f"{base} — posição OCUPADA, não pode ser substituída"
+            return _("{base} — posição OCUPADA, não pode ser substituída", base=base)
         return base
 
 
@@ -318,7 +319,7 @@ def validate_rules(rules: dict[str, LevelRule]) -> None:
     """Corredor obrigatório; nível 'não utilizado' implica todos os de baixo não utilizados."""
     aisle = rules.get("aisle")
     if aisle is None or aisle.range_type == RangeType.NONE:
-        raise ValueError("O Corredor é obrigatório.")
+        raise ValueError(_("O Corredor é obrigatório."))
     unused_from = None
     for name in LEVELS:
         rule = rules.get(name)
@@ -327,8 +328,7 @@ def validate_rules(rules: dict[str, LevelRule]) -> None:
             unused_from = name
         elif not is_none and unused_from is not None:
             raise ValueError(
-                f"{LEVEL_LABELS[name]} não pode ser utilizado porque {LEVEL_LABELS[unused_from]} "
-                "está como 'Não utilizar' (hierarquia estrita)."
+                _("{v} não pode ser utilizado porque {v2} está como 'Não utilizar' (hierarquia estrita).", v=LEVEL_LABELS[name], v2=LEVEL_LABELS[unused_from])
             )
 
 
@@ -386,8 +386,7 @@ def run_batch(db: Session, req: BatchRequest, execute: bool) -> BatchResult:
         paths.append(path)
         if len(paths) > MAX_COMBINATIONS:
             raise ValueError(
-                f"A geração passa de {MAX_COMBINATIONS:,} endereços (limite por lote). "
-                "Divida a geração em lotes menores."
+                _("A geração passa de {MAX_COMBINATIONS} endereços (limite por lote). Divida a geração em lotes menores.", MAX_COMBINATIONS=f"{MAX_COMBINATIONS:,}")
             )
     result.total_combinations = len(paths)
     result.exception_usage = [(e.describe(), usage[e.index]) for e in req.exceptions]
@@ -449,7 +448,7 @@ def run_batch(db: Session, req: BatchRequest, execute: bool) -> BatchResult:
             if not req.replace_unoccupied:
                 result.add_conflict(conflict)
                 for e in old:
-                    result.conflict_addresses.setdefault(e.address, f"conflito com {address}: {conflict.message}")
+                    result.conflict_addresses.setdefault(e.address, _("conflito com {address}: {message}", address=address, message=conflict.message))
                 continue
             if any(e.occupied for e in old):
                 conflict.blocked_by_occupied = True

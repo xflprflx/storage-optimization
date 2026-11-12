@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+from services.i18n import N_, _, translate_workbook
 
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
@@ -36,11 +37,11 @@ AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" 
 # --------------------------------------------------------------------------- #
 # Histórico de saídas
 # --------------------------------------------------------------------------- #
-HISTORY_KINDS = {"orders": "Pedidos (pedido, SKU, quantidade[, data])", "column": "Lista de SKUs com a coluna Saída"}
+HISTORY_KINDS = {"orders": N_("Pedidos (pedido, SKU, quantidade[, data])"), "column": N_("Lista de SKUs com a coluna Saída")}
 HISTORY_FIELDS = {
-    "orders": {"order": ("Pedido (identificador)", True), "sku": ("SKU", True), "qty": ("Quantidade", True),
-               "date": ("Data", False)},
-    "column": {"sku": ("SKU", True), "out": ("Saída (linhas ou unidades no período)", True)},
+    "orders": {"order": (N_("Pedido (identificador)"), True), "sku": ("SKU", True), "qty": (N_("Quantidade"), True),
+               "date": (N_("Data"), False)},
+    "column": {"sku": ("SKU", True), "out": (N_("Saída (linhas ou unidades no período)"), True)},
 }
 
 
@@ -109,16 +110,16 @@ def read_history(path: Path, to_abs: bool, mapping: Optional[dict] = None) -> tu
 
     sheets = read_sheets(path)
     if not sheets:
-        return None, "A planilha não tem abas com dados."
+        return None, _("A planilha não tem abas com dados.")
     if mapping is None:
         det = detect_history(sheets)
         name = det["sheet"]
         if not name or len(sheets.get(name) or []) < 2:
-            return None, "A planilha não tem linhas."
+            return None, _("A planilha não tem linhas.")
         mapping = {"kind": det["kind"], "sheet": name, "cols": guess_history_cols(det["kind"], sheets[name][0])}
         if any(mapping["cols"].get(f) is None for f, (_l, req) in HISTORY_FIELDS[det["kind"]].items() if req):
-            return None, ("Nenhuma aba reconhecida: use uma aba Pedidos (pedido, SKU, quantidade) ou uma lista de SKUs "
-                          "com a coluna Saída.")
+            return None, (_("Nenhuma aba reconhecida: use uma aba Pedidos (pedido, SKU, quantidade) ou uma lista de SKUs "
+                          "com a coluna Saída."))
     return summarize_history(sheets, to_abs, mapping)
 
 
@@ -127,15 +128,15 @@ def summarize_history(sheets: dict, to_abs: bool, mapping: dict) -> tuple[Option
 
     kind, name, cols = mapping.get("kind"), mapping.get("sheet"), dict(mapping.get("cols") or {})
     if kind not in HISTORY_FIELDS:
-        return None, "Escolha o tipo do arquivo."
+        return None, _("Escolha o tipo do arquivo.")
     if name not in sheets or len(sheets[name]) < 2:
-        return None, f"A aba {name!r} não tem linhas."
+        return None, _("A aba {name} não tem linhas.", name=f"{name!r}")
     missing = [lbl for f, (lbl, req) in HISTORY_FIELDS[kind].items() if req and cols.get(f) is None]
     if missing:
-        return None, "Escolha a coluna de " + ", ".join(missing) + "."
+        return None, _("Escolha a coluna de ") + ", ".join(missing) + "."
     used = [v for v in cols.values() if v is not None]
     if len(used) != len(set(used)):
-        return None, "A mesma coluna foi escolhida para mais de um campo."
+        return None, _("A mesma coluna foi escolhida para mais de um campo.")
     if kind == "orders":
         res = _orders(sheets[name], {f: cols.get(f) for f in HISTORY_FIELDS["orders"]}, to_abs)
         if res.get("error"):
@@ -143,7 +144,7 @@ def summarize_history(sheets: dict, to_abs: bool, mapping: dict) -> tuple[Option
         res["sheet"], res["kind"] = name, "orders"
         return res, ""
     res = _column_summary(sheets[name], cols, to_abs, name)
-    return (res, "") if res else (None, f"Aba {name}: nenhum SKU com saída maior que zero.")
+    return (res, "") if res else (None, _("Aba {name}: nenhum SKU com saída maior que zero.", name=name))
 
 
 def popularity(data: Optional[dict], metric: str = "lines") -> dict[str, float]:
@@ -246,7 +247,7 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     aisles = sorted({canon(a or "") for _i, _b, _w, a, _bay, _l in locs}, key=_natural)
     ref = canon(spec.get("ref") or "") if canon(spec.get("ref") or "") in aisles else aisles[0]
     ridx = aisles.index(ref)
-    branches = {b for _i, b, *_ in locs}
+    branches = {b for _i, b, *_x in locs}
     st_of = {}
     for bs, st in db.execute(select(BayStructure, StructureType).join(StructureType,
                                                                        StructureType.id == BayStructure.structure_type_id)
@@ -260,7 +261,7 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     from services.branch_layout import geometry
     from services.route_sim import dist
 
-    layouts = {sc: geometry(db, sc[0], sc[1]) for sc in {(b, w) for _i, b, w, *_ in locs}}
+    layouts = {sc: geometry(db, sc[0], sc[1]) for sc in {(b, w) for _i, b, w, *_x in locs}}
     # zona de ouro da pega pelo nível real das bins de cada endereço (Capacidade dos níveis + estrutura da estante)
     from services.branch_layout import address_golden
 
@@ -275,7 +276,7 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         addr_of.update({k: v for k, v in db.execute(select(StorageLocation.id, StorageLocation.address)
                                                     .where(StorageLocation.id.in_(location_ids[i:i + 900])))})
     for sc in layouts:
-        gold_real.update(address_golden(db, sc[0], sc[1], [i for i, b, w, *_ in locs if (b, w) == sc]))
+        gold_real.update(address_golden(db, sc[0], sc[1], [i for i, b, w, *_x in locs if (b, w) == sc]))
     used_layout = None
     out = {}
     for lid, br, wh, a, bay, lvl in locs:
@@ -324,7 +325,7 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         g.walk_golden = g.walk_m <= (lim or 0) + EPS
     spec["walk_limit"] = lim
     if used_layout is not None:
-        ref = f"referência da planta ({used_layout.ref['label']})"
+        ref = _("referência da planta ({label})", label=used_layout.ref['label'])
         spec["layout"] = True
     return out, ref
 
@@ -413,7 +414,7 @@ def kpis(assign: dict[str, list[tuple[int, float]]], pop: dict[str, float], geo:
         out["pairs_avg"] = sum(p["dist"] for p in pairs) / len(pairs)
         pts = list({l for l, _w in used})
         rg = random.Random(7)
-        smp = [(geo[rg.choice(pts)], geo[rg.choice(pts)]) for _ in range(2000)] if len(pts) > 1 else []
+        smp = [(geo[rg.choice(pts)], geo[rg.choice(pts)]) for _x in range(2000)] if len(pts) > 1 else []
         out["pairs_random"] = sum(geo_dist(p, q) for p, q in smp) / len(smp) if smp else None
     return out
 
@@ -422,7 +423,7 @@ def summary_text(data: Optional[dict]) -> str:
     if not data:
         return ""
     if data.get("kind") == "column":
-        return f"coluna Saída ({len(data.get('skus') or {})} SKUs)"
+        return _("coluna Saída ({skus} SKUs)", skus=len(data.get('skus') or {}))
     txt = f"{data.get('orders', 0)} pedidos, {data.get('lines', 0)} linhas, {len(data.get('skus') or {})} SKUs"
     if data.get("dates"):
         txt += f", {data['dates'][0]} a {data['dates'][1]}"
@@ -495,9 +496,9 @@ def sku_report_xlsx(rep: dict, title: str) -> bytes:
     ws = wb.active
     ws.title = "SKUs"
     rnd = lambda v, n=1: round(v, n) if v is not None else None  # noqa: E731
-    sheet(ws, ["SKU", "Produto", "Linhas de pedido", "Unidades", "% das saídas", "% acumulado", "Curva ABC",
-               "% dos pedidos", "Endereço(s)", "Caminhada (m)", "Zona de ouro da pega", "Zona de ouro da caminhada",
-               "Sai junto com (pedidos juntos · força · lift)"],
+    sheet(ws, ["SKU", N_("Produto"), _("Linhas de pedido"), _("Unidades"), _("% das saídas"), "% acumulado", _("Curva ABC"),
+               _("% dos pedidos"), _("Endereço(s)"), "Caminhada (m)", _("Zona de ouro da pega"), _("Zona de ouro da caminhada"),
+               _("Sai junto com (pedidos juntos · força · lift)")],
           [(r["sku"], r["name"], r["lines"], r["units"], rnd(r["share"], 2), rnd(r["cum"], 2), r["abc"],
             rnd(r["per_order"], 2), ", ".join(w["address"] for w in r["where"][:5]) or None,
             rnd(min((w["dist"] for w in r["where"] if w.get("dist") is not None), default=None)),
@@ -506,18 +507,19 @@ def sku_report_xlsx(rep: dict, title: str) -> bytes:
             "; ".join(f"{p['sku']} ({p['count']} · {p['strength'] * 100:.0f}%"
                       + (f" · {p['lift']:.1f}x" if p["lift"] else "") + ")" for p in r["partners"]) or None)
            for r in rep["rows"]], {1: 16, 2: 36, 9: 30, 13: 60})
-    sheet(wb.create_sheet("Pares"), ["SKU", "Produto", "SKU", "Produto", "Pedidos juntos", "Força (%)", "Lift"],
+    sheet(wb.create_sheet(_("Pares")), ["SKU", N_("Produto"), "SKU", N_("Produto"), _("Pedidos juntos"), _("Força (%)"), _("Lift")],
           [(p["a"], p["name_a"], p["b"], p["name_b"], p["count"], rnd(p["strength"] * 100), rnd(p["lift"], 2))
            for p in rep["pairs"]], {1: 16, 2: 32, 3: 16, 4: 32})
-    info = wb.create_sheet("Resumo")
-    for k, v in (("Relatório", title), ("Pedidos", rep["orders"]), ("Linhas de pedido", rep["lines"]),
-                 ("SKUs com saída", rep["skus"]), ("Linhas por pedido", rnd(rep["lines_per_order"], 2)),
-                 ("Curva ABC (A/B/C)", f"{rep['abc']['A']} / {rep['abc']['B']} / {rep['abc']['C']}"),
-                 ("Período", " a ".join(rep["dates"]) if rep.get("dates") else None),
-                 ("Força", "em que fração dos pedidos do menos vendido do par os dois saem juntos"),
-                 ("Lift", "quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso)")):
+    info = wb.create_sheet(_("Resumo"))
+    for k, v in ((_("Relatório"), title), (_("Pedidos"), rep["orders"]), (_("Linhas de pedido"), rep["lines"]),
+                 (_("SKUs com saída"), rep["skus"]), (_("Linhas por pedido"), rnd(rep["lines_per_order"], 2)),
+                 (_("Curva ABC (A/B/C)"), f"{rep['abc']['A']} / {rep['abc']['B']} / {rep['abc']['C']}"),
+                 (_("Período"), " a ".join(rep["dates"]) if rep.get("dates") else None),
+                 (_("Força"), _("em que fração dos pedidos do menos vendido do par os dois saem juntos")),
+                 (_("Lift"), "quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso)")):
         info.append([k, v])
     info.column_dimensions["A"].width, info.column_dimensions["B"].width = 22, 80
     buf = BytesIO()
+    translate_workbook(wb)
     wb.save(buf)
     return buf.getvalue()

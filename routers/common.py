@@ -17,37 +17,33 @@ from starlette.datastructures import FormData
 
 from database import BASE_DIR, fold_text
 from services.file_reader import parse_decimal
+from services import i18n
+from services.i18n import N_, _, _h, fmt_num, seps
+
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates.env.finalize = i18n.finalize
+templates.env.globals.update(_=_, _h=_h, fmt_datetime=i18n.fmt_datetime, tr=i18n.tr, LANGUAGES=i18n.LANGUAGES, get_lang=i18n.get_lang,
+                             unit_label=i18n.unit_label, js_i18n=i18n.js_bootstrap, units_mode=i18n.get_units_mode,
+                             i18n_version=i18n.catalog_version)
 
 
 # --------------------------------------------------------------------------- #
 # Filtros e globais Jinja
 # --------------------------------------------------------------------------- #
 def fmt_dec(value: Any, places: Optional[int] = None) -> str:
-    """Formata Decimal no padrão brasileiro, removendo zeros à direita."""
-    if value is None or value == "":
-        return ""
-    dec = value if isinstance(value, Decimal) else Decimal(str(value))
-    if places is not None:
-        text = f"{dec:,.{places}f}"
-    else:
-        normalized = dec.normalize()
-        if normalized == normalized.to_integral():
-            text = f"{normalized.to_integral():,f}"
-        else:
-            text = f"{normalized:,f}"
-    return text.replace(",", "X").replace(".", ",").replace("X", ".")
+    """Formata Decimal no padrão do idioma atual (pt-BR: 1.234,5), removendo zeros à direita."""
+    return fmt_num(value, places)
 
 
 def dec_input(value: Any) -> str:
-    """Valor para campos <input> (sem separador de milhar)."""
+    """Valor para campos <input> (sem separador de milhar, com o separador decimal do idioma)."""
     if value is None:
         return ""
     dec = value if isinstance(value, Decimal) else Decimal(str(value))
     normalized = dec.normalize()
     text = f"{normalized:f}"
-    return text.replace(".", ",")
+    return text.replace(".", seps()[0])
 
 
 def url_with(request: Request, **params) -> str:
@@ -164,7 +160,7 @@ def _like_pattern(term: str, mode: str = "contains") -> str:
     return {"starts": f"{t}%", "ends": f"%{t}", "exact": t}.get(mode, f"%{t}%")
 
 
-SEARCH_MODES = {"contains": "contém", "starts": "começa com", "ends": "termina com", "exact": "igual a"}
+SEARCH_MODES = {"contains": N_("contém"), "starts": N_("começa com"), "ends": N_("termina com"), "exact": N_("igual a")}
 _TOKEN = re.compile(r'(?:(\w+):)?("([^"]*)"|\S+)')
 # apelidos aceitos no prefixo campo: (sku:10*, nome:parafuso, tipo:caixa, end:A-01)
 FIELD_ALIASES = {"sku": "sku", "cod": "sku", "codigo": "sku", "nome": "name", "name": "name", "desc": "name",

@@ -23,12 +23,13 @@ from services.file_reader import (
 from services.master_importer import MASTER_KINDS, MasterOptions
 from services.product_importer import PRODUCT_FIELDS, ImportOptions, import_products
 from services.stock_importer import QTY_SYNONYMS, STOCK_FIELDS, StockImportOptions, import_stock
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/imports", tags=["Importações"])
+router = APIRouter(prefix="/imports", tags=[N_("Importações")])
 
 KINDS = {
-    "products": {"title": "Importação de Produtos", "fields": PRODUCT_FIELDS},
-    "stock": {"title": "Importação de Saldos de Estoque", "fields": STOCK_FIELDS},
+    "products": {"title": N_("Importação de Produtos"), "fields": PRODUCT_FIELDS},
+    "stock": {"title": N_("Importação de Saldos de Estoque"), "fields": STOCK_FIELDS},
     **{k: {"title": v["title"], "fields": v["fields"]} for k, v in MASTER_KINDS.items()},
 }
 
@@ -128,9 +129,9 @@ async def history_upload(request: Request):
     db = SessionLocal()
     try:
         if not bid or db.get(Branch, bid) is None:
-            return redirect(back, "Escolha a filial do histórico.", "danger")
+            return redirect(back, _("Escolha a filial do histórico."), "danger")
         if upload is None or not getattr(upload, "filename", ""):
-            return redirect(back, "Escolha o arquivo do histórico.", "danger")
+            return redirect(back, _("Escolha o arquivo do histórico."), "danger")
         try:
             token = await save_upload(upload)
         except ValueError as exc:
@@ -140,7 +141,7 @@ async def history_upload(request: Request):
                                          str(form.get("abs") or "") in {"1", "on", "true"}, back)
         except Exception as exc:  # noqa: BLE001  (arquivo corrompido etc.)
             remove_upload(token)
-            return redirect(back, f"Não foi possível ler o arquivo: {exc}", "danger")
+            return redirect(back, _("Não foi possível ler o arquivo: {exc}", exc=exc), "danger")
     finally:
         db.close()
 
@@ -161,7 +162,7 @@ async def history_confirm(request: Request, form: FormData = Depends(form_data))
         return redirect(back, str(exc), "danger")
     if form.get("action") == "cancel":
         remove_upload(token)
-        return redirect(back, "Envio do histórico cancelado.", "secondary")
+        return redirect(back, _("Envio do histórico cancelado."), "secondary")
     kind = f_str(form, "kind") if f_str(form, "kind") in HISTORY_FIELDS else "orders"
     cols = {f: to_int(form.get(f"col_{f}")) if str(form.get(f"col_{f}") or "").isdigit() else None
             for f in HISTORY_FIELDS[kind]}
@@ -169,14 +170,14 @@ async def history_confirm(request: Request, form: FormData = Depends(form_data))
     db = SessionLocal()
     try:
         if not bid or db.get(Branch, bid) is None:
-            return redirect(back, "Filial não encontrada.", "danger")
+            return redirect(back, _("Filial não encontrada."), "danger")
         try:
             data, err = await run_in_threadpool(read_history, path, to_abs, mapping)
         except Exception as exc:  # noqa: BLE001
-            data, err = None, f"não foi possível ler o arquivo ({exc})."
+            data, err = None, _("não foi possível ler o arquivo ({exc}).", exc=exc)
         if err:
             return _history_mapping_page(request, db, token, filename, bid, to_abs, back, mapping,
-                                         f"Histórico não importado: {err}", 422)
+                                         _("Histórico não importado: {err}", err=err), 422)
         remove_upload(token)
         h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid)) or PickHistory(branch_id=bid)
         h.filename, h.data = filename[:200], data
@@ -186,9 +187,8 @@ async def history_confirm(request: Request, form: FormData = Depends(form_data))
         neg = ""
         if data.get("neg"):
             neg = f" {data['neg']} quantidade(s) negativa(s) " + ("convertida(s) para valor absoluto." if data["abs"]
-                                                                 else "ignorada(s) (sem a conversão).")
-        return redirect(back, f"Histórico de saídas salvo para a filial {br.code}: {summary_text(data)} "
-                              f"(aba {data.get('sheet')}).{neg}", "success")
+                                                                 else _("ignorada(s) (sem a conversão)."))
+        return redirect(back, _("Histórico de saídas salvo para a filial {code}: {summary_text} (aba {sheet}).{neg}", code=br.code, summary_text=summary_text(data), sheet=data.get('sheet'), neg=neg), "success")
     finally:
         db.close()
 
@@ -211,7 +211,7 @@ async def upload_file(kind: str, request: Request, file: UploadFile = File(...),
         headers, rows = read_preview(token_path(token), header)
     except Exception as exc:
         return render(request, "imports/upload.html", status_code=422, kind=kind, title=KINDS[kind]["title"],
-                      error=f"Não foi possível ler o arquivo: {exc}", master=MASTER_KINDS.get(kind))
+                      error=_("Não foi possível ler o arquivo: {exc}", exc=exc), master=MASTER_KINDS.get(kind))
 
     fields = KINDS[kind]["fields"]
     suggested = auto_map(headers, {k: v[2] for k, v in fields.items()}) if header else {k: None for k in fields}
@@ -258,14 +258,14 @@ async def process_file(kind: str, request: Request, form: FormData = Depends(for
 
     try:
         path = token_path(token)
-        headers, _ = read_preview(path, has_header, limit=1)
+        headers, _x = read_preview(path, has_header, limit=1)
         mapping = {k: resolve_column(form.get(f"map_{k}"), headers) for k in fields}
-        missing = [fields[k][0] for k, (_, required, _) in fields.items() if required and mapping.get(k) is None]
+        missing = [fields[k][0] for k, (_x, required, _x) in fields.items() if required and mapping.get(k) is None]
         if missing:
-            return _rerender(f"Mapeie as colunas obrigatórias: {', '.join(missing)}.")
+            return _rerender(_("Mapeie as colunas obrigatórias: {v}.", v=', '.join(missing)))
         used = [v for v in mapping.values() if v is not None]
         if len(used) != len(set(used)):
-            return _rerender("A mesma coluna foi mapeada para mais de um campo.")
+            return _rerender(_("A mesma coluna foi mapeada para mais de um campo."))
     except ValueError as exc:
         if "Token" in str(exc) or "expirado" in str(exc):
             return render(request, "imports/upload.html", status_code=422, kind=kind, title=KINDS[kind]["title"], error=str(exc))
@@ -320,12 +320,12 @@ async def process_file(kind: str, request: Request, form: FormData = Depends(for
                 qty_cols.append(idx)
         qty_cols = sorted(set(qty_cols))
         if not qty_cols:
-            return _rerender("Selecione ao menos uma coluna de quantidade (as selecionadas serão somadas).")
+            return _rerender(_("Selecione ao menos uma coluna de quantidade (as selecionadas serão somadas)."))
         overlap = set(qty_cols) & {v for v in mapping.values() if v is not None}
         if overlap:
-            return _rerender("Colunas de quantidade não podem ser as mesmas de Filial/Armazém/Posição/SKU.")
+            return _rerender(_("Colunas de quantidade não podem ser as mesmas de Filial/Armazém/Posição/SKU."))
         if mapping.get("branch_code") is None and not f_str(form, "default_branch_code"):
-            return _rerender("Mapeie a coluna Filial ou selecione uma filial padrão.")
+            return _rerender(_("Mapeie a coluna Filial ou selecione uma filial padrão."))
         opts = StockImportOptions(
             has_header=has_header,
             default_branch_code=f_str(form, "default_branch_code"),

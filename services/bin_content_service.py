@@ -22,6 +22,7 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
 from models import BinContent, BinType, LocationBin, Product, ShelfLevel, StockItem
+from services.i18n import _
 
 EPS = Decimal("0.0001")
 
@@ -55,7 +56,7 @@ def physical_bins(db: Session, location_ids: Iterable[int]) -> dict[int, list[Ph
     rows.sort(key=lambda r: (r[0], r[1], r[3] is not None, natural_key(lv_code.get(r[3], "")) if r[3] else (0,)))
     seq: dict[tuple, int] = {}
     for lid, tid, qty, sl in rows:
-        for _ in range(qty or 0):
+        for _x in range(qty or 0):
             k = (lid, tid)
             seq[k] = seq.get(k, 0) + 1
             out.setdefault(lid, []).append(PhysBin(lid, tid, seq[k], lv_code.get(sl, "") if sl else ""))
@@ -231,9 +232,9 @@ def set_contents(db: Session, location_id: int, rows: list[tuple[int, int, int, 
         if q is None or q <= 0:
             continue
         if (t, seq) not in bins:
-            return f"A bin nº {seq} do tipo informado não existe neste endereço."
+            return _("A bin nº {seq} do tipo informado não existe neste endereço.", seq=seq)
         if pid not in stock:
-            return "Só é possível colocar nas bins produtos que têm saldo neste endereço."
+            return _("Só é possível colocar nas bins produtos que têm saldo neste endereço.")
         merged[(t, seq, pid)] = merged.get((t, seq, pid), Decimal("0")) + Decimal(str(q))
     sums: dict[int, Decimal] = {}
     for (t, seq, pid), q in merged.items():
@@ -243,7 +244,7 @@ def set_contents(db: Session, location_id: int, rows: list[tuple[int, int, int, 
             continue
         if abs(sums.get(pid, Decimal("0")) - q) > EPS:
             sku = db.get(Product, pid).sku
-            return f"{sku}: a soma nas bins ({sums.get(pid, 0):g}) precisa ser igual ao saldo do endereço ({q:g})."
+            return _("{sku}: a soma nas bins ({get}) precisa ser igual ao saldo do endereço ({q}).", sku=sku, get=f"{sums.get(pid, 0):g}", q=f"{q:g}")
     db.execute(delete(BinContent).where(BinContent.location_id == location_id))
     if merged:
         db.execute(insert(BinContent), [{"location_id": location_id, "bin_type_id": t, "seq": seq, "product_id": pid,
@@ -286,7 +287,7 @@ def planned_bins(location_id: int, cfg_by_level: dict, own_level) -> list[PhysBi
     out = []
     for t in sorted({t for cfg in cfg_by_level.values() for t in cfg}):
         for lv in levels:
-            for _ in range(cfg_by_level[lv].get(t, 0)):
+            for _x in range(cfg_by_level[lv].get(t, 0)):
                 seq[t] = seq.get(t, 0) + 1
                 out.append(PhysBin(location_id, t, seq[t], "" if lv == own_level else (lv[4] if isinstance(lv, tuple) else "")))
     return out

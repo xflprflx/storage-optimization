@@ -17,8 +17,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from models import OptimizationRun
+from services.i18n import N_, _
 
-KINDS = {"address": "Por endereço", "pool": "Pool de bins", "site": "Projeto de filial nova"}
+KINDS = {"address": N_("Por endereço"), "pool": N_("Pool de bins"), "site": N_("Projeto de filial nova")}
 IGNORED_PARAMS = {"page", "sort", "dir", "status", "run", "order"}  # não mudam o resultado (só a exibição)
 MAX_DETAILS = 3000
 

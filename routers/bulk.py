@@ -10,8 +10,9 @@ from starlette.datastructures import FormData
 from database import get_db
 from routers.common import f_bool, form_data, redirect, render, to_int
 from services.delete_service import KINDS, filter_ids, impact, run
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/bulk-delete", tags=["Exclusão em massa"])
+router = APIRouter(prefix="/bulk-delete", tags=[N_("Exclusão em massa")])
 
 
 def _back(kind: str, raw) -> str:
@@ -31,11 +32,11 @@ def _ids(db: Session, kind: str, form: FormData) -> list[int]:
 @router.post("/{kind}/preview")
 def bulk_preview(kind: str, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     if kind not in KINDS:
-        return redirect("/", "Tipo de cadastro desconhecido.", "danger")
+        return redirect("/", _("Tipo de cadastro desconhecido."), "danger")
     back = _back(kind, form.get("back"))
     ids = _ids(db, kind, form)
     if not ids:
-        return redirect(back, "Marque os itens a excluir.", "warning")
+        return redirect(back, _("Marque os itens a excluir."), "warning")
     imp = impact(db, kind, ids)
     # "todos do filtro": a confirmação reenvia o filtro (não um campo por item), e a exclusão o resolve de novo
     by_filter = form.get("all") == "1" and filter_ids(db, kind, {}) is not None
@@ -46,20 +47,20 @@ def bulk_preview(kind: str, request: Request, form: FormData = Depends(form_data
 @router.post("/{kind}/run")
 def bulk_run(kind: str, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     if kind not in KINDS:
-        return redirect("/", "Tipo de cadastro desconhecido.", "danger")
+        return redirect("/", _("Tipo de cadastro desconhecido."), "danger")
     back = _back(kind, form.get("back"))
     ids = _ids(db, kind, form)
     if not ids:
-        return redirect(back, "Nada a excluir.", "warning")
+        return redirect(back, _("Nada a excluir."), "warning")
     cascade = f_bool(form, "cascade")
     try:
         done, skipped = run(db, kind, ids, cascade)
         db.commit()
     except Exception as exc:  # noqa: BLE001  (restrição do banco não prevista: nada é gravado)
         db.rollback()
-        return redirect(back, f"Exclusão não feita: {exc}", "danger")
+        return redirect(back, _("Exclusão não feita: {exc}", exc=exc), "danger")
     label = KINDS[kind]["label"]
-    msg = f"{done} {label} excluído(s)" + (" com os registros relacionados." if cascade and done else ".")
+    msg = _("{done} {label} excluído(s)", done=done, label=label) + (_(" com os registros relacionados.") if cascade and done else ".")
     if skipped:
-        msg += f" {skipped} ignorado(s) por terem registros relacionados (marque \"excluir também os relacionados\")."
+        msg += _(" {skipped} ignorado(s) por terem registros relacionados (marque \"excluir também os relacionados\").", skipped=skipped)
     return redirect(back, msg, "warning" if skipped else "success")

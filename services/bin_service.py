@@ -14,16 +14,17 @@ from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
 from models import BinType, LocationBin
+from services.i18n import N_, _
 
 CHUNK = 900
 MAX_BINS_PER_TYPE = 100_000
 
 BULK_MODES = {
-    "add": "Adicionar no próprio nível (soma à quantidade do mesmo tipo)",
-    "set": "Definir quantidade deste tipo (mantém os outros tipos)",
-    "replace": "Substituir todas as bins do endereço por este tipo",
-    "remove": "Remover este tipo dos endereços",
-    "clear": "Remover TODAS as bins dos endereços",
+    "add": N_("Adicionar no próprio nível (soma à quantidade do mesmo tipo)"),
+    "set": N_("Definir quantidade deste tipo (mantém os outros tipos)"),
+    "replace": N_("Substituir todas as bins do endereço por este tipo"),
+    "remove": N_("Remover este tipo dos endereços"),
+    "clear": N_("Remover TODAS as bins dos endereços"),
 }
 
 
@@ -66,19 +67,19 @@ def parse_bin_rows(type_ids: list, quantities: list, levels: Optional[list] = No
         try:
             type_id = int(raw_type)
         except ValueError:
-            return [], "Tipo de bin inválido."
+            return [], _("Tipo de bin inválido.")
         try:
             qty = int(raw_qty or "1")
         except ValueError:
-            return [], "Quantidade de bins deve ser um número inteiro."
+            return [], _("Quantidade de bins deve ser um número inteiro.")
         if qty < 1 or qty > MAX_BINS_PER_TYPE:
-            return [], f"Quantidade de bins deve estar entre 1 e {MAX_BINS_PER_TYPE:,}."
+            return [], _("Quantidade de bins deve estar entre 1 e {MAX_BINS_PER_TYPE}.", MAX_BINS_PER_TYPE=f"{MAX_BINS_PER_TYPE:,}")
         lvl = None
         if raw_lvl:
             try:
                 lvl = int(raw_lvl)
             except ValueError:
-                return [], "Nível inválido."
+                return [], _("Nível inválido.")
         totals[(type_id, lvl)] = totals.get((type_id, lvl), 0) + qty
     return [(t, q, lvl) for (t, lvl), q in totals.items()], None
 
@@ -89,7 +90,7 @@ def validate_types(db: Session, type_ids: Iterable[int]) -> Optional[str]:
         return None
     found = set(db.scalars(select(BinType.id).where(BinType.id.in_(ids))))
     if found != ids:
-        return "Um ou mais tipos de bin não existem mais."
+        return _("Um ou mais tipos de bin não existem mais.")
     return None
 
 
@@ -125,11 +126,11 @@ class BulkResult:
 def bulk_assign(db: Session, location_ids: list[int], mode: str, bin_type_id: Optional[int], qty: int) -> BulkResult:
     """Atribui bins a vários endereços de uma vez (sem commit)."""
     if mode not in BULK_MODES:
-        raise ValueError("Modo de atribuição inválido.")
+        raise ValueError(_("Modo de atribuição inválido."))
     if mode != "clear" and not bin_type_id:
-        raise ValueError("Selecione o tipo de bin.")
+        raise ValueError(_("Selecione o tipo de bin."))
     if mode in ("add", "set", "replace") and not (1 <= qty <= MAX_BINS_PER_TYPE):
-        raise ValueError(f"Quantidade de bins deve estar entre 1 e {MAX_BINS_PER_TYPE:,}.")
+        raise ValueError(_("Quantidade de bins deve estar entre 1 e {MAX_BINS_PER_TYPE}.", MAX_BINS_PER_TYPE=f"{MAX_BINS_PER_TYPE:,}"))
     res = BulkResult(locations=len(location_ids))
     ids = sorted(set(location_ids))
     for i in range(0, len(ids), CHUNK):

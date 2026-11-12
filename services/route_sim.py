@@ -19,6 +19,7 @@ import re
 import statistics
 from dataclasses import dataclass
 from typing import Callable, Optional
+from services.i18n import N_, _
 
 EPS = 1e-9
 
@@ -324,8 +325,8 @@ def add_times(sim: dict, tp: dict) -> dict:
     return sim
 
 
-ROUTE_KINDS = (("list", "Lista de separação", "#d62728"), ("s", "Serpentina (rota em S)", "#2f6db5"),
-               ("opt", "Otimizada", "#1a9850"))
+ROUTE_KINDS = (("list", N_("Lista de separação"), "#d62728"), ("s", N_("Serpentina (rota em S)"), "#2f6db5"),
+               ("opt", N_("Otimizada"), "#1a9850"))
 
 
 def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Callable = dist) -> dict:
@@ -344,11 +345,11 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
     """As três rotas de um pedido: pontos (cm, planta), índice de cada parada em pts, endereços, SKUs e a distância."""
     lines = [o for o in sample if o[0] == order]
     if not lines:
-        return {"error": f"Pedido {order} não está na amostra."}
+        return {"error": _("Pedido {order} não está na amostra.", order=order)}
     sim = simulate(lines, nodes_of, start, d, keep_routes={order})
     rt = sim["routes"].get(order)
     if not rt:
-        return {"error": f"Os SKUs do pedido {order} não estão na planta."}
+        return {"error": _("Os SKUs do pedido {order} não estão na planta.", order=order)}
     sku_of = {n.key: s for s, ns in nodes_of.items() for n in ns}
     entry = lines[0]
     qty_of = dict(zip(entry[1], entry[2])) if len(entry) > 2 and entry[2] else {}

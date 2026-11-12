@@ -30,22 +30,23 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from services.bin_optimizer import BinSpec, Params, ProductUnit, _sku_options, _units, capacity
+from services.i18n import N_, _, fmt_num, seps, tr
 
 EPS = 1e-9
 OPTIONS_COST = 5  # opções de bins por SKU que o solver compara no objetivo de custo total
 
 SITE_CRITERIA = {  # critérios do projeto (ordem de prioridade definida pelo usuário)
-    "modules": "Menos módulos de estrutura",
-    "cost": "Menor custo total (estruturas + bins)",
-    "area": "Menos metros de fileira (mais área livre)",
-    "structures_cost": "Menor custo de estruturas",
-    "bins_cost": "Menor custo de bins",
-    "bins": "Menos bins",
-    "levels": "Menos níveis ocupados (mais níveis livres)",
-    "walk": "Menor caminhada na separação (trajeto)",
-    "pick": "Mais saídas na zona de ouro da pega",
-    "time": "Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)",
-    "capacity": "Maior capacidade do imóvel (mais níveis de armazenagem, atendendo à demanda)",
+    "modules": N_("Menos módulos de estrutura"),
+    "cost": N_("Menor custo total (estruturas + bins)"),
+    "area": N_("Menos metros de fileira (mais área livre)"),
+    "structures_cost": N_("Menor custo de estruturas"),
+    "bins_cost": N_("Menor custo de bins"),
+    "bins": N_("Menos bins"),
+    "levels": N_("Menos níveis ocupados (mais níveis livres)"),
+    "walk": N_("Menor caminhada na separação (trajeto)"),
+    "pick": N_("Mais saídas na zona de ouro da pega"),
+    "time": N_("Menor tempo de separação (caminhada ÷ velocidade + pega fora da zona de ouro)"),
+    "capacity": N_("Maior capacidade do imóvel (mais níveis de armazenagem, atendendo à demanda)"),
 }
 SITE_OBJECTIVES = SITE_CRITERIA  # o 1º critério é o objetivo
 DEFAULT_TIEBREAK = {"modules": ["area"], "cost": ["modules"], "area": ["modules"], "structures_cost": ["modules"],
@@ -56,8 +57,8 @@ DEFAULT_TIEBREAK = {"modules": ["area"], "cost": ["modules"], "area": ["modules"
 PLACEMENT_CRITERIA = {"walk", "pick", "time"}
 WALK_LIKE = {"walk", "time"}  # no solver, o tempo usa a mesma distância do trajeto; a pega fora do ouro entra na posição dos SKUs
 BIN_CRITERIA = {"cost", "bins_cost", "bins"}  # critérios que dependem das bins escolhidas para cada SKU
-CRIT_UNITS = {"walk": ("m·módulo", 10), "time": ("m·módulo", 10), "capacity": ("níveis", 1), "cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
-              "modules": ("módulos", 1), "bins": ("bins", 1), "levels": ("níveis", 1)}
+CRIT_UNITS = {"walk": (N_("m·módulo"), 10), "time": (N_("m·módulo"), 10), "capacity": (N_("níveis"), 1), "cost": ("R$", 100), "structures_cost": ("R$", 100), "bins_cost": ("R$", 100), "area": ("m", 1000),
+              "modules": (N_("módulos"), 1), "bins": ("bins", 1), "levels": (N_("níveis"), 1)}
 
 
 def site_priority(objective: str, custom: Optional[list] = None) -> list[str]:
@@ -67,11 +68,11 @@ def site_priority(objective: str, custom: Optional[list] = None) -> list[str]:
     rest = [c for c in (custom or []) if c in SITE_CRITERIA and c != first]
     order = [first] + list(dict.fromkeys(rest or DEFAULT_TIEBREAK[first]))
     return order + ([] if "levels" in order else ["levels"])
-STRUCT_MODES = {"auto": "Otimizar quantidade", "fixed": "Quantidade fixa", "off": "Não usar"}
-ORIENTATIONS = {"auto": "Automática (a que comporta mais)", "length": "Fileiras ao longo do comprimento",
-                "width": "Fileiras ao longo da largura"}
-DEMAND_STATUS = {"ok": "Alocado", "sem_dados": "Faltam dimensões", "nao_cabe": "Não cabe em nenhuma bin/estrutura",
-                 "falta": "Faltou espaço", "sem_qtd": "Sem quantidade"}
+STRUCT_MODES = {"auto": N_("Otimizar quantidade"), "fixed": N_("Quantidade fixa"), "off": N_("Não usar")}
+ORIENTATIONS = {"auto": N_("Automática (a que comporta mais)"), "length": N_("Fileiras ao longo do comprimento"),
+                "width": N_("Fileiras ao longo da largura")}
+DEMAND_STATUS = {"ok": N_("Alocado"), "sem_dados": N_("Faltam dimensões"), "nao_cabe": N_("Não cabe em nenhuma bin/estrutura"),
+                 "falta": N_("Faltou espaço"), "sem_qtd": N_("Sem quantidade")}
 
 
 # --------------------------------------------------------------------------- #
@@ -274,9 +275,9 @@ class Obstacle:
     note: str = ""
 
 
-SECTOR_PLACES = {"auto": "Automático (onde perde menos espaço de armazenagem)",
-                 "front": "Junto às docas (frente)", "back": "No fundo", "side": "Nas laterais (paredes de cima/baixo)",
-                 "fixed": "Posição fixa (X/Y)"}
+SECTOR_PLACES = {"auto": N_("Automático (onde perde menos espaço de armazenagem)"),
+                 "front": N_("Junto às docas (frente)"), "back": N_("No fundo"), "side": N_("Nas laterais (paredes de cima/baixo)"),
+                 "fixed": N_("Posição fixa (X/Y)")}
 
 
 @dataclass
@@ -375,7 +376,7 @@ class Layout:
 
     @property
     def real_aisles(self) -> int:
-        return sum(1 for z in self.zones for _, a in z.aisles if a > 0)
+        return sum(1 for z in self.zones for _x, a in z.aisles if a > 0)
 
     @property
     def depth(self) -> float:
@@ -395,7 +396,7 @@ class Layout:
             for y, a in z.aisles:
                 if a > 0:
                     out.append(("aisle", *z.to_global(z.x_start, y, z.x_end - z.x_start, a), ""))
-            for (_, x1), (x2, _) in zip(z.segments, z.segments[1:]):
+            for (_x, x1), (x2, _x) in zip(z.segments, z.segments[1:]):
                 out.append(("cross", *z.to_global(x1, z.cross_lo, x2 - x1, z.cross_hi - z.cross_lo), ""))
             for ln in z.lanes:
                 r = z.rows[ln.row]
@@ -406,13 +407,13 @@ class Layout:
         return out
 
 
-ZONE_ORIENTATIONS = {"along": "Fileiras ao longo do comprimento", "across": "Fileiras ao longo da largura (perpendiculares)"}
-ADDRESS_MODES = {"aisle": "Uma letra por corredor (as duas fileiras de frente têm a mesma letra; estantes ímpares de um lado, "
-                          "pares do outro)",
-                 "row": "Uma letra por rua/fileira (fileiras de frente uma para a outra têm letras diferentes; estantes "
-                        "01, 02, 03… ao longo da fileira)"}
-CAP_ALIGN = {"row": "Encostada na fileira (a sobra fica do lado da área livre)",
-             "edge": "Alinhada à borda do trecho (a sobra fica entre a fileira e a cabeceira)"}
+ZONE_ORIENTATIONS = {"along": N_("Fileiras ao longo do comprimento"), "across": N_("Fileiras ao longo da largura (perpendiculares)")}
+ADDRESS_MODES = {"aisle": N_("Uma letra por corredor (as duas fileiras de frente têm a mesma letra; estantes ímpares de um lado, "
+                          "pares do outro)"),
+                 "row": N_("Uma letra por rua/fileira (fileiras de frente uma para a outra têm letras diferentes; estantes "
+                        "01, 02, 03… ao longo da fileira)")}
+CAP_ALIGN = {"row": N_("Encostada na fileira (a sobra fica do lado da área livre)"),
+             "edge": N_("Alinhada à borda do trecho (a sobra fica entre a fileira e a cabeceira)")}
 
 
 @dataclass
@@ -492,7 +493,7 @@ def build_zone(depth_cm: float, aisle_cm: float, run_len: float, cross_len: floa
     seq = _cross_layout(fl.cross_hi - fl.cross_lo, depth_cm, a, bool(open_cross[0]), bool(open_cross[1])) \
         if depth_cm > 0 else None
     if not seq:
-        fl.notes.append("A zona não comporta nenhuma fileira com corredor.")
+        fl.notes.append(_("A zona não comporta nenhuma fileira com corredor."))
         return fl
     y = fl.cross_lo
     aisle_idx = -1
@@ -533,12 +534,12 @@ def build_zone(depth_cm: float, aisle_cm: float, run_len: float, cross_len: floa
     seg = (x1 - x0 - (n - 1) * ca) / n
     fl.x_start, fl.x_end = x0, x1
     if seg <= 0:
-        fl.notes.append("Faixas reservadas e corredores transversais ocupam todo o comprimento das fileiras.")
+        fl.notes.append(_("Faixas reservadas e corredores transversais ocupam todo o comprimento das fileiras."))
         fl.rows = []
         return fl
     fl.segments = [(x0 + i * (seg + ca), x0 + i * (seg + ca) + seg) for i in range(n)]
-    fl.seg_ends = [(run_ends[0] if i == 0 else f"o corredor transversal {i}",
-                    run_ends[1] if i == n - 1 else f"o corredor transversal {i + 1}") for i in range(n)]
+    fl.seg_ends = [(run_ends[0] if i == 0 else _("o corredor transversal {i}", i=i),
+                    run_ends[1] if i == n - 1 else _("o corredor transversal {v}", v=i + 1)) for i in range(n)]
     fl.lanes = [Lane(r.index, k, a0, a1, *fl.seg_ends[k]) for r in fl.rows for k, (a0, a1) in enumerate(fl.segments)]
     return fl
 
@@ -566,7 +567,7 @@ def apply_obstacles(lay: Layout, obstacles: list, clearance_cm: float = 0.0) -> 
                     keep.append(Lane(ln.row, ln.seg, ox + ow, ln.x1, None, ln.end, False, ln.full_end))
             z.lanes = keep
         if cut and getattr(ob, "kind", "obstacle") == "obstacle":
-            lay.notes.append(f"Obstáculo {ob.name}: {cut} trecho(s) de fileira encurtado(s) ou removido(s).")
+            lay.notes.append(_("Obstáculo {name}: {cut} trecho(s) de fileira encurtado(s) ou removido(s).", name=ob.name, cut=cut))
 
 
 def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
@@ -579,18 +580,18 @@ def build_floor(b: Building, depth_cm: float, along: str) -> Floor:
     # largura de um corredor; corredores transversais sempre
     fl = build_zone(depth_cm, a, run, cross, run_pad=(gap + front, gap + back), cross_pad=(gap, gap),
                     run_ends=("a faixa da frente (docas)" if front >= a - EPS else None,
-                              "a faixa do fundo" if back >= a - EPS else None),
+                              _("a faixa do fundo") if back >= a - EPS else None),
                     cross_aisles=b.cross_aisles, cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps,
                     along=along)
     if not fl.rows and not fl.notes:
-        fl.notes.append("O imóvel não comporta nenhuma fileira com corredor nessa orientação.")
+        fl.notes.append(_("O imóvel não comporta nenhuma fileira com corredor nessa orientação."))
     if fl.notes and fl.notes[0].startswith("A zona não comporta"):
-        fl.notes[0] = "O imóvel não comporta nenhuma fileira com corredor nessa orientação."
+        fl.notes[0] = _("O imóvel não comporta nenhuma fileira com corredor nessa orientação.")
     fl.rot = along == "width"
     if front > 0:
-        fl.areas.append(("reserved", gap, gap, front, cross - 2 * gap, "Docas / expedição"))
+        fl.areas.append(("reserved", gap, gap, front, cross - 2 * gap, _("Docas / expedição")))
     if back > 0:
-        fl.areas.append(("reserved", run - gap - back, gap, back, cross - 2 * gap, "Área reservada"))
+        fl.areas.append(("reserved", run - gap - back, gap, back, cross - 2 * gap, _("Área reservada")))
     return fl
 
 
@@ -601,8 +602,7 @@ def choose_floor(b: Building, structs: list[StructureSpec]) -> Floor:
     narrow = min((s.width for s in structs), default=1.0) or 1.0
     best = max(floors, key=lambda f: (len(f.rows) * len(f.segments) * math.floor(f.seg_len / narrow + EPS), f.along == "length"))
     if len({s.depth for s in structs}) > 1:
-        best.notes.append(f"Estruturas com profundidades diferentes: as fileiras foram dimensionadas pela maior "
-                          f"({depth:g} cm).")
+        best.notes.append(_("Estruturas com profundidades diferentes: as fileiras foram dimensionadas pela maior ({depth} cm).", depth=f"{depth:g}"))
     return best
 
 
@@ -630,9 +630,9 @@ def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -
     L, W = b.length_m * 100.0, b.width_m * 100.0
     gap, front, back = (v * 100.0 for v in (b.wall_gap_m, b.front_reserved_m, b.back_reserved_m))
     if front > 0:
-        lay.areas.append(("reserved", gap, gap, front, W - 2 * gap, "Docas / expedição"))
+        lay.areas.append(("reserved", gap, gap, front, W - 2 * gap, _("Docas / expedição")))
     if back > 0:
-        lay.areas.append(("reserved", L - gap - back, gap, back, W - 2 * gap, "Área reservada"))
+        lay.areas.append(("reserved", L - gap - back, gap, back, W - 2 * gap, _("Área reservada")))
     rects = zone_rects(b)
     blocks = [(o.x_m * 100, o.y_m * 100, o.length_m * 100, o.width_m * 100) for o in b.obstacles]
 
@@ -648,8 +648,8 @@ def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -
         if front > 0 and sx < gap + front - EPS:
             return "a faixa da frente (docas)"
         if back > 0 and sx + sw > L - gap - back + EPS:
-            return "a faixa do fundo"
-        return "a circulação"
+            return _("a faixa do fundo")
+        return _("a circulação")
 
     for i, (z, (x, y, lx, wy)) in enumerate(zip(b.zones, rects)):
         allowed = [s for s in structs if not z.structures or s.id in z.structures]
@@ -664,12 +664,12 @@ def _positioned_layout(b: Building, structs: list[StructureSpec], lay: Layout) -
             fl = build_zone(depth, a, lx, wy, open_cross=(side(i, "top", a), side(i, "bottom", a)),
                             run_ends=(side(i, "left", a), side(i, "right", a)), cross_aisles=z.cross_aisles,
                             cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps, along="length")
-        fl.ox, fl.oy, fl.index, fl.name = x, y, i, z.name or f"Zona {i + 1}"
+        fl.ox, fl.oy, fl.index, fl.name = x, y, i, z.name or _("Zona {v}", v=i + 1)
         fl.struct_ids = {s.id for s in allowed}
         for r in fl.rows:
             r.zone = i
         if not allowed:
-            fl.notes.append("nenhuma estrutura ativa permitida")
+            fl.notes.append(_("nenhuma estrutura ativa permitida"))
         if len({s.depth for s in allowed}) > 1:
             fl.notes.append(f"profundidades diferentes: fileiras dimensionadas pela maior ({depth:g} cm)")
         lay.notes += [f"{fl.name}: {n}" for n in fl.notes]
@@ -717,7 +717,7 @@ def _sector_candidates(b: Building, sec: SectorSpec, taken: list) -> list[tuple[
             out.append((place, x, y, w, d))
     ok = []
     for c in out:
-        _, x, y, w, d = c
+        _x, x, y, w, d = c
         if w < mins - EPS or d < mins - EPS or w <= 0 or d <= 0:
             continue
         if x < x0 - EPS or y < y0 - EPS or x + w > x1 + EPS or y + d > y1 + EPS:
@@ -742,16 +742,15 @@ def _layout_with_sectors(b: Building, structs: list[StructureSpec]) -> Layout:
                       note="posição fixa")
         placed.append(ob)
         taken.append((ob.x_m * 100, ob.y_m * 100, ob.length_m * 100, ob.width_m * 100))
-    br = lambda v: f"{v:.2f}".rstrip("0").rstrip(".").replace(".", ",")  # noqa: E731
+    br = lambda v: f"{v:.2f}".rstrip("0").rstrip(".").replace(".", seps()[0])  # noqa: E731
     for sec in sorted([s for s in b.sectors if s.place != "fixed"], key=lambda s: -s.area_m2):
         cands = [c for c in _sector_candidates(b, sec, taken) if sec.place == "auto" or c[0] == sec.place]
         if not cands:
-            notes.append(f"Setor {sec.name}: não coube ({br(sec.area_m2)} m², lado mínimo {br(sec.min_side_m or 0)} m"
-                         f"{'' if sec.place == 'auto' else ', ' + SECTOR_PLACES[sec.place].lower()}).")
+            notes.append(_("Setor {name}: não coube ({br} m², lado mínimo {br2} m{v}).", name=sec.name, br=br(sec.area_m2), br2=br(sec.min_side_m or 0), v='' if sec.place == 'auto' else ', ' + SECTOR_PLACES[sec.place].lower()))
             continue
         best = None
         for c in cands:
-            _, x, y, w, d = c
+            _x, x, y, w, d = c
             ob = Obstacle(sec.name, x / 100, y / 100, w / 100, d / 100, kind="sector")
             trial = dataclasses.replace(b, sectors=[], obstacles=list(b.obstacles) + placed + [ob])
             lay = _build_layout(trial, structs)
@@ -768,7 +767,7 @@ def _layout_with_sectors(b: Building, structs: list[StructureSpec]) -> Layout:
     apply_obstacles(lay, final.obstacles, b.wall_gap_m * 100.0)
     lay.sectors = placed
     for ob in placed:
-        who = ob.name if ob.name.lower().startswith("setor") else f"Setor {ob.name}"
+        who = ob.name if ob.name.lower().startswith("setor") else _("Setor {name}", name=ob.name)
         size = f"{br(ob.length_m)} × {br(ob.width_m)} m"
         lay.notes.append(f"{who}: X {br(ob.x_m)} m, Y {br(ob.y_m)} m, "
                          + (f"{size} ({ob.note})." if ob.note == "posição fixa" else f"{ob.note}."))
@@ -795,25 +794,24 @@ def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
     free = [z for z in zs if not z.length_m]
     rem = avail - fixed
     if rem < -EPS or (free and rem <= EPS):
-        br = lambda v: f"{v:.2f}".rstrip("0").rstrip(".").replace(".", ",")  # noqa: E731
-        lay.notes.append(f"As zonas com comprimento informado ({br(fixed / 100)} m) não cabem no comprimento útil para "
-                         f"zonas ({br(avail / 100)} m, já descontadas paredes, faixas reservadas e avenidas)"
-                         + (" e não sobra nada para a zona sem comprimento." if free and rem >= -EPS else "."))
+        br = lambda v: f"{v:.2f}".rstrip("0").rstrip(".").replace(".", seps()[0])  # noqa: E731
+        lay.notes.append(_("As zonas com comprimento informado ({br} m) não cabem no comprimento útil para zonas ({br2} m, já descontadas paredes, faixas reservadas e avenidas)", br=br(fixed / 100), br2=br(avail / 100))
+                         + (_(" e não sobra nada para a zona sem comprimento.") if free and rem >= -EPS else "."))
         return lay
     if front > 0:
-        lay.areas.append(("reserved", gap, gap, front, W - 2 * gap, "Docas / expedição"))
+        lay.areas.append(("reserved", gap, gap, front, W - 2 * gap, _("Docas / expedição")))
     if back > 0:
-        lay.areas.append(("reserved", L - gap - back, gap, back, W - 2 * gap, "Área reservada"))
+        lay.areas.append(("reserved", L - gap - back, gap, back, W - 2 * gap, _("Área reservada")))
     X = gap + front
     for i, z in enumerate(zs):
         lz = (z.length_m or 0) * 100.0 or rem / len(free)
         allowed = [s for s in structs if not z.structures or s.id in z.structures]
         depth = max((s.depth for s in allowed), default=0.0)
         a = (z.aisle_m or b.aisle_m) * 100.0
-        prev = f"a avenida {i}" if i > 0 else ("a faixa da frente (docas)" if front >= a - EPS else None)
-        nxt = f"a avenida {i + 1}" if i < len(zs) - 1 else ("a faixa do fundo" if back >= a - EPS else None)
+        prev = _("a avenida {i}", i=i) if i > 0 else ("a faixa da frente (docas)" if front >= a - EPS else None)
+        nxt = _("a avenida {v}", v=i + 1) if i < len(zs) - 1 else (_("a faixa do fundo") if back >= a - EPS else None)
         if z.orientation == "across":
-            side = "a circulação junto à parede" if gap >= a - EPS else None
+            side = _("a circulação junto à parede") if gap >= a - EPS else None
             fl = build_zone(depth, a, W, lz, run_pad=(gap, gap), open_cross=(prev, nxt), run_ends=(side, side),
                             cross_aisles=z.cross_aisles, cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps,
                             along="width")
@@ -821,19 +819,19 @@ def _build_layout(b: Building, structs: list[StructureSpec]) -> Layout:
         else:
             fl = build_zone(depth, a, lz, W, cross_pad=(gap, gap), run_ends=(prev, nxt), cross_aisles=z.cross_aisles,
                             cross_aisle_cm=b.cross_aisle_m * 100.0, end_caps=b.end_caps, along="length")
-        fl.ox, fl.index, fl.name = X, i, z.name or f"Zona {i + 1}"
+        fl.ox, fl.index, fl.name = X, i, z.name or _("Zona {v}", v=i + 1)
         fl.struct_ids = {s.id for s in allowed}
         for r in fl.rows:
             r.zone = i
         if not allowed:
-            fl.notes.append("nenhuma estrutura ativa permitida")
+            fl.notes.append(_("nenhuma estrutura ativa permitida"))
         if len({s.depth for s in allowed}) > 1:
             fl.notes.append(f"profundidades diferentes: fileiras dimensionadas pela maior ({depth:g} cm)")
         lay.notes += [f"{fl.name}: {n}" for n in fl.notes]
         lay.zones.append(fl)
         X += lz
         if i < len(zs) - 1:
-            lay.areas.append(("avenue", X, gap, av, W - 2 * gap, f"Avenida {i + 1}"))
+            lay.areas.append(("avenue", X, gap, av, W - 2 * gap, _("Avenida {v}", v=i + 1)))
             X += av
     return lay
 
@@ -905,7 +903,7 @@ class ModulePlaced:
     y0: Optional[float] = None  # cabeceira: posição transversal do canto
     faces: str = ""  # cabeceira: área livre para onde a frente do módulo está voltada
     segment: int = 0
-    zone: Optional["Floor"] = None
+    zone: Optional[N_("Floor")] = None
 
     @property
     def grect(self) -> tuple[float, float, float, float]:
@@ -1110,12 +1108,11 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
                     params=prm)
     too_tall = [s for s in active if s.height > b.clear_height_m * 100.0 + EPS]
     for s in too_tall:
-        plan.notes.append(f"Estrutura {s.code} ({s.height:g} cm) é mais alta que o pé-direito útil "
-                          f"({b.clear_height_m * 100:g} cm): descartada.")
+        plan.notes.append(_("Estrutura {code} ({height} cm) é mais alta que o pé-direito útil ({v} cm): descartada.", code=s.code, height=f"{s.height:g}", v=f"{b.clear_height_m * 100:g}"))
     active = [s for s in active if s not in too_tall]
     if not active:
-        plan.errors.append("Nenhuma estrutura ativa que caiba no imóvel. Cadastre estruturas e marque ao menos uma "
-                           "como \"Otimizar quantidade\" ou \"Quantidade fixa\".")
+        plan.errors.append(_("Nenhuma estrutura ativa que caiba no imóvel. Cadastre estruturas e marque ao menos uma "
+                           "como \"Otimizar quantidade\" ou \"Quantidade fixa\"."))
         plan.demands = demands
         return plan
     floor = build_layout(b, active)
@@ -1124,9 +1121,9 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     if any(c in PLACEMENT_CRITERIA for c in prm.order):
         prm.walk_ref = ref_point(plan, prm.slotting or {})  # trajeto no solver: distância até a expedição
         if not any(d.pop for d in demands):
-            plan.notes.append("Trajeto/pega no objetivo: sem dados de saída (aba Pedidos ou coluna Saída), a posição dos "
+            plan.notes.append(_("Trajeto/pega no objetivo: sem dados de saída (aba Pedidos ou coluna Saída), a posição dos "
                               "SKUs não tem como priorizar os mais procurados; o trajeto vale só para a posição das "
-                              "estruturas.")
+                              "estruturas."))
 
     # ---- capacidade por (tipo, estrutura) ----
     allowed = [t for t in types.values() if prm.allowed_types is None or t.id in prm.allowed_types]
@@ -1140,8 +1137,8 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
                                           if level_capacity(t, s, prm, parents.get(t.id), n) > 0]
     fitting = {t.id for t in allowed if any(caps[(t.id, s.id)] > 0 for s in active)}
     if not fitting:
-        plan.errors.append("Nenhum tipo de bin permitido cabe nos níveis das estruturas ativas (confira altura/vão, "
-                           "profundidade e frente).")
+        plan.errors.append(_("Nenhum tipo de bin permitido cabe nos níveis das estruturas ativas (confira altura/vão, "
+                           "profundidade e frente)."))
 
     # ---- bins por SKU ----
     bp = prm.as_params()
@@ -1150,19 +1147,19 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         d.units = _units(d.unit.qty, prm.growth)
         if d.cap is not None and d.units > d.cap:
             d.units = max(0, int(d.cap))
-            d.note = f"Limitado a {d.cap} un. (redução da demanda)."
+            d.note = _("Limitado a {cap} un. (redução da demanda).", cap=d.cap)
         if d.units <= 0:
             d.status = "sem_qtd"
             continue
         if not d.unit.has_dims:
             d.status = "sem_dados"
-            d.note = "SKU sem altura, largura ou comprimento."
+            d.note = _("SKU sem altura, largura ou comprimento.")
             continue
         sku_caps = {t: capacity(d.unit, types[t], bp) for t in fitting}
         sku_caps = {t: c for t, c in sku_caps.items() if c > 0}
         if not sku_caps:
             d.status = "nao_cabe"
-            d.note = "Nenhum tipo de bin permitido (que caiba nas estruturas) comporta uma unidade."
+            d.note = _("Nenhum tipo de bin permitido (que caiba nas estruturas) comporta uma unidade.")
             continue
         opts = _sku_options(d.units, sku_caps, types, bp)
         d.bins = dict(opts[0]) if opts else None
@@ -1173,7 +1170,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
             # SKU (inclui a mais barata), pesando-as contra as estruturas que elas ocupam
             choices.append((d, [dict(o) for o in opts[:OPTIONS_COST]]))
     fixed_need: dict[int, int] = {}
-    chosen = {id(d) for d, _ in choices}
+    chosen = {id(d) for d, _x in choices}
     for d in demands:
         if id(d) in chosen:
             continue
@@ -1205,12 +1202,11 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
         v = {"walk": k.get("avg_dist"), "time": k.get("time_pick_s")}.get(c, k.get("golden_picks"))
         if v is not None and isinstance(plan.solver, dict):
             plan.solver.setdefault("stages", []).append(
-                {"criterion": c, "label": SITE_CRITERIA[c] + " — na posição dos SKUs", "value": v, "display": v,
-                 "unit": {"walk": "m por saída", "time": "s por saída"}.get(c, "% das saídas"), "optimal": True,
+                {"criterion": c, "label": SITE_CRITERIA[c] + _(" — na posição dos SKUs"), "value": v, "display": v,
+                 "unit": {"walk": _("m por saída"), "time": _("s por saída")}.get(c, _("% das saídas")), "optimal": True,
                  "placement": True})
     if plan.shortage:
-        plan.notes.append(f"{plan.shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo "
-                          "\"Otimizar quantidade\"), o imóvel ou reduza a demanda.")
+        plan.notes.append(_("{shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo \"Otimizar quantidade\"), o imóvel ou reduza a demanda.", shortage=plan.shortage))
     return plan
 
 
@@ -1291,7 +1287,7 @@ def _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parent
     # ---- posicionamento e endereçamento ----
     _place(plan, floor, active, seg_mods, z, caps, types, demands, prm, end_caps)
 
-    by_t = {t: TypeLine(spec=types[t]) for t in sorted(set(need) | {t for (t, _), n in z.items() if n > 0},
+    by_t = {t: TypeLine(spec=types[t]) for t in sorted(set(need) | {t for (t, _x), n in z.items() if n > 0},
                                                          key=lambda k: types[k].code)}
     for t, line in by_t.items():
         line.needed = need.get(t, 0)
@@ -1318,14 +1314,14 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     glen = [int(math.floor(zones[zi].lanes[li].length * 10 + EPS)) for zi, li in segs]
     if not segs or all(v <= 0 for v in glen):
         fixed = [s for s in active if s.mode == "fixed" and s.qty > 0]
-        return {"info": {**info, "status": "inviável"},
-                "error": "A planta não tem fileiras disponíveis." + (" As estruturas com quantidade fixa não cabem."
+        return {"info": {**info, "status": _("inviável")},
+                "error": _("A planta não tem fileiras disponíveis.") + (_(" As estruturas com quantidade fixa não cabem.")
                                                                     if fixed else "")}
     try:
         from ortools.sat.python import cp_model
     except Exception:  # pragma: no cover
-        return {"info": {**info, "status": "indisponível"},
-                "error": "OR-Tools não está instalado (pip install ortools)."}
+        return {"info": {**info, "status": _("indisponível")},
+                "error": _("OR-Tools não está instalado (pip install ortools).")}
 
     t0 = time.monotonic()
     m = cp_model.CpModel()
@@ -1372,13 +1368,13 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
               + sum(v for kk, v in cc.items() if kk[4] == s.id))
         if s.mode == "fixed":
             if s.qty > floor_cap:
-                return {"info": {**info, "status": "inviável"},
-                        "error": f"Quantidade fixa de {s.code} ({s.qty}) não cabe na planta (máximo {floor_cap})."}
+                return {"info": {**info, "status": _("inviável")},
+                        "error": _("Quantidade fixa de {code} ({qty}) não cabe na planta (máximo {floor_cap}).", code=s.code, qty=s.qty, floor_cap=floor_cap)}
             m.Add(x[s.id] == s.qty)
         elif s.min_qty:
             if s.min_qty > hi:
-                return {"info": {**info, "status": "inviável"},
-                        "error": f"Mínimo de {s.code} ({s.min_qty}) maior que o que cabe ({hi})."}
+                return {"info": {**info, "status": _("inviável")},
+                        "error": _("Mínimo de {code} ({min_qty}) maior que o que cabe ({hi}).", code=s.code, min_qty=s.min_qty, hi=hi)}
             m.Add(x[s.id] >= s.min_qty)
     used = []
     for g in range(len(segs)):
@@ -1459,7 +1455,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
     for i, (label, expr) in enumerate(stages):
         if isinstance(expr, int):  # critério que não depende de nenhuma decisão (ex.: bins já definidas)
             unit, div = CRIT_UNITS.get(label, ("bins", 1))
-            info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, "Falta de bins (guardar toda a demanda)"),
+            info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, _("Falta de bins (guardar toda a demanda)")),
                                    "value": expr, "display": expr / div, "unit": unit, "optimal": True, "fixed": True})
             continue
         left = deadline - time.monotonic()
@@ -1476,12 +1472,12 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
         if st not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
             if not ok:
                 if st == cp_model.UNKNOWN:  # não provou inviável: o tempo acabou antes de achar uma solução
-                    return {"info": {**info, "status": "sem solução no tempo limite", "time": time.monotonic() - t0},
-                            "error": "O solver não encontrou nenhum plano no tempo limite. Aumente o tempo ou marque "
-                                     "\"Sem limite de tempo\" (etapa Objetivo)."}
-                return {"info": {**info, "status": "inviável", "time": time.monotonic() - t0},
-                        "error": "Não foi possível montar um plano com essas restrições (confira as quantidades "
-                                 "fixas/mínimas e o tamanho do imóvel)."}
+                    return {"info": {**info, "status": _("sem solução no tempo limite"), "time": time.monotonic() - t0},
+                            "error": _("O solver não encontrou nenhum plano no tempo limite. Aumente o tempo ou marque "
+                                     "\"Sem limite de tempo\" (etapa Objetivo).")}
+                return {"info": {**info, "status": _("inviável"), "time": time.monotonic() - t0},
+                        "error": _("Não foi possível montar um plano com essas restrições (confira as quantidades "
+                                 "fixas/mínimas e o tamanho do imóvel).")}
             skipped += [SITE_CRITERIA.get(lb, lb) for lb, _e in stages[i:]]
             all_optimal = False
             break
@@ -1490,7 +1486,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
         all_optimal &= st == cp_model.OPTIMAL
         unit, div = CRIT_UNITS.get(label, ("bins", 1))
         sgn = -1 if label == "capacity" else 1  # critério de maximizar: mostra o valor positivo
-        info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, "Falta de bins (guardar toda a demanda)"),
+        info["stages"].append({"criterion": label, "label": SITE_CRITERIA.get(label, _("Falta de bins (guardar toda a demanda)")),
                                "value": sgn * val, "display": sgn * val / div, "unit": unit, "optimal": st == cp_model.OPTIMAL})
         m.Add(expr <= val)
         # guarda a solução desta etapa (a próxima pode estourar o tempo)
@@ -1512,7 +1508,7 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
         for vs, k in zip(y, sol["picks"]):
             for j, v in enumerate(vs):
                 m.AddHint(v, 1 if j == k else 0)
-    info["status"] = "ótimo comprovado" if all_optimal else "melhor solução no tempo limite (não comprovada ótima)"
+    info["status"] = _("ótimo comprovado") if all_optimal else _("melhor solução no tempo limite (não comprovada ótima)")
     info["optimal"] = all_optimal
     info["unlimited"] = not prm.time_limit
     info["skipped"] = skipped  # critérios que não chegaram a ser otimizados (o tempo acabou antes)
@@ -1547,7 +1543,7 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
         start = cap_at.get((zi, row.block, ln.seg, 0)) if ln.full_start else None
         x = ln.x0 + (start[0].depth if start else 0.0)
         for sid in sorted(mods, key=lambda i: by_id[i].code):
-            for _ in range(mods[sid]):
+            for _x in range(mods[sid]):
                 s = by_id[sid]
                 plan.modules.append(ModulePlaced(struct=s, row=row, x0=x, levels=lv_of(s), segment=ln.seg, zone=zn))
                 x += s.width
@@ -1644,7 +1640,7 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
         free = list(slots)
         for t, k in alloc:
             ok = set(s.fit_levels.get(t, [])) if s.fit_levels else None
-            for _ in range(k):
+            for _x in range(k):
                 j = next((j for j, lv in enumerate(free) if ok is None or lv.n in ok), None)
                 if j is None:
                     break
@@ -1754,7 +1750,7 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
             d.note = f"{d.total_bins - d.placed_bins} de {d.total_bins} bin(s) sem lugar."
     for d in demands:
         if d.status == "ok" and d.total_bins and len({p.address for p in plan.positions if p.sku == d.sku}) > 1:
-            d.note = "Dividido em mais de uma posição."
+            d.note = _("Dividido em mais de uma posição.")
     slotting_kpis(plan, demands, prm, bool(sl))
 
 
@@ -1776,21 +1772,21 @@ def ref_point(plan: SitePlan, sl: dict) -> dict:
     center = lambda o: (o.x_m * 100 + o.length_m * 50, o.y_m * 100 + o.width_m * 50)  # noqa: E731
     if spec == "xy" and sl.get("ref_xy"):
         x, y = sl["ref_xy"]
-        return {"x": x * 100.0, "y": y * 100.0, "label": f"X {x:g} m, Y {y:g} m".replace(".", ",")}
+        return {"x": x * 100.0, "y": y * 100.0, "label": f"X {fmt_num(round(x, 3))} m, Y {fmt_num(round(y, 3))} m"}
     if spec.startswith("sector:"):
         name = spec[7:]
         o = next((o for o in sectors if o.name == name), None)
         if o is not None:
             x, y = center(o)
-            return {"x": x, "y": y, "label": f"setor {o.name}"}
+            return {"x": x, "y": y, "label": _("setor {name}", name=o.name)}
     if spec in ("auto",) or spec.startswith("sector:"):
         o = next((o for o in sectors if "exped" in o.name.casefold()), None)
         if o is not None:
             x, y = center(o)
-            return {"x": x, "y": y, "label": f"setor {o.name}"}
+            return {"x": x, "y": y, "label": _("setor {name}", name=o.name)}
     if front > 0:
-        return {"x": gap + front / 2, "y": W / 2, "label": "docas (centro da faixa da frente)"}
-    return {"x": 0.0, "y": W / 2, "label": "frente do imóvel (meio da parede das docas)"}
+        return {"x": gap + front / 2, "y": W / 2, "label": _("docas (centro da faixa da frente)")}
+    return {"x": 0.0, "y": W / 2, "label": _("frente do imóvel (meio da parede das docas)")}
 
 
 def access_point(m: ModulePlaced) -> tuple[float, float]:
@@ -1800,7 +1796,7 @@ def access_point(m: ModulePlaced) -> tuple[float, float]:
         return X + w / 2, Y + d / 2
     r = m.row
     y = r.y + r.depth if r.side == "L" else r.y  # fileira "L" fica antes do corredor
-    X, Y, _, _ = m.zone.to_global(m.x0 + m.struct.width / 2, y, 0, 0)
+    X, Y, _x, _x = m.zone.to_global(m.x0 + m.struct.width / 2, y, 0, 0)
     return X, Y
 
 
@@ -1934,7 +1930,7 @@ def slotting_kpis(plan: SitePlan, demands: list[Demand], prm: SiteParams, used: 
 
         pts = [access_point(m) for m in plan.modules if any(lv.positions for lv in m.levels)]
         rg = _rnd.Random(7)
-        smp = [(rg.choice(pts), rg.choice(pts)) for _ in range(2000)] if len(pts) > 1 else []
+        smp = [(rg.choice(pts), rg.choice(pts)) for _x in range(2000)] if len(pts) > 1 else []
         k["pairs_random"] = (sum(abs(p[0] - q[0]) + abs(p[1] - q[1]) for p, q in smp) / len(smp) / 100.0) if smp else None
 
 
@@ -1967,10 +1963,10 @@ def aisle_labels(plan: SitePlan) -> list[tuple]:
                 continue  # avenida/docas: o código vai no rótulo da área
             # borda da zona de frente para a circulação: o rótulo fica do lado de fora
             yy = y - zn.aisle_cm / 2 if y <= zn.cross_lo + EPS else y + zn.aisle_cm / 2
-            X, Y, _, _ = zn.to_global(zn.x_start + 20, yy, 0, 0)
+            X, Y, _x, _x = zn.to_global(zn.x_start + 20, yy, 0, 0)
             out.append((name, X, Y, zn.rot))
             continue
-        X, Y, _, _ = zn.to_global(zn.x_start + 20, y + wdt / 2, 0, 0)
+        X, Y, _x, _x = zn.to_global(zn.x_start + 20, y + wdt / 2, 0, 0)
         out.append((name, X, Y, zn.rot))
     return out
 
@@ -1987,8 +1983,8 @@ def _same_area(edge: str, label: str) -> bool:
 def aisle_name(plan: SitePlan, code: str) -> str:
     """"Corredor B" (letra por corredor) ou "Ruas B | C" / "Rua A" (letra por rua: as ruas dos dois lados)."""
     if plan.building.address_mode == "row":
-        return ("Ruas " if "|" in code else "Rua ") + code
-    return f"Corredor {code}"
+        return (_("Ruas ") if "|" in code else _("Rua ")) + code
+    return _("Corredor {code}", code=code)
 
 
 def area_label(plan: SitePlan, label: str) -> str:
@@ -2000,7 +1996,7 @@ def area_label(plan: SitePlan, label: str) -> str:
     return label + (f" · {word} {', '.join(codes)}" if codes else "")
 
 
-DIM_MODES = {"none": "Ocultar medidas", "summary": "Resumo (C × L)", "full": "Medidas ao longo da planta"}
+DIM_MODES = {"none": N_("Ocultar medidas"), "summary": N_("Resumo (C × L)"), "full": N_("Medidas ao longo da planta")}
 DIM_KINDS = ("zone", "obstacle", "sector", "reserved", "avenue", "aisle", "cross")  # áreas que entram nas cotas encadeadas
 
 
@@ -2023,14 +2019,14 @@ def dim_chains(fl, min_gap_x: float, min_gap_y: float) -> tuple[list[float], lis
     """Cotas encadeadas da planta (cm): bordas de zonas, obstáculos, faixas, avenidas e corredores, ao longo do
     comprimento (X) e da largura (Y)."""
     xs, ys = [], []
-    for kind, X, Y, w, d, _ in fl.shapes():
+    for kind, X, Y, w, d, _x in fl.shapes():
         if kind in DIM_KINDS and w > 0 and d > 0:
             xs += [X, X + w]
             ys += [Y, Y + d]
     return _chain(xs, fl.length_cm, min_gap_x), _chain(ys, fl.width_cm, min_gap_y)
 
 
-DIM_POSITIONS = {"out": "Por fora da planta", "in": "Por dentro (em cada zona e obstáculo)"}
+DIM_POSITIONS = {"out": N_("Por fora da planta"), "in": N_("Por dentro (em cada zona e obstáculo)")}
 
 
 def dim_pos(v) -> str:
@@ -2042,7 +2038,7 @@ def inner_dims(fl, off: float, min_len: float) -> list[tuple]:
     direita (o nome fica no canto de cima). [(x1, y1, x2, y2, rótulo, vertical?, "zone" | "obstacle")]; lados menores que
     `min_len` ficam sem cota. (Na tela de edição, a forma selecionada ganha também a distância até a vizinha.)"""
     out = []
-    for kind, X, Y, w, d, _ in fl.shapes():
+    for kind, X, Y, w, d, _x in fl.shapes():
         if kind not in ("zone", "obstacle", "sector") or w <= 0 or d <= 0:
             continue
         if w >= min_len:
@@ -2055,10 +2051,10 @@ def inner_dims(fl, off: float, min_len: float) -> list[tuple]:
 
 
 def _m(cm: float) -> str:
-    return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+    return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", seps()[0])
 
 
-FLOOR_KINDS = ("palete no chao", "palete no chão", "blocado", "piso")
+FLOOR_KINDS = (N_("palete no chao"), N_("palete no chão"), "blocado", "piso")
 
 
 def is_floor(kind: str) -> bool:
@@ -2133,7 +2129,7 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
         if fl.mixed and m.zone is not None:
             title += f" · {m.zone.name}"
         if m.rotated:
-            title += f" · cabeceira girada 90°, de frente para {m.faces}"
+            title += _(" · cabeceira girada 90°, de frente para {faces}", faces=m.faces)
         X, Y, w, d = m.grect
         out.append(f'<rect x="{X * sc:.1f}" y="{Y * sc:.1f}" width="{w * sc:.1f}" height="{d * sc:.1f}" '
                    f'fill="{color[m.struct.id]}" fill-opacity="{op:.2f}" '
@@ -2148,11 +2144,11 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     if ref and lim:
         rx, ry, r = ref["x"] * sc, ref["y"] * sc, lim * 100 * sc
         out.append(f'<clipPath id="nkBld"><rect x="0" y="0" width="{W:.1f}" height="{H:.1f}"/></clipPath>'
-                   f'<polygon clip-path="url(#nkBld)" points="{rx - r:.1f},{ry:.1f} {rx:.1f},{ry - r:.1f} {rx + r:.1f},{ry:.1f} '
-                   f'{rx:.1f},{ry + r:.1f}" fill="rgba(245,190,40,.12)" stroke="#d4a017" stroke-width="1.5" '
-                   f'stroke-dasharray="6 3"><title>Zona de ouro da caminhada: até {_m(lim * 100)} m da referência</title></polygon>'
+                   f'<polygon clip-path="url(#nkBld)" points="{rx - r:.1f},{ry:.1f} {rx:.1f},{ry - r:.1f} {rx + r:.1f},{ry:.1f} {rx:.1f},{ry + r:.1f}" '
+                   f'fill="rgba(245,190,40,.12)" stroke="#d4a017" stroke-width="1.5" stroke-dasharray="6 3">'
+                   f'<title>{_("Zona de ouro da caminhada: até {m} m da referência", m=_m(lim * 100))}</title></polygon>'
                    f'<circle cx="{rx:.1f}" cy="{ry:.1f}" r="5" fill="#d62728" stroke="#fff" stroke-width="1.5">'
-                   f'<title>Ponto de referência: {ref["label"]}</title></circle>')
+                   f'<title>{_("Ponto de referência: {label}", label=tr(ref["label"]))}</title></circle>')
     # cotas: total (externa) e encadeada (interna), em cima (X) e à esquerda (Y)
     xs, ys = dim_chains(fl, 30 / sc, 30 / sc)
     g = ['<g class="nk-dim-fo" stroke="#5b6770" stroke-width="0.8" font-size="9" fill="#1f2d33">']
@@ -2201,7 +2197,7 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
     g.append("</g>")
     out += g
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
-            f'fileiras ao longo do {"comprimento" if fl.along == "length" else "largura"}')
+            _("fileiras ao longo do {v}", v="comprimento" if fl.along == "length" else "largura"))
     out.append(f'<text x="0" y="{H + 15:.1f}" font-size="11" fill="#5b6770"><tspan class="nk-dim-s" font-weight="bold" '
                f'fill="#1f2d33">{b.length_m:g} × {b.width_m:g} m · </tspan>{desc} · {len(fl.rows)} fileira(s), '
                f'{fl.real_aisles} corredor(es)'

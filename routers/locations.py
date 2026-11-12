@@ -68,8 +68,9 @@ from services.level_service import (
     validate_bin_levels,
 )
 from services.stock_service import has_items_expr, location_has_items, refresh_occupancy
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/locations", tags=["Endereços"])
+router = APIRouter(prefix="/locations", tags=[N_("Endereços")])
 
 
 def _lookups(db: Session) -> dict:
@@ -116,7 +117,7 @@ def _with_capacity_warnings(db: Session, msg: str, keys) -> tuple[str, str]:
         msg += " " + adj
     warns = capacity_warnings(db, keys, codes)
     if warns:
-        return msg + " ATENÇÃO: " + " ".join(warns), "warning"
+        return msg + _(" ATENÇÃO: ") + " ".join(warns), "warning"
     return msg, "success"
 
 
@@ -138,14 +139,14 @@ def _level_context(db: Session, loc) -> dict:
     def describe(k):
         u = usage.get(k)
         if not u or not u.has_capacity:
-            return "sem capacidade cadastrada"
+            return _("sem capacidade cadastrada")
         caps = " ou ".join(f"{m}× {codes.get(t, t)}" for t, m in u.capacity.items())
         f = u.fraction
         return f"cabem {caps} · uso {'?' if f is None else f'{f * 100:.0f}%'}"
 
     for o in options:
         o["info"] = describe(o["key"])
-    generic = "§Sem nível — preenche a estante de baixo para cima" if loc.bay and (loc.is_generic or not loc.level) else None
+    generic = _("§Sem nível — preenche a estante de baixo para cima") if loc.bay and (loc.is_generic or not loc.level) else None
     return {"level_options": options, "own_level_info": generic or (describe(own) if own else None)}
 
 
@@ -166,17 +167,17 @@ def _validate(db: Session, form: FormData, location_id: int | None):
         "is_generic": f_bool(form, "is_generic"),
     }
     if not data["branch_id"] or not db.get(Branch, data["branch_id"]):
-        errors.add("branch_id", "Filial é obrigatória.")
+        errors.add("branch_id", _("Filial é obrigatória."))
     if data["warehouse_id"]:
         if not db.get(Warehouse, data["warehouse_id"]):
-            errors.add("warehouse_id", "Armazém inválido.")
+            errors.add("warehouse_id", _("Armazém inválido."))
         elif data["branch_id"] and not db.scalar(
             select(exists().where(branch_warehouse.c.branch_id == data["branch_id"],
                                   branch_warehouse.c.warehouse_id == data["warehouse_id"]))
         ):
-            errors.add("warehouse_id", "Este armazém não está vinculado à filial selecionada.")
+            errors.add("warehouse_id", _("Este armazém não está vinculado à filial selecionada."))
     if not data["aisle"]:
-        errors.add("aisle", "Corredor é obrigatório.")
+        errors.add("aisle", _("Corredor é obrigatório."))
     # Hierarquia estrita: um nível só pode ser preenchido se o anterior estiver preenchido.
     chain = ["aisle", "bay", "level", "position", "compartment"]
     for prev, cur in zip(chain, chain[1:]):
@@ -184,9 +185,9 @@ def _validate(db: Session, form: FormData, location_id: int | None):
             errors.add(cur, f"{LEVEL_LABELS[cur]} exige {LEVEL_LABELS[prev]} preenchido (hierarquia estrita).")
     for k in chain:
         if len(data[k]) > 20:
-            errors.add(k, "Máximo de 20 caracteres.")
+            errors.add(k, _("Máximo de 20 caracteres."))
     bin_items, bin_err = parse_bin_rows(form.getlist("bin_type_id"), form.getlist("bin_qty"), form.getlist("bin_level"))
-    bin_err = bin_err or validate_types(db, [t for t, _, _ in bin_items])
+    bin_err = bin_err or validate_types(db, [t for t, _x, _x in bin_items])
     if not bin_err:
         bin_err, bin_items = validate_bin_levels(db, data, bin_items)
     if bin_err:
@@ -223,9 +224,9 @@ def location_contents(db: Session, ids: list[int]) -> dict[int, list[dict]]:
                                Product.material_type)
                         .join(Product, Product.id == StockPolicy.product_id)
                         .where(StockPolicy.default_location_id.in_(ids))):
-        item(*r)["tags"].add("padrão")
+        item(*r)["tags"].add(_("padrão"))
     out: dict[int, list[dict]] = {}
-    for (lid, _), it in sorted(merged.items(), key=lambda kv: (kv[0][0], kv[1]["sku"])):
+    for (lid, _x), it in sorted(merged.items(), key=lambda kv: (kv[0][0], kv[1]["sku"])):
         out.setdefault(lid, []).append(it)
     return out
 
@@ -379,11 +380,11 @@ def assign_bins(form: FormData = Depends(form_data), db: Session = Depends(get_d
     else:
         ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
     if not ids:
-        return redirect(back, "Nenhum endereço selecionado.", "warning")
+        return redirect(back, _("Nenhum endereço selecionado."), "warning")
     if mode != "clear":
         err = validate_types(db, [bin_type_id] if bin_type_id else [])
         if err or not bin_type_id:
-            return redirect(back, err or "Selecione o tipo de bin.", "danger")
+            return redirect(back, err or _("Selecione o tipo de bin."), "danger")
     try:
         res = bulk_assign(db, ids, mode, bin_type_id, qty)
         db.flush()
@@ -396,11 +397,11 @@ def assign_bins(form: FormData = Depends(form_data), db: Session = Depends(get_d
     bt = db.get(BinType, bin_type_id) if bin_type_id else None
     label = bt.code if bt else ""
     msgs = {
-        "add": f"{qty} bin(s) {label} adicionada(s) a {res.locations} endereço(s).",
-        "set": f"{res.locations} endereço(s) agora com {qty} bin(s) {label}.",
-        "replace": f"{res.locations} endereço(s) agora somente com {qty} bin(s) {label}.",
-        "remove": f"Tipo {label} removido de {res.rows_removed} endereço(s).",
-        "clear": f"Bins removidas de {res.locations} endereço(s).",
+        "add": _("{qty} bin(s) {label} adicionada(s) a {locations} endereço(s).", qty=qty, label=label, locations=res.locations),
+        "set": _("{locations} endereço(s) agora com {qty} bin(s) {label}.", locations=res.locations, qty=qty, label=label),
+        "replace": _("{locations} endereço(s) agora somente com {qty} bin(s) {label}.", locations=res.locations, qty=qty, label=label),
+        "remove": _("Tipo {label} removido de {rows_removed} endereço(s).", label=label, rows_removed=res.rows_removed),
+        "clear": _("Bins removidas de {locations} endereço(s).", locations=res.locations),
     }
     return redirect(back, (msgs[mode] + " " + adj).strip())
 
@@ -423,7 +424,7 @@ def create_location(request: Request, form: FormData = Depends(form_data), db: S
     db.flush()
     set_location_bins(db, loc.id, bin_items)
     db.commit()
-    msg, lvl = _with_capacity_warnings(db, f"Endereço {loc.address} criado.", _affected_levels(db, loc, bin_items))
+    msg, lvl = _with_capacity_warnings(db, _("Endereço {address} criado.", address=loc.address), _affected_levels(db, loc, bin_items))
     if f_bool(form, "add_another"):
         return redirect("/locations/new", msg, lvl)
     return redirect("/locations", msg, lvl)
@@ -464,12 +465,12 @@ def _parse_exceptions(form: FormData) -> tuple[list[dict], list[BatchException],
         }
         raw_list.append(raw)
         if raw["target"] not in LEVELS[1:]:
-            error = error or f"Exceção {len(raw_list)}: escolha o nível afetado."
+            error = error or _("Exceção {len}: escolha o nível afetado.", len=len(raw_list))
             continue
         try:
             rt = RangeType(raw["type"])
         except ValueError:
-            error = error or f"Exceção {len(raw_list)}: tipo inválido."
+            error = error or _("Exceção {len}: tipo inválido.", len=len(raw_list))
             continue
         parents = LEVELS[: LEVELS.index(raw["target"])]
         conds = {lvl: raw["cond"][lvl] for lvl in parents}
@@ -504,25 +505,25 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
         try:
             rt = RangeType(r["type"])
         except ValueError:
-            error = f"Tipo inválido para {LEVEL_LABELS[name]}."
+            error = _("Tipo inválido para {v}.", v=LEVEL_LABELS[name])
             continue
         rules[name] = LevelRule(name, rt, r["start"], r["end"], r["value"], to_int(r["padding"]))
 
     exceptions_raw, exceptions, exc_error = _parse_exceptions(form)
     error = error or exc_error
     bin_items, bin_err = parse_bin_rows(form.getlist("bin_type_id"), form.getlist("bin_qty"))
-    bin_items = [(t, q) for t, q, _ in bin_items]  # na geração em lote as bins ficam no nível do endereço
-    error = error or bin_err or validate_types(db, [t for t, _ in bin_items])
+    bin_items = [(t, q) for t, q, _x in bin_items]  # na geração em lote as bins ficam no nível do endereço
+    error = error or bin_err or validate_types(db, [t for t, _x in bin_items])
     data["bins"] = bin_items
 
     if not error:
         if not data["branch_id"] or not db.get(Branch, data["branch_id"]):
-            error = "Selecione a filial."
+            error = _("Selecione a filial.")
         elif data["warehouse_id"] and not db.scalar(
             select(exists().where(branch_warehouse.c.branch_id == data["branch_id"],
                                   branch_warehouse.c.warehouse_id == data["warehouse_id"]))
         ):
-            error = "O armazém selecionado não está vinculado à filial."
+            error = _("O armazém selecionado não está vinculado à filial.")
 
     result = None
     if not error:
@@ -537,10 +538,10 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
 
                 st = db.get(StructureType, data["structure_type_id"])
                 bays = sorted({(data["branch_id"], data["warehouse_id"], seg[0], seg[1])
-                               for seg, _ in result.new_paths if len(seg) >= 2})
+                               for seg, _x in result.new_paths if len(seg) >= 2})
                 if st is not None and bays:
                     apply_structure(db, bays, st, create_levels=False)
-                    result.structure_note = f"Estrutura {st.code} aplicada a {len(bays)} estante(s)."
+                    result.structure_note = _("Estrutura {code} aplicada a {len} estante(s).", code=st.code, len=len(bays))
                 db.commit()
             if action == "execute" and bin_items:
                 spill_overflow(db, None)
@@ -549,7 +550,7 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
         except ValueError as exc:
             error = str(exc)
         except Exception as exc:  # integridade / falhas inesperadas
-            error = f"Falha ao gravar o lote (nenhuma alteração foi aplicada): {exc}"
+            error = _("Falha ao gravar o lote (nenhuma alteração foi aplicada): {exc}", exc=exc)
 
     preview_url = None
     if result is not None and not result.executed and (result.new_paths or result.conflict_addresses):
@@ -561,7 +562,7 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
                               result.conflict_addresses, bin_items)
         q = {"branch_id": data["branch_id"], "warehouse_id": data["warehouse_id"] or "none", "preview": token, "embed": 1}
         # abre no corredor do lote (o primeiro, se forem vários; o filtro do mapa troca de corredor)
-        aisles = result.values_per_level.get("aisle") or sorted({seg[0] for seg, _ in result.new_paths})
+        aisles = result.values_per_level.get("aisle") or sorted({seg[0] for seg, _x in result.new_paths})
         if aisles:
             q["aisle"] = aisles[0]
         preview_url = "/layout?" + urlencode(q)
@@ -575,7 +576,7 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
 def recalc_occupancy(db: Session = Depends(get_db)):
     refresh_occupancy(db, None)
     db.commit()
-    return redirect("/locations", "Ocupação de todos os endereços recalculada a partir dos saldos.")
+    return redirect("/locations", _("Ocupação de todos os endereços recalculada a partir dos saldos."))
 
 
 @router.post("/bulk-delete")
@@ -593,7 +594,7 @@ def bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(get_d
     else:
         ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
     if not ids:
-        return redirect(back, "Nenhum endereço selecionado.", "warning")
+        return redirect(back, _("Nenhum endereço selecionado."), "warning")
     cascade = bool(f_str(form, "cascade"))
     deletable: list[int] = []
     for i in range(0, len(ids), 800):
@@ -617,7 +618,7 @@ def bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(get_d
             sync_default_locations(db, sorted(prods))
         db.commit()
     skipped = len(ids) - len(deletable)
-    msg = f"{len(deletable)} endereço(s) excluído(s)" + (" (com os saldos dos ocupados)." if cascade else ".") + lv_msg
+    msg = _("{len} endereço(s) excluído(s)", len=len(deletable)) + (" (com os saldos dos ocupados)." if cascade else ".") + lv_msg
     if skipped:
         msg += f" {skipped} ignorado(s) por estarem ocupados (com item atrelado)."
     return redirect(back, msg, "warning" if skipped else "success")
@@ -626,7 +627,7 @@ def bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(get_d
 def _levels_msg(dropped: list[str], kept: list[str]) -> str:
     def few(xs):
         return ", ".join(xs[:8]) + ("…" if len(xs) > 8 else "")
-    out = f" {len(dropped)} posição(ões) física(s) (nível) excluída(s): {few(dropped)}." if dropped else ""
+    out = _(" {len} posição(ões) física(s) (nível) excluída(s): {few}.", len=len(dropped), few=few(dropped)) if dropped else ""
     if kept:
         out += f" Mantida(s): {few(kept)}."
     return out
@@ -636,7 +637,7 @@ def _levels_msg(dropped: list[str], kept: list[str]) -> str:
 def edit_location(location_id: int, request: Request, db: Session = Depends(get_db)):
     loc = db.get(StorageLocation, location_id)
     if not loc:
-        return redirect("/locations", "Endereço não encontrado.", "danger")
+        return redirect("/locations", _("Endereço não encontrado."), "danger")
     data = {k: getattr(loc, k) for k in ("branch_id", "warehouse_id", "aisle", "bay", "level", "position", "compartment",
                                          "is_generic")}
     data["bins"] = [(lb.bin_type_id, lb.quantity, lb.shelf_level_id) for lb in loc.bins]
@@ -657,7 +658,7 @@ def _bin_context(db: Session, loc, error: str | None = None) -> dict:
     view = contents_view(db, loc.id)
     arranger = Arranger(db)
     tags = [f"{v['type'].code if v['type'] else '?'} #{v['bin'].seq}" + (f" ↳{v['bin'].level}" if v['bin'].level else "") for v in view]
-    case = case_url(f"endereço {loc.address}", "upright",
+    case = case_url(_("endereço {address}", address=loc.address), "upright",
                     [("before", v["bin"].type_id, tags[i], [(c.product.sku, c.quantity) for c in v["contents"]])
                      for i, v in enumerate(view)])
     for i, v in enumerate(view):
@@ -680,19 +681,19 @@ def save_contents(location_id: int, request: Request, form: FormData = Depends(f
 
     loc = db.get(StorageLocation, location_id)
     if not loc:
-        return redirect("/locations", "Endereço não encontrado.", "danger")
+        return redirect("/locations", _("Endereço não encontrado."), "danger")
     back = f"/locations/{location_id}/edit"
     if form.get("auto"):
         refresh_contents(db, [location_id], force=True)
         db.commit()
-        return redirect(back + "#conteudo", "Conteúdo das bins recalculado automaticamente.")
+        return redirect(back + "#conteudo", _("Conteúdo das bins recalculado automaticamente."))
     rows = []
     for b, p, q in zip(form.getlist("c_bin"), form.getlist("c_product"), form.getlist("c_qty")):
         try:
             t, seq = (int(x) for x in str(b).split(":"))
             qty = parse_decimal(q)
         except ValueError:
-            return redirect(back + "#conteudo", "Linha de conteúdo inválida.", "danger")
+            return redirect(back + "#conteudo", _("Linha de conteúdo inválida."), "danger")
         if qty:
             rows.append((t, seq, to_int(p), qty))
     err = set_contents(db, location_id, rows)
@@ -704,18 +705,18 @@ def save_contents(location_id: int, request: Request, form: FormData = Depends(f
         return render(request, "locations/form.html", status_code=422, location=loc, data=data, errors={}, items=items,
                       **_bin_context(db, loc, err), **_level_context(db, loc), **_lookups(db))
     db.commit()
-    return redirect(back + "#conteudo", "Conteúdo das bins salvo.")
+    return redirect(back + "#conteudo", _("Conteúdo das bins salvo."))
 
 
 @router.post("/{location_id}/edit")
 def update_location(location_id: int, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     loc = db.get(StorageLocation, location_id)
     if not loc:
-        return redirect("/locations", "Endereço não encontrado.", "danger")
+        return redirect("/locations", _("Endereço não encontrado."), "danger")
     errors, data = _validate(db, form, location_id)
     physical_change = any(data[k] != getattr(loc, k) for k in ("branch_id", "warehouse_id", "aisle", "bay", "level", "position", "compartment"))
     if not errors and physical_change and _has_positive_stock(db, location_id):
-        errors.add("__all__", "Endereço com saldo não pode ter filial/armazém/coordenadas alterados. Transfira o saldo antes.")
+        errors.add("__all__", _("Endereço com saldo não pode ter filial/armazém/coordenadas alterados. Transfira o saldo antes."))
     if errors:
         items = location_contents(db, [location_id]).get(location_id, [])
         return render(request, "locations/form.html", status_code=422, location=loc, data=data, errors=errors, items=items,
@@ -727,7 +728,7 @@ def update_location(location_id: int, request: Request, form: FormData = Depends
     set_location_bins(db, loc.id, bin_items)
     refresh_occupancy(db, [loc.id])
     db.commit()
-    msg, lvl = _with_capacity_warnings(db, f"Endereço {loc.address} atualizado.", _affected_levels(db, loc, bin_items))
+    msg, lvl = _with_capacity_warnings(db, _("Endereço {address} atualizado.", address=loc.address), _affected_levels(db, loc, bin_items))
     return redirect("/locations", msg, lvl)
 
 
@@ -735,12 +736,12 @@ def update_location(location_id: int, request: Request, form: FormData = Depends
 def delete_location(location_id: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     loc = db.get(StorageLocation, location_id)
     if not loc:
-        return redirect("/locations", "Endereço não encontrado.", "danger")
+        return redirect("/locations", _("Endereço não encontrado."), "danger")
     if loc.is_occupied or location_has_items(db, location_id):
-        return redirect("/locations", f"Endereço {loc.address} está ocupado (tem item atrelado) e não pode ser excluído.", "danger")
+        return redirect("/locations", _("Endereço {address} está ocupado (tem item atrelado) e não pode ser excluído.", address=loc.address), "danger")
     address, key = loc.address, level_key_of(loc)
     db.execute(delete(StorageLocation).where(StorageLocation.id == location_id))
     lv_msg = _levels_msg(*drop_unused_levels(db, [key])) if f_str(form, "drop_levels") else ""
     db.commit()
     back = f_str(form, "back") or "/locations"
-    return redirect(back if back.startswith("/locations") else "/locations", f"Endereço {address} excluído." + lv_msg)
+    return redirect(back if back.startswith("/locations") else "/locations", _("Endereço {address} excluído.", address=address) + lv_msg)

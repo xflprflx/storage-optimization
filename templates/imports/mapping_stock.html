@@ -5,12 +5,12 @@
 {% macro chk(name, default) -%}{% if fv is not none %}{% if fv.get(name) %}checked{% endif %}{% elif default %}checked{% endif %}{%- endmacro %}
 <div class="page-header">
   <h1><i class="bi bi-upload"></i> {{ title }}</h1>
-  <a href="/imports/stock" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Outro arquivo</a>
+  <a href="/imports/stock" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Outro arquivo") }}</a>
 </div>
 <div class="mb-3">
-  <span class="badge rounded-pill text-bg-success">1. Arquivo enviado</span>
-  <span class="badge rounded-pill text-bg-primary">2. Mapear colunas</span>
-  <span class="badge rounded-pill text-bg-light border">3. Resultado</span>
+  <span class="badge rounded-pill text-bg-success">{{ _("1. Arquivo enviado") }}</span>
+  <span class="badge rounded-pill text-bg-primary">{{ _("2. Mapear colunas") }}</span>
+  <span class="badge rounded-pill text-bg-light border">{{ _("3. Resultado") }}</span>
 </div>
 {% if errors %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ errors }}</div>{% endif %}
 
@@ -21,21 +21,21 @@
   <div class="row g-3">
     <div class="col-lg-7">
       <div class="card">
-        <div class="card-header bg-white"><strong>Mapeamento de colunas</strong></div>
+        <div class="card-header bg-white"><strong>{{ _("Mapeamento de colunas") }}</strong></div>
         <div class="card-body">
           <div class="row g-2">
           {% for key, (label, required, _syn) in fields.items() %}
             <div class="col-md-6">
               <label class="form-label small mb-1">{{ label }}{% if required %} <span class="text-danger">*</span>{% endif %}</label>
               <select class="form-select form-select-sm key-col" name="map_{{ key }}" {% if required %}required{% endif %}>
-                <option value="">— não importar —</option>
+                <option value="">{{ _("— não importar —") }}</option>
                 {% for h in headers %}<option value="{{ loop.index0 }}" {% if mapping.get(key) == loop.index0 %}selected{% endif %}>#{{ loop.index }} · {{ h }}</option>{% endfor %}
               </select>
             </div>
           {% endfor %}
           </div>
           <hr>
-          <label class="form-label small mb-1">Colunas de quantidade <span class="text-danger">*</span> <span class="text-muted">— as colunas marcadas serão <b>somadas</b> em cada linha</span></label>
+          <label class="form-label small mb-1">{{ _h("Colunas de quantidade <span class=\"text-danger\">*</span> <span class=\"text-muted\">— as colunas marcadas serão <b>somadas</b> em cada linha</span>") }}</label>
           <div class="row row-cols-2 row-cols-md-3 g-1">
             {% for h in headers %}
             <div class="col"><div class="form-check">
@@ -50,39 +50,39 @@
     </div>
     <div class="col-lg-5">
       <div class="card">
-        <div class="card-header bg-white"><strong>Opções</strong></div>
+        <div class="card-header bg-white"><strong>{{ _("Opções") }}</strong></div>
         <div class="card-body">
           <div class="mb-2">
-            <label class="form-label small mb-1">Filial padrão (quando a coluna estiver vazia/ausente)</label>
+            <label class="form-label small mb-1">{{ _("Filial padrão (quando a coluna estiver vazia/ausente)") }}</label>
             <input class="form-control form-control-sm mono text-uppercase" name="default_branch_code" list="branchCodes" value="{{ fv.get('default_branch_code', '') if fv is not none else '' }}">
             <datalist id="branchCodes">{% for b in branches %}<option value="{{ b.code }}">{{ b.name }}</option>{% endfor %}</datalist>
           </div>
           <div class="mb-3">
-            <label class="form-label small mb-1">Armazém padrão</label>
+            <label class="form-label small mb-1">{{ _("Armazém padrão") }}</label>
             <input class="form-control form-control-sm mono text-uppercase" name="default_warehouse_code" list="whCodes" value="{{ fv.get('default_warehouse_code', '') if fv is not none else '' }}">
             <datalist id="whCodes">{% for w in warehouses %}<option value="{{ w.code }}">{{ w.name }}</option>{% endfor %}</datalist>
           </div>
-          <label class="form-label small mb-1">Linhas repetidas (mesmo SKU + endereço no arquivo)</label>
+          <label class="form-label small mb-1">{{ _("Linhas repetidas (mesmo SKU + endereço no arquivo)") }}</label>
           {% set dm = fv.get('duplicate_mode', 'sum') if fv is not none else 'sum' %}
           <select class="form-select form-select-sm mb-3" name="duplicate_mode">
-            <option value="sum" {% if dm == 'sum' %}selected{% endif %}>Somar as linhas</option>
-            <option value="last" {% if dm == 'last' %}selected{% endif %}>Última linha prevalece</option>
+            <option value="sum" {% if dm == 'sum' %}selected{% endif %}>{{ _("Somar as linhas") }}</option>
+            <option value="last" {% if dm == 'last' %}selected{% endif %}>{{ _("Última linha prevalece") }}</option>
           </select>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="create_missing_products" value="1" id="cmp" {{ chk('create_missing_products', False) }}>
-            <label class="form-check-label small" for="cmp">Criar produtos (SKU) inexistentes</label>
+            <label class="form-check-label small" for="cmp">{{ _("Criar produtos (SKU) inexistentes") }}</label>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="zero_missing" value="1" id="zm" {{ chk('zero_missing', False) }}>
-            <label class="form-check-label small" for="zm">Zerar saldos <b>ausentes</b> no arquivo (dentro das filiais/armazéns do arquivo) — sincronização completa. Só roda se <b>nenhuma linha</b> do arquivo der erro.</label>
+            <label class="form-check-label small" for="zm">{{ _h("Zerar saldos <b>ausentes</b> no arquivo (dentro das filiais/armazéns do arquivo) — sincronização completa. Só roda se <b>nenhuma linha</b> do arquivo der erro.") }}</label>
           </div>
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="allow_negative" value="1" id="an" {{ chk('allow_negative', False) }}>
-            <label class="form-check-label small" for="an">Permitir quantidades negativas</label>
+            <label class="form-check-label small" for="an">{{ _("Permitir quantidades negativas") }}</label>
           </div>
         </div>
         <div class="card-footer bg-white">
-          <button class="btn btn-accent w-100" id="submitBtn"><i class="bi bi-play-fill"></i> Processar importação</button>
+          <button class="btn btn-accent w-100" id="submitBtn"><i class="bi bi-play-fill"></i> {{ _("Processar importação") }}</button>
         </div>
       </div>
     </div>
@@ -103,14 +103,14 @@
       cb.disabled = clash; if (clash) cb.checked = false;
       if (cb.checked) n++;
     });
-    hint.innerHTML = n ? `<span class="text-success"><i class="bi bi-plus-circle"></i> ${n} coluna(s) serão somadas.</span>`
-                       : '<span class="text-danger">Selecione ao menos uma coluna de quantidade.</span>';
+    hint.innerHTML = n ? '<span class="text-success"><i class="bi bi-plus-circle"><\/i> ' + _t('{n} coluna(s) serão somadas.', {n}) + '<\/span>'
+                       : '<span class="text-danger">' + _t('Selecione ao menos uma coluna de quantidade.') + '<\/span>';
   }
   form.addEventListener('change', refresh);
   form.addEventListener('submit', e => {
     if (!form.querySelector('.qty-col:checked')) { e.preventDefault(); refresh(); return; }
     const b = document.getElementById('submitBtn');
-    b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processando...';
+    b.disabled = true; b.innerHTML = _t('<span class="spinner-border spinner-border-sm"><\/span> Processando...');
   });
   refresh();
 })();

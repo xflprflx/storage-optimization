@@ -1,5 +1,5 @@
 <div class="card mt-3">
-  <div class="card-header bg-white"><strong>Amostra do arquivo</strong> <small class="text-muted">{{ filename }}</small></div>
+  <div class="card-header bg-white"><strong>{{ _("Amostra do arquivo") }}</strong> <small class="text-muted">{{ filename }}</small></div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered mb-0 preview-table">
       <thead><tr>{% for h in headers %}<th><span class="text-muted">#{{ loop.index }}</span> {{ h }}</th>{% endfor %}</tr></thead>

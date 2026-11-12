@@ -12,6 +12,7 @@ from services.bin_optimizer import ProductUnit
 from services.optimization_service import MAX_SCOPE, load_types
 from services.pool_optimizer import PoolBin, PoolParams, PoolResult, SkuDemand, optimize_pool
 from services.stock_service import refresh_occupancy, sync_default_locations
+from services.i18n import _
 
 
 def _f(v) -> Optional[float]:
@@ -37,7 +38,7 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
     groups: dict[tuple, dict] = {}
 
     def g(lid):
-        _, b, w = locs[lid]
+        _x, b, w = locs[lid]
         return groups.setdefault((b, w), {"bins": [], "demands": {}, "reserved": set(), "no_dims": [], "fixed": {}})
 
     # bins físicas (mesma numeração do conteúdo por bin) + o que cada uma guarda hoje
@@ -132,8 +133,8 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
                 if fixed & set(b.orig):
                     b.locked = True  # guarda produto fora do foco: não entra no pool
     if no_level:
-        label = "nível mínimo" if basis == "min" else "nível máximo"
-        notes.append(f"{len(no_level)} SKU(s) sem {label} cadastrado usaram o saldo atual: "
+        label = _("nível mínimo") if basis == "min" else _("nível máximo")
+        notes.append(_("{len} SKU(s) sem {label} cadastrado usaram o saldo atual: ", len=len(no_level), label=label)
                      + ", ".join(sorted(no_level)[:10]) + ("…" if len(no_level) > 10 else "") + ".")
     return groups, locs, notes
 
@@ -147,7 +148,7 @@ def run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str =
 
 def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str = "stock", focus: Optional[set] = None):
     if len(location_ids) > MAX_SCOPE:
-        raise ValueError(f"O escopo tem {len(location_ids):,} endereços (limite {MAX_SCOPE:,}). Filtre por armazém ou corredor.")
+        raise ValueError(_("O escopo tem {len} endereços (limite {MAX_SCOPE}). Filtre por armazém ou corredor.", len=f"{len(location_ids):,}", MAX_SCOPE=f"{MAX_SCOPE:,}"))
     types = load_types(db)
     groups, locs, notes = load_pool(db, location_ids, basis, focus, prm.bin_source)
     results: list[PoolResult] = []
@@ -190,18 +191,18 @@ def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str
     Retorna (SKUs alterados, endereços tocados, SKUs aplicados)."""
     from services.bin_content_service import refresh_contents, set_contents
 
-    results, locs, _, _ = run_pool(db, location_ids, prm, basis, focus)
+    results, locs, _x, _x = run_pool(db, location_ids, prm, basis, focus)
     if prm.unlimited:
-        raise ValueError("Com bins como recurso infinito o plano é só um dimensionamento e não pode ser aplicado.")
+        raise ValueError(_("Com bins como recurso infinito o plano é só um dimensionamento e não pode ser aplicado."))
     all_skus = {p.sku for r in results for p in r.plans}
     applied = all_skus if only_skus is None else pool_closure(results, only_skus)
     if not applied:
-        raise ValueError("Nenhum SKU selecionado.")
+        raise ValueError(_("Nenhum SKU selecionado."))
     short = sorted(p.sku for r in results for p in r.plans if p.sku in applied and p.shortage)
     if short:
-        raise ValueError("O plano está incompleto (faltam bins para " + ", ".join(short[:8])
-                         + ("…" if len(short) > 8 else "") + ") — nada foi alterado. "
-                         "Amplie o escopo, mude o objetivo ou cadastre mais bins.")
+        raise ValueError(_("O plano está incompleto (faltam bins para ") + ", ".join(short[:8])
+                         + ("…" if len(short) > 8 else "") + _(") — nada foi alterado. "
+                         "Amplie o escopo, mude o objetivo ou cadastre mais bins."))
     pid_of = {p.sku: p.product_id for r in results for p in r.plans}
     orphan_keys = {(sku, b.id) for r in results for sku, _l, b, _q in (r.orphans or []) if b is not None}
     for r in results:  # produtos fora do foco: continuam nas bins de hoje

@@ -1,42 +1,41 @@
 {% extends "base.html" %}
-{% block title %}SKUs: popularidade e afinidade — {{ title }}{% endblock %}
+{% block title %}{{ _h("SKUs: popularidade e afinidade — {title}", title=(title)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-bar-chart-line"></i> SKUs: popularidade e afinidade</h1>
-    <div class="small text-muted">{{ title }} · {% if rep.kind == 'column' %}popularidade pela coluna Saída (sem pedidos, sem afinidade){% else %}{{ rep.orders }} pedidos, {{ rep.lines }} linhas{% if rep.dates %}, {{ rep.dates[0] }} a {{ rep.dates[1] }}{% endif %}{% endif %}</div>
+    <h1><i class="bi bi-bar-chart-line"></i> {{ _("SKUs: popularidade e afinidade") }}</h1>
+    <div class="small text-muted">{{ title }} · {% if rep.kind == 'column' %}{{ _("popularidade pela coluna Saída (sem pedidos, sem afinidade)") }}{% else %}{{ _h("{orders} pedidos, {lines} linhas", orders=(rep.orders), lines=(rep.lines)) }}{% if rep.dates %}, {{ rep.dates[0] }} a {{ rep.dates[1] }}{% endif %}{% endif %}</div>
   </div>
   <div class="d-flex gap-2">
-    <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+    <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
     <a href="{{ xlsx }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
   </div>
 </div>
 {% if not rep.rows %}
-<div class="alert alert-info">Sem histórico de saídas. Envie a aba <b>Pedidos</b> (pedido, SKU, quantidade) ou a coluna <b>Saída</b>.</div>
+<div class="alert alert-info">{{ _h("Sem histórico de saídas. Envie a aba <b>Pedidos</b> (pedido, SKU, quantidade) ou a coluna <b>Saída</b>.") }}</div>
 {% else %}
 <div class="row g-2 mb-3">
   {% for label, val, sub in [
-    ('SKUs com saída', rep.skus, ''),
-    ('Pedidos', rep.orders or '—', ('%.1f'|format(rep.lines_per_order)|replace('.', ',') ~ ' linhas por pedido') if rep.lines_per_order else ''),
-    ('Curva ABC', rep.abc.A ~ ' / ' ~ rep.abc.B ~ ' / ' ~ rep.abc.C, 'A = 80% das saídas, B = até 95%'),
-    ('Pares que saem juntos', rep.pairs|length, 'em 2 ou mais pedidos'),
+    (_('SKUs com saída'), rep.skus, ''),
+    (_('Pedidos'), rep.orders or '—', _('{n} linhas por pedido', n=rep.lines_per_order|dec(1)) if rep.lines_per_order else ''),
+    (_('Curva ABC'), rep.abc.A ~ ' / ' ~ rep.abc.B ~ ' / ' ~ rep.abc.C, _('A = 80% das saídas, B = até 95%')),
+    (_('Pares que saem juntos'), rep.pairs|length, _('em 2 ou mais pedidos')),
   ] %}
   <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
     <div class="small text-muted">{{ label }}</div><div class="fs-4 fw-semibold">{{ val }}</div><div class="small text-muted">{{ sub }}</div>
   </div></div></div>
   {% endfor %}
 </div>
-<div class="small text-muted mb-2">Popularidade = <b>linhas de pedido</b> (em quantos pedidos o SKU aparece: visitas ao endereço). <b>Força</b> de um par = em que fração
-  dos pedidos do menos vendido os dois saem juntos. <b>Lift</b> = quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso; quanto maior, mais "par" de verdade).
-  <i class="bi bi-star-fill text-warning"></i> zona de ouro da pega · <i class="bi bi-person-walking text-warning"></i> zona de ouro da caminhada.</div>
+<div class="small text-muted mb-2">{{ _h("Popularidade = <b>linhas de pedido</b> (em quantos pedidos o SKU aparece: visitas ao endereço). <b>Força</b> de um par = em que fração dos pedidos do menos vendido os dois saem juntos. <b>Lift</b> = quantas vezes saem juntos mais do que sairiam por acaso (1 = acaso; quanto maior, mais \"par\" de verdade).") }}
+  <i class="bi bi-star-fill text-warning"></i> {{ _("zona de ouro da pega ·") }} <i class="bi bi-person-walking text-warning"></i> {{ _("zona de ouro da caminhada.") }}</div>
 <div class="row g-3">
   <div class="col-xl-8">
     <div class="card">
-      <div class="card-header bg-white d-flex justify-content-between gap-2 flex-wrap"><strong>Popularidade por SKU</strong>
-        <input class="form-control form-control-sm" style="max-width:240px" type="search" placeholder="Filtrar SKU, produto ou ABC" id="skuFilter"></div>
+      <div class="card-header bg-white d-flex justify-content-between gap-2 flex-wrap"><strong>{{ _("Popularidade por SKU") }}</strong>
+        <input class="form-control form-control-sm" style="max-width:240px" type="search" placeholder="{{ _("Filtrar SKU, produto ou ABC") }}" id="skuFilter"></div>
       <div class="table-responsive" style="max-height:640px"><table class="table table-sm table-hover mb-0 small" id="skuTable" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>SKU</th><th>Produto</th><th class="text-end">Linhas</th><th class="text-end">Unid.</th>
-          <th class="text-end">% saídas</th><th class="text-end">% acum.</th><th>ABC</th><th>Onde está</th><th>Sai junto com</th></tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>SKU</th><th>{{ _("Produto") }}</th><th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Unid.") }}</th>
+          <th class="text-end">{{ _("% saídas") }}</th><th class="text-end">{{ _("% acum.") }}</th><th>ABC</th><th>{{ _("Onde está") }}</th><th>{{ _("Sai junto com") }}</th></tr></thead>
         <tbody>
         {% for r in rep.rows[:3000] %}
           <tr><td class="mono">{{ r.sku }}</td><td>{{ r.name }}</td><td class="text-end">{{ r.lines|dec }}</td><td class="text-end">{{ r.units|dec }}</td>
@@ -45,19 +44,19 @@
             <td class="text-nowrap">{% for w in r.where[:2] %}<div><span class="mono">{{ w.address }}</span>{% if w.dist is not none %} <span class="text-muted">{{ w.dist|dec(1) }} m</span>{% endif %}{% if w.walk %} <i class="bi bi-person-walking text-warning"></i>{% endif %}{% if w.golden %} <i class="bi bi-star-fill text-warning"></i>{% endif %}</div>{% else %}<span class="text-muted">—</span>{% endfor %}{% if r.where|length > 2 %}<div class="text-muted">+{{ r.where|length - 2 }}</div>{% endif %}</td>
             <td>{% for p in r.partners[:3] %}<div class="text-nowrap"><span class="mono">{{ p.sku }}</span> <span class="text-muted">{{ p.count }} · {{ (p.strength * 100)|dec(0) }}%{% if p.lift %} · {{ p.lift|dec(1) }}x{% endif %}</span></div>{% else %}<span class="text-muted">—</span>{% endfor %}</td></tr>
         {% endfor %}
-        {% if rep.rows|length > 3000 %}<tr><td colspan="9" class="text-center text-muted">… mais {{ rep.rows|length - 3000 }} SKUs no Excel.</td></tr>{% endif %}
+        {% if rep.rows|length > 3000 %}<tr><td colspan="9" class="text-center text-muted">{{ _h("… mais {rows} SKUs no Excel.", rows=(rep.rows|length - 3000)) }}</td></tr>{% endif %}
         </tbody>
       </table></div>
     </div>
   </div>
   <div class="col-xl-4">
     <div class="card">
-      <div class="card-header bg-white"><strong>Pares que mais saem juntos</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("Pares que mais saem juntos") }}</strong></div>
       <div class="table-responsive" style="max-height:640px"><table class="table table-sm mb-0 small" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>SKU</th><th>SKU</th><th class="text-end">Juntos</th><th class="text-end">Força</th><th class="text-end">Lift</th></tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>SKU</th><th>SKU</th><th class="text-end">{{ _("Juntos") }}</th><th class="text-end">{{ _("Força") }}</th><th class="text-end">{{ _("Lift") }}</th></tr></thead>
         <tbody>{% for p in rep.pairs[:200] %}<tr><td class="mono" title="{{ p.name_a }}">{{ p.a }}</td><td class="mono" title="{{ p.name_b }}">{{ p.b }}</td><td class="text-end">{{ p.count }}</td>
           <td class="text-end">{{ (p.strength * 100)|dec(0) }}%</td><td class="text-end">{{ p.lift|dec(1) if p.lift else '—' }}</td></tr>
-        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">Sem pares (precisa da aba Pedidos).</td></tr>{% endfor %}</tbody>
+        {% else %}<tr><td colspan="5" class="text-muted text-center py-3">{{ _("Sem pares (precisa da aba Pedidos).") }}</td></tr>{% endfor %}</tbody>
       </table></div>
     </div>
   </div>

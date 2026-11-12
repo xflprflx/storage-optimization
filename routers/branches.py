@@ -20,8 +20,9 @@ from routers.common import (
     to_int,
 )
 from services.addressing import normalize_code
+from services.i18n import N_, _
 
-router = APIRouter(prefix="/branches", tags=["Filiais"])
+router = APIRouter(prefix="/branches", tags=[N_("Filiais")])
 
 
 def _all_warehouses(db: Session) -> list[Warehouse]:
@@ -33,17 +34,17 @@ def _validate(db: Session, form: FormData, branch_id: int | None):
     code = normalize_code(f_str(form, "code"))
     name = f_str(form, "name", 150)
     if not code:
-        errors.add("code", "Código é obrigatório.")
+        errors.add("code", _("Código é obrigatório."))
     elif len(code) > 30:
-        errors.add("code", "Código deve ter no máximo 30 caracteres.")
+        errors.add("code", _("Código deve ter no máximo 30 caracteres."))
     else:
         stmt = select(Branch.id).where(Branch.code == code)
         if branch_id:
             stmt = stmt.where(Branch.id != branch_id)
         if db.scalar(stmt):
-            errors.add("code", f"Já existe uma filial com o código {code}.")
+            errors.add("code", _("Já existe uma filial com o código {code}.", code=code))
     if not name:
-        errors.add("name", "Nome é obrigatório.")
+        errors.add("name", _("Nome é obrigatório."))
     wh_ids = [i for i in (to_int(v) for v in form.getlist("warehouse_ids")) if i]
     return errors, {"code": code, "name": name, "warehouse_ids": wh_ids}
 
@@ -87,14 +88,14 @@ def create_branch(request: Request, form: FormData = Depends(form_data), db: Ses
         branch.warehouses = list(db.scalars(select(Warehouse).where(Warehouse.id.in_(data["warehouse_ids"]))))
     db.add(branch)
     db.commit()
-    return redirect("/branches", f"Filial {branch.code} criada com sucesso.")
+    return redirect("/branches", _("Filial {code} criada com sucesso.", code=branch.code))
 
 
 @router.get("/{branch_id}/edit")
 def edit_branch(branch_id: int, request: Request, db: Session = Depends(get_db)):
     branch = db.get(Branch, branch_id)
     if not branch:
-        return redirect("/branches", "Filial não encontrada.", "danger")
+        return redirect("/branches", _("Filial não encontrada."), "danger")
     data = {"code": branch.code, "name": branch.name, "warehouse_ids": [w.id for w in branch.warehouses]}
     return render(request, "branches/form.html", branch=branch, data=data, errors={}, warehouses=_all_warehouses(db))
 
@@ -103,7 +104,7 @@ def edit_branch(branch_id: int, request: Request, db: Session = Depends(get_db))
 def update_branch(branch_id: int, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     branch = db.get(Branch, branch_id)
     if not branch:
-        return redirect("/branches", "Filial não encontrada.", "danger")
+        return redirect("/branches", _("Filial não encontrada."), "danger")
     errors, data = _validate(db, form, branch_id)
     # Não permite desvincular armazém que possui endereços nesta filial.
     current = {w.id for w in branch.warehouses}
@@ -114,26 +115,25 @@ def update_branch(branch_id: int, request: Request, form: FormData = Depends(for
             .where(StorageLocation.branch_id == branch_id, Warehouse.id.in_(removed)).distinct()
         ).all()
         if blocked:
-            errors.add("warehouse_ids", f"Não é possível desvincular armazéns com endereços nesta filial: {', '.join(blocked)}.")
+            errors.add("warehouse_ids", _("Não é possível desvincular armazéns com endereços nesta filial: {v}.", v=', '.join(blocked)))
     if errors:
         return render(request, "branches/form.html", status_code=422, branch=branch, data=data, errors=errors,
                       warehouses=_all_warehouses(db))
     branch.code, branch.name = data["code"], data["name"]
     branch.warehouses = list(db.scalars(select(Warehouse).where(Warehouse.id.in_(data["warehouse_ids"])))) if data["warehouse_ids"] else []
     db.commit()
-    return redirect("/branches", f"Filial {branch.code} atualizada.")
+    return redirect("/branches", _("Filial {code} atualizada.", code=branch.code))
 
 
 @router.post("/{branch_id}/delete")
 def delete_branch(branch_id: int, db: Session = Depends(get_db)):
     branch = db.get(Branch, branch_id)
     if not branch:
-        return redirect("/branches", "Filial não encontrada.", "danger")
+        return redirect("/branches", _("Filial não encontrada."), "danger")
     n_locs = db.scalar(select(func.count()).where(StorageLocation.branch_id == branch_id))
     if n_locs:
-        return redirect("/branches", f"Filial {branch.code} possui {n_locs} endereço(s) cadastrados. "
-                                     "Exclua os endereços antes de excluir a filial.", "danger")
+        return redirect("/branches", _("Filial {code} possui {n_locs} endereço(s) cadastrados. Exclua os endereços antes de excluir a filial.", code=branch.code, n_locs=n_locs), "danger")
     code = branch.code
     db.delete(branch)
     db.commit()
-    return redirect("/branches", f"Filial {code} excluída.")
+    return redirect("/branches", _("Filial {code} excluída.", code=code))

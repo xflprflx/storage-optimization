@@ -1,46 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Arranjo 3D{% endblock %}
+{% block title %}{{ _("Arranjo 3D") }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <h1><i class="bi bi-box"></i> Arranjo na bin {% if arr %}<span class="mono">{{ arr.code }}</span>{% endif %}</h1>
-    <div class="small text-muted">{{ title }}{% if arr and arr.parent %} · compartimento {{ arr.parent.label }} · {{ arr.parent.code }} nº {{ arr.parent.n }}, posição {{ arr.parent.slot }} de {{ arr.parent.k }} (grade {{ arr.parent.grid }}){% endif %}{% if arr and arr.dims %} · bin interna {{ arr.dims[1]|dec }} (larg.) × {{ arr.dims[2]|dec }} (comp.) × {{ arr.dims[0]|dec }} (alt.) cm{% endif %}
-      · rotação: {{ 'qualquer orientação' if rot == 'any' else 'só girar no plano (altura sempre para cima)' }}</div>
+    <h1><i class="bi bi-box"></i> {{ _("Arranjo na bin") }} {% if arr %}<span class="mono">{{ arr.code }}</span>{% endif %}</h1>
+    <div class="small text-muted">{{ title }}{% if arr and arr.parent %} {{ _h("· compartimento {label} · {code} nº {n}, posição {slot} de {k} (grade {grid})", label=(arr.parent.label), code=(arr.parent.code), n=(arr.parent.n), slot=(arr.parent.slot), k=(arr.parent.k), grid=(arr.parent.grid)) }}{% endif %}{% if arr and arr.dims %} {{ _h("· bin interna {v} (larg.) × {v2} (comp.) × {v3} (alt.) cm", v=(arr.dims[1]|dec), v2=(arr.dims[2]|dec), v3=(arr.dims[0]|dec)) }}{% endif %}
+      {{ _h("· rotação: {v}", v=(_('qualquer orientação') if rot == 'any' else _('só girar no plano (altura sempre para cima)'))) }}</div>
   </div>
-  <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : window.close()"><i class="bi bi-arrow-left"></i> Voltar</button>
+  <button class="btn btn-outline-secondary" onclick="history.length > 1 ? history.back() : window.close()"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</button>
 </div>
-{% if not arr %}<div class="alert alert-warning">Tipo de bin não encontrado.</div>
-{% elif not arr.dims %}<div class="alert alert-warning">O tipo de bin {{ arr.code }} não tem dimensões cadastradas.</div>
+{% if not arr %}<div class="alert alert-warning">{{ _("Tipo de bin não encontrado.") }}</div>
+{% elif not arr.dims %}<div class="alert alert-warning">{{ _h("O tipo de bin {code} não tem dimensões cadastradas.", code=(arr.code)) }}</div>
 {% else %}
 <div class="row g-3">
   <div class="col-lg-8">
     <div class="card"><div class="card-body p-0 position-relative">
       <div id="view3d" style="height: 70vh; min-height: 420px; background: #f4f6f8; border-radius: .375rem"></div>
-      <div class="position-absolute top-0 start-0 m-2 small text-muted bg-white bg-opacity-75 rounded px-2">Arraste para girar · roda do mouse para zoom · botão direito para mover</div>
+      <div class="position-absolute top-0 start-0 m-2 small text-muted bg-white bg-opacity-75 rounded px-2">{{ _("Arraste para girar · roda do mouse para zoom · botão direito para mover") }}</div>
       <div class="position-absolute top-0 end-0 m-2 btn-group btn-group-sm">
         <button class="btn btn-light border" data-view="iso">3D</button>
-        <button class="btn btn-light border" data-view="top">Cima</button>
-        <button class="btn btn-light border" data-view="front">Frente</button>
-        <button class="btn btn-light border" data-view="side">Lado</button>
+        <button class="btn btn-light border" data-view="top">{{ _("Cima") }}</button>
+        <button class="btn btn-light border" data-view="front">{{ _("Frente") }}</button>
+        <button class="btn btn-light border" data-view="side">{{ _("Lado") }}</button>
       </div>
     </div></div>
   </div>
   <div class="col-lg-4">
     <div class="card mb-3"><div class="card-body small">
-      <div class="fw-semibold mb-2">Itens nesta bin{% if arr.approx %} <span class="badge bg-warning-subtle text-warning-emphasis border">vários SKUs: divisão aproximada</span>{% endif %}</div>
+      <div class="fw-semibold mb-2">{{ _("Itens nesta bin") }}{% if arr.approx %} <span class="badge bg-warning-subtle text-warning-emphasis border">{{ _("vários SKUs: divisão aproximada") }}</span>{% endif %}</div>
       {% for it in arr.items %}
       <div class="mb-2">
         <div><span class="d-inline-block rounded me-1" style="width:12px;height:12px;background:{{ it.color }};vertical-align:-1px"></span>
-          <span class="mono fw-semibold">{{ it.sku }}</span> · {{ it.qty }} un.
-          {% if it.dims[0] %}<span class="text-muted">(produto {{ it.dims[0]|dec }}×{{ it.dims[1]|dec }}×{{ it.dims[2]|dec }} cm, A×L×C)</span>{% endif %}</div>
+          {{ _h("<span class=\"mono fw-semibold\">{sku}</span> · {qty} un.", sku=(it.sku), qty=(it.qty)) }}
+          {% if it.dims[0] %}<span class="text-muted">{{ _h("(produto {v}×{v2}×{v3} cm, A × L × C)", v=(it.dims[0]|dec), v2=(it.dims[1]|dec), v3=(it.dims[2]|dec)) }}</span>{% endif %}</div>
         <div class="text-muted">{{ it.text }}</div>
-        {% if it.oriented %}<div class="text-muted">Capacidade nesta orientação: {{ it.per_bin }} un. ({{ it.nx }} × {{ it.nz }} × {{ it.ny }})</div>{% endif %}
-        {% if it.overflow %}<div class="text-danger">{{ it.overflow }} unidade(s) não cabem na bin pela geometria.</div>{% endif %}
+        {% if it.oriented %}<div class="text-muted">{{ _h("Capacidade nesta orientação: {per_bin} un. ({nx} × {nz} × {ny})", per_bin=(it.per_bin), nx=(it.nx), nz=(it.nz), ny=(it.ny)) }}</div>{% endif %}
+        {% if it.overflow %}<div class="text-danger">{{ _h("{overflow} unidade(s) não cabem na bin pela geometria.", overflow=(it.overflow)) }}</div>{% endif %}
       </div>
       {% endfor %}
     </div></div>
     <div class="card"><div class="card-body small">
-      <div class="fw-semibold mb-1">Vista de cima e de frente</div>
+      <div class="fw-semibold mb-1">{{ _("Vista de cima e de frente") }}</div>
       {{ svg|safe }}
     </div></div>
   </div>

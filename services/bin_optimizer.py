@@ -24,6 +24,7 @@ import itertools
 import math
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
+from services.i18n import N_, _, seps
 
 EPS = 1e-9
 MAX_COMBOS = 20_000
@@ -31,24 +32,24 @@ OPTIONS_PER_SKU = 10
 PAIR_SPAN = 40  # quantas variações de "n bins grandes + resto em pequenas" testar
 
 OBJECTIVES = {
-    "min_bins": "Menos bins",
-    "min_volume": "Menos volume de bins (menos ar)",
-    "max_fill": "Maior ocupação das bins (volume das unidades ÷ volume das bins)",
-    "min_width": "Menor largura de frente (mais espaço livre na prateleira)",
-    "min_changes": "Mínimo de mudanças (só corrige o que não comporta o saldo)",
-    "min_cost": "Menor custo de bins (R$)",
+    "min_bins": N_("Menos bins"),
+    "min_volume": N_("Menos volume de bins (menos ar)"),
+    "max_fill": N_("Maior ocupação das bins (volume das unidades ÷ volume das bins)"),
+    "min_width": N_("Menor largura de frente (mais espaço livre na prateleira)"),
+    "min_changes": N_("Mínimo de mudanças (só corrige o que não comporta o saldo)"),
+    "min_cost": N_("Menor custo de bins (R$)"),
 }
 
 STATUS_LABELS = {
-    "melhoria": "Pode melhorar",
-    "corrigir": "Bins atuais não comportam o saldo",
-    "liberar": "Sem saldo: liberar bins",
-    "ok": "Já está ótimo",
-    "inviavel": "Inviável com as restrições",
-    "sem_dados": "Faltam dimensões",
-    "sem_saldo": "Sem saldo",
-    "realocar": "Cede bins e é rearranjado",
-    "orfao": "Cede bins: itens ficam fora de bin",
+    "melhoria": N_("Pode melhorar"),
+    "corrigir": N_("Bins atuais não comportam o saldo"),
+    "liberar": N_("Sem saldo: liberar bins"),
+    "ok": N_("Já está ótimo"),
+    "inviavel": N_("Inviável com as restrições"),
+    "sem_dados": N_("Faltam dimensões"),
+    "sem_saldo": N_("Sem saldo"),
+    "realocar": N_("Cede bins e é rearranjado"),
+    "orfao": N_("Cede bins: itens ficam fora de bin"),
 }
 APPLICABLE = {"melhoria", "corrigir", "liberar", "realocar", "orfao"}
 
@@ -163,9 +164,9 @@ class LevelLedger:
 
 
 BASES = {
-    "stock": "Saldo atual",
-    "min": "Nível mínimo (min level)",
-    "max": "Nível máximo (max level)",
+    "stock": N_("Saldo atual"),
+    "min": N_("Nível mínimo (min level)"),
+    "max": N_("Nível máximo (max level)"),
 }
 
 
@@ -206,21 +207,21 @@ class Params:
 
     def validate(self) -> None:
         if self.objective not in OBJECTIVES:
-            raise ValueError("Objetivo inválido.")
+            raise ValueError(_("Objetivo inválido."))
         if not (0.05 <= self.fill_limit <= 1.0):
-            raise ValueError("Taxa máxima de enchimento deve estar entre 5% e 100%.")
+            raise ValueError(_("Taxa máxima de enchimento deve estar entre 5% e 100%."))
         if self.growth < 0 or self.growth > 10:
-            raise ValueError("Margem de crescimento deve estar entre 0% e 1000%.")
+            raise ValueError(_("Margem de crescimento deve estar entre 0% e 1000%."))
         if self.rotation not in ("upright", "any"):
-            raise ValueError("Rotação inválida.")
+            raise ValueError(_("Rotação inválida."))
         if self.basis not in BASES:
-            raise ValueError("Base de cálculo inválida.")
+            raise ValueError(_("Base de cálculo inválida."))
         if self.max_bins is not None and self.max_bins < 1:
-            raise ValueError("Máximo de bins por endereço deve ser ao menos 1.")
+            raise ValueError(_("Máximo de bins por endereço deve ser ao menos 1."))
         if self.engine not in ("heuristic", "or"):
-            raise ValueError("Motor inválido.")
+            raise ValueError(_("Motor inválido."))
         if self.time_limit is not None and not (1 <= self.time_limit <= 3600):  # None = sem limite
-            raise ValueError("Tempo limite deve estar entre 1 e 3600 segundos (ou sem limite).")
+            raise ValueError(_("Tempo limite deve estar entre 1 e 3600 segundos (ou sem limite)."))
 
 
 # --------------------------------------------------------------------------- #
@@ -365,8 +366,8 @@ def metrics(cfg: dict[int, int], types: dict[int, BinSpec]) -> Metrics:
     return m
 
 
-CRITERIA = {"bins": "Menos bins", "volume": "Menos volume de bins", "width": "Menor largura de frente",
-            "changes": "Mínimo de mudanças / movimentações", "cost": "Menor custo de bins"}
+CRITERIA = {"bins": N_("Menos bins"), "volume": N_("Menos volume de bins"), "width": N_("Menor largura de frente"),
+            "changes": N_("Mínimo de mudanças / movimentações"), "cost": N_("Menor custo de bins")}
 OBJ_CRITERION = {"min_bins": "bins", "min_volume": "volume", "min_width": "width", "min_changes": "changes",
                  "min_moves": "changes", "min_cost": "cost"}
 
@@ -416,7 +417,7 @@ def _space_limits(current_m: Metrics, prm: Params) -> tuple[float, float, list[s
         if current_m.bins and not current_m.unknown_dims and current_m.width_cm > 0:
             max_w, max_h = current_m.width_cm, current_m.height_cm
         else:
-            notes.append("Espaço atual desconhecido (sem bins dimensionadas): restrição de espaço ignorada.")
+            notes.append(_("Espaço atual desconhecido (sem bins dimensionadas): restrição de espaço ignorada."))
     if prm.max_width_cm:
         max_w = min(max_w, prm.max_width_cm)
     if prm.max_height_cm:
@@ -427,14 +428,14 @@ def _space_limits(current_m: Metrics, prm: Params) -> tuple[float, float, list[s
 def violations(cfg: dict[int, int], m: Metrics, prm: Params, max_w: float, max_h: float) -> list[str]:
     v = []
     if prm.allowed_types is not None and any(t not in prm.allowed_types for t, n in cfg.items() if n > 0):
-        v.append("usa tipo de bin não permitido")
+        v.append(_("usa tipo de bin não permitido"))
     if prm.single_type and len([1 for n in cfg.values() if n > 0]) > 1:
-        v.append("mais de um tipo de bin")
+        v.append(_("mais de um tipo de bin"))
     if prm.max_bins is not None and m.bins > prm.max_bins:
         v.append(f"mais de {prm.max_bins} bin(s)")
     if max_w < math.inf or max_h < math.inf:
         if m.unknown_dims:
-            v.append("tipo de bin sem dimensões (não dá para checar o espaço)")
+            v.append(_("tipo de bin sem dimensões (não dá para checar o espaço)"))
         else:
             if m.width_cm > max_w + 0.01:
                 v.append(f"largura {m.width_cm:g} cm > {max_w:g} cm")
@@ -527,7 +528,7 @@ def _fill_count(items: list[tuple[ProductUnit, int]], sequence, prm: Params) -> 
 
 def _mixed_candidates(items, types: dict[int, BinSpec], prm: Params) -> list[dict[int, int]]:
     usable = [t for t in types.values()
-              if t.volume_cm3 and all(unit_fits(p, t, prm) for p, _ in items)]
+              if t.volume_cm3 and all(unit_fits(p, t, prm) for p, _x in items)]
     out: dict[tuple, dict[int, int]] = {}
     for t in usable:
         c = _fill_count(items, lambda k, t=t: t, prm)
@@ -553,7 +554,7 @@ def _current_fits(items, current: dict[int, int], types: dict[int, BinSpec], prm
     if any(types.get(t) is None or types[t].volume_cm3 is None for t in current):
         return None
     if prm.mix_skus:
-        pool = sorted((types[t] for t, n in current.items() for _ in range(n)), key=lambda b: -(b.volume_cm3 or 0))
+        pool = sorted((types[t] for t, n in current.items() for _x in range(n)), key=lambda b: -(b.volume_cm3 or 0))
         return _fill_count(items, lambda k: pool[k] if k < len(pool) else None, prm) is not None
     pool = dict(current)
     for p, u in sorted(items, key=lambda it: -(it[0].volume_cm3 or 0) * it[1]):
@@ -649,7 +650,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
 
     items = [(p, _units(p.qty, prm.growth)) for p in a.items if p.qty and p.qty > 0]
     items = [(p, u) for p, u in items if u > 0]
-    used = sum((p.volume_cm3 or 0) * p.qty for p, _ in items) / 1000.0
+    used = sum((p.volume_cm3 or 0) * p.qty for p, _x in items) / 1000.0
     res.used_volume_l = used
     if cur_m.volume_l and items:
         res.fill_now = used / cur_m.volume_l * 100.0
@@ -657,19 +658,19 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
     if not items:
         if prm.clear_empty and a.current and not a.linked_without_stock:
             res.status, res.suggested, res.suggested_metrics = "liberar", {}, Metrics()
-            res.notes.append("Endereço sem saldo e sem produto atrelado.")
+            res.notes.append(_("Endereço sem saldo e sem produto atrelado."))
         else:
             res.status = "sem_saldo"
         return res
 
-    missing = [p.sku for p, _ in items if not p.has_dims]
+    missing = [p.sku for p, _x in items if not p.has_dims]
     if missing:
         res.status = "sem_dados"
-        res.notes.append("SKU sem dimensões: " + ", ".join(missing[:5]) + ("…" if len(missing) > 5 else ""))
+        res.notes.append(_("SKU sem dimensões: ") + ", ".join(missing[:5]) + ("…" if len(missing) > 5 else ""))
         return res
     if not types:
         res.status = "inviavel"
-        res.notes.append("Nenhum tipo de bin permitido.")
+        res.notes.append(_("Nenhum tipo de bin permitido."))
         return res
 
     slots = _level_slots(a, ledger, prm)
@@ -683,11 +684,11 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
         return {t for t, n in used.items() if n > 0}
 
     if slots is not None and not slots[0][1]:
-        res.notes.append("Nível sem capacidade cadastrada: não dá para garantir que as bins cabem "
-                         "(cadastre em Capacidade dos níveis).")
+        res.notes.append(_("Nível sem capacidade cadastrada: não dá para garantir que as bins cabem "
+                         "(cadastre em Capacidade dos níveis)."))
     if slots is not None and (slots[0][1] or slots[0][3] is not None):
         # O nível do endereço tem capacidade cadastrada: ela define o espaço (substitui "espaço atual")
-        max_w, max_h, _ = _space_limits(cur_m, Params(keep_space=False, max_width_cm=prm.max_width_cm,
+        max_w, max_h, _x = _space_limits(cur_m, Params(keep_space=False, max_width_cm=prm.max_width_cm,
                                                       max_height_cm=prm.max_height_cm))
     else:
         max_w, max_h, space_notes = _space_limits(cur_m, prm)
@@ -699,7 +700,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
         candidates = _mixed_candidates(items, types, prm)
         if not candidates:
             res.status = "inviavel"
-            res.notes.append("Algum SKU não cabe (geometria/peso) em nenhum tipo de bin permitido.")
+            res.notes.append(_("Algum SKU não cabe (geometria/peso) em nenhum tipo de bin permitido."))
             return res
     else:
         per_sku = []
@@ -707,15 +708,15 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
             caps = {t: capacity(p, b, prm) for t, b in types.items()}
             if not any(c > 0 for c in caps.values()):
                 res.status = "inviavel"
-                res.notes.append(f"SKU {p.sku} não cabe em nenhum tipo de bin permitido.")
+                res.notes.append(_("SKU {sku} não cabe em nenhum tipo de bin permitido.", sku=p.sku))
                 return res
             per_sku.append((p, u, caps))
         if prm.single_type:
             for t in types:
-                if all(caps[t] > 0 for _, _, caps in per_sku):
-                    candidates.append({t: sum(math.ceil(u / caps[t]) for _, u, caps in per_sku)})
+                if all(caps[t] > 0 for _x, _x, caps in per_sku):
+                    candidates.append({t: sum(math.ceil(u / caps[t]) for _x, u, caps in per_sku)})
         else:
-            options = [_sku_options(u, caps, types, prm) for _, u, caps in per_sku]
+            options = [_sku_options(u, caps, types, prm) for _x, u, caps in per_sku]
             k = max(1, int(MAX_COMBOS ** (1.0 / len(options))))
             options = [o[:k] for o in options]
             for combo in itertools.product(*options):
@@ -729,7 +730,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
                 collect["cands"].append((c, m))
         # a configuração atual também é opção válida quando comporta o saldo e respeita as restrições do endereço
         if a.current and _current_fits(items, a.current, all_types, prm) and not violations(a.current, cur_m, prm, max_w, max_h):
-            if all(_key(c) != _key(a.current) for c, _ in collect["cands"]):
+            if all(_key(c) != _key(a.current) for c, _x in collect["cands"]):
                 collect["cands"].append((dict(a.current), cur_m))
         collect["slots"] = [sl[0] for sl in slots] if slots is not None else None
         collect["res"] = res
@@ -752,12 +753,12 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
             # Altura não restringe: se a bin for mais alta que o vão, a estrutura (vão) é que sobe.
             pl, rest = place_in_levels(c, slots)
             if rest:
-                v = ["não cabe na capacidade do(s) nível(is)"]
+                v = [_("não cabe na capacidade do(s) nível(is)")]
             elif not prm.mixed_level_types and pl:
                 for sid, cfg in pl.items():
                     placed = {t for t, n in cfg.items() if n > 0}
                     if len(placed | level_types(sid)) > 1:
-                        v = ["tipos de bin diferentes no mesmo nível"]
+                        v = [_("tipos de bin diferentes no mesmo nível")]
                         break
         if v:
             for r in v:
@@ -771,12 +772,12 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
         cur_over = [sid for sid in a.current_placement if ledger.over(sid)]
         if cur_over:
             cur_ok = False
-            res.notes.append("Nível atual acima da capacidade.")
+            res.notes.append(_("Nível atual acima da capacidade."))
 
     if not feasible:
         res.status = "inviavel"
         top = sorted(reasons.items(), key=lambda kv: -kv[1])[:2]
-        res.notes.append("Nenhuma combinação respeita as restrições" + (": " + "; ".join(r for r, _ in top) if top else "."))
+        res.notes.append(_("Nenhuma combinação respeita as restrições") + (": " + "; ".join(r for r, _x in top) if top else "."))
         return res
 
     base_obj = "min_volume" if prm.objective == "min_changes" else prm.objective
@@ -797,21 +798,21 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
         est = sorted({all_types[t].code for sid, cfg in best_pl.items() for t, n in cfg.items()
                       if n and ledger.slots.get(sid) and t in ledger.slots[sid].derived and t in all_types})
         if est:
-            res.notes.append("Capacidade de " + ", ".join(est) + " no nível estimada pela largura (não cadastrada).")
+            res.notes.append(_("Capacidade de ") + ", ".join(est) + _(" no nível estimada pela largura (não cadastrada)."))
     if best_pl:
         extra_lv = [str(k[4]) if isinstance(k, tuple) else str(k) for k, cfg in best_pl.items()
                     if k != a.own_level and any(cfg.values())]
         if extra_lv:
-            res.notes.append("Usa nível(is) extra(s) da estante: " + ", ".join(extra_lv) + ".")
+            res.notes.append(_("Usa nível(is) extra(s) da estante: ") + ", ".join(extra_lv) + ".")
     if ledger is not None:
         lifts = []
         for sid, cfg in (best_pl or ({a.own_level: best_cfg} if a.own_level is not None else {})).items():
             slot = ledger.slots.get(sid)
             top = max((heights.get(t) or 0 for t, n in cfg.items() if n), default=0)
             if slot and slot.height is not None and top > slot.height + EPS:
-                lifts.append(f"{slot.label} {slot.height:g}→{top:g} cm".replace(".", ","))
+                lifts.append(f"{slot.label} {slot.height:g}→{top:g} cm".replace(".", seps()[0]))
         if lifts:
-            res.notes.append("Estrutura sobe para acomodar a bin (vão): " + ", ".join(lifts) + ".")
+            res.notes.append(_("Estrutura sobe para acomodar a bin (vão): ") + ", ".join(lifts) + ".")
     res.fill_after = used / best_m.volume_l * 100.0 if best_m.volume_l else None
     same_place = slots is None or _placement_key(best_pl) == _placement_key(res.current_placement)
 
@@ -819,7 +820,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
         res.status = "ok"
     elif _key(best_cfg) == _key(a.current):
         res.status = "melhoria"
-        res.notes.append("Mesmas bins, redistribuídas entre os níveis.")
+        res.notes.append(_("Mesmas bins, redistribuídas entre os níveis."))
     elif res.current_fits is False:
         res.status = "corrigir"
     elif force is None and res.current_fits and cur_ok and (
@@ -832,7 +833,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
     else:
         res.status = "melhoria"
         if not cur_ok and a.current:
-            res.notes.append("Configuração atual viola as restrições escolhidas.")
+            res.notes.append(_("Configuração atual viola as restrições escolhidas."))
     return res
 
 
@@ -884,7 +885,7 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
                                            used_volume_l=o.used_volume_l, fill_now=o.fill_now, fill_after=o.fill_now,
                                            current_fits=o.current_fits, own_level=o.own_level,
                                            current_placement=o.current_placement, placement=o.current_placement)
-                        nr.notes = list(a_.notes) + ["Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes)."]
+                        nr.notes = list(a_.notes) + [_("Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes).")]
                         results[j] = nr
             return
         i = min(gainers, key=lambda i: (prio[results[i].status], results[i].address))
@@ -909,13 +910,13 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
                                suggested_metrics=r.current_metrics, used_volume_l=r.used_volume_l, fill_now=r.fill_now,
                                fill_after=r.fill_now, current_fits=r.current_fits, own_level=r.own_level,
                                current_placement=r.current_placement, placement=r.current_placement)
-            nr.notes = list(a.notes) + ["Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes)."]
+            nr.notes = list(a.notes) + [_("Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes).")]
         elif nr.status == "inviavel":
-            nr.notes.append("Faltam bins no escopo para corrigir (bins existentes) — simule com recurso infinito.")
+            nr.notes.append(_("Faltam bins no escopo para corrigir (bins existentes) — simule com recurso infinito."))
         elif nr.status == "ok" and r.status == "melhoria":
-            nr.notes.append("Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes).")
+            nr.notes.append(_("Haveria melhoria, mas faltam bins desse tipo no escopo (bins existentes)."))
         elif nr.applicable and _key(nr.suggested or {}) != _key(r.suggested or {}):
-            nr.notes.append("Sugestão ajustada às bins existentes no escopo.")
+            nr.notes.append(_("Sugestão ajustada às bins existentes no escopo."))
         if ledger is not None and nr.applicable and nr.placement is not None:
             ledger.commit(a.current_placement, nr.placement)
         results[i] = nr
@@ -936,7 +937,7 @@ def optimize(addresses: list[AddressIn], types: dict[int, BinSpec], prm: Params,
     return results, s
 
 
-def summarize(results: list[AddressResult]) -> "Summary":
+def summarize(results: list[AddressResult]) -> _("Summary"):
     s = Summary(addresses=len(results))
     for r in results:
         s.by_status[r.status] = s.by_status.get(r.status, 0) + 1
@@ -1064,8 +1065,8 @@ def assign_donors(results: list[AddressResult], donors: list[Donor], types: dict
                               suggested=left, suggested_metrics=metrics(left, types), own_level=d.a.own_level,
                               current_placement={k: dict(v) for k, v in d.a.current_placement.items()},
                               placement=pl if d.a.current_placement else None)
-            r.notes.append("Sem saldo: cede " + ", ".join(f"{n}× {code(t)}" for t, n in sorted(taken[d.a.id].items()))
-                           + " para os itens filtrados.")
+            r.notes.append(_("Sem saldo: cede ") + ", ".join(f"{n}× {code(t)}" for t, n in sorted(taken[d.a.id].items()))
+                           + _(" para os itens filtrados."))
             if ledger is not None and d.a.current_placement:
                 ledger.commit(d.a.current_placement, pl)
             out[d.a.id] = r
@@ -1094,8 +1095,8 @@ def assign_donors(results: list[AddressResult], donors: list[Donor], types: dict
                     r.removed_bins = [(b[0], b[1]) for b in gone]
                     loose = [(sku, f"{code(b[0])} #{b[1]}", q) for b in gone for sku, q in b[2].items() if q > 0]
                     orphans += [(sku, d.a.address, tag, q) for sku, tag, q in loose]
-                    r.notes.append(f"Cede {k}× {code(t)} para os itens filtrados"
-                                   + ("; ficam fora de bin: " + ", ".join(f"{sku} {q:g} un." for sku, _tg, q in loose)
+                    r.notes.append(_("Cede {k}× {code} para os itens filtrados", k=k, code=code(t))
+                                   + (_("; ficam fora de bin: ") + ", ".join(f"{sku} {q:g} un." for sku, _tg, q in loose)
                                       if loose else " (bins vazias).") )
                     if ledger is not None and d.a.current_placement:
                         ledger.commit(d.a.current_placement, pl)
@@ -1135,9 +1136,9 @@ def assign_donors(results: list[AddressResult], donors: list[Donor], types: dict
                     nr.fill_now = nr.used_volume_l / nr.current_metrics.volume_l * 100.0
                 if nr.used_volume_l and nr.suggested_metrics.volume_l:
                     nr.fill_after = nr.used_volume_l / nr.suggested_metrics.volume_l * 100.0
-                nr.notes.append(f"Cede {k}× {code(t)} para os itens filtrados"
-                                + (" e é rearranjado com o que sobra." if _key(cfg) != _key(rest) else
-                                   "; os itens cabem nas bins que ficam."))
+                nr.notes.append(_("Cede {k}× {code} para os itens filtrados", k=k, code=code(t))
+                                + (_(" e é rearranjado com o que sobra.") if _key(cfg) != _key(rest) else
+                                   _("; os itens cabem nas bins que ficam.")))
                 out[d.a.id] = nr
     uncovered = {t: n for t, n in need.items() if n > 0}
     return list(out.values()), uncovered, orphans

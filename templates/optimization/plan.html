@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Plano de ação{% endblock %}
+{% block title %}{{ _("Plano de ação") }}{% endblock %}
 {% block head %}
 <style>
   .kpi-card .ba { font-size: 1.35rem; font-weight: 700; }
@@ -24,28 +24,28 @@
 <div class="page-header">
   <div>
     <h1><i class="bi bi-list-check"></i> {{ plan.title }}</h1>
-    <div class="small text-muted">Gerado em {{ plan.created.strftime('%d/%m/%Y %H:%M') }} · {{ plan.n_steps }} passo(s){% if not plan.applicable %} · <b>plano informativo</b> (não pode ser aplicado){% endif %}</div>
+    <div class="small text-muted">{{ _h("Gerado em {strftime} · {n_steps} passo(s)", strftime=(fmt_datetime(plan.created)), n_steps=(plan.n_steps)) }}{% if not plan.applicable %} {{ _h("· <b>plano informativo</b> (não pode ser aplicado)") }}{% endif %}</div>
   </div>
   <div class="d-flex gap-2 no-print">
-    <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar à análise</a>
+    <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar à análise") }}</a>
     <a href="{{ request.url.path }}.xlsx?{{ qs }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
     <a href="{{ request.url.path }}.pdf?{{ qs }}" class="btn btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
-    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _("Imprimir") }}</button>
   </div>
 </div>
 
 <div class="row g-3 mb-3">
   <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
-    <div class="fw-semibold mb-1">Escopo</div>
+    <div class="fw-semibold mb-1">{{ _("Escopo") }}</div>
     <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in plan.scope %}<tr><td class="text-muted" style="width:40%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
   </div></div></div>
   <div class="col-lg-6"><div class="card h-100"><div class="card-body small">
-    <div class="fw-semibold mb-1">Parâmetros</div>
+    <div class="fw-semibold mb-1">{{ _("Parâmetros") }}</div>
     <table class="table table-sm mb-0" data-no-resize><tbody>{% for k, v in plan.params %}<tr><td class="text-muted" style="width:40%">{{ k }}</td><td>{{ v }}</td></tr>{% endfor %}</tbody></table>
   </div></div></div>
 </div>
 
-<h5 class="mb-2">Antes × depois</h5>
+<h5 class="mb-2">{{ _("Antes × depois") }}</h5>
 <div class="row g-3 mb-3">
   {% for k in plan.kpis %}
   {% set mx = [k.before or 0, k.after or 0]|max %}
@@ -54,8 +54,8 @@
     <div class="ba">{% if k.before is not none %}<span class="text-muted">{{ k.before|dec(k.places) }}</span><span class="arrow">→</span>{% endif %}<span>{{ k.after|dec(k.places) if k.after is not none else '—' }}</span><small class="text-muted fw-normal">{{ k.unit }}</small></div>
     {% if k.delta is not none %}<div class="small {{ 'text-success' if k.good else ('text-danger' if k.good == false else 'text-muted') }}">
       {{ '+' if k.delta > 0 else '' }}{{ k.delta|dec(k.places) }}{{ k.unit }}{% if k.pct is not none %} ({{ '+' if k.pct > 0 else '' }}{{ k.pct|dec(1) }}%){% endif %}</div>
-    {% if mx %}<div class="kpi-bar" title="antes"><span style="width:{{ (k.before or 0) / mx * 100 }}%; background:#9aa5ad"></span></div>
-    <div class="kpi-bar" title="depois"><span style="width:{{ (k.after or 0) / mx * 100 }}%; background:var(--nk-accent)"></span></div>{% endif %}{% endif %}
+    {% if mx %}<div class="kpi-bar" title="{{ _("antes") }}"><span style="width:{{ (k.before or 0) / mx * 100 }}%; background:#9aa5ad"></span></div>
+    <div class="kpi-bar" title="{{ _("depois") }}"><span style="width:{{ (k.after or 0) / mx * 100 }}%; background:var(--nk-accent)"></span></div>{% endif %}{% endif %}
   </div></div></div>
   {% endfor %}
 </div>
@@ -63,10 +63,10 @@
 {% for w in plan.warnings %}<div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
 
 {% if plan.by_type %}
-{% set names = ('Existentes', 'Necessárias') if plan.mode == 'pool_unlimited' else (('Existentes', 'Usadas no plano') if plan.mode == 'pool' else ('Antes', 'Depois')) %}
+{% set names = (_('Existentes'), _('Necessárias')) if plan.mode == 'pool_unlimited' else ((_('Existentes'), _('Usadas no plano')) if plan.mode == 'pool' else (_('Antes'), _('Depois'))) %}
 {% set ymax = [plan.by_type|map(attribute=1)|max, plan.by_type|map(attribute=2)|max, 1]|max %}
 <div class="card mb-3"><div class="card-body">
-  <div class="d-flex justify-content-between"><strong>Bins por tipo</strong>
+  <div class="d-flex justify-content-between"><strong>{{ _("Bins por tipo") }}</strong>
     <small><span class="bin-box" style="width:12px;background:#9aa5ad"></span> {{ names[0] }} &nbsp; <span class="bin-box" style="width:12px;background:var(--nk-accent)"></span> {{ names[1] }}</small></div>
   {% set bw = 26 %}{% set gap = 30 %}{% set H = 150 %}
   <svg width="{{ plan.by_type|length * (2 * bw + gap) + 40 }}" height="{{ H + 40 }}" style="max-width:100%">
@@ -85,22 +85,22 @@
 
 <div class="card mb-3 page-break">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
-    <strong>Passo a passo</strong>
-    <small class="text-muted no-print">Marque os passos executados (só nesta tela; use o Excel/PDF como checklist impresso).</small>
+    <strong>{{ _("Passo a passo") }}</strong>
+    <small class="text-muted no-print">{{ _("Marque os passos executados (só nesta tela; use o Excel/PDF como checklist impresso).") }}</small>
   </div>
   <div class="table-responsive">
     <table class="table table-sm mb-0 small" id="steps">
-      <thead><tr><th style="width:50px">Nº</th><th style="width:120px">Ação</th><th>Onde / origem</th><th>Destino</th><th>Descrição</th><th>Destino no momento</th><th style="width:60px" class="text-center">Feito</th></tr></thead>
+      <thead><tr><th style="width:50px">Nº</th><th style="width:120px">{{ _("Ação") }}</th><th>{{ _("Onde / origem") }}</th><th>{{ _("Destino") }}</th><th>{{ _("Descrição") }}</th><th>{{ _("Destino no momento") }}</th><th style="width:60px" class="text-center">{{ _("Feito") }}</th></tr></thead>
       <tbody>
       {% set ns = namespace(g=none) %}
       {% for s in plan.steps %}
-        {% if s.group != ns.g %}{% set ns.g = s.group %}<tr class="grp-row"><td colspan="7">{{ s.group }}{% if s.group.startswith('Onda') %} <span class="fw-normal text-muted">— passos desta onda podem ser feitos em qualquer ordem</span>{% endif %}</td></tr>{% endif %}
+        {% if s.group != ns.g %}{% set ns.g = s.group %}<tr class="grp-row"><td colspan="7">{{ s.group }}{% if s.group.startswith('Onda') %} <span class="fw-normal text-muted">{{ _("— passos desta onda podem ser feitos em qualquer ordem") }}</span>{% endif %}</td></tr>{% endif %}
         <tr><td class="mono">{{ s.n }}</td><td class="step-{{ s.kind }} fw-semibold">{{ s.action }}</td><td class="mono">{{ s.where }}</td>
           <td class="mono">{{ s.to or '' }}</td><td>{{ s.detail }}</td>
-          <td class="{{ 'text-success' if s.status.startswith('livre agora') else ('text-warning-emphasis' if s.status else '') }}">{{ s.status }}</td>
+          <td class="{{ 'text-success' if s.status.startswith(_('livre agora')) else ('text-warning-emphasis' if s.status else '') }}">{{ s.status }}</td>
           <td class="text-center"><input type="checkbox" class="form-check-input" onchange="this.closest('tr').classList.toggle('step-done', this.checked)"></td></tr>
       {% else %}
-        <tr><td colspan="7" class="text-center text-muted py-3">Nenhuma ação necessária.</td></tr>
+        <tr><td colspan="7" class="text-center text-muted py-3">{{ _("Nenhuma ação necessária.") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -109,20 +109,20 @@
 
 {% if plan.visuals %}
 <div class="card mb-3 page-break">
-  <div class="card-header bg-white"><strong>Visual por endereço — antes × depois</strong> <small class="text-muted">{{ plan.visuals|length }} endereço(s){% if plan.mode == 'address' %}; largura proporcional à bin{% endif %}</small></div>
+  <div class="card-header bg-white"><strong>{{ _("Visual por endereço — antes × depois") }}</strong> <small class="text-muted">{{ _h("{visuals} endereço(s)", visuals=(plan.visuals|length)) }}{% if plan.mode == 'address' %}{{ _("; largura proporcional à bin") }}{% endif %}</small></div>
   <div class="table-responsive">
     <table class="table table-sm mb-0 small" data-no-resize>
-      <thead><tr><th style="width:140px">Endereço</th><th>Antes</th><th>Depois</th></tr></thead>
+      <thead><tr><th style="width:140px">{{ _("Endereço") }}</th><th>{{ _("Antes") }}</th><th>{{ _("Depois") }}</th></tr></thead>
       <tbody>
       {% for v in plan.visuals %}
         <tr><td class="mono">{{ v.label }}</td>
         {% if v.before is defined %}
           {% for side, cls in [(v.before, ''), (v.after, 'bin-after')] %}
-          <td>{% for code, n, w in side %}{% for _ in range([n, 30]|min) %}<span class="bin-box {{ cls }}" style="width:{{ [((w or 30) * 1.4)|round|int, 14]|max }}px" title="{{ code }}">{{ code if (w or 30) * 1.4 > 34 else '' }}</span>{% endfor %}{% if n > 30 %}<small> +{{ n - 30 }}</small>{% endif %}{% else %}<span class="text-muted">nenhuma bin</span>{% endfor %}</td>
+          <td>{% for code, n, w in side %}{% for _ in range([n, 30]|min) %}<span class="bin-box {{ cls }}" style="width:{{ [((w or 30) * 1.4)|round|int, 14]|max }}px" title="{{ code }}">{{ code if (w or 30) * 1.4 > 34 else '' }}</span>{% endfor %}{% if n > 30 %}<small> +{{ n - 30 }}</small>{% endif %}{% else %}<span class="text-muted">{{ _("nenhuma bin") }}</span>{% endfor %}</td>
           {% endfor %}
         {% else %}
           {% for used in [v.before_used, v.after_used] %}
-          <td><div class="d-flex align-items-center gap-2"><div class="kpi-bar flex-grow-1" style="max-width:260px"><span style="width:{{ used / ([v.total, 1]|max) * 100 }}%; background:var(--nk-accent)"></span></div><span>{{ used }}/{{ v.total }} bins</span></div></td>
+          <td><div class="d-flex align-items-center gap-2"><div class="kpi-bar flex-grow-1" style="max-width:260px"><span style="width:{{ used / ([v.total, 1]|max) * 100 }}%; background:var(--nk-accent)"></span></div><span>{{ _h("{used}/{total} bins", used=(used), total=(v.total)) }}</span></div></td>
           {% endfor %}
         {% endif %}
         </tr>
@@ -134,13 +134,13 @@
 {% endif %}
 
 <div class="card mb-3 page-break">
-  <div class="card-header bg-white"><strong>De-para</strong> <small class="text-muted">{{ plan.depara|length }} linha(s)</small></div>
+  <div class="card-header bg-white"><strong>{{ _("De-para") }}</strong> <small class="text-muted">{{ _h("{depara} linha(s)", depara=(plan.depara|length)) }}</small></div>
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0 small">
       <thead><tr>{% for c in plan.depara_cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
       <tbody>
       {% for row in plan.depara %}<tr>{% for c in row %}<td class="{{ 'text-end' if c is number else '' }}">{{ (c|dec(1) if c is float else c|dec) if c is number else (c if c is not none else '—') }}</td>{% endfor %}</tr>
-      {% else %}<tr><td colspan="{{ plan.depara_cols|length }}" class="text-center text-muted py-3">Sem linhas.</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="{{ plan.depara_cols|length }}" class="text-center text-muted py-3">{{ _("Sem linhas.") }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% from "_macros.html" import warehouse_options, bin_editor %}
-{% block title %}Gerar endereços em lote{% endblock %}
+{% block title %}{{ _("Gerar endereços em lote") }}{% endblock %}
 
 {% macro type_select(name, current, allow_none=True) -%}
 <select class="form-select form-select-sm rule-type" name="{{ name }}">
-  <option value="ALPHABETIC" {% if current == 'ALPHABETIC' %}selected{% endif %}>Alfabético (A..Z)</option>
-  <option value="NUMERIC" {% if current == 'NUMERIC' %}selected{% endif %}>Numérico (01..10)</option>
-  <option value="EXACT" {% if current == 'EXACT' %}selected{% endif %}>Valor fixo</option>
-  {% if allow_none %}<option value="NONE" {% if current == 'NONE' %}selected{% endif %}>Não utilizar</option>{% endif %}
+  <option value="ALPHABETIC" {% if current == 'ALPHABETIC' %}selected{% endif %}>{{ _("Alfabético (A..Z)") }}</option>
+  <option value="NUMERIC" {% if current == 'NUMERIC' %}selected{% endif %}>{{ _("Numérico (01..10)") }}</option>
+  <option value="EXACT" {% if current == 'EXACT' %}selected{% endif %}>{{ _("Valor fixo") }}</option>
+  {% if allow_none %}<option value="NONE" {% if current == 'NONE' %}selected{% endif %}>{{ _("Não utilizar") }}</option>{% endif %}
 </select>
 {%- endmacro %}
 
@@ -19,13 +19,13 @@
       <span class="badge text-bg-secondary exc-num">#</span>
     </div>
     <div class="col-6 col-lg-2">
-      <label class="form-label small mb-0">Nível afetado</label>
+      <label class="form-label small mb-0">{{ _("Nível afetado") }}</label>
       <select class="form-select form-select-sm exc-target" name="exc_target_{{ n }}">
         {% for lvl in levels[1:] %}<option value="{{ lvl }}" {% if e and e.target == lvl %}selected{% endif %}>{{ short_labels[lvl] }}</option>{% endfor %}
       </select>
     </div>
     <div class="col-12 col-lg">
-      <label class="form-label small mb-0">Quando (vazio = qualquer · aceita <span class="mono">05</span>, <span class="mono">01,03</span>, <span class="mono">01-05</span>, <span class="mono">A-C</span>)</label>
+      <label class="form-label small mb-0">{{ _h("Quando (vazio = qualquer · aceita <span class=\"mono\">05</span>, <span class=\"mono\">01,03</span>, <span class=\"mono\">01-05</span>, <span class=\"mono\">A-C</span>)") }}</label>
       <div class="d-flex gap-1">
         {% for lvl in levels[:-1] %}
         <input class="form-control form-control-sm mono text-uppercase exc-cond" data-level="{{ lvl }}" name="exc_cond_{{ lvl }}_{{ n }}"
@@ -34,15 +34,15 @@
       </div>
     </div>
     <div class="col-6 col-lg-2">
-      <label class="form-label small mb-0">Nova regra</label>
+      <label class="form-label small mb-0">{{ _("Nova regra") }}</label>
       {{ type_select('exc_type_' ~ n, e.type if e else 'NUMERIC') }}
     </div>
-    <div class="col-4 col-lg-1"><label class="form-label small mb-0">Início</label><input class="form-control form-control-sm mono text-uppercase r-start" name="exc_start_{{ n }}" value="{{ e.start if e else '' }}" maxlength="10"></div>
-    <div class="col-4 col-lg-1"><label class="form-label small mb-0">Fim</label><input class="form-control form-control-sm mono text-uppercase r-end" name="exc_end_{{ n }}" value="{{ e.end if e else '' }}" maxlength="10"></div>
-    <div class="col-4 col-lg-1"><label class="form-label small mb-0">Fixo</label><input class="form-control form-control-sm mono text-uppercase r-value" name="exc_value_{{ n }}" value="{{ e.value if e else '' }}" maxlength="20"></div>
-    <div class="col-4 col-lg-auto" style="max-width:80px"><label class="form-label small mb-0">Díg.</label><input class="form-control form-control-sm r-padding" type="number" min="0" max="10" name="exc_padding_{{ n }}" value="{{ e.padding if e else '' }}"></div>
+    <div class="col-4 col-lg-1"><label class="form-label small mb-0">{{ _("Início") }}</label><input class="form-control form-control-sm mono text-uppercase r-start" name="exc_start_{{ n }}" value="{{ e.start if e else '' }}" maxlength="10"></div>
+    <div class="col-4 col-lg-1"><label class="form-label small mb-0">{{ _("Fim") }}</label><input class="form-control form-control-sm mono text-uppercase r-end" name="exc_end_{{ n }}" value="{{ e.end if e else '' }}" maxlength="10"></div>
+    <div class="col-4 col-lg-1"><label class="form-label small mb-0">{{ _("Fixo") }}</label><input class="form-control form-control-sm mono text-uppercase r-value" name="exc_value_{{ n }}" value="{{ e.value if e else '' }}" maxlength="20"></div>
+    <div class="col-4 col-lg-auto" style="max-width:80px"><label class="form-label small mb-0">{{ _("Díg.") }}</label><input class="form-control form-control-sm r-padding" type="number" min="0" max="10" name="exc_padding_{{ n }}" value="{{ e.padding if e else '' }}"></div>
     <div class="col-auto">
-      <button type="button" class="btn btn-sm btn-outline-danger exc-remove" title="Remover exceção"><i class="bi bi-x-lg"></i></button>
+      <button type="button" class="btn btn-sm btn-outline-danger exc-remove" title="{{ _("Remover exceção") }}"><i class="bi bi-x-lg"></i></button>
     </div>
   </div>
   <div class="small text-muted mt-1 exc-summary"></div>
@@ -51,8 +51,8 @@
 
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-magic"></i> Gerar Endereços em Lote</h1>
-  <a href="/locations" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Endereços</a>
+  <h1><i class="bi bi-magic"></i> {{ _("Gerar Endereços em Lote") }}</h1>
+  <a href="/locations" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Endereços") }}</a>
 </div>
 
 {% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
@@ -61,44 +61,44 @@
 <div class="row g-3">
   <div class="col-xxl-8">
     <div class="card">
-      <div class="card-header bg-white"><strong>1. Depósito</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("1. Depósito") }}</strong></div>
       <div class="card-body row g-3">
         <div class="col-md-6">
-          <label class="form-label">Filial *</label>
+          <label class="form-label">{{ _("Filial *") }}</label>
           <select class="form-select" name="branch_id" id="branch_id" required>
-            <option value="">Selecione...</option>
+            <option value="">{{ _("Selecione...") }}</option>
             {% for b in branches %}<option value="{{ b.id }}" {% if data.get('branch_id') == b.id %}selected{% endif %}>{{ b.code }} - {{ b.name }}</option>{% endfor %}
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Armazém</label>
+          <label class="form-label">{{ _("Armazém") }}</label>
           <select class="form-select" name="warehouse_id" data-filter-by="branch_id">
             {{ warehouse_options(warehouses, wh_branches, data.get('warehouse_id')) }}
           </select>
         </div>
         <div class="col-12">
-          <label class="form-label mb-1"><i class="bi bi-inboxes"></i> Bins em cada endereço novo <small class="text-muted">(opcional)</small></label>
-          {{ bin_editor(bin_types, data.get('bins') or [], none, 'Sem bins — pode atribuir depois na lista de endereços.') }}
+          <label class="form-label mb-1"><i class="bi bi-inboxes"></i> {{ _h("Bins em cada endereço novo <small class=\"text-muted\">(opcional)</small>") }}</label>
+          {{ bin_editor(bin_types, data.get('bins') or [], none, _('Sem bins — pode atribuir depois na lista de endereços.')) }}
         </div>
         <div class="col-md-6">
-          <label class="form-label mb-1"><i class="bi bi-bookshelf"></i> Estrutura de armazenagem das estantes <small class="text-muted">(opcional)</small></label>
+          <label class="form-label mb-1"><i class="bi bi-bookshelf"></i> {{ _h("Estrutura de armazenagem das estantes <small class=\"text-muted\">(opcional)</small>") }}</label>
           <select class="form-select" name="structure_type_id">
-            <option value="">— nenhuma —</option>
-            {% for st in structures %}<option value="{{ st.id }}" {% if data.get('structure_type_id') == st.id %}selected{% endif %}>{{ st.code }} — {{ st.levels }} níveis × {{ st.level_height|dec }} cm, frente {{ st.width|dec }} cm</option>{% endfor %}
+            <option value="">{{ _("— nenhuma —") }}</option>
+            {% for st in structures %}<option value="{{ st.id }}" {% if data.get('structure_type_id') == st.id %}selected{% endif %}>{{ _h("{code} — {levels} níveis × {level_height} cm, frente {width} cm", code=(st.code), levels=(st.levels), level_height=(st.level_height|dec), width=(st.width|dec)) }}</option>{% endfor %}
           </select>
-          <div class="form-text">Ao gerar, cada estante nova fica com essa estrutura: vão dos níveis e quantas bins de cada tipo cabem por nível.</div>
+          <div class="form-text">{{ _("Ao gerar, cada estante nova fica com essa estrutura: vão dos níveis e quantas bins de cada tipo cabem por nível.") }}</div>
         </div>
       </div>
     </div>
 
     <div class="card mt-3">
       <div class="card-header bg-white">
-        <strong>2. Regra padrão por nível</strong>
-        <small class="text-muted">— somente o Corredor é obrigatório; "Não utilizar" encerra o endereço naquele nível</small>
+        <strong>{{ _("2. Regra padrão por nível") }}</strong>
+        <small class="text-muted">{{ _("— somente o Corredor é obrigatório; \"Não utilizar\" encerra o endereço naquele nível") }}</small>
       </div>
       <div class="table-responsive">
         <table class="table align-middle mb-0">
-          <thead><tr><th>Nível</th><th style="width:170px">Regra</th><th>Início</th><th>Fim</th><th>Valor fixo</th><th style="width:90px" title="Dígitos (zeros à esquerda). Vazio = automático">Dígitos</th><th class="text-end">Qtde</th></tr></thead>
+          <thead><tr><th>{{ _("Nível") }}</th><th style="width:170px">{{ _("Regra") }}</th><th>{{ _("Início") }}</th><th>{{ _("Fim") }}</th><th>{{ _("Valor fixo") }}</th><th style="width:90px" title="{{ _("Dígitos (zeros à esquerda). Vazio = automático") }}">{{ _("Dígitos") }}</th><th class="text-end">{{ _("Qtde") }}</th></tr></thead>
           <tbody>
           {% for name in levels %}
             {% set r = rules.get(name, {}) %}
@@ -120,41 +120,37 @@
     <div class="card mt-3">
       <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-          <strong>3. Exceções</strong>
-          <small class="text-muted">— trocam a regra de um nível para determinados corredores/estantes/níveis. Se várias valerem, a última prevalece.</small>
+          <strong>{{ _("3. Exceções") }}</strong>
+          <small class="text-muted">{{ _("— trocam a regra de um nível para determinados corredores/estantes/níveis. Se várias valerem, a última prevalece.") }}</small>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-primary" id="addException"><i class="bi bi-plus-lg"></i> Adicionar exceção</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="addException"><i class="bi bi-plus-lg"></i> {{ _("Adicionar exceção") }}</button>
       </div>
       <div class="card-body" id="exceptions">
         {% for e in exceptions %}{{ exception_row(loop.index0, e, levels, short_labels) }}{% endfor %}
         <div class="text-muted small" id="noExceptions" {% if exceptions %}hidden{% endif %}>
-          Nenhuma exceção. Exemplo: no Corredor <span class="mono">B</span>, Estante <span class="mono">05</span>, o Nível vai de 01 a 03 (em vez do padrão 01 a 08) —
-          escolha "Nível" como nível afetado, preencha <span class="mono">B</span> e <span class="mono">05</span> nas condições e a nova faixa 01–03.
+          {{ _h("Nenhuma exceção. Exemplo: no Corredor <span class=\"mono\">B</span>, Estante <span class=\"mono\">05</span>, o Nível vai de 01 a 03 (em vez do padrão 01 a 08) — escolha \"Nível\" como nível afetado, preencha <span class=\"mono\">B</span> e <span class=\"mono\">05</span> nas condições e a nova faixa 01–03.") }}
         </div>
       </div>
       <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>Exemplo: <span class="mono fw-semibold" id="exampleAddr">—</span></div>
-        <div>Total estimado: <span class="mono fw-bold" id="totalCount">—</span> <small class="text-muted">(limite {{ max_combinations|dec }})</small></div>
+        <div>{{ _h("Exemplo: <span class=\"mono fw-semibold\" id=\"exampleAddr\">—</span>") }}</div>
+        <div>{{ _h("Total estimado: <span class=\"mono fw-bold\" id=\"totalCount\">—</span> <small class=\"text-muted\">(limite {max_combinations})</small>", max_combinations=(max_combinations|dec)) }}</div>
       </div>
     </div>
 
     <div class="card mt-3">
-      <div class="card-header bg-white"><strong>4. Conflitos</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("4. Conflitos") }}</strong></div>
       <div class="card-body">
         <div class="form-check form-switch">
           <input class="form-check-input" type="checkbox" role="switch" name="replace_unoccupied" value="1" id="replace" {% if data.get('replace_unoccupied') %}checked{% endif %}>
-          <label class="form-check-label" for="replace"><strong>Substituir posições desocupadas</strong></label>
+          <label class="form-check-label" for="replace"><strong>{{ _("Substituir posições desocupadas") }}</strong></label>
         </div>
         <div class="form-text">
-          Sem esta opção, toda posição conflitante é apenas reportada e não é gravada.<br>
-          Com ela, as posições antigas conflitantes (idênticas, genéricas acima ou sub-endereços abaixo) são removidas e substituídas
-          pelas novas <b>somente se estiverem desocupadas</b> (sem flag de ocupação e sem saldo). Posições ocupadas <b>nunca</b> são sobrescritas.
-          Endereços idênticos e livres são mantidos (mesmo ID), preservando produtos ligados a eles.
+          {{ _h("Sem esta opção, toda posição conflitante é apenas reportada e não é gravada.<br> Com ela, as posições antigas conflitantes (idênticas, genéricas acima ou sub-endereços abaixo) são removidas e substituídas pelas novas <b>somente se estiverem desocupadas</b> (sem flag de ocupação e sem saldo). Posições ocupadas <b>nunca</b> são sobrescritas. Endereços idênticos e livres são mantidos (mesmo ID), preservando produtos ligados a eles.") }}
         </div>
       </div>
       <div class="card-footer bg-white d-flex gap-2">
-        <button class="btn btn-outline-primary" name="action" value="preview"><i class="bi bi-eye"></i> Pré-visualizar</button>
-        <button class="btn btn-accent" name="action" value="execute" onclick="return confirm('Gravar os endereços gerados?');"><i class="bi bi-lightning-charge"></i> Gerar agora</button>
+        <button class="btn btn-outline-primary" name="action" value="preview"><i class="bi bi-eye"></i> {{ _("Pré-visualizar") }}</button>
+        <button class="btn btn-accent" name="action" value="execute" onclick="return confirm(_t('Gravar os endereços gerados?'));"><i class="bi bi-lightning-charge"></i> {{ _("Gerar agora") }}</button>
       </div>
     </div>
   </div>
@@ -163,52 +159,52 @@
     {% if result %}
     <div class="card {% if result.executed %}border border-success{% endif %}">
       <div class="card-header bg-white d-flex justify-content-between">
-        <strong>{% if result.executed %}<i class="bi bi-check-circle text-success"></i> Lote gravado{% else %}<i class="bi bi-eye"></i> Pré-visualização{% endif %}</strong>
+        <strong>{% if result.executed %}<i class="bi bi-check-circle text-success"></i> {{ _("Lote gravado") }}{% else %}<i class="bi bi-eye"></i> {{ _("Pré-visualização") }}{% endif %}</strong>
         <small class="text-muted">{{ result.elapsed_ms }} ms</small>
       </div>
       <div class="card-body">
         <div class="row g-2 text-center">
-          <div class="col-4"><div class="border rounded p-2"><div class="fs-4 fw-bold">{{ result.total_combinations|dec }}</div><small class="text-muted">Combinações</small></div></div>
-          <div class="col-4"><div class="border rounded p-2 border-success"><div class="fs-4 fw-bold text-success">{{ (result.created if result.executed else result.to_create)|dec }}</div><small class="text-muted">{{ 'Criados' if result.executed else 'A criar' }}</small></div></div>
-          <div class="col-4"><div class="border rounded p-2 {% if result.conflict_count %}border-danger{% endif %}"><div class="fs-4 fw-bold {% if result.conflict_count %}text-danger{% endif %}">{{ result.conflict_count|dec }}</div><small class="text-muted">Conflitos</small></div></div>
-          <div class="col-4"><div class="border rounded p-2"><div class="fs-5 fw-bold">{{ result.deleted_old|dec }}</div><small class="text-muted">Antigos {{ 'removidos' if result.executed else 'a remover' }}</small></div></div>
-          <div class="col-4"><div class="border rounded p-2"><div class="fs-5 fw-bold">{{ result.replaced_exact|dec }}</div><small class="text-muted">Idênticos mantidos</small></div></div>
-          <div class="col-4"><div class="border rounded p-2 {% if result.blocked_count %}border-warning{% endif %}"><div class="fs-5 fw-bold text-warning">{{ result.blocked_count|dec }}</div><small class="text-muted">Bloqueados (ocupados)</small></div></div>
+          <div class="col-4"><div class="border rounded p-2"><div class="fs-4 fw-bold">{{ result.total_combinations|dec }}</div><small class="text-muted">{{ _("Combinações") }}</small></div></div>
+          <div class="col-4"><div class="border rounded p-2 border-success"><div class="fs-4 fw-bold text-success">{{ (result.created if result.executed else result.to_create)|dec }}</div><small class="text-muted">{{ _('Criados') if result.executed else _('A criar') }}</small></div></div>
+          <div class="col-4"><div class="border rounded p-2 {% if result.conflict_count %}border-danger{% endif %}"><div class="fs-4 fw-bold {% if result.conflict_count %}text-danger{% endif %}">{{ result.conflict_count|dec }}</div><small class="text-muted">{{ _("Conflitos") }}</small></div></div>
+          <div class="col-4"><div class="border rounded p-2"><div class="fs-5 fw-bold">{{ result.deleted_old|dec }}</div><small class="text-muted">{{ _h("Antigos {v}", v=('removidos' if result.executed else _('a remover'))) }}</small></div></div>
+          <div class="col-4"><div class="border rounded p-2"><div class="fs-5 fw-bold">{{ result.replaced_exact|dec }}</div><small class="text-muted">{{ _("Idênticos mantidos") }}</small></div></div>
+          <div class="col-4"><div class="border rounded p-2 {% if result.blocked_count %}border-warning{% endif %}"><div class="fs-5 fw-bold text-warning">{{ result.blocked_count|dec }}</div><small class="text-muted">{{ _("Bloqueados (ocupados)") }}</small></div></div>
         </div>
         {% if result.executed and result.structure_note %}
         <div class="alert alert-success mt-3 mb-0 small"><i class="bi bi-bookshelf"></i> {{ result.structure_note }}</div>
         {% endif %}
         {% if result.executed and result.bins_assigned %}
-        <div class="alert alert-success mt-3 mb-0 small"><i class="bi bi-inboxes"></i> Bins atribuídas a {{ result.bins_assigned|dec }} endereço(s) novo(s).</div>
+        <div class="alert alert-success mt-3 mb-0 small"><i class="bi bi-inboxes"></i> {{ _h("Bins atribuídas a {bins_assigned} endereço(s) novo(s).", bins_assigned=(result.bins_assigned|dec)) }}</div>
         {% elif data.get('bins') and not result.executed %}
-        <div class="small text-muted mt-2"><i class="bi bi-inboxes"></i> Cada endereço novo receberá: {% for t, q in data.get('bins') %}{% for bt in bin_types if bt.id == t %}<b>{{ q }}× {{ bt.code }}</b>{% endfor %}{% if not loop.last %}, {% endif %}{% endfor %} (endereços já existentes não são alterados).</div>
+        <div class="small text-muted mt-2"><i class="bi bi-inboxes"></i> {{ _("Cada endereço novo receberá:") }} {% for t, q in data.get('bins') %}{% for bt in bin_types if bt.id == t %}<b>{{ q }}× {{ bt.code }}</b>{% endfor %}{% if not loop.last %}, {% endif %}{% endfor %} {{ _("(endereços já existentes não são alterados).") }}</div>
         {% endif %}
         {% if not result.executed and result.to_create %}
-        <div class="alert alert-info mt-3 mb-0 small">Revise e clique em <b>Gerar agora</b> para gravar.</div>
+        <div class="alert alert-info mt-3 mb-0 small">{{ _h("Revise e clique em <b>Gerar agora</b> para gravar.") }}</div>
         {% endif %}
       </div>
       {% if result.exception_usage %}
       <div class="card-body border-top">
-        <div class="small text-muted mb-1">Exceções aplicadas:</div>
+        <div class="small text-muted mb-1">{{ _("Exceções aplicadas:") }}</div>
         <ul class="small mb-0 ps-3">
           {% for desc, count in result.exception_usage %}
-          <li class="{% if not count %}text-danger{% endif %}">#{{ loop.index }} {{ desc }} — <b>{{ count }}</b> caminho(s){% if not count %} <i>(nenhum caminho correspondeu)</i>{% endif %}</li>
+          <li class="{% if not count %}text-danger{% endif %}">{{ _h("#{index} {desc} — <b>{count}</b> caminho(s)", index=(loop.index), desc=(desc), count=(count)) }}{% if not count %} <i>{{ _("(nenhum caminho correspondeu)") }}</i>{% endif %}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
       {% if result.sample %}
       <div class="card-body border-top">
-        <div class="small text-muted mb-1">Amostra dos endereços {{ 'criados' if result.executed else 'a criar' }}:</div>
+        <div class="small text-muted mb-1">{{ _h("Amostra dos endereços {v}:", v=('criados' if result.executed else _('a criar'))) }}</div>
         <div class="mono small">{% for a in result.sample %}<span class="badge text-bg-light border me-1 mb-1">{{ a }}</span>{% endfor %}{% if result.to_create > result.sample|length %} …{% endif %}</div>
       </div>
       {% endif %}
       {% if result.conflicts %}
       <div class="border-top">
-        <div class="px-3 pt-2 small text-muted">Conflitos{% if result.conflict_count + result.blocked_count > result.conflicts|length %} (exibindo {{ result.conflicts|length }} de {{ result.conflict_count + result.blocked_count }}){% endif %}:</div>
+        <div class="px-3 pt-2 small text-muted">{{ _("Conflitos") }}{% if result.conflict_count + result.blocked_count > result.conflicts|length %} {{ _h("(exibindo {conflicts} de {v})", conflicts=(result.conflicts|length), v=(result.conflict_count + result.blocked_count)) }}{% endif %}:</div>
         <div class="table-responsive" style="max-height: 420px">
           <table class="table table-sm mb-0 small">
-            <thead><tr><th>Novo endereço</th><th>Motivo</th><th>Existente(s)</th></tr></thead>
+            <thead><tr><th>{{ _("Novo endereço") }}</th><th>{{ _("Motivo") }}</th><th>{{ _("Existente(s)") }}</th></tr></thead>
             <tbody>
             {% for c in result.conflicts %}
               <tr class="{% if c.blocked_by_occupied %}table-warning{% endif %}">
@@ -225,14 +221,14 @@
     </div>
     {% else %}
     <div class="card"><div class="card-body text-muted">
-      <p class="mb-2"><i class="bi bi-info-circle"></i> Como funciona</p>
+      <p class="mb-2"><i class="bi bi-info-circle"></i> {{ _("Como funciona") }}</p>
       <ul class="small mb-0">
-        <li><b>Alfabético</b>: faixa de letras, ex.: A até F (aceita AA..AZ).</li>
-        <li><b>Numérico</b>: zeros à esquerda do início são preservados (01..10 → 01, 02, … 10). Use "Dígitos" para forçar.</li>
-        <li><b>Valor fixo</b>: um único valor para o nível.</li>
-        <li><b>Não utilizar</b>: o endereço termina no nível anterior (ex.: só Corredor + Estante → <span class="mono">A-01</span>).</li>
-        <li><b>Exceções</b>: mudam a faixa de um nível só para certos pais — ex.: a Estante 05 do Corredor B tem só 3 níveis; ou o Corredor C não tem compartimentos.</li>
-        <li>Use <b>Pré-visualizar</b> para ver conflitos antes de gravar.</li>
+        <li>{{ _h("<b>Alfabético</b>: faixa de letras, ex.: A até F (aceita AA..AZ).") }}</li>
+        <li>{{ _h("<b>Numérico</b>: zeros à esquerda do início são preservados (01..10 → 01, 02, … 10). Use \"Dígitos\" para forçar.") }}</li>
+        <li>{{ _h("<b>Valor fixo</b>: um único valor para o nível.") }}</li>
+        <li>{{ _h("<b>Não utilizar</b>: o endereço termina no nível anterior (ex.: só Corredor + Estante → <span class=\"mono\">A-01</span>).") }}</li>
+        <li>{{ _h("<b>Exceções</b>: mudam a faixa de um nível só para certos pais — ex.: a Estante 05 do Corredor B tem só 3 níveis; ou o Corredor C não tem compartimentos.") }}</li>
+        <li>{{ _h("Use <b>Pré-visualizar</b> para ver conflitos antes de gravar.") }}</li>
       </ul>
     </div></div>
     {% endif %}
@@ -243,10 +239,10 @@
 {% if preview_url %}
 <div class="card mt-3">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
-    <strong><i class="bi bi-bricks"></i> Pré-visualização no mapa</strong>
-    <a class="small" href="{{ preview_url|replace('&embed=1', '') }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Abrir em tela cheia</a>
+    <strong><i class="bi bi-bricks"></i> {{ _("Pré-visualização no mapa") }}</strong>
+    <a class="small" href="{{ preview_url|replace('&embed=1', '') }}" target="_blank"><i class="bi bi-box-arrow-up-right"></i> {{ _("Abrir em tela cheia") }}</a>
   </div>
-  <iframe src="{{ preview_url }}" title="Pré-visualização no mapa" style="width:100%; height:72vh; border:0; display:block"></iframe>
+  <iframe src="{{ preview_url }}" title="{{ _("Pré-visualização no mapa") }}" style="width:100%; height:72vh; border:0; display:block"></iframe>
 </div>
 {% endif %}
 
@@ -317,9 +313,9 @@
     const rule = readRule(row);
     const conds = [...row.querySelectorAll('.exc-cond')].filter(i => !i.disabled && i.value.trim()).map(i => `${SHORT[i.dataset.level]} = ${i.value.trim().toUpperCase()}`);
     const typeEl = row.querySelector('.rule-type');
-    let what = typeEl.value === 'NONE' ? 'não utilizar' : (typeEl.value === 'EXACT' ? '= ' + row.querySelector('.r-value').value.toUpperCase()
+    let what = typeEl.value === 'NONE' ? _t('não utilizar') : (typeEl.value === 'EXACT' ? '= ' + row.querySelector('.r-value').value.toUpperCase()
                : `${row.querySelector('.r-start').value.toUpperCase()} a ${row.querySelector('.r-end').value.toUpperCase()}`);
-    row.querySelector('.exc-summary').textContent = `${SHORT[target]}: ${what} quando ${conds.length ? conds.join(' e ') : 'todos os caminhos'}` + (rule.values === null ? ' — regra inválida' : '');
+    row.querySelector('.exc-summary').textContent = _t('{SHORT}: {what} quando {conds}{values}', {SHORT: SHORT[target], what, conds: conds.length ? conds.join(' e ') : _t('todos os caminhos'), values: (rule.values === null ? ' ' + _t('— regra inválida') : '')});
     return { target, rule, matchers: Object.fromEntries([...row.querySelectorAll('.exc-cond')].filter(i => !i.disabled).map(i => [i.dataset.level, matcher(i.value)]).filter(([, m]) => m)) };
   }
 
@@ -355,7 +351,7 @@
     })(0, []);
     const fmt = p => { if (!p) return '—'; const base = p.slice(0, 4), comp = p[4]; return base.join('-') + (comp ? '-' + comp : ''); };
     document.getElementById('exampleAddr').textContent = invalid ? '—' : fmt(example);
-    document.getElementById('totalCount').textContent = invalid ? 'regra inválida' : (over ? `mais de ${MAX.toLocaleString('pt-BR')}` : total.toLocaleString('pt-BR'));
+    document.getElementById('totalCount').textContent = invalid ? _t('regra inválida') : (over ? _t('mais de {MAX}', {MAX: MAX.toLocaleString(NK_I18N.locale)}) : total.toLocaleString(NK_I18N.locale));
   }
 
   document.getElementById('addException').addEventListener('click', () => {

@@ -1,58 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Resultado {{ run.id }}{% endblock %}
+{% block title %}{{ _h("Resultado {id}", id=(run.id)) }}{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <h1><i class="bi bi-clipboard-data"></i> {{ run.title }}</h1>
-    <div class="small text-muted">{{ kinds.get(run.kind, run.kind) }} · resultado nº {{ run.id }} · {{ run.updated_at.strftime('%d/%m/%Y %H:%M') if run.updated_at else '' }}</div>
+    <div class="small text-muted">{{ _h("{get} · resultado nº {id} · {v}", get=(kinds.get(run.kind, run.kind)), id=(run.id), v=(fmt_datetime(run.updated_at) if run.updated_at else '')) }}</div>
   </div>
   <div class="d-flex gap-2">
-    <a href="/optimization/runs" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Resultados</a>
-    {% if run.url %}<a href="{{ run.url }}" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Reabrir com estes parâmetros</a>{% endif %}
+    <a href="/optimization/runs" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Resultados") }}</a>
+    {% if run.url %}<a href="{{ run.url }}" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> {{ _("Reabrir com estes parâmetros") }}</a>{% endif %}
     <a href="/optimization/runs/{{ run.id }}/export.xlsx" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
-    <form method="post" action="/optimization/runs/{{ run.id }}/delete" onsubmit="return confirm('Excluir este resultado salvo?')"><button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+    <form method="post" action="/optimization/runs/{{ run.id }}/delete" onsubmit="return confirm(_t('Excluir este resultado salvo?'))"><button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>
   </div>
 </div>
 <form method="post" action="/optimization/runs/{{ run.id }}/note" class="d-flex gap-2 mb-3" style="max-width:700px">
-  <input class="form-control form-control-sm" name="note" value="{{ run.note }}" maxlength="300" placeholder="Nome ou observação (ex.: cenário com serpentina, estruturas compradas)">
-  <button class="btn btn-sm btn-outline-secondary text-nowrap">Salvar nome</button>
+  <input class="form-control form-control-sm" name="note" value="{{ run.note }}" maxlength="300" placeholder="{{ _("Nome ou observação (ex.: cenário com serpentina, estruturas compradas)") }}">
+  <button class="btn btn-sm btn-outline-secondary text-nowrap">{{ _("Salvar nome") }}</button>
 </form>
 <div class="row g-3">
   <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header bg-white"><strong>Indicadores</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("Indicadores") }}</strong></div>
       <table class="table table-sm mb-0 small">
-        <thead><tr><th>Indicador</th><th class="text-end">Antes</th><th class="text-end">{{ 'Depois' if run.kind != 'site' else 'Valor' }}</th></tr></thead>
+        <thead><tr><th>{{ _("Indicador") }}</th><th class="text-end">{{ _("Antes") }}</th><th class="text-end">{{ _('Depois') if run.kind != 'site' else _('Valor') }}</th></tr></thead>
         <tbody>{% for k in (run.summary or {}).get('kpis', []) %}{% set v = k.get('after') if k.get('after') is not none else k.get('value') %}
           <tr><td>{{ k.label }}{% if k.hint %}<div class="text-muted" style="font-size:.72rem">{{ k.hint }}</div>{% endif %}</td>
             <td class="text-end text-muted">{{ (k.get('before')|dec(k.places or 0) ~ (k.unit or '')) if k.get('before') is not none else '' }}</td>
             <td class="text-end fw-semibold">{{ (v|dec(k.places or 0) ~ (k.unit or '')) if v is not none else '—' }}</td></tr>{% endfor %}</tbody>
       </table>
-      {% if (run.summary or {}).get('solver') %}<div class="card-body small border-top"><b>Origem do resultado:</b> {{ run.summary.solver }}</div>{% endif %}
+      {% if (run.summary or {}).get('solver') %}<div class="card-body small border-top">{{ _h("<b>Origem do resultado:</b> {solver}", solver=(run.summary.solver)) }}</div>{% endif %}
       {% if (run.summary or {}).get('status') %}<div class="card-body small border-top">{% for lbl, n in run.summary.status.items() %}<span class="badge text-bg-light border me-1">{{ n }} {{ lbl }}</span>{% endfor %}</div>{% endif %}
       {% if (run.summary or {}).get('notes') %}<div class="card-body small border-top text-muted">{% for n in run.summary.notes %}<div>{{ n }}</div>{% endfor %}</div>{% endif %}
     </div>
     <div class="card">
-      <div class="card-header bg-white"><strong>Parâmetros</strong></div>
+      <div class="card-header bg-white"><strong>{{ _("Parâmetros") }}</strong></div>
       <div class="card-body small" style="max-height:420px; overflow:auto"><dl class="row mb-0">{% for k, v in (run.params or {})|dictsort %}
         <dt class="col-4 text-truncate" title="{{ k }}">{{ k }}</dt><dd class="col-8 mono" style="font-size:.75rem; word-break:break-all">{{ v|tojson if v is mapping or (v is iterable and v is not string) else v }}</dd>{% endfor %}</dl></div>
     </div>
   </div>
   <div class="col-xl-7">
-    {% for key, label in (('structs', 'Estruturas'), ('types', 'Bins')) if (run.details or {}).get(key) %}
+    {% for key, label in (('structs', _('Estruturas')), ('types', _('Bins'))) if (run.details or {}).get(key) %}
     <div class="card mb-3"><div class="card-header bg-white"><strong>{{ label }}</strong></div>
       {% set rows = run.details[key] %}<div class="table-responsive"><table class="table table-sm mb-0 small"><thead><tr>{% for c in rows[0].keys() %}<th>{{ c }}</th>{% endfor %}</tr></thead>
       <tbody>{% for r in rows %}<tr>{% for c in rows[0].keys() %}<td>{{ r[c]|dec(1) if r[c] is number else (r[c] if r[c] is not none else '') }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div></div>
     {% endfor %}
     {% set rows = (run.details or {}).get('rows') or [] %}
     <div class="card">
-      <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>Detalhes ({{ run.details.total_rows if run.details.total_rows is defined else rows|length }})</strong>
-        <input class="form-control form-control-sm" style="max-width:220px" type="search" placeholder="Filtrar" id="rowFilter"></div>
+      <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>{{ _h("Detalhes ({v})", v=(run.details.total_rows if run.details.total_rows is defined else rows|length)) }}</strong>
+        <input class="form-control form-control-sm" style="max-width:220px" type="search" placeholder="{{ _("Filtrar") }}" id="rowFilter"></div>
       {% if rows %}<div class="table-responsive" style="max-height:620px"><table class="table table-sm table-hover mb-0 small" id="rowTable" data-no-resize>
         <thead class="sticky-top bg-white"><tr>{% for c in rows[0].keys() %}<th>{{ c }}</th>{% endfor %}</tr></thead>
         <tbody>{% for r in rows[:1500] %}<tr>{% for c in rows[0].keys() %}<td>{{ r[c]|dec(1) if r[c] is number else (r[c] if r[c] is not none else '') }}</td>{% endfor %}</tr>{% endfor %}</tbody>
-      </table></div>{% if rows|length > 1500 %}<div class="card-footer small text-muted">Mostrando 1.500 de {{ rows|length }} — veja todas no Excel.</div>{% endif %}
-      {% else %}<div class="card-body small text-muted">Sem detalhes.</div>{% endif %}
+      </table></div>{% if rows|length > 1500 %}<div class="card-footer small text-muted">{{ _h("Mostrando 1.500 de {rows} — veja todas no Excel.", rows=(rows|length)) }}</div>{% endif %}
+      {% else %}<div class="card-body small text-muted">{{ _("Sem detalhes.") }}</div>{% endif %}
     </div>
   </div>
 </div>

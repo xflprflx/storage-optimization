@@ -23,19 +23,20 @@ import time
 from typing import Optional
 
 from services.bin_optimizer import BinSpec, CRITERIA, capacity, priority_list
+from services.i18n import N_, _
 
 SCALE = 720720  # divisível por 1..16, 18, 20…: frações de bin exatas para as capacidades comuns
 CAND_PER_SKU = 30  # grupos de bins candidatos por SKU no modelo do pool (os mais promissores por critério)
 
-STATUS_TXT = {"optimal": "solver: ótimo comprovado",
-              "feasible": "solver: melhor solução no tempo limite (não comprovada ótima)",
-              "heuristic": "HEURÍSTICA: o solver não achou solução melhor no tempo limite",
-              "fallback": "HEURÍSTICA: solver indisponível"}
-STATUS_HELP = {"feasible": "O tempo acabou antes de o solver provar que é a melhor solução possível. Para a solução do "
-                           "solver a qualquer custo, marque \"Sem limite de tempo\".",
-               "heuristic": "Com o tempo limite, o solver não encontrou solução melhor que a da heurística, que foi a "
+STATUS_TXT = {"optimal": N_("solver: ótimo comprovado"),
+              "feasible": N_("solver: melhor solução no tempo limite (não comprovada ótima)"),
+              "heuristic": N_("HEURÍSTICA: o solver não achou solução melhor no tempo limite"),
+              "fallback": N_("HEURÍSTICA: solver indisponível")}
+STATUS_HELP = {"feasible": N_("O tempo acabou antes de o solver provar que é a melhor solução possível. Para a solução do "
+                           "solver a qualquer custo, marque \"Sem limite de tempo\"."),
+               "heuristic": N_("Com o tempo limite, o solver não encontrou solução melhor que a da heurística, que foi a "
                             "usada. Para a solução do solver a qualquer custo, marque \"Sem limite de tempo\" (pode "
-                            "demorar bastante em escopos grandes)."}
+                            "demorar bastante em escopos grandes).")}
 
 
 def available() -> bool:
@@ -114,7 +115,7 @@ def _pool_metrics(res, types: dict[int, BinSpec]) -> dict:
     """Valores dos critérios de um resultado do pool (para comparar heurística × solver)."""
     used = [b for b in (res.bins or []) if b.contents and b.location_id not in res.reserved_locations]
     if res.unlimited:
-        used = {id(b): b for p in res.plans for b, _ in p.allocations}.values()
+        used = {id(b): b for p in res.plans for b, _x in p.allocations}.values()
     used = list(used)
     return {"short": sum(p.shortage for p in res.plans), "bins": len(used),
             "volume": round(sum((types[b.type_id].volume_cm3 or 0) for b in used) / 1000.0, 1),
@@ -143,7 +144,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     greedy = greedy_pool(g_bins, demands, types, prm, reserved_locations, no_dims)
     heur = _pool_metrics(greedy, types)
     if not available():
-        greedy.solver = _info("fallback", t0, [], heur, heur, "OR-Tools não está instalado (pip install ortools).")
+        greedy.solver = _info("fallback", t0, [], heur, heur, _("OR-Tools não está instalado (pip install ortools)."))
         return _rebind(greedy, bins)
 
     from ortools.sat.python import cp_model
@@ -158,7 +159,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     needs = {d.sku: (int(math.ceil(d.qty * (1 + prm.growth) - 1e-9)) if d.qty > 0 else 0) for d in demands}
     S = [d for d in demands if needs[d.sku] > 0 and any(caps[d.sku].values())]
     if not S:
-        greedy.solver = _info("optimal", t0, [], heur, heur, "Nada a otimizar neste pool.")
+        greedy.solver = _info("optimal", t0, [], heur, heur, _("Nada a otimizar neste pool."))
         return _rebind(greedy, bins)
 
     # 2) grupos de bins iguais: (endereço, tipo, ocupada por produto fora do foco?) -> bins;
@@ -318,7 +319,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     }
 
     # 3) dica inicial = solução da heurística
-    g_index = {b.id: gkey(b) for p in greedy.plans for b, _ in p.allocations}
+    g_index = {b.id: gkey(b) for p in greedy.plans for b, _x in p.allocations}
     hq, hk, hu = {}, {}, {}
     for p in greedy.plans:
         seen = set()
@@ -329,7 +330,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
                 hk[(p.sku, g)] = hk.get((p.sku, g), 0) + 1
                 seen.add(b.id)
     for p in greedy.plans:
-        for b, _ in p.allocations:
+        for b, _x in p.allocations:
             hu.setdefault(g_index[b.id], set()).add(b.id)
     for key, v in q.items():
         m.AddHint(v, int(hq.get(key, 0)))
@@ -352,7 +353,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     lex = _Lex(m, prm.time_limit)
     ok = lex.run(stages, hint_vars)
     if not ok:
-        greedy.solver = _info("heuristic", t0, lex.stages, heur, heur, "O solver não achou solução no tempo limite.")
+        greedy.solver = _info("heuristic", t0, lex.stages, heur, heur, _("O solver não achou solução no tempo limite."))
         return _rebind(greedy, bins)
 
     # 4) monta o plano nas bins físicas
@@ -363,7 +364,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
         if prm.unlimited:
             n_used = lex.val(u[g]) if mix and g in u else sum(lex.val(k[(s_, g)]) for s_ in cand if (s_, g) in k)
             lst = []
-            for _ in range(n_used):
+            for _x in range(n_used):
                 vb = PoolBin(-(len(virtual) + 1), None, "", g[1], 0, type_code=types[g[1]].code)
                 virtual.append(vb)
                 lst.append(vb)
@@ -377,7 +378,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
         plan.orig_bins = [(b, b.orig[d.sku]) for b in bins if d.sku in b.orig]
         plans.append(plan)
         if need > 0 and not any(caps[d.sku].values()):
-            plan.shortage, plan.note = need, "Não cabe em nenhum tipo de bin do escopo."
+            plan.shortage, plan.note = need, _("Não cabe em nenhum tipo de bin do escopo.")
     plan_of = {p.sku: p for p in plans}
     leftover: dict[str, int] = {}
     for g in gkeys:
@@ -433,7 +434,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     # ela vai para outra bin com espaço (no mesmo endereço, se o SKU não pode ser dividido entre endereços)
     for s_, rest in leftover.items():
         p = plan_of[s_]
-        locs_ = {b.location_id for b, _ in p.allocations}
+        locs_ = {b.location_id for b, _x in p.allocations}
         for g in cand.get(s_, []):
             if rest <= 0:
                 break
@@ -455,13 +456,13 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
                 rest -= take
         if rest > 0:
             p.shortage += rest
-            p.note = p.note or "Sobrou ao montar as bins: revise as restrições ou use a heurística."
+            p.note = p.note or _("Sobrou ao montar as bins: revise as restrições ou use a heurística.")
     for d in S:
         sh = lex.val(short[d.sku])
         if sh:
             p = plan_of[d.sku]
             p.shortage += sh
-            p.note = p.note or "Faltam bins no escopo para este SKU."
+            p.note = p.note or _("Faltam bins no escopo para este SKU.")
 
     from services.pool_optimizer import PoolResult
 
@@ -478,16 +479,15 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     final = _pool_metrics(res, types)
     import os
     if os.environ.get("NK_OR_DEBUG"):
-        print("DEBUG stages", lex.stages, "heur", heur, "final", final)
+        print(_("DEBUG stages"), lex.stages, "heur", heur, "final", final)
     if _better(heur, final, prio):
         # o solver não terminou a tempo melhor que a heurística: fica a heurística (com aviso)
         greedy.solver = _info("heuristic", t0, lex.stages, heur, heur,
-                              "A heurística ficou melhor que a solução do solver no tempo limite — aumente o tempo.")
+                              _("A heurística ficou melhor que a solução do solver no tempo limite — aumente o tempo."))
         return _rebind(greedy, bins)
     note = ""
     if reduced:
-        note = (f"Para caber no tempo, cada SKU considerou até {limit_k} grupos de bins (endereço × tipo): os de onde "
-                "ele está, os usados pela heurística e os melhores por volume, largura e capacidade.")
+        note = (_("Para caber no tempo, cada SKU considerou até {limit_k} grupos de bins (endereço × tipo): os de onde ele está, os usados pela heurística e os melhores por volume, largura e capacidade.", limit_k=limit_k))
     res.solver = _info("optimal" if lex.all_optimal else "feasible", t0, lex.stages, heur, final, note)
     return res
 
@@ -542,7 +542,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
     greedy = greedy_addresses(addresses, types, prm, copy.deepcopy(ledger) if ledger is not None else None)
     heur = _addr_metrics(greedy)
     if not available():
-        return greedy, _info("fallback", t0, [], heur, heur, "OR-Tools não está instalado (pip install ortools).")
+        return greedy, _info("fallback", t0, [], heur, heur, _("OR-Tools não está instalado (pip install ortools)."))
     from ortools.sat.python import cp_model
 
     g_by_id = {r.id: r for r in greedy}
@@ -575,7 +575,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
             slots = list(dict.fromkeys(list(slots) + list(a.current_placement)))
         entries.append((a, opts, slots))
     if not entries:
-        return greedy, _info("optimal", t0, [], heur, heur, "Nada a otimizar neste escopo.")
+        return greedy, _info("optimal", t0, [], heur, heur, _("Nada a otimizar neste escopo."))
 
     m = cp_model.CpModel()
     x = {}
@@ -584,7 +584,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
     pvar = {}  # (endereço, nível, tipo) -> bins
     lvl_slot = ledger.slots if ledger is not None else {}
     for a, opts, slots in entries:
-        xs = [m.NewBoolVar("") for _ in opts]
+        xs = [m.NewBoolVar("") for _x in opts]
         x[a.id] = xs
         hint_vars += xs
         m.AddExactlyOne(xs)
@@ -617,7 +617,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
 
     # 2) capacidade dos níveis (com as bins dos endereços fora do escopo e dos fixos) e um tipo por nível
     if ledger is not None and prm.respect_levels:
-        levels = {l for (_, l, _) in pvar}
+        levels = {l for (_x, l, _x) in pvar}
         cur_in_scope: dict = {}
         for a in addresses:
             for l, cfg in a.current_placement.items():
@@ -646,7 +646,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
                       <= L + over * (L // max(1, min(c for c in sl.caps.values() if c))))
             if not prm.mixed_level_types:
                 fixed_t = {t for t, n in base.items() if n > 0}
-                ts = sorted({t for _, t in terms} | fixed_t)
+                ts = sorted({t for _x, t in terms} | fixed_t)
                 z = {t: m.NewBoolVar("") for t in ts}
                 for t in fixed_t:
                     m.Add(z[t] == 1)
@@ -659,17 +659,17 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
         for a in addresses:
             for t, n in (a.current or {}).items():
                 budget[t] = budget.get(t, 0) + n
-        tset = set(budget) | {t for _, opts, _ in entries for o in opts for t in o[0]}
+        tset = set(budget) | {t for _x, opts, _x in entries for o in opts for t in o[0]}
         for t in tset:
             fixed_n = sum(cfg.get(t, 0) for cfg in fixed.values())
-            expr = sum(xo * o[0].get(t, 0) for a, opts, _ in entries for xo, o in zip(x[a.id], opts))
+            expr = sum(xo * o[0].get(t, 0) for a, opts, _x in entries for xo, o in zip(x[a.id], opts))
             slack = m.NewIntVar(0, 100000, "")
             pen.append(slack)
             m.Add(expr + fixed_n <= budget.get(t, 0) + slack)
 
     # 4) critérios
     def total(f):
-        return sum(xo * f(o) for a, opts, _ in entries for xo, o in zip(x[a.id], opts))
+        return sum(xo * f(o) for a, opts, _x in entries for xo, o in zip(x[a.id], opts))
     exprs = {"short": sum(pen) if pen else 0,
              "bins": total(lambda o: o[1].bins),
              "volume": total(lambda o: int(round(o[1].volume_l * 10))),
@@ -677,7 +677,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
              "cost": total(lambda o: int(round(o[1].cost * 100))),
              "changes": total(lambda o: o[2])}
     own_extra = [v for (aid, l, t), v in pvar.items()
-                 if l != next((a.own_level for a, _, _ in entries if a.id == aid), None)]
+                 if l != next((a.own_level for a, _x, _x in entries if a.id == aid), None)]
     stages = [("short", exprs["short"])] + [(c, exprs[c]) for c in prio]
     if own_extra:
         stages.append(("levels", sum(own_extra)))  # desempate: preferir o próprio nível
@@ -696,7 +696,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
 
     lex = _Lex(m, prm.time_limit)
     if not lex.run(stages, hint_vars):
-        return greedy, _info("heuristic", t0, lex.stages, heur, heur, "O solver não achou solução no tempo limite.")
+        return greedy, _info("heuristic", t0, lex.stages, heur, heur, _("O solver não achou solução no tempo limite."))
 
     # 6) resultados (situação e observações montadas como na heurística)
     results = []
@@ -705,7 +705,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
         if a.id not in by_entry:
             results.append(g_by_id[a.id])
             continue
-        _, opts, slots = by_entry[a.id]
+        _x, opts, slots = by_entry[a.id]
         i = next(j for j, xo in enumerate(x[a.id]) if lex.val(xo))
         cfg, _m, _c, valid = opts[i]
         pl = None
@@ -717,12 +717,12 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
         r = optimize_address(a, types, prm, base_ledger, force=(cfg, pl))
         if not valid:
             r.status, r.suggested, r.suggested_metrics, r.placement = "inviavel", None, None, None
-            r.notes.append("Sem configuração que respeite as restrições do escopo (níveis / bins disponíveis).")
+            r.notes.append(_("Sem configuração que respeite as restrições do escopo (níveis / bins disponíveis)."))
         results.append(r)
     final = _addr_metrics(results)
     if _better(heur, final, prio):
         return greedy, _info("heuristic", t0, lex.stages, heur, heur,
-                             "A heurística ficou melhor que a solução do solver no tempo limite — aumente o tempo.")
+                             _("A heurística ficou melhor que a solução do solver no tempo limite — aumente o tempo."))
     return results, _info("optimal" if lex.all_optimal else "feasible", t0, lex.stages, heur, final)
 
 

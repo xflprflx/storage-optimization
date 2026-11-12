@@ -1,62 +1,60 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
-{% block title %}{{ 'Editar' if bin_type else 'Novo' }} tipo de bin{% endblock %}
+{% block title %}{{ _h("{v} tipo de bin", v=(_('Editar') if bin_type else _('Novo'))) }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-inboxes"></i> {{ 'Editar tipo de bin ' ~ bin_type.code if bin_type else 'Novo tipo de bin' }}</h1>
-  <a href="/bin-types" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
+  <h1><i class="bi bi-inboxes"></i> {{ _('Editar tipo de bin ') ~ bin_type.code if bin_type else _('Novo tipo de bin') }}</h1>
+  <a href="/bin-types" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
 </div>
 <div class="card" style="max-width: 860px">
   <div class="card-body">
     {{ form_alert(errors) }}
     {% if bin_type and usage and usage[0] %}
-    <div class="alert alert-info small"><i class="bi bi-info-circle"></i> Em uso em <b>{{ usage[0] }}</b> endereço(s), total de <b>{{ usage[1] }}</b> bin(s). Alterações valem para todos.</div>
+    <div class="alert alert-info small"><i class="bi bi-info-circle"></i> {{ _h("Em uso em <b>{v}</b> endereço(s), total de <b>{v2}</b> bin(s). Alterações valem para todos.", v=(usage[0]), v2=(usage[1])) }}</div>
     {% endif %}
     <form method="post" autocomplete="off" id="binForm">
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Código *</label>
-          <input class="form-control mono text-uppercase {{ invalid(errors, 'code') }}" name="code" maxlength="30" value="{{ data.get('code') or '' }}" required autofocus placeholder="Ex.: CX-P">
+          <label class="form-label">{{ _("Código *") }}</label>
+          <input class="form-control mono text-uppercase {{ invalid(errors, 'code') }}" name="code" maxlength="30" value="{{ data.get('code') or '' }}" required autofocus placeholder="{{ _("Ex.: CX-P") }}">
           {{ field_error(errors, 'code') }}
         </div>
         <div class="col-md-8">
-          <label class="form-label">Nome *</label>
-          <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="150" value="{{ data.get('name') or '' }}" required placeholder="Ex.: Caixa plástica pequena">
+          <label class="form-label">{{ _("Nome *") }}</label>
+          <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="150" value="{{ data.get('name') or '' }}" required placeholder="{{ _("Ex.: Caixa plástica pequena") }}">
           {{ field_error(errors, 'name') }}
         </div>
       </div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-grid-3x2"></i> Compartimento de uma bin inteira <span class="text-lowercase fw-normal">— opcional</span></h6>
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-grid-3x2"></i> {{ _h("Compartimento de uma bin inteira <span class=\"text-lowercase fw-normal\">— opcional</span>") }}</h6>
       <div class="row g-3 align-items-start">
         <div class="col-md-4">
-          <label class="form-label">Bin pai</label>
+          <label class="form-label">{{ _("Bin pai") }}</label>
           <select class="form-select {{ invalid(errors, 'parent_id') }}" name="parent_id" id="parent_id">
-            <option value="">— nenhuma (bin inteira) —</option>
+            <option value="">{{ _("— nenhuma (bin inteira) —") }}</option>
             {% for p in parents %}<option value="{{ p.id }}" data-h="{{ p.height|dec_input }}" data-w="{{ p.width|dec_input }}" data-l="{{ p.length|dec_input }}" {% if (data.get('parent_id')|string) == (p.id|string) %}selected{% endif %}>{{ p.code }} — {{ p.name }}</option>{% endfor %}
           </select>
           {{ field_error(errors, 'parent_id') }}
         </div>
         <div class="col-md-2">
-          <label class="form-label" title="Colunas, lado a lado (vistas de frente)">Na largura</label>
+          <label class="form-label" title="{{ _("Colunas, lado a lado (vistas de frente)") }}">{{ _("Na largura") }}</label>
           <input class="form-control text-end {{ invalid(errors, 'div_w') }}" name="div_w" id="div_w" inputmode="numeric" maxlength="3" value="{{ data.get('div_w_txt') or '' }}" placeholder="2">
         </div>
         <div class="col-md-2">
-          <label class="form-label" title="Fileiras, da frente para o fundo">No comprimento</label>
+          <label class="form-label" title="{{ _("Fileiras, da frente para o fundo") }}">{{ _("No comprimento") }}</label>
           <input class="form-control text-end" name="div_l" id="div_l" inputmode="numeric" maxlength="3" value="{{ data.get('div_l_txt') or '' }}" placeholder="1">
         </div>
         <div class="col-md-4">
-          <label class="form-label">Vista de cima</label>
+          <label class="form-label">{{ _("Vista de cima") }}</label>
           <div class="d-flex align-items-center gap-2"><svg id="gridPrev" width="90" height="70"></svg><div class="small" id="gridTxt"></div></div>
         </div>
         <div class="col-12">{{ field_error(errors, 'div_w') }}</div>
       </div>
-      <div class="form-text" id="fracHint">Divide a bin pai numa grade: colunas na largura (lado a lado) × fileiras no comprimento (da frente
-        para o fundo). Ex.: 2 × 1 = meia bin (1/2); 2 × 3 = 6 compartimentos (1/6). Com as dimensões vazias, elas vêm da bin pai
-        (largura ÷ colunas, comprimento ÷ fileiras; peso e volume ÷ compartimentos) e acompanham se ela mudar.</div>
+      <div class="form-text" id="fracHint">{{ _("Divide a bin pai numa grade: colunas na largura (lado a lado) × fileiras no comprimento (da frente para o fundo). Ex.: 2 × 1 = meia bin (1/2); 2 × 3 = 6 compartimentos (1/6). Com as dimensões vazias, elas vêm da bin pai (largura ÷ colunas, comprimento ÷ fileiras; peso e volume ÷ compartimentos) e acompanham se ela mudar.") }}</div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> Dimensões internas (cm)</h6>
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> {{ _("Dimensões internas (cm)") }}</h6>
       <div class="row g-3">
-        {% for key, label in [('height', 'Altura'), ('width', 'Largura'), ('length', 'Comprimento')] %}
+        {% for key, label in [('height', _('Altura')), ('width', _('Largura')), ('length', _('Comprimento'))] %}
         <div class="col-md-4">
           <label class="form-label">{{ label }}</label>
           <input class="form-control text-end dim {{ invalid(errors, key) }}" name="{{ key }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
@@ -65,29 +63,29 @@
         {% endfor %}
       </div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-speedometer"></i> Capacidade</h6>
+      <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-speedometer"></i> {{ _("Capacidade") }}</h6>
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label">Peso máximo (kg)</label>
+          <label class="form-label">{{ _("Peso máximo (kg)") }}</label>
           <input class="form-control text-end {{ invalid(errors, 'max_weight') }}" name="max_weight" inputmode="decimal" value="{{ data.get('max_weight')|dec_input }}">
           {{ field_error(errors, 'max_weight') }}
         </div>
         <div class="col-md-4">
-          <label class="form-label">Volume (litros)</label>
+          <label class="form-label">{{ _("Volume (litros)") }}</label>
           <input class="form-control text-end {{ invalid(errors, 'max_volume') }}" name="max_volume" id="max_volume" inputmode="decimal" value="{{ data.get('max_volume')|dec_input }}">
           {{ field_error(errors, 'max_volume') }}
-          <div class="form-text" id="volHint">Vazio = calcular pelas dimensões.</div>
+          <div class="form-text" id="volHint">{{ _("Vazio = calcular pelas dimensões.") }}</div>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Custo por bin (R$)</label>
+          <label class="form-label">{{ _("Custo por bin (R$)") }}</label>
           <input class="form-control text-end {{ invalid(errors, 'cost') }}" name="cost" inputmode="decimal" value="{{ data.get('cost')|dec_input }}">
           {{ field_error(errors, 'cost') }}
-          <div class="form-text">Usado nos objetivos de menor custo. Num compartimento vazio = custo da bin pai ÷ compartimentos.</div>
+          <div class="form-text">{{ _("Usado nos objetivos de menor custo. Num compartimento vazio = custo da bin pai ÷ compartimentos.") }}</div>
         </div>
       </div>
       <div class="mt-4">
-        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> Salvar</button>
-        <a href="/bin-types" class="btn btn-link">Cancelar</a>
+        <button class="btn btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+        <a href="/bin-types" class="btn btn-link">{{ _("Cancelar") }}</a>
       </div>
     </form>
   </div>
@@ -101,8 +99,8 @@
   function upd() {
     const [h, w, l] = [...document.querySelectorAll('.dim')].map(i => num(i.value));
     const calc = h * w * l / 1000;
-    hint.textContent = isNaN(calc) ? 'Vazio = calcular pelas dimensões.'
-      : `Vazio = calcular pelas dimensões (${calc.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L).`;
+    hint.textContent = isNaN(calc) ? _t('Vazio = calcular pelas dimensões.')
+      : _t('Vazio = calcular pelas dimensões ({calc} L).', {calc: calc.toLocaleString(NK_I18N.locale, { maximumFractionDigits: 2 })});
   }
   document.getElementById('binForm').addEventListener('input', upd); upd();
   // Compartimento: prévia da grade (vista de cima) e das dimensões que virão da bin pai
@@ -110,17 +108,17 @@
   const gp = document.getElementById('gridPrev'), gt = document.getElementById('gridTxt');
   function grid() {
     const c = Math.max(1, parseInt(dw.value) || 1), r = Math.max(1, parseInt(dl.value) || 1), o = par.selectedOptions[0];
-    if (!o || !o.value || c * r < 2) { gp.innerHTML = ''; gt.innerHTML = '<span class="text-muted">bin inteira</span>'; return; }
+    if (!o || !o.value || c * r < 2) { gp.innerHTML = ''; gt.innerHTML = '<span class="text-muted">' + _t('bin inteira') + '<\/span>'; return; }
     const w = num(o.dataset.w), l = num(o.dataset.l), h = num(o.dataset.h);
     const sc = Math.min(86 / (w || 1), 66 / (l || 1)), W = (w || 40) * sc, L = (l || 30) * sc;
     let svg = `<rect x="2" y="2" width="${W}" height="${L}" fill="#f7f9fa" stroke="#1f2d33"/>`;
     svg += `<rect x="2" y="2" width="${W / c}" height="${L / r}" fill="#cfe2ff"/>`;
     for (let i = 1; i < c; i++) svg += `<line x1="${2 + W / c * i}" y1="2" x2="${2 + W / c * i}" y2="${2 + L}" stroke="#3b5b8c" stroke-dasharray="3 2"/>`;
     for (let j = 1; j < r; j++) svg += `<line x1="2" y1="${2 + L / r * j}" x2="${2 + W}" y2="${2 + L / r * j}" stroke="#3b5b8c" stroke-dasharray="3 2"/>`;
-    svg += `<text x="${2 + W / 2}" y="${L + 2}" font-size="7" text-anchor="middle" dy="-2" fill="#6b7780">frente</text>`;
+    svg += '<text x="' + (2 + W / 2) + '" y="' + (L + 2) + '" font-size="7" text-anchor="middle" dy="-2" fill="#6b7780">' + _t('frente') + '<\/text>';
     gp.setAttribute('height', L + 4); gp.innerHTML = svg;
-    const fmt = v => isNaN(v) ? '?' : v.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
-    gt.innerHTML = `<b>${c} × ${r} = ${c * r}</b> compartimentos (<b>1/${c * r}</b>)<br>cada: ${fmt(h)} × ${fmt(w / c)} × ${fmt(l / r)} cm<br><span class="text-muted">A × L × C</span>`;
+    const fmt = v => isNaN(v) ? '?' : v.toLocaleString(NK_I18N.locale, { maximumFractionDigits: 2 });
+    gt.innerHTML = _t('<b>{c} × {r} = {c2}<\/b> compartimentos (<b>1/{c2}<\/b>)<br>cada: {fmt} × {fmt2} × {fmt3} cm<br><span class="text-muted">A × L × C<\/span>', {c, r, c2: c * r, fmt: fmt(h), fmt2: fmt(w / c), fmt3: fmt(l / r)});
   }
   [par, dw, dl].forEach(e => e.addEventListener('input', grid)); grid();
 })();

@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from models import BayStructure, BinType, StructureType
 from services.level_service import ensure_level, fit_structure, matching_levels, set_capacity, spill_overflow
 from services.site_planner import SiteParams, StructureSpec, level_capacity
+from services.i18n import _
 
 BayKey = tuple  # (branch_id, warehouse_id|None, aisle, bay)
 
@@ -132,7 +133,7 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
             if set_heights:
                 sl.height_cm = Decimal(str(vaos[min(i, len(vaos) - 1)]))
             if not sl.notes:
-                sl.notes = f"Estrutura {st.code}"
+                sl.notes = _("Estrutura {code}", code=st.code)
     db.flush()
     if set_caps and all_keys:
         groups = {}

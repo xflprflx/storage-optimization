@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, Optional, Sequence
 
 from database import BASE_DIR
+from services.i18n import _
 
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -37,8 +38,7 @@ async def save_upload(upload) -> str:
     ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise ValueError(
-            f"Formato '{ext or 'desconhecido'}' não suportado. Use CSV, TXT ou XLSX "
-            "(arquivos .xls antigos devem ser salvos como .xlsx)."
+            _("Formato '{v}' não suportado. Use CSV, TXT ou XLSX (arquivos .xls antigos devem ser salvos como .xlsx).", v=ext or 'desconhecido')
         )
     token = f"{uuid.uuid4().hex}{ext}"
     dest = UPLOAD_DIR / token
@@ -52,20 +52,20 @@ async def save_upload(upload) -> str:
             if size > MAX_UPLOAD_BYTES:
                 fh.close()
                 dest.unlink(missing_ok=True)
-                raise ValueError("Arquivo excede o limite de 200 MB.")
+                raise ValueError(_("Arquivo excede o limite de 200 MB."))
             fh.write(chunk)
     if size == 0:
         dest.unlink(missing_ok=True)
-        raise ValueError("Arquivo vazio.")
+        raise ValueError(_("Arquivo vazio."))
     return token
 
 
 def token_path(token: str) -> Path:
     if not token or not _TOKEN_RE.match(token):
-        raise ValueError("Token de arquivo inválido.")
+        raise ValueError(_("Token de arquivo inválido."))
     path = UPLOAD_DIR / token
     if not path.exists():
-        raise ValueError("Arquivo enviado não encontrado (expirado). Envie novamente.")
+        raise ValueError(_("Arquivo enviado não encontrado (expirado). Envie novamente."))
     return path
 
 
@@ -121,7 +121,7 @@ def parse_decimal(value) -> Optional[Decimal]:
         return None
     text = re.sub(r"[^\d,.\-+]", "", text)
     if not text or text in {"-", "+"}:
-        raise ValueError(f"Número inválido: {value!r}")
+        raise ValueError(_("Número inválido: {value}", value=f"{value!r}"))
     if "," in text and "." in text:
         if text.rfind(",") > text.rfind("."):
             text = text.replace(".", "").replace(",", ".")
@@ -129,14 +129,14 @@ def parse_decimal(value) -> Optional[Decimal]:
             text = text.replace(",", "")
     elif "," in text:
         if text.count(",") > 1:
-            raise ValueError(f"Número inválido: {value!r}")
+            raise ValueError(_("Número inválido: {value}", value=f"{value!r}"))
         text = text.replace(",", ".")
     elif text.count(".") > 1:
         text = text.replace(".", "")
     try:
         return Decimal(text)
     except InvalidOperation as exc:
-        raise ValueError(f"Número inválido: {value!r}") from exc
+        raise ValueError(_("Número inválido: {value}", value=f"{value!r}")) from exc
 
 
 def normalize_header(text: str) -> str:
@@ -193,7 +193,7 @@ def _iter_raw_rows(path: Path) -> Iterator[list[str]]:
         finally:
             wb.close()
     else:
-        raise ValueError(f"Extensão não suportada: {ext}")
+        raise ValueError(_("Extensão não suportada: {ext}", ext=ext))
 
 
 def iter_rows(path: Path, has_header: bool = True) -> Iterator[tuple[int, list[str]]]:
@@ -210,13 +210,13 @@ def read_preview(path: Path, has_header: bool = True, limit: int = 8) -> tuple[l
     """Retorna cabeçalhos e algumas linhas de amostra."""
     raw = list(islice(_iter_raw_rows(path), limit + 1))
     if not raw:
-        raise ValueError("O arquivo não possui linhas.")
+        raise ValueError(_("O arquivo não possui linhas."))
     width = max(len(r) for r in raw)
     if has_header:
-        headers = [h or f"Coluna {i + 1}" for i, h in enumerate(raw[0] + [""] * (width - len(raw[0])))]
+        headers = [h or _("Coluna {v}", v=i + 1) for i, h in enumerate(raw[0] + [""] * (width - len(raw[0])))]
         rows = raw[1:]
     else:
-        headers = [f"Coluna {i + 1}" for i in range(width)]
+        headers = [_("Coluna {v}", v=i + 1) for i in range(width)]
         rows = raw[:limit]
     rows = [r + [""] * (width - len(r)) for r in rows]
     return headers, rows
@@ -260,9 +260,9 @@ def resolve_column(spec, headers: Sequence[str]) -> Optional[int]:
             for i, h in enumerate(headers):
                 if normalize_header(h) == target:
                     return i
-            raise ValueError(f"Coluna '{s}' não encontrada no arquivo.")
+            raise ValueError(_("Coluna '{s}' não encontrada no arquivo.", s=s))
     if idx < 0 or (headers and idx >= len(headers)):
-        raise ValueError(f"Índice de coluna fora do intervalo: {idx}")
+        raise ValueError(_("Índice de coluna fora do intervalo: {idx}", idx=idx))
     return idx
 
 

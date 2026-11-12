@@ -11,8 +11,9 @@ from database import get_db
 from models import Branch, OptimizationRun
 from routers.common import form_data, paginate, redirect, render, to_int
 from services.run_history import KINDS, kpi_rows, param_diff
+from services.i18n import N_, _, translate_workbook
 
-router = APIRouter(prefix="/optimization/runs", tags=["Resultados de otimização"])
+router = APIRouter(prefix="/optimization/runs", tags=[N_("Resultados de otimização")])
 
 
 @router.get("")
@@ -51,11 +52,11 @@ def runs_bulk_delete(form: FormData = Depends(form_data), db: Session = Depends(
     else:
         ids = [i for i in (to_int(v) for v in form.getlist("ids")) if i]
         if not ids:
-            return redirect(back, "Marque os resultados a excluir.", "warning")
+            return redirect(back, _("Marque os resultados a excluir."), "warning")
         stmt = delete(OptimizationRun).where(OptimizationRun.id.in_(ids))
     n = db.execute(stmt).rowcount or 0
     db.commit()
-    return redirect(back if form.get("all") != "1" else "/optimization/runs", f"{n} resultado(s) excluído(s).", "secondary")
+    return redirect(back if form.get("all") != "1" else "/optimization/runs", _("{n} resultado(s) excluído(s).", n=n), "secondary")
 
 
 @router.get("/compare")
@@ -63,7 +64,7 @@ def compare_runs(request: Request, db: Session = Depends(get_db)):
     ids = [i for i in (to_int(v) for v in request.query_params.getlist("ids")) if i]
     runs = [r for r in (db.get(OptimizationRun, i) for i in ids) if r is not None]
     if len(runs) < 2:
-        return redirect("/optimization/runs", "Escolha pelo menos dois resultados para comparar.", "warning")
+        return redirect("/optimization/runs", _("Escolha pelo menos dois resultados para comparar."), "warning")
     return render(request, "runs/compare.html", runs=runs, rows=kpi_rows(runs), diff=param_diff(runs), kinds=KINDS)
 
 
@@ -71,7 +72,7 @@ def compare_runs(request: Request, db: Session = Depends(get_db)):
 def run_detail(run_id: int, request: Request, db: Session = Depends(get_db)):
     run = db.get(OptimizationRun, run_id)
     if run is None:
-        return redirect("/optimization/runs", "Resultado não encontrado.", "danger")
+        return redirect("/optimization/runs", _("Resultado não encontrado."), "danger")
     return render(request, "runs/detail.html", run=run, kinds=KINDS)
 
 
@@ -85,15 +86,15 @@ def run_xlsx(run_id: int, db: Session = Depends(get_db)):
 
     run = db.get(OptimizationRun, run_id)
     if run is None:
-        return redirect("/optimization/runs", "Resultado não encontrado.", "danger")
+        return redirect("/optimization/runs", _("Resultado não encontrado."), "danger")
     wb = Workbook()
     ws = wb.active
-    ws.title = "Indicadores"
-    ws.append(["Indicador", "Antes", "Depois / valor", "Unidade"])
+    ws.title = _("Indicadores")
+    ws.append([_("Indicador"), _("Antes"), _("Depois / valor"), _("Unidade")])
     for k in (run.summary or {}).get("kpis", []):
         ws.append([k["label"], k.get("before"), k.get("after") if k.get("after") is not None else k.get("value"),
                    (k.get("unit") or "").strip()])
-    for name, key in (("Detalhes", "rows"), ("Estruturas", "structs"), ("Bins", "types")):
+    for name, key in ((_("Detalhes"), "rows"), (_("Estruturas"), "structs"), (N_("Bins"), "types")):
         rows = (run.details or {}).get(key) or []
         if rows:
             sh = wb.create_sheet(name)
@@ -101,10 +102,11 @@ def run_xlsx(run_id: int, db: Session = Depends(get_db)):
             sh.append(cols)
             for r in rows:
                 sh.append([r.get(c) for c in cols])
-    ps = wb.create_sheet("Parâmetros")
+    ps = wb.create_sheet(_("Parâmetros"))
     for k, v in sorted((run.params or {}).items()):
         ps.append([k, v if isinstance(v, (int, float, str)) or v is None else str(v)])
     buf = BytesIO()
+    translate_workbook(wb)
     wb.save(buf)
     return Response(buf.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": _attachment(f"resultado_{run.id}_{run.kind}.xlsx")})
@@ -114,10 +116,10 @@ def run_xlsx(run_id: int, db: Session = Depends(get_db)):
 def run_note(run_id: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     run = db.get(OptimizationRun, run_id)
     if run is None:
-        return redirect("/optimization/runs", "Resultado não encontrado.", "danger")
+        return redirect("/optimization/runs", _("Resultado não encontrado."), "danger")
     run.note = str(form.get("note") or "").strip()[:300]
     db.commit()
-    return redirect(f"/optimization/runs/{run_id}", "Nome/observação salvo.")
+    return redirect(f"/optimization/runs/{run_id}", _("Nome/observação salvo."))
 
 
 @router.post("/{run_id}/delete")
@@ -126,4 +128,4 @@ def run_delete(run_id: int, db: Session = Depends(get_db)):
     if run is not None:
         db.delete(run)
         db.commit()
-    return redirect("/optimization/runs", "Resultado excluído.", "secondary")
+    return redirect("/optimization/runs", _("Resultado excluído."), "secondary")

@@ -501,9 +501,9 @@
     {% if run_id %}<span class="fs-6 fw-normal text-muted ms-2"><i class="bi bi-clock-history"></i> salvo como <a href="/optimization/runs/{{ run_id }}">nº {{ run_id }}</a> · <a href="/optimization/runs?kind=site">comparar</a></span>{% endif %}</h2>
   <div class="d-flex gap-2">
     <button class="btn {{ 'btn-warning' if plan.shortage else 'btn-outline-secondary' }}" type="submit" form="suggestForm"
-            title="Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-funnel"></i> Sugerir redução da demanda</button>
+            title="Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (roda em segundo plano, com progresso; pode levar de 1 a 2 minutos)"><i class="bi bi-funnel"></i> Sugerir redução da demanda</button>
     {% if not plan.shortage %}<button class="btn btn-outline-secondary" type="submit" form="growthForm"
-            title="Calcula até quanto a demanda pode crescer com as estruturas e o imóvel atuais (pode levar alguns segundos)"><i class="bi bi-graph-up-arrow"></i> Quanto posso crescer?</button>{% endif %}
+            title="Calcula até quanto a demanda pode crescer com as estruturas e o imóvel atuais (roda em segundo plano, com progresso; pode levar de 1 a 2 minutos)"><i class="bi bi-graph-up-arrow"></i> Quanto posso crescer?</button>{% endif %}
     <a class="btn btn-primary" href="/optimization/site/{{ project.id }}/plan"><i class="bi bi-list-check"></i> Plano detalhado</a>
     {% if plan.modules %}<a class="btn btn-outline-primary" href="/optimization/site/{{ project.id }}/3d"><i class="bi bi-box"></i> Ver em 3D</a>{% endif %}
     <a class="btn btn-outline-success" href="/optimization/site/{{ project.id }}/plan.xlsx"><i class="bi bi-file-earmark-excel"></i> Excel</a>

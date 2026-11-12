@@ -280,32 +280,110 @@ def layout_json(pid: int, form: FormData = Depends(form_data), db: Session = Dep
                                                                          for k, x, y, w, d, lb in lay.shapes()]})
 
 
+# --------------------------------------------------------------------------- #
+# Buscas de fator (redução e crescimento): rodam em segundo plano, com progresso e cancelamento
+# --------------------------------------------------------------------------- #
+_JOBS: dict[str, dict] = {}  # token -> {pid, kind, step, total, label, done, error, res, cancel, t0}
+_JOB_KINDS = {"reduction": ("Sugestão de redução da demanda", "bi-funnel", "site/suggest.html"),
+              "growth": ("Quanto posso crescer?", "bi-graph-up-arrow", "site/growth.html")}
+
+
+def _start_job(pid: int, kind: str, cfg: dict) -> str:
+    import threading
+    import time
+    import uuid
+
+    from database import SessionLocal
+    from services.site_service import Cancelled, suggest_growth, suggest_reduction
+
+    for k in [k for k, j in _JOBS.items() if time.time() - j["t0"] > 3600]:  # limpa o que ficou parado há mais de 1 h
+        _JOBS.pop(k, None)
+    token = uuid.uuid4().hex
+    job = {"pid": pid, "kind": kind, "step": 0, "total": 0, "label": "Começando", "done": False, "error": "", "res": None,
+           "cancel": False, "t0": time.time(), "t1": None}
+    _JOBS[token] = job
+
+    def progress(step, total, label):
+        job.update(step=step, total=total, label=label)
+
+    def work():
+        try:
+            with SessionLocal() as db:
+                fn = suggest_growth if kind == "growth" else suggest_reduction
+                job["res"] = fn(db, cfg, progress=progress, cancelled=lambda: job["cancel"])
+        except Cancelled:
+            job["error"] = "Busca cancelada."
+        except Exception as exc:  # noqa: BLE001  (o erro volta para a tela de espera)
+            job["error"] = f"Não foi possível concluir a busca: {exc}"
+        finally:
+            job["done"], job["t1"] = True, time.time()
+
+    threading.Thread(target=work, daemon=True).start()
+    return token
+
+
+def _job(pid: int, token: str):
+    j = _JOBS.get(token)
+    return j if j and j["pid"] == pid else None
+
+
+def _wait_page(request: Request, pid: int, kind: str, token: str, pr):
+    title, icon, _tpl = _JOB_KINDS[kind]
+    return render(request, "site/running.html", project=pr, token=token, kind=kind, title=title, icon=icon)
+
+
 @router.post("/{pid}/demand-suggestion")
 def demand_suggestion(pid: int, request: Request, db: Session = Depends(get_db)):
-    """Sugestão de redução da demanda: fator que cabe, limites por SKU e maiores consumidores."""
-    from services.site_service import suggest_reduction
-
+    """Sugestão de redução da demanda: fator que cabe, limites por SKU e maiores consumidores (em segundo plano)."""
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
-    res = suggest_reduction(db, merged(copy.deepcopy(pr.config)))
-    if res.get("error"):
-        return redirect(f"/optimization/site/{pid}", res["error"], "danger")
-    return render(request, "site/suggest.html", project=pr, res=res)
+    token = _start_job(pid, "reduction", merged(copy.deepcopy(pr.config)))
+    return _wait_page(request, pid, "reduction", token, pr)
 
 
 @router.post("/{pid}/growth-suggestion")
 def growth_suggestion(pid: int, request: Request, db: Session = Depends(get_db)):
-    """Folga de crescimento: até quanto a demanda cresce com as estruturas e o imóvel atuais."""
-    from services.site_service import suggest_growth
-
+    """Folga de crescimento: até quanto a demanda cresce com as estruturas e o imóvel atuais (em segundo plano)."""
     pr = _get(db, pid)
     if not pr:
         return redirect("/optimization/site", "Projeto não encontrado.", "danger")
-    res = suggest_growth(db, merged(copy.deepcopy(pr.config)))
-    if res.get("error"):
-        return redirect(f"/optimization/site/{pid}", res["error"], "danger")
-    return render(request, "site/growth.html", project=pr, res=res)
+    token = _start_job(pid, "growth", merged(copy.deepcopy(pr.config)))
+    return _wait_page(request, pid, "growth", token, pr)
+
+
+@router.get("/{pid}/job/{token}/status")
+def job_status(pid: int, token: str):
+    import time
+    from fastapi.responses import JSONResponse
+
+    j = _job(pid, token)
+    if j is None:
+        return JSONResponse({"error": "A busca expirou ou o servidor foi reiniciado: rode de novo."}, status_code=404)
+    end = j["t1"] or time.time()
+    return {"step": j["step"], "total": j["total"], "label": j["label"], "done": j["done"], "error": j["error"],
+            "elapsed": round(end - j["t0"], 1), "cancelling": j["cancel"] and not j["done"]}
+
+
+@router.post("/{pid}/job/{token}/cancel")
+def job_cancel(pid: int, token: str):
+    j = _job(pid, token)
+    if j is not None and not j["done"]:
+        j["cancel"] = True
+    return {"ok": j is not None}
+
+
+@router.get("/{pid}/job/{token}/result")
+def job_result(pid: int, token: str, request: Request, db: Session = Depends(get_db)):
+    pr = _get(db, pid)
+    j = _job(pid, token)
+    if not pr or j is None or not j["done"]:
+        return redirect(f"/optimization/site/{pid}", "A busca expirou ou ainda não terminou: rode de novo.", "warning")
+    res = j["res"]
+    if j["error"] or not res or res.get("error"):
+        return redirect(f"/optimization/site/{pid}", j["error"] or (res or {}).get("error") or "Busca sem resultado.", "danger")
+    _title, _icon, tpl = _JOB_KINDS[j["kind"]]
+    return render(request, tpl, project=pr, res=res)
 
 
 @router.post("/{pid}/demand-apply")

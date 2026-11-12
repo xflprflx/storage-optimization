@@ -8,6 +8,7 @@
   </div>
   <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
 </div>
+{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> Busca cancelada: o limite abaixo é o melhor fator achado até ali (pode ser menor que o real).</div>{% endif %}
 {% if res.shortage %}
 <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> A demanda atual <b>não cabe</b> ({{ res.shortage|dec }} bin(s) sem lugar): não há folga de crescimento.
   Use <b>Sugerir redução da demanda</b> ou aumente as estruturas e o imóvel.</div>

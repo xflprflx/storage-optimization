@@ -10,6 +10,7 @@
   <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar ao projeto</a>
 </div>
 
+{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> Busca cancelada: o fator sugerido é o melhor achado até ali (pode ser menor que o real).</div>{% endif %}
 {% if not res.shortage %}
 <div class="alert alert-success"><i class="bi bi-check-circle"></i> A demanda atual <b>já cabe</b> com as estruturas e o imóvel definidos — não é preciso reduzir.
   Abaixo, os SKUs que mais ocupam espaço, caso queira liberar área ou estruturas.</div>

@@ -79,8 +79,71 @@ def test_growth_suggestion(client, db, project):
     cfg["params"]["time_limit"] = "6"
     plan, errs = run_project(db, cfg)
     assert not errs and plan.shortage == 0  # no limite sugerido ainda cabe
+
+
+def _wait_job(client, project, page):
+    """A busca roda em segundo plano: a tela de espera traz o token; consulta o status até terminar e abre o resultado."""
+    import time
+
+    token = re.search(rf"/optimization/site/{project}/job/(\w+)", page).group(1)
+    base = f"/optimization/site/{project}/job/{token}"
+    for _ in range(300):
+        st = client.get(base + "/status").json()
+        if st["done"]:
+            break
+        time.sleep(0.5)
+    assert st["done"] and not st["error"], st
+    return st, client.get(base + "/result")
+
+
+def test_growth_page_runs_in_background_with_progress(client, project):
     r = client.post(f"/optimization/site/{project}/growth-suggestion")
-    assert r.status_code == 200 and "Quanto posso crescer" in r.text and "+" in r.text
+    assert r.status_code == 200 and "pode levar de 1 a 2 minutos" in r.text and "/status" in r.text
+    st, res = _wait_job(client, project, r.text)
+    assert st["total"] >= 3 and st["step"] == st["total"]  # o progresso chegou ao fim
+    assert res.status_code == 200 and "Quanto posso crescer" in res.text and "+" in res.text
+
+
+def test_reduction_page_runs_in_background(client, project):
+    r = client.post(f"/optimization/site/{project}/demand-suggestion")
+    assert r.status_code == 200 and "/status" in r.text
+    _st, res = _wait_job(client, project, r.text)
+    assert res.status_code == 200 and "Sugestão de redução da demanda" in res.text
+
+
+def test_cancel_stops_the_search(client, project):
+    import time
+
+    r = client.post(f"/optimization/site/{project}/demand-suggestion")
+    token = re.search(rf"/optimization/site/{project}/job/(\w+)", r.text).group(1)
+    base = f"/optimization/site/{project}/job/{token}"
+    assert client.post(base + "/cancel").json()["ok"]
+    for _ in range(120):
+        if client.get(base + "/status").json()["done"]:
+            break
+        time.sleep(0.5)
+    assert client.get(base + "/status").json()["done"]
+    assert client.get("/optimization/site/999999/job/x/status").status_code == 404  # token de outro projeto / expirado
+
+
+def test_probe_rounds_skip_the_second_weight_attempt(db, project, monkeypatch):
+    """Com falta de espaço e "respeitar pesos", a otimização completa refaz o plano pelo peso máximo (2 solves); a rodada
+    de teste das buscas de fator faz só o primeiro."""
+    import services.site_planner as P
+    from services.site_service import _probe_cfg
+
+    calls = []
+    orig = P._solve
+    monkeypatch.setattr(P, "_solve", lambda *a, **k: (calls.append(1), orig(*a, **k))[1])
+    cfg = _cfg(db, project, objective="modules", time_limit="3", weight="1")
+    cfg["demand"]["factor"] = "8000"
+    plan, _ = run_project(db, cfg)
+    assert plan.shortage > 0 and len(calls) == 2
+    calls.clear()
+    plan, _ = run_project(db, _probe_cfg(cfg, 3.0))
+    assert plan.shortage > 0 and len(calls) == 1
+    cfg["params"]["tl_unlimited"] = "1"  # a busca nunca roda "sem limite de tempo"
+    assert _probe_cfg(cfg, 4.0)["params"]["tl_unlimited"] == ""
 
 
 @pytest.fixture(scope="module")

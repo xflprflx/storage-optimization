@@ -2,6 +2,8 @@
 exportação para Excel e geração do cadastro da filial (endereços, níveis e bins) a partir do plano."""
 from __future__ import annotations
 
+import copy
+
 from decimal import Decimal
 from typing import Mapping, Optional
 
@@ -298,6 +300,7 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
         bin_objective=canonical_objective(p.get("bin_objective")) if p.get("bin_objective") in OBJECTIVES else "min_volume",
         walk_speed=_num(p.get("t_v"), "Velocidade de caminhada", errors, 1, 0.1, 5) or 1.0,
         gold_s=_num(p.get("t_gold"), "Tempo extra fora da zona de ouro", errors, 5, 0, 600) or 0.0,
+        quick=bool(p.get("_quick")),
         fill_limit=(_num(p.get("fill_limit"), "Taxa máxima de enchimento das bins", errors, 85, 5, 100) or 85) / 100,
         rotation="any" if p.get("rotation") == "any" else "upright",
         single_type=bool(p.get("single_type")),
@@ -528,15 +531,36 @@ def slotting_spec(cfg: dict, demands: list[Demand]) -> tuple[Optional[dict], str
     return spec, note
 
 
-def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0) -> dict:
+class Cancelled(Exception):
+    """A busca foi cancelada pelo usuário."""
+
+
+def _probe_cfg(cfg: dict, per_run_s: float, quick: bool = True) -> dict:
+    """Configuração de uma rodada das buscas de fator: tempo curto (nunca "sem limite") e, nas rodadas de teste
+    (`quick`), só a 1ª tentativa de peso (a média). Fica conservadora: se a rodada de teste cabe, a otimização
+    completa também cabe. A rodada do plano atual (quick=False) faz as duas tentativas, como a tela do projeto."""
+    import copy
+
+    c2 = copy.deepcopy(cfg)
+    c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15), per_run_s))
+    c2["params"]["tl_unlimited"] = ""
+    c2["params"]["_quick"] = quick
+    return c2
+
+
+def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0, progress=None, cancelled=None) -> dict:
     """Quanto da demanda cabe com as estruturas e o imóvel atuais.
     - fator: busca binária do maior fator de demanda (relativo ao atual) sem falta de espaço;
     - por SKU: no plano atual, quanto coube de cada SKU que ficou sem lugar (limite sugerido);
-    - maiores consumidores: SKUs que mais ocupam volume de bins (candidatos a revisão)."""
-    import copy
+    - maiores consumidores: SKUs que mais ocupam volume de bins (candidatos a revisão).
+    `progress(passo, total, texto)` e `cancelled()` (opcionais) acompanham e interrompem a busca entre as rodadas."""
     import math
 
-    base, errors = run_project(db, cfg)
+    prog = progress or (lambda *_a: None)
+    stop = cancelled or (lambda: False)
+    prog(0, steps + 1, "Otimizando o plano atual")
+    # a 1ª rodada é a do plano atual, mas com tempo limitado (um projeto "sem limite de tempo" não prende a busca)
+    base, errors = run_project(db, _probe_cfg(cfg, max(per_run_s, 15.0), quick=False))
     if errors or base is None:
         return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
     f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
@@ -568,31 +592,37 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
                                 "missing_bins": d.total_bins - d.placed_bins})
     # fator que cabe (relativo ao atual)
     lo, hi = 0.0, 1.0
-    for _ in range(steps):
+    for i in range(steps):
+        if stop():
+            out["partial"] = True
+            break
         mid = (lo + hi) / 2
+        prog(i + 1, steps + 1, f"Testando {f0 * mid:.0f}% da demanda")
         c2 = copy.deepcopy(cfg)
         c2["demand"]["factor"] = f"{f0 * mid:.4f}"
-        c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15),
-                                             per_run_s))
-        c2["params"]["tl_unlimited"] = ""  # a busca do fator roda várias vezes: sempre com tempo curto
-        plan, errs = run_project(db, c2)
+        plan, errs = run_project(db, _probe_cfg(c2, per_run_s))
         if plan is not None and not errs and not plan.errors and plan.shortage == 0:
             lo = mid
         else:
             hi = mid
+    prog(steps + 1, steps + 1, "Pronto")
     out["fit_factor"] = math.floor(f0 * lo * 10) / 10 if lo > 0 else None
     return out
 
 
-def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0, max_mult: float = 8.0) -> dict:
+def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.0, max_mult: float = 8.0,
+                   progress=None, cancelled=None) -> dict:
     """Até quanto a demanda pode crescer com as estruturas e o imóvel atuais: busca o maior fator de demanda (relativo
     ao atual) em que ainda não falta espaço. Só faz sentido quando a demanda atual já cabe.
     Retorna {"factor", "max_factor" (% — None se nem a atual cabe), "growth_pct" (crescimento sobre a atual),
-    "capped" (passou do limite da busca), "plan" (plano atual), "limits" (o que limita: estruturas no máximo)}."""
-    import copy
+    "capped" (passou do limite da busca), "partial" (cancelada: o melhor fator achado até ali), "plan" (plano atual),
+    "limits" (o que limita: estruturas no máximo)}. As rodadas de teste são rápidas e conservadoras (ver _probe_cfg)."""
     import math
 
-    base, errors = run_project(db, cfg)
+    prog = progress or (lambda *_a: None)
+    stop = cancelled or (lambda: False)
+    prog(0, steps + 2, "Otimizando o plano atual")
+    base, errors = run_project(db, _probe_cfg(cfg, max(per_run_s, 15.0), quick=False))
     if errors or base is None:
         return {"error": " ".join(errors) or "Não foi possível rodar o plano."}
     f0 = float(parse_decimal(str(cfg["demand"].get("factor") or "100")) or 100)
@@ -614,21 +644,28 @@ def suggest_growth(db: Session, cfg: dict, steps: int = 7, per_run_s: float = 4.
     def fits(mult: float) -> bool:
         c2 = copy.deepcopy(cfg)
         c2["demand"]["factor"] = f"{f0 * mult:.4f}"
-        c2["params"]["time_limit"] = str(min(float(parse_decimal(str(cfg["params"].get("time_limit") or 15)) or 15), per_run_s))
-        c2["params"]["tl_unlimited"] = ""  # a busca roda várias vezes: sempre com tempo curto
-        plan, errs = run_project(db, c2)
+        plan, errs = run_project(db, _probe_cfg(c2, per_run_s))
         return plan is not None and not errs and not plan.errors and plan.shortage == 0
 
     lo, hi = 1.0, max_mult
+    prog(1, steps + 2, f"Testando {f0 * max_mult:.0f}% da demanda")
+    if stop():
+        raise Cancelled()
     if fits(max_mult):  # cabe até o limite da busca
         out.update(max_factor=f0 * max_mult, growth_pct=(max_mult - 1) * 100, capped=True)
+        prog(steps + 2, steps + 2, "Pronto")
         return out
-    for _ in range(steps):
+    for i in range(steps):
+        if stop():
+            out["partial"] = True
+            break
         mid = (lo + hi) / 2
+        prog(i + 2, steps + 2, f"Testando {f0 * mid:.0f}% da demanda")
         if fits(mid):
             lo = mid
         else:
             hi = mid
+    prog(steps + 2, steps + 2, "Pronto")
     out["max_factor"] = math.floor(f0 * lo * 10) / 10
     out["growth_pct"] = math.floor((lo - 1) * 1000) / 10
     return out

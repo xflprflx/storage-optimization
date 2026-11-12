@@ -169,6 +169,7 @@ class SiteParams:
     bin_objective: str = "min_volume"
     walk_speed: float = 1.0  # m/s (objetivo "tempo")
     gold_s: float = 5.0  # s a mais por item fora da zona de ouro da pega (objetivo "tempo")
+    quick: bool = False  # rodada de teste (buscas de fator): só a 1ª tentativa de peso (a média), sem a 2ª pelo peso máximo
     fill_limit: float = 0.85
     rotation: str = "upright"
     single_type: bool = True
@@ -1184,7 +1185,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     # médio das bins do tipo). Se mesmo assim a alocação (que confere o peso bin a bin) deixar bins de fora, refaz
     # pelo peso da bin mais pesada do tipo.
     base_bins = {id(d): d.bins for d in demands}
-    for attempt, stat in enumerate(("mean", "max") if prm.enforce_weight else ("none",)):
+    for attempt, stat in enumerate(("mean", "max") if prm.enforce_weight and not prm.quick else ("none" if not prm.enforce_weight else "mean",)):
         if attempt:
             plan.modules, plan.structs, plan.notes = [], [], [n for n in plan.notes if "carga" not in n]
             for d in demands:

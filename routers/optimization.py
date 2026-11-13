@@ -55,10 +55,10 @@ def _getlist(src, key: str) -> list[str]:
     return src.getlist(key) if hasattr(src, "getlist") else ([src[key]] if key in src else [])
 
 
-def parse_engine(raw: dict, errors: list) -> tuple[str, Optional[float], Optional[list]]:
+def parse_engine(raw: dict, errors: list, criteria: Optional[dict] = None) -> tuple[str, Optional[float], Optional[list]]:
     """Motor (heurística ou pesquisa operacional), tempo limite (s; None = sem limite) e ordem dos critérios."""
     engine = "or" if raw.get("engine") == "or" else "heuristic"
-    prio = [raw.get(k) for k in ("prio2", "prio3", "prio4") if raw.get(k) in CRITERIA]
+    prio = [raw.get(k) for k in ("prio2", "prio3", "prio4") if raw.get(k) in (criteria or CRITERIA)]
     if str(raw.get("tl_unlimited") or "").lower() in {"1", "on", "true"}:
         return engine, None, (prio or None)  # solução do solver a qualquer custo (até provar o ótimo)
     try:
@@ -371,7 +371,9 @@ def _save_run(db: Session, request: Request, kind: str, filters: dict, kpis: lis
 
 
 def _common_ctx(db: Session, mode: str, filters: dict, raw: dict, errors: list, objectives: dict, unlimited: bool) -> dict:
-    return {"mode": mode, "criteria": CRITERIA, "crit_labels": CRIT_LABELS, "solvers": [], "bin_sources": BIN_SOURCES,
+    from services.pool_optimizer import POOL_CRITERIA
+
+    return {"mode": mode, "criteria": POOL_CRITERIA if mode == "pool" else CRITERIA, "crit_labels": CRIT_LABELS, "solvers": [], "bin_sources": BIN_SOURCES,
             "orphan_modes": ORPHAN_MODES, "orphans": [], "displaced": 0, "filters": filters, "params": raw, "errors": errors, "objectives": objectives, "bases": BASES,
             "bins_modes": BINS_MODES, "unlimited": unlimited, "results": None,
             "base_url": "/optimization" if mode == "address" else "/optimization/pool", **_lookups(db),
@@ -740,7 +742,9 @@ def parse_pool_params(src: Mapping):
                      allowed_types={int(t) for t in raw["types"] if str(t).isdigit()} or None)
     if raw.get("max_bins") and not to_int(raw.get("max_bins")):
         errors.append(_("Máximo de bins: número inteiro inválido."))
-    prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors)
+    from services.pool_optimizer import POOL_CRITERIA
+
+    prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors, POOL_CRITERIA)
     prm.bin_source = "any" if raw.get("bin_source") == "any" else "free"
     prm.orphans = "leave" if raw.get("orphans") == "leave" else "relocate"
     if prm.unlimited and prm.objective == "min_moves":
@@ -794,8 +798,11 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                 ids, focus = pool_scope(db, filters, raw)
                 from services.pool_optimizer import SLOT_OBJECTIVES
 
-                if prm.objective in SLOT_OBJECTIVES:
-                    raw["slot"] = "1"  # trajeto/pega no objetivo: a posição pela saída é obrigatória
+                from services.pool_optimizer import SLOT_CRITERIA
+
+                slot_tb = [c for c in (prm.priority or []) if c in SLOT_CRITERIA]  # caminhada/pega/tempo no desempate
+                if prm.objective in SLOT_OBJECTIVES or slot_tb:
+                    raw["slot"] = "1"  # trajeto/pega no objetivo ou no desempate: a posição pela saída é obrigatória
                     if prm.objective == "max_pick":
                         raw["slot_golden_m"] = "1000"  # pega antes da caminhada
                     elif prm.objective == "min_time":
@@ -805,11 +812,16 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                         raw["slot_golden_m"] = f"{max(0.0, _slot_num(raw.get('slot_gold_s'), 5.0)) * max(0.05, _slot_num(raw.get('slot_v'), 1.0)):g}"
                 sl = _slot_setup(db, filters, raw, ids)
                 slot_notes = []
-                if prm.objective in SLOT_OBJECTIVES and not sl.get("on"):
+                if (prm.objective in SLOT_OBJECTIVES or slot_tb) and not sl.get("on"):
                     raise ValueError(_("O objetivo de caminhada/zona de ouro usa o histórico de saídas da filial: envie a aba "
                                      "Pedidos (ou a coluna Saída) na etapa Posição pela saída."))
                 if sl.get("on") and not prm.unlimited:
-                    prm.slotting = {"geo": sl["geo"], "pop": sl["pop"], "abc": sl["abc"], "aff": sl["aff"]}
+                    from services.slotting import _num as _slot_num2
+
+                    prm.slotting = {"geo": sl["geo"], "pop": sl["pop"], "abc": sl["abc"], "aff": sl["aff"],
+                                    # desempate por tempo: caminhada ÷ velocidade + segundos fora da zona de ouro
+                                    "v": max(0.05, _slot_num2(raw.get("slot_v"), 1.0)),
+                                    "gold_s": max(0.0, _slot_num2(raw.get("slot_gold_s"), 5.0))}
                     prm.slot_key = sl["key"]
                     if prm.engine == "or":
                         prm.engine = "heuristic"

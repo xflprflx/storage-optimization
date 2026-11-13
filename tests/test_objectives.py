@@ -171,3 +171,17 @@ def test_pool_min_time_shows_estimated_time(client, branch_id):
                                                  "slot_gold_s": "8"})
     assert r.status_code == 200 and "alert-danger" not in r.text
     assert "Tempo estimado por saída" in r.text and "1,2 m/s" in r.text
+
+
+def test_pool_tiebreak_options_include_walk_pick_time():
+    """Pool: o desempate oferece os critérios de posição pela saída; o modo Por endereço não (os produtos não mudam)."""
+    from routers.optimization import parse_engine
+    from services.bin_optimizer import CRITERIA
+    from services.pool_optimizer import POOL_CRITERIA, POOL_OBJECTIVES, OBJ_TB
+
+    assert {"walk", "pick", "time"} <= set(POOL_CRITERIA) and not {"walk", "pick", "time"} & set(CRITERIA)
+    assert {OBJ_TB[o] for o in POOL_OBJECTIVES} <= set(POOL_CRITERIA)  # todo objetivo tem o critério equivalente
+    _e, _t, prio = parse_engine({"prio2": "walk", "prio3": "volume"}, [], POOL_CRITERIA)
+    assert prio == ["walk", "volume"]
+    _e, _t, prio = parse_engine({"prio2": "walk"}, [])
+    assert prio is None

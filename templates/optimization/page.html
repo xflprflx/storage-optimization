@@ -163,7 +163,7 @@
             {% for k, lbl in criteria.items() %}<option value="{{ k }}" {% if cur == k %}selected{% endif %}>{{ i }}º: {{ lbl }}</option>{% endfor %}
           </select>{% endfor %}
         </div>
-        <div class="form-text mb-2">{{ _h("Padrão: o objetivo escolhido, depois mínimo de {v} e os demais (bins, volume, largura).", v=(_('movimentações') if POOL else _('mudanças'))) }} {% if POOL %}{{ _("Na heurística do pool a ordem vale só para o objetivo.") }}{% else %}{{ _("Com \"padrão\", a heurística mantém o desempate atual.") }}{% endif %}</div>
+        <div class="form-text mb-2">{{ _h("Padrão: o objetivo escolhido, depois mínimo de {v} e os demais (bins, volume, largura).", v=(_('movimentações') if POOL else _('mudanças'))) }} {% if POOL %}{{ _("Na heurística do pool, cada desempate entra logo depois do objetivo na escolha do endereço e da bin. Caminhada, zona de ouro e tempo usam o histórico de saídas (etapa Posição pela saída) e levam ao motor heurístico.") }}{% else %}{{ _("Com \"padrão\", a heurística mantém o desempate atual.") }}{% endif %}</div>
         <div class="small fw-semibold mb-1">{{ _("Motor") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           <input type="radio" class="btn-check" name="engine" id="eng_or" value="or" {% if params.engine == 'or' %}checked{% endif %}>

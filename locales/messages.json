@@ -56,17 +56,17 @@
  },
  " Desenhe a planta da filial para medir pelos corredores reais e ver as rotas.": {
   "src": [
-   "routers/optimization.py:1194"
+   "routers/optimization.py:1197"
   ]
  },
  " Foram junto {len} SKU(s) que precisavam sair das bins de destino: ": {
   "src": [
-   "routers/optimization.py:966"
+   "routers/optimization.py:969"
   ]
  },
  " a mais (veja Bins por tipo).": {
   "src": [
-   "routers/optimization.py:465"
+   "routers/optimization.py:468"
   ]
  },
  " com os registros relacionados.": {
@@ -103,7 +103,7 @@
  },
  " em serpentina": {
   "src": [
-   "routers/optimization.py:1224"
+   "routers/optimization.py:1227"
   ]
  },
  " linhas por pedido": {
@@ -113,7 +113,7 @@
  },
  " m da referência": {
   "src": [
-   "templates/optimization/page.html:403"
+   "templates/optimization/page.html:410"
   ]
  },
  " m² do imóvel": {
@@ -138,7 +138,7 @@
  },
  " s por item fora da zona de ouro": {
   "src": [
-   "templates/optimization/page.html:401"
+   "templates/optimization/page.html:408"
   ]
  },
  " {len} posição(ões) física(s) (nível) excluída(s): {few}.": {
@@ -153,7 +153,7 @@
  },
  " {v} endereço(s) foram junto por liberarem as bins recebidas (bins existentes).": {
   "src": [
-   "routers/optimization.py:529"
+   "routers/optimization.py:532"
   ]
  },
  " {v} já tinham essas medidas.": {
@@ -188,17 +188,17 @@
  },
  " · nas duas: ": {
   "src": [
-   "templates/optimization/page.html:403"
+   "templates/optimization/page.html:410"
   ]
  },
  " · o planejado é maior que o saldo: o saldo é dividido entre as bins planejadas e o restante fica reservado (tracejado)": {
   "src": [
-   "routers/optimization.py:663"
+   "routers/optimization.py:666"
   ]
  },
  " · o planejado é maior que o saldo: o saldo é dividido entre as bins sugeridas e o restante fica reservado (tracejado)": {
   "src": [
-   "routers/optimization.py:707"
+   "routers/optimization.py:710"
   ]
  },
  " · palete no chão": {
@@ -213,7 +213,7 @@
  },
  " · sem bin: {shortage} un.": {
   "src": [
-   "routers/optimization.py:666"
+   "routers/optimization.py:669"
   ]
  },
  " · sem custo (R$ 0): ": {
@@ -228,7 +228,7 @@
  },
  " · sem limite de tempo": {
   "src": [
-   "routers/optimization.py:502",
+   "routers/optimization.py:505",
    "routers/site.py:199"
   ]
  },
@@ -286,18 +286,18 @@
  },
  "% das posições usadas": {
   "src": [
-   "templates/optimization/page.html:402"
+   "templates/optimization/page.html:409"
   ]
  },
  "% das saídas": {
   "src": [
    "services/site_planner.py:1206",
-   "services/slotting.py:499"
+   "services/slotting.py:557"
   ]
  },
  "% dos pedidos": {
   "src": [
-   "services/slotting.py:500"
+   "services/slotting.py:558"
   ]
  },
  "% enchimento": {
@@ -342,7 +342,7 @@
  },
  "(a obter)": {
   "src": [
-   "templates/optimization/page.html:540"
+   "templates/optimization/page.html:547"
   ]
  },
  "(bins e SKUs considerados)": {
@@ -357,7 +357,7 @@
  },
  "(com letras por rua: B-01 fica de frente para o fim da A)": {
   "src": [
-   "templates/optimization/page.html:246"
+   "templates/optimization/page.html:253"
   ]
  },
  "(curva ABC, zona de ouro e itens que saem juntos)": {
@@ -420,7 +420,7 @@
  },
  "(nível sem capacidade cadastrada)": {
   "src": [
-   "templates/optimization/page.html:297"
+   "templates/optimization/page.html:304"
   ]
  },
  "(posição dos SKUs)": {
@@ -447,7 +447,7 @@
  },
  "(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)": {
   "src": [
-   "templates/optimization/page.html:245"
+   "templates/optimization/page.html:252"
   ]
  },
  "(sem nível)": {
@@ -496,7 +496,7 @@
  },
  "({ns} un.)": {
   "src": [
-   "templates/optimization/page.html:597",
+   "templates/optimization/page.html:604",
    "templates/optimization/pool.html:218"
   ],
   "html": true
@@ -537,7 +537,7 @@
  },
  ", \"Cede bins e é rearranjado\", \"Cede bins: itens ficam fora de bin\"": {
   "src": [
-   "templates/optimization/page.html:516"
+   "templates/optimization/page.html:523"
   ]
  },
  ", 1º nível a {fl} cm do piso nessas estantes": {
@@ -579,7 +579,7 @@
  },
  ". O plano foi refeito com o que dá para liberar.": {
   "src": [
-   "routers/optimization.py:476"
+   "routers/optimization.py:479"
   ]
  },
  ". Para a solução do solver a qualquer custo, marque \"Sem limite de tempo\" na etapa Objetivo.": {
@@ -594,7 +594,7 @@
  },
  ". {used} deles cedem bins (situações \"Sem saldo: liberar bins\"": {
   "src": [
-   "templates/optimization/page.html:516"
+   "templates/optimization/page.html:523"
   ],
   "html": true
  },
@@ -931,7 +931,7 @@
  },
  "<b>Capacidade</b> de uma bin para um SKU = menor entre encaixe geométrico, volume × enchimento máx. e peso máx. A <b>margem</b> reserva espaço para crescer. Produtos sem dimensões ficam de fora.": {
   "src": [
-   "templates/optimization/page.html:332"
+   "templates/optimization/page.html:339"
   ],
   "html": true
  },
@@ -1021,13 +1021,13 @@
  },
  "<b>Foco nos SKUs filtrados:</b> {focus} endereço(s) filtrado(s) podem usar as bins dos outros endereços do escopo — {free} sem saldo ({free_bins} bin(s))": {
   "src": [
-   "templates/optimization/page.html:516"
+   "templates/optimization/page.html:523"
   ],
   "html": true
  },
  "<b>Foco nos SKUs filtrados:</b> {skus} SKU(s) otimizado(s) usando as bins do escopo inteiro — {free_bins} bin(s) vazia(s) disponível(is). {fixed_skus} outro(s) produto(s) ficam onde estão; as {locked_bins} bin(s) deles não entram no plano.": {
   "src": [
-   "templates/optimization/page.html:515"
+   "templates/optimization/page.html:522"
   ],
   "html": true
  },
@@ -1105,7 +1105,7 @@
  },
  "<b>Recurso infinito:</b> a quantidade de bins não é restrição — resultado de dimensionamento (quantas bins de cada tipo seriam necessárias). Bins novas não têm endereço: não pode ser aplicado.": {
   "src": [
-   "templates/optimization/page.html:518"
+   "templates/optimization/page.html:525"
   ],
   "html": true
  },
@@ -1219,7 +1219,7 @@
  },
  "<b>{freed_addr} endereço(s) ficam vazios</b> (todas as bins livres): <span class=\"mono\">{v}</span>": {
   "src": [
-   "templates/optimization/page.html:651",
+   "templates/optimization/page.html:658",
    "templates/optimization/pool.html:241"
   ],
   "html": true
@@ -1232,14 +1232,14 @@
  },
  "<b>{no_dims} SKU(s) sem dimensões</b> ficam onde estão e as bins dos seus endereços não entram no pool: {v}": {
   "src": [
-   "templates/optimization/page.html:520",
+   "templates/optimization/page.html:527",
    "templates/optimization/pool.html:178"
   ],
   "html": true
  },
  "<b>{orphans} item(ns) órfão(s)</b> — perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use \"Realocar os itens desalojados\"):": {
   "src": [
-   "templates/optimization/page.html:511"
+   "templates/optimization/page.html:518"
   ],
   "html": true
  },
@@ -1281,7 +1281,7 @@
  },
  "<span class=\"mono\">{sku}</span> · {q} un. · <span class=\"mono\">{addr}</span> {tag}": {
   "src": [
-   "templates/optimization/page.html:512"
+   "templates/optimization/page.html:519"
   ],
   "html": true
  },
@@ -1428,9 +1428,9 @@
   ],
   "html": true
  },
- "A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.": {
+ "A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.": {
   "src": [
-   "templates/optimization/page.html:248"
+   "templates/optimization/page.html:255"
   ]
  },
  "A capacidade dos níveis é sempre respeitada (<a href=\"/levels\" target=\"_blank\">cadastro</a>; considera as bins dos outros endereços do nível). Tipos sem capacidade cadastrada no nível têm a capacidade estimada pela largura do nível.": {
@@ -1441,7 +1441,7 @@
  },
  "A capacidade dos níveis é sempre respeitada (<a href=\"/levels\" target=\"_blank\">cadastro</a>; sem capacidade cadastrada, é estimada pela largura do nível).": {
   "src": [
-   "templates/optimization/page.html:294"
+   "templates/optimization/page.html:301"
   ],
   "html": true
  },
@@ -1607,7 +1607,7 @@
  },
  "A simulação de separação (hoje × proposta) usa a amostra de pedidos do histórico: envie a aba Pedidos (pedido, SKU, quantidade e data).": {
   "src": [
-   "templates/optimization/page.html:488"
+   "templates/optimization/page.html:495"
   ]
  },
  "A soma de cada SKU nas bins precisa ser igual ao saldo do endereço.": {
@@ -1617,7 +1617,7 @@
  },
  "A sugestão precisa caber no nível (descontadas as bins dos vizinhos) — ou em outros níveis da estante, se permitido.": {
   "src": [
-   "templates/optimization/page.html:329"
+   "templates/optimization/page.html:336"
   ]
  },
  "A zona de ouro da pega vale quantos metros de caminhada?": {
@@ -1799,7 +1799,7 @@
  },
  "Alguns SKUs não cabem em nenhum tipo de bin permitido (situação \"Sem bin\").": {
   "src": [
-   "templates/optimization/page.html:522"
+   "templates/optimization/page.html:529"
   ]
  },
  "Alguns SKUs não cabem em nenhum tipo de bin permitido (veja \"Sem bin\") — revise os tipos permitidos ou as restrições.": {
@@ -1844,7 +1844,7 @@
  "Alt. máx. (cm)": {
   "src": [
    "templates/optimization/index.html:145",
-   "templates/optimization/page.html:289"
+   "templates/optimization/page.html:296"
   ]
  },
  "Alterações não salvas": {
@@ -2053,7 +2053,7 @@
  "Analisar": {
   "src": [
    "templates/optimization/index.html:150",
-   "templates/optimization/page.html:301",
+   "templates/optimization/page.html:308",
    "templates/optimization/pool.html:129"
   ]
  },
@@ -2081,8 +2081,8 @@
  },
  "Antes (hoje)": {
   "src": [
-   "routers/optimization.py:648",
-   "routers/optimization.py:696",
+   "routers/optimization.py:651",
+   "routers/optimization.py:699",
    "routers/packing.py:176"
   ]
  },
@@ -2180,7 +2180,7 @@
  },
  "Aplicar TODO o plano do escopo analisado (recalculado com os mesmos parâmetros)?": {
   "src": [
-   "templates/optimization/page.html:694"
+   "templates/optimization/page.html:701"
   ],
   "js": true
  },
@@ -2242,7 +2242,7 @@
  },
  "Aplicar selecionados": {
   "src": [
-   "templates/optimization/page.html:560"
+   "templates/optimization/page.html:567"
   ]
  },
  "Aplicar todas ({n_applicable})": {
@@ -2253,7 +2253,7 @@
  },
  "Aplicar todos ({n_applicable})": {
   "src": [
-   "templates/optimization/page.html:561"
+   "templates/optimization/page.html:568"
   ],
   "html": true
  },
@@ -2279,7 +2279,7 @@
  },
  "Armazém": {
   "src": [
-   "routers/optimization.py:980",
+   "routers/optimization.py:983",
    "services/field_help.py:95",
    "services/field_help.py:100",
    "services/field_help.py:215",
@@ -2685,7 +2685,7 @@
  },
  "As trocas não são aplicadas automaticamente: a troca de endereço move o saldo dos dois SKUs (e o endereço padrão).": {
   "src": [
-   "templates/optimization/page.html:498"
+   "templates/optimization/page.html:505"
   ]
  },
  "As unidades podem só girar no plano (altura para cima) ou ficar em qualquer orientação.": {
@@ -3001,8 +3001,8 @@
  "Bins": {
   "src": [
    "routers/optimization.py:175",
-   "routers/optimization.py:1007",
-   "routers/optimization.py:1023",
+   "routers/optimization.py:1010",
+   "routers/optimization.py:1026",
    "routers/runs.py:97",
    "routers/site.py:193",
    "services/action_plan.py:123"
@@ -3048,7 +3048,7 @@
  },
  "Bins atuais": {
   "src": [
-   "routers/optimization.py:988",
+   "routers/optimization.py:991",
    "services/field_help.py:219",
    "templates/optimization/index.html:75",
    "templates/optimization/index.html:214",
@@ -3065,7 +3065,7 @@
  },
  "Bins como recurso infinito": {
   "src": [
-   "routers/optimization.py:539"
+   "routers/optimization.py:542"
   ],
   "lazy": true
  },
@@ -3111,7 +3111,7 @@
  },
  "Bins existentes no escopo": {
   "src": [
-   "routers/optimization.py:539",
+   "routers/optimization.py:542",
    "services/action_plan.py:283",
    "templates/optimization/pool.html:139"
   ],
@@ -3125,8 +3125,8 @@
  },
  "Bins hoje": {
   "src": [
-   "routers/optimization.py:488",
-   "routers/optimization.py:927"
+   "routers/optimization.py:491",
+   "routers/optimization.py:930"
   ],
   "lazy": true
  },
@@ -3168,13 +3168,13 @@
  },
  "Bins ocupadas": {
   "src": [
-   "routers/optimization.py:445",
-   "routers/optimization.py:896"
+   "routers/optimization.py:448",
+   "routers/optimization.py:899"
   ]
  },
  "Bins plano": {
   "src": [
-   "routers/optimization.py:927"
+   "routers/optimization.py:930"
   ],
   "lazy": true
  },
@@ -3183,14 +3183,14 @@
    "services/plan_export.py:126",
    "services/plan_export.py:136",
    "services/plan_export.py:270",
-   "templates/optimization/page.html:529",
+   "templates/optimization/page.html:536",
    "templates/optimization/plan.html:69",
    "templates/optimization/pool.html:163"
   ]
  },
  "Bins que podem ser usadas": {
   "src": [
-   "routers/optimization.py:1032",
+   "routers/optimization.py:1035",
    "services/field_help.py:222"
   ],
   "help": true
@@ -3218,7 +3218,7 @@
  },
  "Bins sugeridas": {
   "src": [
-   "routers/optimization.py:489"
+   "routers/optimization.py:492"
   ],
   "lazy": true
  },
@@ -3580,7 +3580,7 @@
  },
  "Caminhada": {
   "src": [
-   "templates/optimization/page.html:493"
+   "templates/optimization/page.html:500"
   ]
  },
  "Caminhada (em L) do ponto de referência até a estante": {
@@ -3592,7 +3592,7 @@
   "src": [
    "services/field_help.py:53",
    "services/field_help.py:61",
-   "templates/optimization/page.html:240",
+   "templates/optimization/page.html:247",
    "templates/site/view3d.html:109",
    "templates/slotting/routes.html:42"
   ],
@@ -3611,15 +3611,15 @@
  },
  "Caminhada média por pedido": {
   "src": [
-   "templates/optimization/page.html:439",
+   "templates/optimization/page.html:446",
    "templates/slotting/routes.html:23"
   ]
  },
  "Caminhada média por saída": {
   "src": [
-   "routers/optimization.py:353",
+   "routers/optimization.py:356",
    "routers/site.py:183",
-   "templates/optimization/page.html:400",
+   "templates/optimization/page.html:407",
    "templates/site/project.html:560"
   ]
  },
@@ -3630,7 +3630,7 @@
  },
  "Caminhada total": {
   "src": [
-   "templates/optimization/page.html:433"
+   "templates/optimization/page.html:440"
   ]
  },
  "Campo": {
@@ -3748,7 +3748,7 @@
  "Capacidade dos níveis": {
   "src": [
    "routers/levels.py:22",
-   "routers/optimization.py:1015",
+   "routers/optimization.py:1018",
    "templates/base.html:99",
    "templates/base.html:119",
    "templates/levels/index.html:2",
@@ -3758,7 +3758,7 @@
  },
  "Capacidade dos níveis, largura/altura máximas e \"remover bins de vazios\" não se aplicam ao pool: as bins não mudam de lugar nem de tipo.": {
   "src": [
-   "templates/optimization/page.html:284"
+   "templates/optimization/page.html:291"
   ]
  },
  "Capacidade nesta orientação: {per_bin} un. ({nx} × {nz} × {ny})": {
@@ -4023,7 +4023,7 @@
  },
  "Com alguma bin": {
   "src": [
-   "routers/optimization.py:988",
+   "routers/optimization.py:991",
    "templates/locations/list.html:46",
    "templates/optimization/index.html:78",
    "templates/optimization/page.html:98",
@@ -4037,7 +4037,7 @@
  },
  "Com bins como recurso infinito o resultado é um dimensionamento (quantas bins de cada tipo seriam necessárias) e não pode ser aplicado. Use \"Bins existentes no escopo\" para gerar um plano de movimentação.": {
   "src": [
-   "routers/optimization.py:945"
+   "routers/optimization.py:948"
   ]
  },
  "Com bins em outro nível": {
@@ -4153,7 +4153,7 @@
  "Como funciona": {
   "src": [
    "templates/locations/batch.html:224",
-   "templates/optimization/page.html:320",
+   "templates/optimization/page.html:327",
    "templates/site/index.html:37"
   ]
  },
@@ -4456,7 +4456,7 @@
   "src": [
    "services/field_help.py:250",
    "templates/optimization/index.html:129",
-   "templates/optimization/page.html:271",
+   "templates/optimization/page.html:278",
    "templates/optimization/pool.html:114"
   ],
   "help": true
@@ -4823,7 +4823,7 @@
  },
  "Critério (na ordem)": {
   "src": [
-   "templates/optimization/page.html:350"
+   "templates/optimization/page.html:357"
   ]
  },
  "Critério de desempate": {
@@ -4836,13 +4836,13 @@
  "Curva ABC": {
   "src": [
    "services/site_report.py:349",
-   "services/slotting.py:499",
+   "services/slotting.py:557",
    "templates/slotting/skus.html:21"
   ]
  },
  "Curva ABC (A/B/C)": {
   "src": [
-   "services/slotting.py:516"
+   "services/slotting.py:574"
   ]
  },
  "Curva ABC (SKUs)": {
@@ -5180,7 +5180,7 @@
   "src": [
    "services/site_import.py:207",
    "services/site_import.py:825",
-   "templates/optimization/page.html:459",
+   "templates/optimization/page.html:466",
    "templates/slotting/routes.html:101",
    "static/field_help.js:189"
   ],
@@ -5287,7 +5287,7 @@
  },
  "Deixar perto os itens que saem juntos": {
   "src": [
-   "templates/optimization/page.html:247"
+   "templates/optimization/page.html:254"
   ]
  },
  "Deixar vizinhos os SKUs que saem juntos (precisa da aba Pedidos; pares que aparecem juntos em ao menos 20% dos pedidos do menos vendido)": {
@@ -5334,9 +5334,9 @@
  },
  "Depois — {v}": {
   "src": [
-   "routers/optimization.py:668",
-   "routers/optimization.py:710",
-   "routers/optimization.py:654"
+   "routers/optimization.py:671",
+   "routers/optimization.py:713",
+   "routers/optimization.py:657"
   ]
  },
  "Depois, desempatar por <span class=\"fw-normal text-muted\">(ordem de prioridade)</span>": {
@@ -5468,7 +5468,7 @@
  "Dia": {
   "src": [
    "services/field_help.py:48",
-   "templates/optimization/page.html:446",
+   "templates/optimization/page.html:453",
    "templates/site/view3d.html:90",
    "templates/slotting/routes.html:66"
   ],
@@ -5483,10 +5483,10 @@
  "Diferença": {
   "src": [
    "services/plan_export.py:129",
-   "templates/optimization/page.html:447",
-   "templates/optimization/page.html:448",
-   "templates/optimization/page.html:461",
-   "templates/optimization/page.html:533",
+   "templates/optimization/page.html:454",
+   "templates/optimization/page.html:455",
+   "templates/optimization/page.html:468",
+   "templates/optimization/page.html:540",
    "templates/optimization/pool.html:140"
   ]
  },
@@ -5537,12 +5537,12 @@
  },
  "Dimensionados": {
   "src": [
-   "routers/optimization.py:903"
+   "routers/optimization.py:906"
   ]
  },
  "Dimensões (cm)": {
   "src": [
-   "templates/optimization/page.html:533",
+   "templates/optimization/page.html:540",
    "templates/optimization/pool.html:165"
   ]
  },
@@ -5647,7 +5647,7 @@
  },
  "Distância entre itens que saem juntos": {
   "src": [
-   "routers/optimization.py:356",
+   "routers/optimization.py:359",
    "routers/site.py:186"
   ]
  },
@@ -5659,12 +5659,12 @@
  },
  "Distância estimada pelo endereço (corredores × distância entre corredores + estantes × frente), como na posição pela saída.": {
   "src": [
-   "routers/optimization.py:1179"
+   "routers/optimization.py:1182"
   ]
  },
  "Distância pelo menor caminho na planta desenhada: pelos corredores (respeitando a mão única), saindo pela ponta da fileira ou por uma passagem para trocar de corredor, contornando fileiras e obstáculos.": {
   "src": [
-   "routers/optimization.py:1240"
+   "routers/optimization.py:1243"
   ]
  },
  "Distância pelo menor caminho no piso livre: pelos corredores, saindo pela ponta ou por um transversal para trocar de corredor, contornando estruturas e obstáculos.": {
@@ -5674,7 +5674,7 @@
  },
  "Distância {v}": {
   "src": [
-   "templates/optimization/page.html:503"
+   "templates/optimization/page.html:510"
   ],
   "html": true
  },
@@ -5770,7 +5770,7 @@
  },
  "Dois separadores na planta 3D fazendo os mesmos pedidos: com os SKUs onde estão hoje e onde ficam na proposta": {
   "src": [
-   "templates/optimization/page.html:423"
+   "templates/optimization/page.html:430"
   ]
  },
  "Duas zonas de ouro": {
@@ -5956,8 +5956,8 @@
  },
  "Encaixe geométrico": {
   "src": [
-   "routers/optimization.py:1012",
-   "routers/optimization.py:1028"
+   "routers/optimization.py:1015",
+   "routers/optimization.py:1031"
   ]
  },
  "Ench. atual": {
@@ -5967,7 +5967,7 @@
  },
  "Ench. hoje": {
   "src": [
-   "templates/optimization/page.html:581"
+   "templates/optimization/page.html:588"
   ]
  },
  "Ench. novo": {
@@ -5977,7 +5977,7 @@
  },
  "Ench. plano": {
   "src": [
-   "templates/optimization/page.html:581"
+   "templates/optimization/page.html:588"
   ]
  },
  "Enchimento antes (%)": {
@@ -5992,15 +5992,15 @@
  },
  "Enchimento hoje (%)": {
   "src": [
-   "routers/optimization.py:490",
-   "routers/optimization.py:928"
+   "routers/optimization.py:493",
+   "routers/optimization.py:931"
   ],
   "lazy": true
  },
  "Enchimento máx. (%)": {
   "src": [
    "templates/optimization/index.html:124",
-   "templates/optimization/page.html:265",
+   "templates/optimization/page.html:272",
    "templates/optimization/pool.html:109"
   ]
  },
@@ -6016,9 +6016,9 @@
  },
  "Enchimento máximo": {
   "src": [
-   "routers/optimization.py:732",
-   "routers/optimization.py:1011",
-   "routers/optimization.py:1027"
+   "routers/optimization.py:735",
+   "routers/optimization.py:1014",
+   "routers/optimization.py:1030"
   ]
  },
  "Enchimento máximo (%)": {
@@ -6030,7 +6030,7 @@
  },
  "Enchimento máximo deve estar entre 5% e 100%.": {
   "src": [
-   "routers/optimization.py:735"
+   "routers/optimization.py:738"
   ]
  },
  "Enchimento médio": {
@@ -6041,8 +6041,8 @@
  },
  "Enchimento plano (%)": {
   "src": [
-   "routers/optimization.py:490",
-   "routers/optimization.py:929"
+   "routers/optimization.py:493",
+   "routers/optimization.py:932"
   ],
   "lazy": true
  },
@@ -6071,7 +6071,7 @@
  },
  "Endereço": {
   "src": [
-   "routers/optimization.py:488",
+   "routers/optimization.py:491",
    "routers/products.py:142",
    "services/action_plan.py:181",
    "services/field_help.py:321",
@@ -6109,7 +6109,7 @@
  },
  "Endereço contém": {
   "src": [
-   "routers/optimization.py:981",
+   "routers/optimization.py:984",
    "services/field_help.py:216",
    "templates/optimization/index.html:69",
    "templates/optimization/page.html:89",
@@ -6124,7 +6124,7 @@
  },
  "Endereço fora do escopo da otimização.": {
   "src": [
-   "routers/optimization.py:693"
+   "routers/optimization.py:696"
   ]
  },
  "Endereço físico onde esta quantidade do produto está guardada.": {
@@ -6161,7 +6161,7 @@
    "routers/locations.py:684",
    "routers/locations.py:715",
    "routers/locations.py:739",
-   "routers/optimization.py:682"
+   "routers/optimization.py:685"
   ]
  },
  "Endereço não vinculado: {err}": {
@@ -6266,7 +6266,7 @@
  },
  "Endereço(s)": {
   "src": [
-   "services/slotting.py:500"
+   "services/slotting.py:558"
   ]
  },
  "Endereços": {
@@ -6288,7 +6288,7 @@
  },
  "Endereços a alterar": {
   "src": [
-   "routers/optimization.py:451"
+   "routers/optimization.py:454"
   ]
  },
  "Endereços até esta caminhada da referência; vazio = os 20% mais perto.": {
@@ -6309,8 +6309,8 @@
  },
  "Endereços com bins": {
   "src": [
-   "routers/optimization.py:450",
-   "routers/optimization.py:902"
+   "routers/optimization.py:453",
+   "routers/optimization.py:905"
   ]
  },
  "Endereços com bins gravadas": {
@@ -6527,17 +6527,17 @@
  },
  "Escolha a filial para simular os trajetos.": {
   "src": [
-   "routers/optimization.py:1176"
+   "routers/optimization.py:1179"
   ]
  },
  "Escolha a filial para ver o relatório de SKUs.": {
   "src": [
-   "routers/optimization.py:1158"
+   "routers/optimization.py:1161"
   ]
  },
  "Escolha a filial.": {
   "src": [
-   "routers/optimization.py:1282"
+   "routers/optimization.py:1285"
   ]
  },
  "Escolha ao menos uma aba para importar.": {
@@ -7437,14 +7437,14 @@
  "Exportar para Excel": {
   "src": [
    "templates/optimization/index.html:202",
-   "templates/optimization/page.html:557",
+   "templates/optimization/page.html:564",
    "templates/optimization/pool.html:194"
   ]
  },
  "Exportar para PDF": {
   "src": [
    "templates/optimization/index.html:203",
-   "templates/optimization/page.html:558",
+   "templates/optimization/page.html:565",
    "templates/optimization/pool.html:195"
   ]
  },
@@ -7570,7 +7570,7 @@
  },
  "Faltam bins para alguns SKUs (situação \"Sem bin\"): esses SKUs não podem ser aplicados — amplie o escopo, mude o objetivo, cadastre mais bins ou simule com \"Recurso infinito\".": {
   "src": [
-   "templates/optimization/page.html:523"
+   "templates/optimization/page.html:530"
   ]
  },
  "Faltam bins para alguns SKUs (veja \"Sem bin\"). O plano não pode ser aplicado assim — amplie o escopo, mude o objetivo, cadastre mais bins ou simule com \"Recurso infinito\" para saber quantas faltam.": {
@@ -7592,7 +7592,7 @@
  },
  "Faltaram bins nos outros endereços do escopo para o plano dos itens filtrados: ": {
   "src": [
-   "routers/optimization.py:474"
+   "routers/optimization.py:477"
   ]
  },
  "Faltou espaço": {
@@ -7789,7 +7789,7 @@
  },
  "Filial": {
   "src": [
-   "routers/optimization.py:977",
+   "routers/optimization.py:980",
    "services/field_help.py:94",
    "services/field_help.py:99",
    "services/field_help.py:199",
@@ -8111,7 +8111,7 @@
  },
  "Foco nos SKUs filtrados": {
   "src": [
-   "routers/optimization.py:1031",
+   "routers/optimization.py:1034",
    "services/field_help.py:220",
    "templates/optimization/page.html:104"
   ],
@@ -8228,7 +8228,7 @@
  },
  "Fora do ouro (s/item)": {
   "src": [
-   "templates/optimization/page.html:242",
+   "templates/optimization/page.html:249",
    "templates/site/view3d.html:115",
    "templates/slotting/routes.html:48"
   ]
@@ -8261,14 +8261,14 @@
  },
  "Força": {
   "src": [
-   "services/slotting.py:518",
+   "services/slotting.py:576",
    "templates/site/project.html:588",
    "templates/slotting/skus.html:56"
   ]
  },
  "Força (%)": {
   "src": [
-   "services/slotting.py:510"
+   "services/slotting.py:568"
   ]
  },
  "Fração (ex.: 1/2) — alternativa às divisões": {
@@ -8332,16 +8332,16 @@
    "templates/layout/plan.html:78"
   ]
  },
+ "Frente das estantes sem estrutura cadastrada; com estrutura, vale a frente dela": {
+  "src": [
+   "templates/optimization/page.html:230"
+  ]
+ },
  "Frente de cada estante que não tem estrutura cadastrada. Com estrutura, vale a frente dela.": {
   "src": [
    "services/field_help.py:78"
   ],
   "help": true
- },
- "Frente de cada estante, ao longo do corredor": {
-  "src": [
-   "templates/optimization/page.html:230"
-  ]
  },
  "Frente do módulo": {
   "src": [
@@ -8528,7 +8528,7 @@
  "Heurística": {
   "src": [
    "templates/optimization/page.html:172",
-   "templates/optimization/page.html:350"
+   "templates/optimization/page.html:357"
   ]
  },
  "Heurístico (rápido) ou pesquisa operacional (OR-Tools), que busca a melhor solução comprovada.": {
@@ -8583,7 +8583,7 @@
  },
  "Histórico de saídas removido.": {
   "src": [
-   "routers/optimization.py:1298"
+   "routers/optimization.py:1301"
   ]
  },
  "Histórico de saídas salvo para a filial {code}: {summary_text} (aba {sheet}).{neg}": {
@@ -8603,8 +8603,8 @@
  },
  "Hoje": {
   "src": [
-   "templates/optimization/page.html:493",
-   "templates/optimization/page.html:533"
+   "templates/optimization/page.html:500",
+   "templates/optimization/page.html:540"
   ]
  },
  "Hoje (endereço · saldo)": {
@@ -8614,22 +8614,22 @@
  },
  "Hoje (h)": {
   "src": [
-   "templates/optimization/page.html:448"
+   "templates/optimization/page.html:455"
   ]
  },
  "Hoje (km)": {
   "src": [
-   "templates/optimization/page.html:447"
+   "templates/optimization/page.html:454"
   ]
  },
  "Hoje (m)": {
   "src": [
-   "templates/optimization/page.html:461"
+   "templates/optimization/page.html:468"
   ]
  },
  "Hoje <span class=\"fw-normal text-muted text-lowercase\">(clique para o 3D)</span>": {
   "src": [
-   "templates/optimization/page.html:577"
+   "templates/optimization/page.html:584"
   ],
   "html": true
  },
@@ -8640,7 +8640,7 @@
  },
  "Horas de separação": {
   "src": [
-   "templates/optimization/page.html:436"
+   "templates/optimization/page.html:443"
   ]
  },
  "Horas de separação no dia (caminhada + paradas + pega), em cada rota": {
@@ -9008,7 +9008,7 @@
  },
  "Itens desalojados": {
   "src": [
-   "routers/optimization.py:1033"
+   "routers/optimization.py:1036"
   ]
  },
  "Itens nesta bin": {
@@ -9031,7 +9031,7 @@
  "Itens que saem juntos": {
   "src": [
    "services/field_help.py:179",
-   "templates/optimization/page.html:404",
+   "templates/optimization/page.html:411",
    "templates/site/project.html:578"
   ],
   "help": true
@@ -9164,7 +9164,7 @@
  "Larg. máx. (cm)": {
   "src": [
    "templates/optimization/index.html:144",
-   "templates/optimization/page.html:288"
+   "templates/optimization/page.html:295"
   ]
  },
  "Largura": {
@@ -9241,8 +9241,8 @@
  },
  "Largura de frente": {
   "src": [
-   "routers/optimization.py:447",
-   "routers/optimization.py:899",
+   "routers/optimization.py:450",
+   "routers/optimization.py:902",
    "services/action_plan.py:125",
    "templates/optimization/index.html:182"
   ]
@@ -9345,7 +9345,7 @@
  "Letras por rua": {
   "src": [
    "services/field_help.py:243",
-   "templates/optimization/page.html:245"
+   "templates/optimization/page.html:252"
   ],
   "help": true
  },
@@ -9377,13 +9377,13 @@
  },
  "Liberar bins de vazios": {
   "src": [
-   "routers/optimization.py:1019"
+   "routers/optimization.py:1022"
   ]
  },
  "Lift": {
   "src": [
-   "services/slotting.py:510",
-   "services/slotting.py:519",
+   "services/slotting.py:568",
+   "services/slotting.py:577",
    "templates/slotting/skus.html:56"
   ]
  },
@@ -9486,8 +9486,8 @@
  },
  "Linhas": {
   "src": [
-   "templates/optimization/page.html:446",
-   "templates/optimization/page.html:459",
+   "templates/optimization/page.html:453",
+   "templates/optimization/page.html:466",
    "templates/slotting/routes.html:66",
    "templates/slotting/routes.html:101",
    "templates/slotting/skus.html:37"
@@ -9502,8 +9502,8 @@
  },
  "Linhas de pedido": {
   "src": [
-   "services/slotting.py:499",
-   "services/slotting.py:514"
+   "services/slotting.py:557",
+   "services/slotting.py:572"
   ]
  },
  "Linhas de pedido (quantas vezes o item é pego) ou unidades que saem.": {
@@ -9527,7 +9527,7 @@
  },
  "Linhas por pedido": {
   "src": [
-   "services/slotting.py:515"
+   "services/slotting.py:573"
   ]
  },
  "Linhas repetidas": {
@@ -9567,7 +9567,7 @@
  "Lista de separação": {
   "src": [
    "services/route_sim.py:362",
-   "templates/optimization/page.html:428",
+   "templates/optimization/page.html:435",
    "templates/slotting/routes.html:38"
   ],
   "lazy": true
@@ -9764,7 +9764,7 @@
  },
  "Margem": {
   "src": [
-   "routers/optimization.py:733"
+   "routers/optimization.py:736"
   ]
  },
  "Margem de crescimento": {
@@ -9787,20 +9787,20 @@
  },
  "Margem deve estar entre 0% e 1000%.": {
   "src": [
-   "routers/optimization.py:737"
+   "routers/optimization.py:740"
   ]
  },
  "Margem s/ quantidade (%)": {
   "src": [
    "templates/optimization/index.html:125",
-   "templates/optimization/page.html:266",
+   "templates/optimization/page.html:273",
    "templates/optimization/pool.html:110"
   ]
  },
  "Margem sobre a quantidade": {
   "src": [
-   "routers/optimization.py:1011",
-   "routers/optimization.py:1027"
+   "routers/optimization.py:1014",
+   "routers/optimization.py:1030"
   ]
  },
  "Margem sobre a quantidade (%)": {
@@ -9881,7 +9881,7 @@
  },
  "Max level": {
   "src": [
-   "routers/optimization.py:546",
+   "routers/optimization.py:549",
    "services/site_import.py:198",
    "services/site_import.py:821",
    "templates/optimization/index.html:95",
@@ -10089,14 +10089,14 @@
  },
  "Mesmo SKU em mais de um endereço": {
   "src": [
-   "routers/optimization.py:1034",
+   "routers/optimization.py:1037",
    "services/field_help.py:255"
   ],
   "help": true
  },
  "Meta": {
   "src": [
-   "routers/optimization.py:1025"
+   "routers/optimization.py:1028"
   ]
  },
  "Metros": {
@@ -10117,7 +10117,7 @@
  },
  "Min level": {
   "src": [
-   "routers/optimization.py:546",
+   "routers/optimization.py:549",
    "services/site_import.py:197",
    "services/site_import.py:821",
    "templates/optimization/index.html:95",
@@ -10393,14 +10393,14 @@
  },
  "Movimentação": {
   "src": [
-   "templates/optimization/page.html:579",
+   "templates/optimization/page.html:586",
    "templates/optimization/pool.html:205"
   ]
  },
  "Movimentações": {
   "src": [
-   "routers/optimization.py:903",
-   "routers/optimization.py:928",
+   "routers/optimization.py:906",
+   "routers/optimization.py:931",
    "services/action_plan.py:311",
    "templates/optimization/pool.html:153"
   ],
@@ -10432,18 +10432,18 @@
  "Máx. bins": {
   "src": [
    "templates/optimization/index.html:143",
-   "templates/optimization/page.html:287"
+   "templates/optimization/page.html:294"
   ]
  },
  "Máx. bins / larg. / alt.": {
   "src": [
-   "routers/optimization.py:1018"
+   "routers/optimization.py:1021"
   ]
  },
  "Máx. bins por SKU": {
   "src": [
-   "routers/optimization.py:1035",
-   "templates/optimization/page.html:281"
+   "routers/optimization.py:1038",
+   "templates/optimization/page.html:288"
   ]
  },
  "Máx. na planta": {
@@ -10487,7 +10487,7 @@
  "Máximo de bins: número inteiro inválido.": {
   "src": [
    "routers/optimization.py:96",
-   "routers/optimization.py:747"
+   "routers/optimization.py:750"
   ]
  },
  "Máximo de módulos": {
@@ -10660,7 +10660,7 @@
    "routers/site.py:191",
    "services/plan_export.py:129",
    "services/plan_export.py:264",
-   "templates/optimization/page.html:533",
+   "templates/optimization/page.html:540",
    "templates/optimization/plan.html:66",
    "templates/optimization/pool.html:165"
   ],
@@ -10678,12 +10678,12 @@
  },
  "Nenhum SKU nesta situação.": {
   "src": [
-   "templates/optimization/page.html:612"
+   "templates/optimization/page.html:619"
   ]
  },
  "Nenhum SKU selecionado.": {
   "src": [
-   "routers/optimization.py:958",
+   "routers/optimization.py:961",
    "services/pool_service.py:200"
   ]
  },
@@ -10723,7 +10723,7 @@
  },
  "Nenhum endereço nesta situação.": {
   "src": [
-   "templates/optimization/page.html:636"
+   "templates/optimization/page.html:643"
   ]
  },
  "Nenhum endereço neste depósito. <a href=\"/locations/batch\">Gerar endereços em lote</a>": {
@@ -10739,8 +10739,8 @@
  },
  "Nenhum endereço no escopo.": {
   "src": [
-   "routers/optimization.py:524",
-   "routers/optimization.py:953"
+   "routers/optimization.py:527",
+   "routers/optimization.py:956"
   ]
  },
  "Nenhum endereço no filtro.": {
@@ -10753,7 +10753,7 @@
   "src": [
    "routers/locations.py:383",
    "routers/locations.py:597",
-   "routers/optimization.py:520"
+   "routers/optimization.py:523"
   ]
  },
  "Nenhum histórico para a filial selecionada.": {
@@ -10789,12 +10789,12 @@
  },
  "Nenhum pedido da amostra tem SKUs com saldo em estantes da planta.": {
   "src": [
-   "routers/optimization.py:1249"
+   "routers/optimization.py:1252"
   ]
  },
  "Nenhum pedido da amostra tem SKUs com saldo nesta filial.": {
   "src": [
-   "routers/optimization.py:1227"
+   "routers/optimization.py:1230"
   ]
  },
  "Nenhum pedido da amostra tem SKUs no plano.": {
@@ -10805,7 +10805,7 @@
  },
  "Nenhum pedido da amostra tem SKUs nos endereços do escopo.": {
   "src": [
-   "routers/optimization.py:257"
+   "routers/optimization.py:260"
   ]
  },
  "Nenhum pedido do dia {day} na amostra.": {
@@ -10820,7 +10820,7 @@
  },
  "Nenhum produto corresponde ao filtro de SKU / tipo de material.": {
   "src": [
-   "routers/optimization.py:567"
+   "routers/optimization.py:570"
   ]
  },
  "Nenhum produto selecionado.": {
@@ -10862,7 +10862,7 @@
  "Nenhum tipo cadastrado. <a href=\"/bin-types/new\">Cadastrar</a>": {
   "src": [
    "templates/optimization/index.html:121",
-   "templates/optimization/page.html:262"
+   "templates/optimization/page.html:269"
   ],
   "html": true
  },
@@ -10929,7 +10929,7 @@
   "src": [
    "routers/packing.py:157",
    "templates/_macros.html:86",
-   "templates/optimization/page.html:541",
+   "templates/optimization/page.html:548",
    "templates/optimization/pool.html:173",
    "templates/site/project.html:639"
   ],
@@ -11031,7 +11031,7 @@
  },
  "No plano": {
   "src": [
-   "templates/optimization/page.html:533"
+   "templates/optimization/page.html:540"
   ]
  },
  "No plano atual": {
@@ -11041,7 +11041,7 @@
  },
  "No pool": {
   "src": [
-   "templates/optimization/page.html:533"
+   "templates/optimization/page.html:540"
   ]
  },
  "No projeto, informe as dimensões do imóvel, corredores e áreas reservadas.": {
@@ -11339,7 +11339,7 @@
  },
  "Não": {
   "src": [
-   "routers/optimization.py:999"
+   "routers/optimization.py:1002"
   ]
  },
  "Não cabe em nenhum tipo de bin do escopo.": {
@@ -11362,7 +11362,7 @@
  },
  "Não exceder espaço atual": {
   "src": [
-   "routers/optimization.py:1017"
+   "routers/optimization.py:1020"
   ]
  },
  "Não exceder o espaço atual": {
@@ -11373,7 +11373,7 @@
  },
  "Não exceder o espaço atual do endereço": {
   "src": [
-   "templates/optimization/page.html:297"
+   "templates/optimization/page.html:304"
   ]
  },
  "Não exceder o espaço atual do endereço <span class=\"text-muted\">(largura/altura das bins atuais; só para endereços cujo nível não tem capacidade cadastrada)</span>": {
@@ -11394,7 +11394,7 @@
  },
  "Não foi possível guardar o resultado da otimização": {
   "src": [
-   "routers/optimization.py:372"
+   "routers/optimization.py:375"
   ]
  },
  "Não foi possível guardar o resultado do projeto": {
@@ -11476,7 +11476,7 @@
    "services/site_import.py:809",
    "services/site_report.py:336",
    "services/site_report.py:333",
-   "templates/optimization/page.html:292",
+   "templates/optimization/page.html:299",
    "templates/site/project.html:608"
   ],
   "lazy": true
@@ -11522,7 +11522,7 @@
  "Níveis de ouro (pega)": {
   "src": [
    "services/field_help.py:242",
-   "templates/optimization/page.html:237"
+   "templates/optimization/page.html:242"
   ],
   "help": true
  },
@@ -11771,7 +11771,7 @@
  },
  "O dia inteiro em 3D: hoje × proposta": {
   "src": [
-   "templates/optimization/page.html:455"
+   "templates/optimization/page.html:462"
   ]
  },
  "O endereço informado vira o endereço padrão do produto na filial.": {
@@ -11821,7 +11821,7 @@
  },
  "O motor \"esquece\" os endereços e enxerga só as bins e suas dimensões: pode usar qualquer quantidade das bins de qualquer endereço do escopo (ex.: de 6 bins de um endereço usar só 2 e liberar 4).": {
   "src": [
-   "templates/optimization/page.html:323"
+   "templates/optimization/page.html:330"
   ]
  },
  "O nível da estante que ficar sem nenhum endereço também é excluído.": {
@@ -11837,7 +11837,7 @@
  },
  "O objetivo de caminhada/zona de ouro usa o histórico de saídas da filial: envie a aba Pedidos (ou a coluna Saída) na etapa Posição pela saída.": {
   "src": [
-   "routers/optimization.py:819"
+   "routers/optimization.py:822"
   ]
  },
  "O otimizador testa várias demandas para achar o limite. Isso <b>pode levar de 1 a 2 minutos</b> (mais em projetos grandes ou com objetivos de custo e de capacidade). Você pode sair desta tela: a busca continua no servidor, mas o resultado só aparece se você ficar aqui.": {
@@ -11854,7 +11854,7 @@
  },
  "O pedido em 3D: hoje × proposta": {
   "src": [
-   "templates/optimization/page.html:469"
+   "templates/optimization/page.html:476"
   ]
  },
  "O peso das unidades não pode passar do peso máximo da bin.": {
@@ -11880,7 +11880,7 @@
  },
  "O plano reserva espaço para o planejado; as bins recebem só o saldo físico, o resto fica como reserva.": {
   "src": [
-   "templates/optimization/page.html:592",
+   "templates/optimization/page.html:599",
    "templates/optimization/pool.html:210"
   ]
  },
@@ -11939,7 +11939,7 @@
  },
  "O resultado é um <b>plano de movimentação</b> por SKU. Ao aplicar, os <b>saldos</b> são movidos (as bins continuam onde estão) e o endereço padrão acompanha.": {
   "src": [
-   "templates/optimization/page.html:324"
+   "templates/optimization/page.html:331"
   ],
   "html": true
  },
@@ -11972,7 +11972,7 @@
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se ele foi enviado antes desta versão, envie de novo.": {
   "src": [
-   "routers/optimization.py:1185"
+   "routers/optimization.py:1188"
   ]
  },
  "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a aba Pedidos — se ela já foi importada antes desta versão, importe de novo.": {
@@ -12038,7 +12038,7 @@
  },
  "Objetivo": {
   "src": [
-   "routers/optimization.py:1009",
+   "routers/optimization.py:1012",
    "services/field_help.py:225",
    "templates/optimization/page.html:150",
    "templates/site/project.html:419",
@@ -12194,8 +12194,8 @@
  },
  "Ocupação das bins": {
   "src": [
-   "routers/optimization.py:448",
-   "routers/optimization.py:900",
+   "routers/optimization.py:451",
+   "routers/optimization.py:903",
    "routers/site.py:180",
    "services/site_report.py:146",
    "templates/site/project.html:537",
@@ -12283,7 +12283,7 @@
  "Onde deixar itens temporariamente quando o destino ainda está ocupado (ex.: DOCA 1, PULMÃO)": {
   "src": [
    "templates/optimization/index.html:128",
-   "templates/optimization/page.html:269",
+   "templates/optimization/page.html:276",
    "templates/optimization/pool.html:113"
   ]
  },
@@ -12505,7 +12505,7 @@
  },
  "Outros níveis da estante": {
   "src": [
-   "routers/optimization.py:1017"
+   "routers/optimization.py:1020"
   ]
  },
  "Padrão da simulação de separação: velocidade média do separador. Cada tela de simulação pode mudar na hora.": {
@@ -12577,7 +12577,7 @@
  },
  "Para cada endereço, testa um tipo de bin ou a combinação de dois tipos e escolhe pela meta. Os produtos ficam no mesmo endereço; o que muda são as bins.": {
   "src": [
-   "templates/optimization/page.html:328"
+   "templates/optimization/page.html:335"
   ]
  },
  "Para estantes montadas diferente da estrutura; vazio = a altura da estrutura.": {
@@ -12622,12 +12622,12 @@
  },
  "Paradas": {
   "src": [
-   "templates/optimization/page.html:460"
+   "templates/optimization/page.html:467"
   ]
  },
  "Paradas hoje → na proposta": {
   "src": [
-   "templates/optimization/page.html:460"
+   "templates/optimization/page.html:467"
   ]
  },
  "Paradas — {esc}:": {
@@ -12661,7 +12661,7 @@
  },
  "Pares": {
   "src": [
-   "services/slotting.py:510",
+   "services/slotting.py:568",
    "templates/layout/plan.html:74"
   ]
  },
@@ -12672,7 +12672,7 @@
  },
  "Pares que mais saem juntos ({pairs})": {
   "src": [
-   "templates/optimization/page.html:502",
+   "templates/optimization/page.html:509",
    "templates/site/project.html:587"
   ],
   "html": true
@@ -12730,7 +12730,7 @@
   "src": [
    "services/field_help.py:46",
    "services/site_import.py:825",
-   "templates/optimization/page.html:459",
+   "templates/optimization/page.html:466",
    "templates/site/suggest.html:48",
    "templates/slotting/routes.html:101",
    "static/field_help.js:189"
@@ -12778,8 +12778,8 @@
  "Pedidos": {
   "src": [
    "services/site_import.py:825",
-   "services/slotting.py:514",
-   "templates/optimization/page.html:446",
+   "services/slotting.py:572",
+   "templates/optimization/page.html:453",
    "templates/slotting/routes.html:66",
    "templates/slotting/routes.html:98",
    "templates/slotting/skus.html:20"
@@ -12811,8 +12811,8 @@
  },
  "Pedidos juntos": {
   "src": [
-   "services/slotting.py:510",
-   "templates/optimization/page.html:503",
+   "services/slotting.py:568",
+   "templates/optimization/page.html:510",
    "templates/site/project.html:588"
   ]
  },
@@ -12833,7 +12833,7 @@
  },
  "Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.": {
   "src": [
-   "templates/optimization/page.html:471"
+   "templates/optimization/page.html:478"
   ],
   "html": true
  },
@@ -12886,13 +12886,13 @@
  "Permitir SKUs diferentes na mesma bin": {
   "src": [
    "templates/optimization/index.html:135",
-   "templates/optimization/page.html:277",
+   "templates/optimization/page.html:284",
    "templates/optimization/pool.html:120"
   ]
  },
  "Permitir o mesmo SKU em mais de um endereço": {
   "src": [
-   "templates/optimization/page.html:283",
+   "templates/optimization/page.html:290",
    "templates/optimization/pool.html:121"
   ]
  },
@@ -12905,7 +12905,7 @@
  },
  "Período": {
   "src": [
-   "services/slotting.py:517"
+   "services/slotting.py:575"
   ]
  },
  "Peso": {
@@ -12957,8 +12957,8 @@
  },
  "Peso máximo da bin": {
   "src": [
-   "routers/optimization.py:1014",
-   "routers/optimization.py:1030"
+   "routers/optimization.py:1017",
+   "routers/optimization.py:1033"
   ]
  },
  "Peso máximo que a bin suporta.": {
@@ -12982,8 +12982,8 @@
  "Pesquisa operacional": {
   "src": [
    "templates/optimization/page.html:170",
-   "templates/optimization/page.html:342",
-   "templates/optimization/page.html:350"
+   "templates/optimization/page.html:349",
+   "templates/optimization/page.html:357"
   ]
  },
  "Pesquisa operacional: modelo de otimização inteira resolvido para o escopo todo, critério a critério na ordem acima, partindo da solução da heurística (nunca fica pior). O resultado mostra de onde veio: ótimo comprovado, melhor no tempo ou heurística.": {
@@ -13038,7 +13038,7 @@
  },
  "Plano": {
   "src": [
-   "templates/optimization/page.html:578"
+   "templates/optimization/page.html:585"
   ]
  },
  "Plano (bins)": {
@@ -13048,13 +13048,13 @@
  },
  "Plano aplicado: {n} SKU(s) movimentado(s) em {nl} endereço(s).{extra} A análise abaixo já reflete os novos saldos.": {
   "src": [
-   "routers/optimization.py:968"
+   "routers/optimization.py:971"
   ]
  },
  "Plano de ação": {
   "src": [
    "templates/optimization/index.html:201",
-   "templates/optimization/page.html:556",
+   "templates/optimization/page.html:563",
    "templates/optimization/plan.html:2",
    "templates/optimization/pool.html:193"
   ]
@@ -13093,7 +13093,7 @@
  },
  "Plano por SKU": {
   "src": [
-   "templates/optimization/page.html:552",
+   "templates/optimization/page.html:559",
    "templates/optimization/pool.html:185"
   ]
  },
@@ -13158,7 +13158,7 @@
  "Pode usar outros níveis da mesma estante com espaço livre": {
   "src": [
    "templates/optimization/index.html:139",
-   "templates/optimization/page.html:295"
+   "templates/optimization/page.html:302"
   ]
  },
  "Política de estoque por filial": {
@@ -13253,7 +13253,7 @@
  },
  "Por dia": {
   "src": [
-   "templates/optimization/page.html:425"
+   "templates/optimization/page.html:432"
   ]
  },
  "Por endereço": {
@@ -13297,7 +13297,7 @@
  },
  "Por pedido": {
   "src": [
-   "templates/optimization/page.html:426"
+   "templates/optimization/page.html:433"
   ]
  },
  "Por peça (s)": {
@@ -13427,12 +13427,12 @@
  "Posição pela saída": {
   "src": [
    "templates/optimization/page.html:187",
-   "templates/optimization/page.html:389"
+   "templates/optimization/page.html:396"
   ]
  },
  "Posição pela saída ligada: o pool usou o motor heurístico (é nele que os SKUs mais procurados escolhem os endereços mais fáceis).": {
   "src": [
-   "routers/optimization.py:831"
+   "routers/optimization.py:834"
   ]
  },
  "Posição/endereço vazio": {
@@ -13797,17 +13797,17 @@
  },
  "Proposta (h)": {
   "src": [
-   "templates/optimization/page.html:448"
+   "templates/optimization/page.html:455"
   ]
  },
  "Proposta (km)": {
   "src": [
-   "templates/optimization/page.html:447"
+   "templates/optimization/page.html:454"
   ]
  },
  "Proposta (m)": {
   "src": [
-   "templates/optimization/page.html:461"
+   "templates/optimization/page.html:468"
   ]
  },
  "Proposta automática (ainda não salva)": {
@@ -13984,8 +13984,8 @@
  },
  "Qualquer orientação": {
   "src": [
-   "routers/optimization.py:1013",
-   "routers/optimization.py:1029",
+   "routers/optimization.py:1016",
+   "routers/optimization.py:1032",
    "templates/site/project.html:339"
   ]
  },
@@ -14032,7 +14032,7 @@
  },
  "Quantidade": {
   "src": [
-   "routers/optimization.py:927",
+   "routers/optimization.py:930",
    "routers/site.py:193",
    "routers/stock.py:120",
    "routers/stock.py:151",
@@ -14055,8 +14055,8 @@
  },
  "Quantidade considerada": {
   "src": [
-   "routers/optimization.py:1008",
-   "routers/optimization.py:1024",
+   "routers/optimization.py:1011",
+   "routers/optimization.py:1027",
    "services/field_help.py:153",
    "templates/site/project.html:291"
   ],
@@ -14329,17 +14329,17 @@
  },
  "Recurso infinito: mesmo sem limite de quantidade, o plano cabe nas bins que já existem no escopo.": {
   "src": [
-   "routers/optimization.py:467"
+   "routers/optimization.py:470"
   ]
  },
  "Recurso infinito: o plano pode usar bins que não existem hoje no escopo (providencie as bins a mais antes de executar; veja Bins por tipo).": {
   "src": [
-   "routers/optimization.py:1069"
+   "routers/optimization.py:1072"
   ]
  },
  "Recurso infinito: o plano usa bins que não existem no escopo — ": {
   "src": [
-   "routers/optimization.py:463"
+   "routers/optimization.py:466"
   ]
  },
  "Redução da demanda — {name}": {
@@ -14401,7 +14401,7 @@
  },
  "Relatório": {
   "src": [
-   "services/slotting.py:514"
+   "services/slotting.py:572"
   ]
  },
  "Relatório de SKUs": {
@@ -14542,7 +14542,7 @@
   "src": [
    "services/field_help.py:252",
    "templates/optimization/index.html:134",
-   "templates/optimization/page.html:276",
+   "templates/optimization/page.html:283",
    "templates/optimization/pool.html:119"
   ],
   "help": true
@@ -14567,8 +14567,8 @@
  },
  "Restrições": {
   "src": [
-   "templates/optimization/page.html:252",
-   "templates/optimization/page.html:253"
+   "templates/optimization/page.html:259",
+   "templates/optimization/page.html:260"
   ]
  },
  "Resultado": {
@@ -14590,7 +14590,7 @@
  },
  "Resultado salvo como": {
   "src": [
-   "templates/optimization/page.html:365"
+   "templates/optimization/page.html:372"
   ]
  },
  "Resultado {id}": {
@@ -14631,7 +14631,7 @@
   "src": [
    "services/plan_export.py:49",
    "services/site_report.py:294",
-   "services/slotting.py:513",
+   "services/slotting.py:571",
    "templates/base.html:396"
   ],
   "js": true
@@ -14682,7 +14682,7 @@
  "Rota do separador": {
   "src": [
    "services/field_help.py:226",
-   "templates/optimization/page.html:427"
+   "templates/optimization/page.html:434"
   ],
   "help": true
  },
@@ -14700,7 +14700,7 @@
  },
  "Rota otimizada": {
   "src": [
-   "templates/optimization/page.html:428",
+   "templates/optimization/page.html:435",
    "templates/slotting/routes.html:19"
   ]
  },
@@ -14712,8 +14712,8 @@
  },
  "Rotação": {
   "src": [
-   "routers/optimization.py:1013",
-   "routers/optimization.py:1029"
+   "routers/optimization.py:1016",
+   "routers/optimization.py:1032"
   ]
  },
  "Rotação / tipo único / peso": {
@@ -14742,7 +14742,7 @@
  "Rotação: qualquer orientação (6)": {
   "src": [
    "templates/optimization/index.html:132",
-   "templates/optimization/page.html:274"
+   "templates/optimization/page.html:281"
   ]
  },
  "Rotação: só girar no plano": {
@@ -14753,7 +14753,7 @@
  "Rotação: só girar no plano (altura sempre para cima)": {
   "src": [
    "templates/optimization/index.html:131",
-   "templates/optimization/page.html:273"
+   "templates/optimization/page.html:280"
   ]
  },
  "Rotação: {v} · camadas numeradas de baixo (1) para cima · arraste para girar, roda do mouse para zoom": {
@@ -14776,7 +14776,7 @@
   "src": [
    "services/field_help.py:123",
    "services/field_help.py:244",
-   "templates/optimization/page.html:246"
+   "templates/optimization/page.html:253"
   ],
   "help": true
  },
@@ -14808,7 +14808,7 @@
  },
  "SKU fora do plano neste cenário.": {
   "src": [
-   "routers/optimization.py:655"
+   "routers/optimization.py:658"
   ]
  },
  "SKU não encontrado.": {
@@ -14828,7 +14828,7 @@
  },
  "SKU ou produto": {
   "src": [
-   "routers/optimization.py:981",
+   "routers/optimization.py:984",
    "services/field_help.py:151",
    "services/field_help.py:217",
    "services/field_help.py:322",
@@ -14875,7 +14875,7 @@
  },
  "SKUs com saída": {
   "src": [
-   "services/slotting.py:515",
+   "services/slotting.py:573",
    "templates/slotting/skus.html:19"
   ]
  },
@@ -14898,8 +14898,8 @@
  },
  "SKUs na mesma bin": {
   "src": [
-   "routers/optimization.py:1014",
-   "routers/optimization.py:1030"
+   "routers/optimization.py:1017",
+   "routers/optimization.py:1033"
   ]
  },
  "SKUs não alocados": {
@@ -14972,7 +14972,7 @@
  },
  "Sai junto com (pedidos juntos · força · lift)": {
   "src": [
-   "services/slotting.py:501"
+   "services/slotting.py:559"
   ]
  },
  "Saldo": {
@@ -14985,7 +14985,7 @@
  },
  "Saldo atual": {
   "src": [
-   "routers/optimization.py:546",
+   "routers/optimization.py:549",
    "services/bin_optimizer.py:167",
    "templates/optimization/index.html:95",
    "templates/optimization/page.html:146",
@@ -15113,7 +15113,7 @@
  "Saída": {
   "src": [
    "routers/site.py:194",
-   "templates/optimization/page.html:493",
+   "templates/optimization/page.html:500",
    "templates/site/project.html:664"
   ],
   "lazy": true
@@ -15143,17 +15143,17 @@
  },
  "Saídas na zona de ouro da caminhada": {
   "src": [
-   "routers/optimization.py:355",
+   "routers/optimization.py:358",
    "routers/site.py:185",
-   "templates/optimization/page.html:403",
+   "templates/optimization/page.html:410",
    "templates/site/project.html:573"
   ]
  },
  "Saídas na zona de ouro da pega": {
   "src": [
-   "routers/optimization.py:354",
+   "routers/optimization.py:357",
    "routers/site.py:184",
-   "templates/optimization/page.html:402",
+   "templates/optimization/page.html:409",
    "templates/site/project.html:568"
   ]
  },
@@ -15241,10 +15241,10 @@
  },
  "Selecione ao menos a filial do escopo.": {
   "src": [
-   "routers/optimization.py:1041",
-   "routers/optimization.py:396",
-   "routers/optimization.py:630",
-   "routers/optimization.py:798"
+   "routers/optimization.py:1044",
+   "routers/optimization.py:399",
+   "routers/optimization.py:633",
+   "routers/optimization.py:801"
   ]
  },
  "Selecione ao menos um endereço (ou escolha \"todos os filtrados\").": {
@@ -15267,7 +15267,7 @@
  },
  "Selecione ao menos um item com sugestão.": {
   "src": [
-   "templates/optimization/page.html:689"
+   "templates/optimization/page.html:696"
   ],
   "js": true
  },
@@ -15316,13 +15316,13 @@
  },
  "Sem armazém": {
   "src": [
-   "routers/optimization.py:980"
+   "routers/optimization.py:983"
   ]
  },
  "Sem bin": {
   "src": [
    "routers/optimization.py:163",
-   "routers/optimization.py:988",
+   "routers/optimization.py:991",
    "templates/locations/list.html:47",
    "templates/optimization/index.html:79",
    "templates/optimization/page.html:99",
@@ -15442,7 +15442,7 @@
   ],
   "help": true
  },
- "Sem planta: frente de cada estante, ao longo do corredor.": {
+ "Sem planta: frente das estantes sem estrutura cadastrada (com estrutura, vale a frente dela), ao longo do corredor.": {
   "src": [
    "services/field_help.py:239"
   ],
@@ -15468,7 +15468,7 @@
  },
  "Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.": {
   "src": [
-   "routers/optimization.py:247"
+   "routers/optimization.py:250"
   ]
  },
  "Sem saldo.": {
@@ -15489,7 +15489,7 @@
  },
  "Sem tipo de material": {
   "src": [
-   "routers/optimization.py:984"
+   "routers/optimization.py:987"
   ]
  },
  "Sem vizinho de frente: o corredor fica a 1 m da face": {
@@ -15511,7 +15511,7 @@
  },
  "Sem {label} cadastrado (usou o saldo): ": {
   "src": [
-   "routers/optimization.py:610"
+   "routers/optimization.py:613"
   ]
  },
  "Sempre em 1º lugar: guardar toda a demanda (falta de bins).": {
@@ -15521,7 +15521,7 @@
  },
  "Sempre respeitada": {
   "src": [
-   "routers/optimization.py:1015"
+   "routers/optimization.py:1018"
   ]
  },
  "Sentido": {
@@ -15559,7 +15559,7 @@
  "Serpentina (rota em S)": {
   "src": [
    "services/route_sim.py:362",
-   "templates/optimization/page.html:428",
+   "templates/optimization/page.html:435",
    "templates/site/view3d.html:96"
   ],
   "lazy": true
@@ -15624,7 +15624,7 @@
  },
  "Sim": {
   "src": [
-   "routers/optimization.py:999"
+   "routers/optimization.py:1002"
   ]
  },
  "Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)": {
@@ -15681,12 +15681,12 @@
  },
  "Simulação de separação (hoje × proposta):": {
   "src": [
-   "templates/optimization/page.html:410"
+   "templates/optimization/page.html:417"
   ]
  },
  "Simulação de separação: hoje × proposta": {
   "src": [
-   "templates/optimization/page.html:420"
+   "templates/optimization/page.html:427"
   ]
  },
  "Simulação por dia": {
@@ -15724,8 +15724,8 @@
  },
  "Situação": {
   "src": [
-   "routers/optimization.py:488",
-   "routers/optimization.py:926",
+   "routers/optimization.py:491",
+   "routers/optimization.py:929",
    "routers/site.py:193",
    "services/action_plan.py:181",
    "services/field_help.py:324",
@@ -15858,7 +15858,7 @@
  },
  "Sugerido": {
   "src": [
-   "templates/optimization/page.html:493"
+   "templates/optimization/page.html:500"
   ]
  },
  "Sugerir 75–150 cm": {
@@ -15874,7 +15874,7 @@
  "Sugerir remover bins de endereços sem saldo e sem produto": {
   "src": [
    "templates/optimization/index.html:147",
-   "templates/optimization/page.html:291"
+   "templates/optimization/page.html:298"
   ]
  },
  "Sugestão": {
@@ -15896,12 +15896,12 @@
  },
  "Sugestões aplicadas em {changed} endereço(s).{extra} A análise abaixo já reflete as novas bins.": {
   "src": [
-   "routers/optimization.py:531"
+   "routers/optimization.py:534"
   ]
  },
  "Sugestões por endereço": {
   "src": [
-   "templates/optimization/page.html:552"
+   "templates/optimization/page.html:559"
   ]
  },
  "Summary": {
@@ -15929,8 +15929,8 @@
  },
  "Só girar no plano": {
   "src": [
-   "routers/optimization.py:1013",
-   "routers/optimization.py:1029"
+   "routers/optimization.py:1016",
+   "routers/optimization.py:1032"
   ]
  },
  "Só o <b>resumo</b> fica no sistema (linhas e unidades por SKU, pares que saem juntos e uma amostra de até 3.000 pedidos com as quantidades, para o simulador de trajeto); o arquivo é descartado.": {
@@ -16087,7 +16087,7 @@
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega": {
   "src": [
-   "templates/optimization/page.html:242"
+   "templates/optimization/page.html:249"
   ]
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega. No objetivo \"Menor tempo\", vira metros de caminhada pela velocidade.": {
@@ -16120,7 +16120,7 @@
  },
  "Tempo de separação <span class=\"fw-normal text-muted\">(objetivo \"Menor tempo\" e indicador do resultado)</span>": {
   "src": [
-   "templates/optimization/page.html:239"
+   "templates/optimization/page.html:246"
   ],
   "html": true
  },
@@ -16132,7 +16132,7 @@
  },
  "Tempo estimado por saída": {
   "src": [
-   "templates/optimization/page.html:401"
+   "templates/optimization/page.html:408"
   ]
  },
  "Tempo extra fora da zona de ouro": {
@@ -16169,7 +16169,7 @@
  },
  "Tempo hoje": {
   "src": [
-   "templates/optimization/page.html:462"
+   "templates/optimization/page.html:469"
   ]
  },
  "Tempo limite": {
@@ -16281,7 +16281,7 @@
  },
  "Tempo proposta": {
   "src": [
-   "templates/optimization/page.html:462"
+   "templates/optimization/page.html:469"
   ]
  },
  "Testando {v}% da demanda": {
@@ -16320,7 +16320,7 @@
    "services/field_help.py:376",
    "services/site_import.py:187",
    "services/site_import.py:809",
-   "templates/optimization/page.html:533",
+   "templates/optimization/page.html:540",
    "templates/optimization/pool.html:165",
    "templates/site/plan.html:143"
   ],
@@ -16421,7 +16421,7 @@
  },
  "Tipo de material": {
   "src": [
-   "routers/optimization.py:981",
+   "routers/optimization.py:984",
    "routers/products.py:142",
    "services/field_help.py:152",
    "services/field_help.py:218",
@@ -16507,8 +16507,8 @@
  },
  "Tipos de bin permitidos": {
   "src": [
-   "routers/optimization.py:1010",
-   "routers/optimization.py:1026",
+   "routers/optimization.py:1013",
+   "routers/optimization.py:1029",
    "services/field_help.py:168",
    "services/field_help.py:246"
   ],
@@ -16517,7 +16517,7 @@
  "Tipos de bin permitidos <span class=\"text-muted\">(nenhum marcado = todos)</span>": {
   "src": [
    "templates/optimization/index.html:114",
-   "templates/optimization/page.html:255",
+   "templates/optimization/page.html:262",
    "templates/optimization/pool.html:99",
    "templates/site/project.html:316"
   ],
@@ -16586,8 +16586,8 @@
  },
  "Todos": {
   "src": [
-   "routers/optimization.py:994",
-   "routers/optimization.py:980",
+   "routers/optimization.py:997",
+   "routers/optimization.py:983",
    "templates/layout/index.html:54",
    "templates/layout/index.html:143",
    "templates/optimization/index.html:65",
@@ -16624,7 +16624,7 @@
  },
  "Todos {n_total}": {
   "src": [
-   "templates/optimization/page.html:565"
+   "templates/optimization/page.html:572"
   ],
   "html": true
  },
@@ -16697,12 +16697,12 @@
  },
  "Trocas de endereço sugeridas (mais procurados primeiro)": {
   "src": [
-   "templates/optimization/page.html:491"
+   "templates/optimization/page.html:498"
   ]
  },
  "Trocas sugeridas": {
   "src": [
-   "templates/optimization/page.html:405"
+   "templates/optimization/page.html:412"
   ]
  },
  "Tudo": {
@@ -16766,12 +16766,12 @@
  },
  "Um tipo por SKU": {
   "src": [
-   "routers/optimization.py:1034"
+   "routers/optimization.py:1037"
   ]
  },
  "Um tipo por endereço": {
   "src": [
-   "routers/optimization.py:1015"
+   "routers/optimization.py:1018"
   ]
  },
  "Um único tipo de bin": {
@@ -16782,7 +16782,7 @@
  },
  "Um único tipo de bin por ": {
   "src": [
-   "templates/optimization/page.html:279"
+   "templates/optimization/page.html:286"
   ]
  },
  "Um único tipo de bin por SKU": {
@@ -16797,8 +16797,8 @@
  },
  "Um único tipo de bin por nível": {
   "src": [
-   "routers/optimization.py:1016",
-   "templates/optimization/page.html:296"
+   "routers/optimization.py:1019",
+   "templates/optimization/page.html:303"
   ]
  },
  "Um único tipo de bin por nível <span class=\"text-muted\">(desligado = permite tipos diferentes no mesmo nível)</span>": {
@@ -16868,7 +16868,7 @@
    "services/site_report.py:343",
    "services/site_report.py:595",
    "services/site_service.py:78",
-   "services/slotting.py:499",
+   "services/slotting.py:557",
    "templates/optimization/page.html:225",
    "templates/site/project.html:684"
   ],
@@ -16892,7 +16892,7 @@
  },
  "Unidades na bin": {
   "src": [
-   "templates/optimization/page.html:270"
+   "templates/optimization/page.html:277"
   ]
  },
  "Unit.": {
@@ -16932,7 +16932,7 @@
   "src": [
    "services/plan_export.py:129",
    "services/plan_export.py:265",
-   "templates/optimization/page.html:533",
+   "templates/optimization/page.html:540",
    "templates/optimization/plan.html:66",
    "templates/optimization/pool.html:165"
   ]
@@ -17126,7 +17126,7 @@
  },
  "Velocidade de caminhada do separador": {
   "src": [
-   "templates/optimization/page.html:240",
+   "templates/optimization/page.html:247",
    "templates/site/view3d.html:109"
   ]
  },
@@ -17181,7 +17181,7 @@
   "src": [
    "templates/layout/plan.html:25",
    "templates/locations/form.html:106",
-   "templates/optimization/page.html:423",
+   "templates/optimization/page.html:430",
    "templates/site/plan.html:27",
    "templates/site/project.html:480"
   ]
@@ -17190,7 +17190,7 @@
   "src": [
    "templates/levels/index.html:49",
    "templates/optimization/index.html:176",
-   "templates/optimization/page.html:530"
+   "templates/optimization/page.html:537"
   ]
  },
  "Ver saldos por endereço →": {
@@ -17334,8 +17334,8 @@
  },
  "Volume de bins": {
   "src": [
-   "routers/optimization.py:446",
-   "routers/optimization.py:898",
+   "routers/optimization.py:449",
+   "routers/optimization.py:901",
    "templates/optimization/index.html:181"
   ]
  },
@@ -17616,7 +17616,7 @@
  },
  "Zona de ouro da caminhada": {
   "src": [
-   "services/slotting.py:500",
+   "services/slotting.py:558",
    "templates/site/project.html:688"
   ]
  },
@@ -17639,7 +17639,7 @@
  },
  "Zona de ouro da pega": {
   "src": [
-   "services/slotting.py:500"
+   "services/slotting.py:558"
   ]
  },
  "Zona de ouro da pega (altura)": {
@@ -17655,7 +17655,12 @@
  },
  "Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada": {
   "src": [
-   "templates/optimization/page.html:237"
+   "templates/optimization/page.html:242"
+  ]
+ },
+ "Zona de ouro da pega: os {n} endereços do escopo usam a da estrutura da estante.": {
+  "src": [
+   "templates/optimization/page.html:240"
   ]
  },
  "Zona de ouro fim (cm)": {
@@ -17902,7 +17907,7 @@
  },
  "altura ergonômica · tem ": {
   "src": [
-   "templates/optimization/page.html:402"
+   "templates/optimization/page.html:409"
   ]
  },
  "altura ergonômica · tem {golden_positions}% das bins": {
@@ -17971,7 +17976,7 @@
  },
  "armazém {warehouse_id}": {
   "src": [
-   "routers/optimization.py:360"
+   "routers/optimization.py:363"
   ]
  },
  "armazéns": {
@@ -18000,7 +18005,7 @@
  },
  "até ": {
   "src": [
-   "templates/optimization/page.html:403"
+   "templates/optimization/page.html:410"
   ]
  },
  "até 95%": {
@@ -18054,7 +18059,7 @@
  },
  "base {qty}": {
   "src": [
-   "templates/optimization/page.html:592",
+   "templates/optimization/page.html:599",
    "templates/optimization/pool.html:210"
   ],
   "html": true
@@ -18084,12 +18089,12 @@
  },
  "bins dos endereços do escopo": {
   "src": [
-   "routers/optimization.py:445"
+   "routers/optimization.py:448"
   ]
  },
  "bins novas necessárias": {
   "src": [
-   "routers/optimization.py:897"
+   "routers/optimization.py:900"
   ]
  },
  "cabe pelas": {
@@ -18134,7 +18139,7 @@
  },
  "caminhada ÷ ": {
   "src": [
-   "templates/optimization/page.html:401"
+   "templates/optimization/page.html:408"
   ]
  },
  "capacidades": {
@@ -18150,7 +18155,7 @@
  },
  "coluna Saída ({skus} SKUs)": {
   "src": [
-   "services/slotting.py:426"
+   "services/slotting.py:484"
   ]
  },
  "coluna Saída da aba SKUs": {
@@ -18172,7 +18177,7 @@
  },
  "com as trocas": {
   "src": [
-   "templates/optimization/page.html:503"
+   "templates/optimization/page.html:510"
   ]
  },
  "com movimentação": {
@@ -18193,7 +18198,7 @@
  },
  "comparar com outros": {
   "src": [
-   "templates/optimization/page.html:366"
+   "templates/optimization/page.html:373"
   ]
  },
  "compartimento {label} · {code} nº {n}, posição {slot} de {k} (grade {grid})": {
@@ -18259,7 +18264,7 @@
  },
  "de {bins} bins no pool": {
   "src": [
-   "routers/optimization.py:897"
+   "routers/optimization.py:900"
   ]
  },
  "depois": {
@@ -18296,7 +18301,7 @@
  },
  "distância entre os pares mais frequentes": {
   "src": [
-   "templates/optimization/page.html:404"
+   "templates/optimization/page.html:411"
   ]
  },
  "divide a bin com ": {
@@ -18322,7 +18327,7 @@
  },
  "e {stocked} com saldo de outros itens": {
   "src": [
-   "templates/optimization/page.html:516"
+   "templates/optimization/page.html:523"
   ],
   "html": true
  },
@@ -18356,7 +18361,7 @@
  },
  "em que fração dos pedidos do menos vendido do par os dois saem juntos": {
   "src": [
-   "services/slotting.py:518"
+   "services/slotting.py:576"
   ]
  },
  "em vez de {factor}% — todos os SKUs reduzidos na mesma proporção.": {
@@ -18396,13 +18401,13 @@
  },
  "endereço": {
   "src": [
-   "templates/optimization/page.html:279"
+   "templates/optimization/page.html:286"
   ]
  },
  "endereço {address}": {
   "src": [
    "routers/locations.py:661",
-   "routers/optimization.py:683"
+   "routers/optimization.py:686"
   ]
  },
  "endereços": {
@@ -18503,7 +18508,7 @@
  },
  "ex.: 2,3": {
   "src": [
-   "templates/optimization/page.html:238"
+   "templates/optimization/page.html:243"
   ]
  },
  "ex.: 45; 40; 40; 35 — vazio = o vão útil em todos os níveis": {
@@ -18546,7 +18551,7 @@
  },
  "fica onde está": {
   "src": [
-   "templates/optimization/page.html:604",
+   "templates/optimization/page.html:611",
    "templates/optimization/pool.html:228"
   ]
  },
@@ -18595,7 +18600,7 @@
   "src": [
    "services/action_plan.py:315",
    "services/action_plan.py:323",
-   "templates/optimization/page.html:604",
+   "templates/optimization/page.html:611",
    "templates/optimization/pool.html:228"
   ]
  },
@@ -18658,7 +18663,7 @@
  },
  "heurística (escolhida)": {
   "src": [
-   "routers/optimization.py:499"
+   "routers/optimization.py:502"
   ]
  },
  "heurístico": {
@@ -18702,7 +18707,7 @@
  },
  "hoje × {v}": {
   "src": [
-   "templates/optimization/page.html:529"
+   "templates/optimization/page.html:536"
   ],
   "html": true
  },
@@ -18803,7 +18808,7 @@
  },
  "letras por rua": {
   "src": [
-   "routers/optimization.py:1224"
+   "routers/optimization.py:1227"
   ]
  },
  "limite de bins": {
@@ -18909,7 +18914,7 @@
  "manter": {
   "src": [
    "templates/optimization/index.html:227",
-   "templates/optimization/page.html:628"
+   "templates/optimization/page.html:635"
   ]
  },
  "marca as linhas para a ação em massa": {
@@ -18926,12 +18931,12 @@
  },
  "max level": {
   "src": [
-   "routers/optimization.py:609"
+   "routers/optimization.py:612"
   ]
  },
  "melhor encontrado": {
   "src": [
-   "templates/optimization/page.html:357"
+   "templates/optimization/page.html:364"
   ]
  },
  "melhor solução no tempo limite (não comprovada ótima)": {
@@ -18953,7 +18958,7 @@
  },
  "min level": {
   "src": [
-   "routers/optimization.py:609"
+   "routers/optimization.py:612"
   ]
  },
  "modelo": {
@@ -19021,7 +19026,7 @@
  },
  "necessárias": {
   "src": [
-   "templates/optimization/page.html:529"
+   "templates/optimization/page.html:536"
   ]
  },
  "negativo vira positivo": {
@@ -19047,8 +19052,8 @@
  },
  "no plano": {
   "src": [
-   "templates/optimization/page.html:503",
-   "templates/optimization/page.html:529"
+   "templates/optimization/page.html:510",
+   "templates/optimization/page.html:536"
   ]
  },
  "nos endereços selecionados": {
@@ -19243,7 +19248,7 @@
  },
  "o tempo acabou nesta etapa": {
   "src": [
-   "templates/optimization/page.html:357",
+   "templates/optimization/page.html:364",
    "templates/site/project.html:649"
   ]
  },
@@ -19355,7 +19360,7 @@
  "padrão": {
   "src": [
    "routers/locations.py:227",
-   "routers/optimization.py:364",
+   "routers/optimization.py:367",
    "templates/layout/index.html:487",
    "templates/site/project.html:129",
    "templates/site/project.html:212"
@@ -19431,7 +19436,7 @@
  },
  "pesquisa operacional": {
   "src": [
-   "routers/optimization.py:501",
+   "routers/optimization.py:504",
    "static/field_help.js:260"
   ],
   "js": true
@@ -19475,12 +19480,12 @@
  },
  "ponderada pela popularidade; ao acaso: ": {
   "src": [
-   "templates/optimization/page.html:400"
+   "templates/optimization/page.html:407"
   ]
  },
  "ponta do corredor {ref}": {
   "src": [
-   "routers/optimization.py:1223"
+   "routers/optimization.py:1226"
   ]
  },
  "pool de bins": {
@@ -19496,7 +19501,7 @@
  "por endereço": {
   "src": [
    "templates/optimization/page.html:4",
-   "templates/optimization/page.html:287"
+   "templates/optimization/page.html:294"
   ]
  },
  "porta-paletes": {
@@ -19580,7 +19585,7 @@
  },
  "recurso infinito: só simulação": {
   "src": [
-   "routers/optimization.py:905"
+   "routers/optimization.py:908"
   ]
  },
  "referência": {
@@ -19591,7 +19596,7 @@
  },
  "referência da planta ({label})": {
   "src": [
-   "services/slotting.py:328"
+   "services/slotting.py:386"
   ]
  },
  "referência: {label}": {
@@ -19602,7 +19607,7 @@
  },
  "referência: {layout} · {summary}": {
   "src": [
-   "templates/optimization/page.html:390"
+   "templates/optimization/page.html:397"
   ],
   "html": true
  },
@@ -19693,7 +19698,7 @@
  },
  "saldo hoje {cur}": {
   "src": [
-   "templates/optimization/page.html:592",
+   "templates/optimization/page.html:599",
    "templates/optimization/pool.html:210"
   ],
   "html": true
@@ -19734,7 +19739,7 @@
  },
  "sem bin: {shortage} un.": {
   "src": [
-   "templates/optimization/page.html:591"
+   "templates/optimization/page.html:598"
   ],
   "html": true
  },
@@ -19797,7 +19802,7 @@
  },
  "sem saldo": {
   "src": [
-   "templates/optimization/page.html:593",
+   "templates/optimization/page.html:600",
    "templates/optimization/pool.html:212"
   ]
  },
@@ -19813,7 +19818,7 @@
  },
  "sem tempo": {
   "src": [
-   "templates/optimization/page.html:357"
+   "templates/optimization/page.html:364"
   ]
  },
  "serpentina": {
@@ -20023,7 +20028,7 @@
  },
  "todas as filiais": {
   "src": [
-   "routers/optimization.py:364"
+   "routers/optimization.py:367"
   ]
  },
  "todos os caminhos": {
@@ -20041,7 +20046,7 @@
  },
  "trocas de bins": {
   "src": [
-   "routers/optimization.py:451"
+   "routers/optimization.py:454"
   ]
  },
  "tudo vale para esta filial": {
@@ -20069,7 +20074,7 @@
  },
  "uma letra por corredor": {
   "src": [
-   "routers/optimization.py:1225"
+   "routers/optimization.py:1228"
   ]
  },
  "uma letra por corredor (ímpares/pares)": {
@@ -20123,7 +20128,7 @@
  },
  "valor ótimo comprovado nesta etapa": {
   "src": [
-   "templates/optimization/page.html:357"
+   "templates/optimization/page.html:364"
   ]
  },
  "vazia": {
@@ -20158,8 +20163,8 @@
  },
  "volume dos produtos ÷ volume das bins": {
   "src": [
-   "routers/optimization.py:449",
-   "routers/optimization.py:901"
+   "routers/optimization.py:452",
+   "routers/optimization.py:904"
   ]
  },
  "volume dos produtos ÷ volume útil das bins": {
@@ -20360,7 +20365,7 @@
  },
  "{displaced} outro(s) item(ns) perderam a bin para os itens filtrados e foram realocados (situação \"Desalojado e realocado\").": {
   "src": [
-   "templates/optimization/page.html:514"
+   "templates/optimization/page.html:521"
   ],
   "html": true
  },
@@ -20564,7 +20569,7 @@
  "{label}: número inválido.": {
   "src": [
    "routers/optimization.py:87",
-   "routers/optimization.py:729",
+   "routers/optimization.py:732",
    "services/site_service.py:86"
   ]
  },
@@ -20691,7 +20696,7 @@
  },
  "{n_pairs} troca(s)": {
   "src": [
-   "templates/optimization/page.html:406"
+   "templates/optimization/page.html:413"
   ],
   "html": true
  },
@@ -20703,7 +20708,7 @@
  },
  "{n_shown} de {n_total}": {
   "src": [
-   "templates/optimization/page.html:553"
+   "templates/optimization/page.html:560"
   ],
   "html": true
  },
@@ -20868,7 +20873,7 @@
  },
  "{n} pedidos do histórico, com os SKUs onde estão hoje e onde ficam na proposta do solver": {
   "src": [
-   "templates/optimization/page.html:421"
+   "templates/optimization/page.html:428"
   ],
   "html": true
  },
@@ -21025,7 +21030,7 @@
  },
  "{swaps} SKUs mudam · entre {mono} endereços com 1 SKU e as mesmas bins de outros ({groups} grupos) · só quando o mais procurado ganha {v} m ou mais": {
   "src": [
-   "templates/optimization/page.html:406"
+   "templates/optimization/page.html:413"
   ],
   "html": true
  },
@@ -21034,6 +21039,11 @@
    "templates/imports/mapping_master.html:76"
   ],
   "html": true
+ },
+ "{s} endereços pela estrutura · {f} dependem deste campo": {
+  "src": [
+   "templates/optimization/page.html:244"
+  ]
  },
  "{tag} · reservada ({n} un.)": {
   "src": [
@@ -21337,7 +21347,7 @@
  },
  "· pool {index}": {
   "src": [
-   "templates/optimization/page.html:344"
+   "templates/optimization/page.html:351"
   ],
   "html": true
  },
@@ -21351,7 +21361,7 @@
   "src": [
    "templates/levels/index.html:165",
    "templates/optimization/index.html:198",
-   "templates/optimization/page.html:553"
+   "templates/optimization/page.html:560"
   ],
   "html": true
  },
@@ -21411,8 +21421,8 @@
  "ÁREA DE ESPERA": {
   "src": [
    "routers/optimization.py:40",
-   "routers/optimization.py:540",
-   "routers/optimization.py:1003",
+   "routers/optimization.py:543",
+   "routers/optimization.py:1006",
    "services/action_plan.py:117",
    "services/action_plan.py:209",
    "services/action_plan.py:265"
@@ -21444,8 +21454,8 @@
  },
  "Área de espera": {
   "src": [
-   "routers/optimization.py:1019",
-   "routers/optimization.py:1035",
+   "routers/optimization.py:1022",
+   "routers/optimization.py:1038",
    "services/field_help.py:249"
   ],
   "help": true
@@ -21453,7 +21463,7 @@
  "Área de espera (para trocas)": {
   "src": [
    "templates/optimization/index.html:127",
-   "templates/optimization/page.html:268",
+   "templates/optimization/page.html:275",
    "templates/optimization/pool.html:112"
   ]
  },
@@ -21542,7 +21552,7 @@
  },
  "ótimo": {
   "src": [
-   "templates/optimization/page.html:357"
+   "templates/optimization/page.html:364"
   ]
  },
  "ótimo comprovado": {
@@ -21553,13 +21563,13 @@
  "Δ bins": {
   "src": [
    "templates/optimization/index.html:215",
-   "templates/optimization/page.html:580"
+   "templates/optimization/page.html:587"
   ]
  },
  "Δ largura": {
   "src": [
    "templates/optimization/index.html:215",
-   "templates/optimization/page.html:580"
+   "templates/optimization/page.html:587"
   ]
  },
  "Δ largura (cm)": {
@@ -21570,12 +21580,12 @@
  "Δ volume": {
   "src": [
    "templates/optimization/index.html:215",
-   "templates/optimization/page.html:580"
+   "templates/optimization/page.html:587"
   ]
  },
  "— (dimensionamento)": {
   "src": [
-   "templates/optimization/page.html:604",
+   "templates/optimization/page.html:611",
    "templates/optimization/pool.html:228"
   ]
  },

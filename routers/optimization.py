@@ -220,6 +220,9 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
                       for lay in db.scalars(select(BranchLayout).where(BranchLayout.branch_id == bid))]
     wh = filters.get("warehouse_id") or ""
     out["layout_link"] = f"/layout/plan?branch_id={bid}&warehouse_id={wh if wh else ''}"
+    from services.slotting import gold_sources
+
+    out["gold"] = gold_sources(db, location_ids if location_ids is not None else _scope_ids(db, filters))
     spec = slot_spec(raw)
     if not spec or h is None or location_ids is None:
         return out

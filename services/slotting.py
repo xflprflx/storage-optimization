@@ -229,6 +229,35 @@ def slot_spec(raw: dict) -> Optional[dict]:
             "walk_golden_m": _num(raw.get("slot_walk_m"), 0.0) or None}
 
 
+def gold_sources(db, location_ids: list[int]) -> dict:
+    """De onde vem a zona de ouro da PEGA dos endereços do escopo: "structure" = estante com estrutura que tem zona
+    de ouro cadastrada; "field" = sem ela, dependem do campo "Níveis de ouro (pega)". Endereços sem estante ou sem
+    número de nível não entram."""
+    from sqlalchemy import select
+
+    from models import BayStructure, StorageLocation, StructureType
+    from services.app_settings import canon
+
+    locs = []
+    for i in range(0, len(location_ids), 900):
+        locs += list(db.execute(select(StorageLocation.branch_id, StorageLocation.warehouse_id, StorageLocation.aisle,
+                                       StorageLocation.bay, StorageLocation.level)
+                                .where(StorageLocation.id.in_(location_ids[i:i + 900]))))
+    gold = set()
+    for bs, st in db.execute(select(BayStructure, StructureType)
+                             .join(StructureType, StructureType.id == BayStructure.structure_type_id)
+                             .where(BayStructure.branch_id.in_({b for b, *_x in locs}))):
+        if st.golden_from is not None and st.golden_to is not None:
+            gold.add((bs.branch_id, bs.warehouse_id, canon(bs.aisle), canon(bs.bay)))
+    out = {"structure": 0, "field": 0}
+    for br, wh, a, bay, lvl in locs:
+        if not (bay or "").strip() or not re.sub(r"\D", "", lvl or ""):
+            continue
+        a, bay = canon(a or ""), canon(bay or "")
+        out["structure" if (br, wh, a, bay) in gold or (br, None, a, bay) in gold else "field"] += 1
+    return out
+
+
 def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo], str]:
     """Facilidade estimada de cada endereço (location_id -> Geo) e o corredor de referência usado."""
     from sqlalchemy import select
@@ -278,16 +307,46 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
     for sc in layouts:
         gold_real.update(address_golden(db, sc[0], sc[1], [i for i, b, w, *_x in locs if (b, w) == sc]))
     used_layout = None
+
+    def _slot(a: str, bay: str) -> tuple[int, int]:
+        """(lado, posição) da estante no corredor, contada da ponta da expedição (sem a serpentina)."""
+        digits = re.sub(r"\D", "", bay)
+        if spec.get("rows"):  # letra por rua: estantes numeradas em sequência ao longo da rua
+            return 0, int(digits) if digits else rank[a].get(bay, 0) + 1
+        if digits:  # letra por corredor: ímpares de um lado, pares do outro
+            return int(digits) % 2, (int(digits) + 1) // 2
+        k = rank[a].get(bay, 0)
+        return k % 2, k // 2 + 1
+
+    # frente real de cada estante (largura da estrutura); sem estrutura, o campo "Frente da estante"
+    fronts: dict[tuple, dict[int, float]] = {}
+    for _i, br, wh, a, bay, _l in locs:
+        a, bay = canon(a or ""), canon(bay or "")
+        st = st_of.get((br, wh, a, bay)) or st_of.get((br, None, a, bay))
+        side, p = _slot(a, bay)
+        if st is not None and st.width and float(st.width) > 0:
+            fronts.setdefault((br, wh, a, side), {})[p] = float(st.width) / 100.0
+    starts: dict[tuple, list[float]] = {}
+
+    def _start(key: tuple, p: int) -> float:
+        """Metros do começo do corredor até o início da posição p (soma das frentes anteriores)."""
+        acc = starts.setdefault(key, [0.0])
+        w = fronts.get(key, {})
+        while len(acc) < p:
+            acc.append(acc[-1] + w.get(len(acc), spec["bay_m"]))
+        return acc[p - 1]
+
     out = {}
     for lid, br, wh, a, bay, lvl in locs:
         a, bay = canon(a or ""), canon(bay or "")
-        digits = re.sub(r"\D", "", bay)
-        if spec.get("rows"):  # letra por rua: estantes numeradas em sequência ao longo da rua
-            pos = int(digits) if digits else rank[a].get(bay, 0) + 1
-            if spec.get("serpentine") and aisles.index(a) % 2 == 1:  # começa na ponta oposta do corredor
-                pos = max(1, max_pos.get(a, pos) - pos + 1)
-        else:  # letra por corredor: ímpares de um lado, pares do outro
-            pos = (int(digits) + 1) // 2 if digits else rank[a].get(bay, 0) // 2 + 1
+        side, raw_pos = _slot(a, bay)
+        raw_pos = max(1, raw_pos)
+        key = (br, wh, a, side)
+        width = fronts.get(key, {}).get(raw_pos, spec["bay_m"])
+        x = _start(key, raw_pos) + width / 2
+        if spec.get("rows") and spec.get("serpentine") and aisles.index(a) % 2 == 1:  # começa na ponta oposta
+            last = max(raw_pos, max_pos.get(a, raw_pos))
+            x = _start(key, last + 1) - x
         n = int(re.sub(r"\D", "", lvl or "") or 0)
         st = st_of.get((br, wh, a, bay)) or st_of.get((br, None, a, bay))
         golden = None
@@ -313,7 +372,6 @@ def address_geo(db, location_ids: list[int], spec: dict) -> tuple[dict[int, Geo]
         else:
             r0 = ridx
         y = abs(ai - r0) * spec["aisle_m"]
-        x = max(0, pos - 1) * spec["bay_m"] + spec["bay_m"] / 2
         walk = x + y
         out[lid] = Geo(ai, x, y, golden, walk, walk + (spec["golden_m"] if golden is False else 0.0))
     # zona de ouro da caminhada: até X m (informado) ou os 20% de endereços mais perto da referência

@@ -236,7 +236,7 @@ R(POPT, "slot", "Considerar a saída dos SKUs", "Liga a posição pela saída: c
 R(POPT, "slot_metric", "Medida da popularidade", "Linhas de pedido (quantas vezes o item é pego) ou unidades que saem.", "slot:metric")
 R(POPT, "slot_ref", "Corredor mais perto da expedição", "Sem planta desenhada: o corredor de onde a caminhada é contada.", "slot:ref")
 R(POPT, "slot_aisle_m", "Entre corredores (m)", "Sem planta: distância de um corredor para o seguinte.", "slot:aisle_m")
-R(POPT, "slot_bay_m", "Frente da estante (m)", "Sem planta: frente de cada estante, ao longo do corredor.", "slot:bay_m")
+R(POPT, "slot_bay_m", "Frente da estante (m)", "Sem planta: frente das estantes sem estrutura cadastrada (com estrutura, vale a frente dela), ao longo do corredor.", "slot:bay_m")
 R(POPT, "slot_walk_m", "Zona de ouro da caminhada (m)", "Endereços até esta caminhada da referência; vazio = os 20% mais perto.", "slot:walk")
 R(POPT, "slot_golden_m", "Pega fora do ouro vale (m)", "Quantos metros de caminhada um nível fora da zona de ouro da pega \"custa\".", "slot:goldm")
 R(POPT, "slot_golden_levels", "Níveis de ouro (pega)", "Para estantes sem zona de ouro na estrutura: os níveis bons de pegar, ex.: 2,3.", "slot:levels")

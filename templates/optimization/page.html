@@ -227,15 +227,22 @@
             <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="{{ _("o primeiro") }}" maxlength="20" title="{{ _("Corredor (ou rua) mais perto da expedição") }}"></div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Distância de um corredor para o seguinte") }}">{{ _("Entre corredores (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_aisle_m" data-u="m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
-          <div class="col-6"><label class="form-label mb-0" title="{{ _("Frente de cada estante, ao longo do corredor") }}">{{ _("Frente da estante (m)") }}</label>
+          <div class="col-6"><label class="form-label mb-0" title="{{ _("Frente das estantes sem estrutura cadastrada; com estrutura, vale a frente dela") }}">{{ _("Frente da estante (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_bay_m" data-u="m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
           <div class="col-12 fw-semibold mt-1">{{ _("Duas zonas de ouro: da pega (altura) e da caminhada (perto da expedição)") }}</div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Endereços até esta caminhada estimada da referência; vazio = os 20% mais perto") }}">{{ _("Caminhada até (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ params.slot_walk_m }}" inputmode="decimal" placeholder="{{ _("20% mais perto") }}"></div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Metros de caminhada que um nível fora da zona de ouro da pega \"custa\"") }}">{{ _("Pega fora vale (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_golden_m" value="{{ params.slot_golden_m }}" inputmode="decimal"></div>
+          {% set gs = slot_info.get('gold') %}
+          {% if gs and gs.structure and not gs.field %}
+          <input type="hidden" name="slot_golden_levels" value="{{ params.slot_golden_levels|e }}">
+          <div class="col-12 text-muted" id="goldSrc">{{ _("Zona de ouro da pega: os {n} endereços do escopo usam a da estrutura da estante.", n=gs.structure) }}</div>
+          {% else %}
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada") }}">{{ _("Níveis de ouro (pega)") }}</label>
-            <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="{{ _("ex.: 2,3") }}"></div>
+            <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels|e }}" placeholder="{{ _("ex.: 2,3") }}">
+            {% if gs and (gs.structure or gs.field) %}<div class="form-text" id="goldSrc">{{ _("{s} endereços pela estrutura · {f} dependem deste campo", s=gs.structure, f=gs.field) }}</div>{% endif %}</div>
+          {% endif %}
           <div class="col-12 fw-semibold mt-1">{{ _h("Tempo de separação <span class=\"fw-normal text-muted\">(objetivo \"Menor tempo\" e indicador do resultado)</span>") }}</div>
           <div class="col-6"><label class="form-label mb-0" for="slot_v" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_v" data-u="m/s" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
@@ -245,7 +252,7 @@
         {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
         {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}
         {{ switch('slot_aff', _('Deixar perto os itens que saem juntos')) }}
-        <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + posição da estante no corredor (01/02 na ponta da expedição) × frente. A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.") }}</div>
+        <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.") }}</div>
       </div>
     </div>
 

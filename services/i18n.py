@@ -322,6 +322,8 @@ def fmt_datetime(dt: Any, time: bool = True, year: bool = True) -> str:
     """Data (e hora) no formato do idioma: 31/12/2025 14:30, 12/31/2025 14:30, 31.12.2025 14:30, 2025-12-31 14:30."""
     if dt is None or dt == "":
         return ""
+    if not hasattr(dt, "strftime"):
+        return str(dt)
     fmt = (_DATE if year else _DAY_MONTH).get(get_lang(), _DATE[DEFAULT_LANG])
     return dt.strftime(fmt + (" %H:%M" if time else ""))
 
@@ -521,6 +523,62 @@ _HTML_ATTR = re.compile(r'\b(title|placeholder|aria-label|data-bs-title|data-bs-
 _UNIT_ONLY = re.compile(rf"^(\s*)({_UNIT_ALT})(\s*)$")
 
 
+_TABLE = re.compile(r"(?is)<table\b.*?</table>")
+_TR = re.compile(r"(?is)<tr\b.*?</tr>")
+_CELL = re.compile(r"(?is)(<(t[hd])\b([^>]*)>)(.*?)(</\2>)")
+
+
+def _tables(html: str) -> str:
+    """Tabelas com a unidade só no título da coluna ("Lista (m)"): os números das células dessa coluna também são
+    convertidos (o título vira "(ft)" em units_in_text)."""
+    head_re = re.compile(rf"\(({_LABEL_ALT})(?=[\s,;)])")
+    num = _num_pattern(get_lang())
+    only_num = re.compile(rf"^(\s*(?:<[^>]+>\s*)*)({num})((?:\s*<[^>]+>)*\s*)$", re.S)
+
+    def table(m: re.Match) -> str:
+        t = m.group(0)
+        if "(" not in t:
+            return t
+        units: dict[int, str] = {}
+
+        def row(rm: re.Match) -> str:
+            r = rm.group(0)
+            cells = list(_CELL.finditer(r))
+            if not cells:
+                return r
+            if not units and any(c.group(2).lower() == "th" for c in cells):
+                col = 0
+                for c in cells:
+                    span = re.search(r'colspan="?(\d+)', c.group(3))
+                    hm = head_re.search(re.sub(r"<[^>]+>", "", c.group(4)))
+                    if hm:
+                        units[col] = hm.group(1)
+                    col += int(span.group(1)) if span else 1
+                if not units:
+                    units[-1] = ""  # tabela sem colunas com unidade: não procura mais
+                return r
+            if not any(k >= 0 for k in units):
+                return r
+            out, pos, col = [], 0, 0
+            for c in cells:
+                span = re.search(r'colspan="?(\d+)', c.group(3))
+                inner = c.group(4)
+                unit = units.get(col)
+                if unit and c.group(2).lower() == "td":
+                    nm = only_num.match(inner)
+                    if nm:
+                        inner = nm.group(1) + _imperial_num(nm.group(2), unit) + nm.group(3)
+                out.append(r[pos:c.start()] + c.group(1) + inner + c.group(5))
+                pos = c.end()
+                col += int(span.group(1)) if span else 1
+            out.append(r[pos:])
+            return "".join(out)
+
+        return _TR.sub(row, t)
+
+    return _TABLE.sub(table, html)
+
+
 def units_in_html(html: str) -> str:
     """Página inteira no imperial: medidas nos textos e em title/placeholder (fora de script/style/textarea).
     Os valores dos campos <input> são convertidos no navegador (static/units.js)."""
@@ -556,10 +614,10 @@ def units_in_html(html: str) -> str:
 
     parts, pos = [], 0
     for m in _HTML_SKIP.finditer(html):
-        parts.append(text_part(split_re.sub(split_fix, html[pos:m.start()])))
+        parts.append(text_part(split_re.sub(split_fix, _tables(html[pos:m.start()]))))
         parts.append(m.group(0))
         pos = m.end()
-    parts.append(text_part(split_re.sub(split_fix, html[pos:])))
+    parts.append(text_part(split_re.sub(split_fix, _tables(html[pos:]))))
     return "".join(parts)
 
 

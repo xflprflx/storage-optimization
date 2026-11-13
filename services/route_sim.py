@@ -223,6 +223,8 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         dl, do = _tour(by_list, start, d) / unit, _tour(opt, start, d) / unit
         row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "out_gold": out_gold,
                "out_units": out_units, "list_m": dl, "opt_m": do}
+        if len(entry) > 3 and entry[3]:
+            row["date"] = entry[3]
         if s_route is not None:
             row["s_m"] = _tour(s_route, start, d) / unit
         rows.append(row)
@@ -322,7 +324,36 @@ def add_times(sim: dict, tp: dict) -> dict:
     out["out_gold_avg"] = sum(r.get("out_gold", 0) for r in rows) / len(rows)
     out["out_units_avg"] = sum(r.get("out_units", 0) for r in rows) / len(rows)
     sim["times"] = out
+    sim["days"] = by_day(sim)
     return sim
+
+
+def day_rows(rows: list, day: Optional[str]) -> list:
+    """Só os pedidos do dia escolhido (todos, sem dia)."""
+    return [r for r in rows if r.get("date") == day] if day else rows
+
+
+def by_day(sim: dict) -> list[dict]:
+    """Totais por dia (pedidos com data): pedidos, linhas, peças, paradas, metros e horas de cada rota.
+    Use depois de add_times (para as horas). Lista do dia mais recente para o mais antigo."""
+    days: dict[str, dict] = {}
+    for r in sim.get("rows") or []:
+        if not r.get("date"):
+            continue
+        e = days.setdefault(r["date"], {"date": r["date"], "orders": 0, "lines": 0, "units": 0.0, "stops": 0})
+        e["orders"] += 1
+        e["lines"] += r["lines"]
+        e["units"] += r.get("units", r["lines"])
+        e["stops"] += r["stops"]
+        for k in ("list", "s", "opt"):
+            if f"{k}_m" in r:
+                e[f"{k}_m"] = e.get(f"{k}_m", 0.0) + r[f"{k}_m"]
+            if f"{k}_t" in r:
+                e[f"{k}_h"] = e.get(f"{k}_h", 0.0) + r[f"{k}_t"] / 3600
+    out = sorted(days.values(), key=lambda e: e["date"], reverse=True)
+    for e in out:
+        e["gain_pct"] = (1 - e["opt_m"] / e["list_m"]) * 100 if e.get("list_m") else None
+    return out
 
 
 ROUTE_KINDS = (("list", N_("Lista de separação"), "#d62728"), ("s", N_("Serpentina (rota em S)"), "#2f6db5"),
@@ -338,7 +369,8 @@ def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Call
             "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"],
                                                                                                 "has_qty": sim.get("has_qty", False)},
             "orders": [{"order": r["order"], "lines": r["lines"], "stops": r["stops"], "list_m": r2(r["list_m"]),
-                        "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"])} for r in rows]}
+                        "s_m": r2(r.get("s_m")), "opt_m": r2(r["opt_m"]), "date": r.get("date", "")} for r in rows],
+            "days": [{k: (r2(v) if isinstance(v, float) else v) for k, v in e.items()} for e in by_day(sim)]}
 
 
 def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: str, d: Callable = dist) -> dict:
@@ -384,4 +416,41 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
     return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
             "out_gold": row["out_gold"], "has_gold": any(n.gold is not None for ns in nodes_of.values() for n in ns),
+            "ref": ref, "routes": routes}
+
+
+def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, d: Callable = dist) -> dict:
+    """Um dia inteiro para a caminhada em 3D: os pedidos do dia, um depois do outro (cada um sai da referência e
+    volta a ela), no mesmo formato de order_payload. Cada rota traz também `ord` (índice do pedido de cada parada) e
+    `starts` (índice em pts onde começa cada pedido); `orders` lista os pedidos na ordem feita."""
+    entries = [o for o in sample if len(o) > 3 and o[3] == day]
+    if not entries:
+        return {"error": _("Nenhum pedido do dia {day} na amostra.", day=day)}
+    done, routes, tot = [], {}, {"lines": 0, "stops": 0, "units": 0.0, "out_gold": 0}
+    has_qty = has_gold = False
+    for e in sorted(entries, key=lambda o: o[0]):
+        p = order_payload([e], nodes_of, start, ref, e[0], d)
+        if p.get("error"):
+            continue
+        oi = len(done)
+        done.append({"order": e[0], "lines": p["lines"], "stops": p["stops"], "units": p["units"]})
+        for k in tot:
+            tot[k] += p.get(k) or 0
+        has_qty, has_gold = has_qty or p["has_qty"], has_gold or p["has_gold"]
+        for kind, r in p["routes"].items():
+            m = routes.setdefault(kind, {"name": r["name"], "color": r["color"], "pts": [], "stops": [], "keys": [],
+                                         "groups": [], "skus": [], "qty": [], "out": [], "outq": [], "m": 0.0,
+                                         "ord": [], "starts": []})
+            base = len(m["pts"])
+            m["starts"].append(base)
+            m["pts"] += r["pts"]
+            m["stops"] += [base + i for i in r["stops"]]
+            for f in ("keys", "groups", "skus", "qty", "out", "outq"):
+                m[f] += r[f]
+            m["ord"] += [oi] * len(r["keys"])
+            m["m"] = round(m["m"] + r["m"], 2)
+    if not done:
+        return {"error": _("Os SKUs dos pedidos do dia {day} não estão na planta.", day=day)}
+    return {"day": day, "order": day, "orders": done, "lines": tot["lines"], "stops": tot["stops"],
+            "units": round(tot["units"], 3), "out_gold": tot["out_gold"], "has_qty": has_qty, "has_gold": has_gold,
             "ref": ref, "routes": routes}

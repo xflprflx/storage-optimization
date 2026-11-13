@@ -54,6 +54,33 @@
   <div class="text-muted small mt-1">{{ _h("Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.") }}</div>
 </div></div>
 {% endif %}
+{% set days = sim.get('days') or [] %}
+{% set dsel = request.query_params.get('day', '') %}
+{% if days %}
+<div class="card mb-3" id="dias">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="bi bi-calendar3"></i> {{ _("Simulação por dia") }}</strong>
+    <span class="small text-muted">{{ _("Todos os pedidos do dia, um depois do outro, com um separador (saída e volta na referência a cada pedido). Clique num dia para ver os pedidos dele.") }}</span>
+  </div>
+  <div class="table-responsive" style="max-height:340px"><table class="table table-sm table-hover mb-0 small" data-no-resize>
+    <thead class="sticky-top bg-white"><tr><th>{{ _("Dia") }}</th><th class="text-end">{{ _("Pedidos") }}</th><th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Peças") }}</th>
+      <th class="text-end">{{ _("Lista (km)") }}</th><th class="text-end">{{ _("Serp. (km)") }}</th><th class="text-end">{{ _("Otim. (km)") }}</th>
+      {% if tm %}<th class="text-end" title="{{ _("Horas de separação no dia (caminhada + paradas + pega), em cada rota") }}">{{ _("Horas: lista · serp. · otim.") }}</th>{% endif %}
+      <th class="text-end">{{ _("Ganho") }}</th><th></th></tr></thead>
+    <tbody>{% for d in days %}<tr class="{{ 'table-active' if d.date == dsel }}">
+      <td><a href="{{ day_link if day_link is defined else '?' }}day={{ d.date }}#dias">{{ fmt_datetime(d.date|todate, time=False) }}</a></td>
+      <td class="text-end">{{ d.orders }}</td><td class="text-end">{{ d.lines }}</td><td class="text-end">{{ d.units|dec(0) }}</td>
+      <td class="text-end">{{ (d.list_m / 1000)|dec(2) }}</td><td class="text-end text-primary">{{ ((d.s_m / 1000)|dec(2)) if d.s_m is defined else '—' }}</td><td class="text-end text-success">{{ (d.opt_m / 1000)|dec(2) }}</td>
+      {% if tm %}<td class="text-end">{{ d.list_h|dec(1) }} · <span class="text-primary">{{ d.s_h|dec(1) if d.s_h is defined else '—' }}</span> · <span class="text-success">{{ d.opt_h|dec(1) }}</span></td>{% endif %}
+      <td class="text-end">{{ (d.gain_pct|dec(0) ~ '%') if d.gain_pct is not none else '—' }}</td>
+      <td class="text-end">{% if walk3d is defined %}<a class="btn btn-sm btn-outline-success py-0" href="{{ walk3d }}day={{ d.date }}" title="{{ _("O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular o dia em 3D") }}</a>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% if dsel %}<div class="card-footer bg-white small">{{ _h("Mostrando só os pedidos de <b>{day}</b>.", day=(fmt_datetime(dsel|todate, time=False))) }} <a href="{{ day_link if day_link is defined else '?' }}">{{ _("Ver todos os pedidos") }}</a></div>{% endif %}
+</div>
+{% elif sim.get('orders') %}
+<div class="alert alert-light border small py-2"><i class="bi bi-calendar3"></i> {{ _h("Para simular um <b>dia inteiro</b>, reenvie o histórico de pedidos com a coluna <b>Data</b> (data de cada pedido).") }}</div>
+{% endif %}
 <div class="small text-muted mb-2">{{ _h("<b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). Cada SKU é buscado na posição dele mais perto da referência. {dist_note}", dist_note=(dist_note)) }}</div>
 <div class="row g-3">
   {% if svg %}
@@ -71,9 +98,9 @@
       <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>{{ _("Pedidos") }}</strong>
         <input class="form-control form-control-sm" style="max-width:180px" type="search" placeholder="{{ _("Filtrar") }}" id="ordFilter"></div>
       <div class="table-responsive" style="max-height:620px"><table class="table table-sm table-hover mb-0 small" id="ordTable" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th><th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Lista (m)") }}</th><th class="text-end">{{ _("Serp. (m)") }}</th><th class="text-end">{{ _("Otim. (m)") }}</th>{% if tm %}<th class="text-end" title="{{ _("Tempo na rota otimizada") }}">{{ _("Tempo") }}</th>{% endif %}</tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th>{% if days %}<th>{{ _("Data") }}</th>{% endif %}<th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Lista (m)") }}</th><th class="text-end">{{ _("Serp. (m)") }}</th><th class="text-end">{{ _("Otim. (m)") }}</th>{% if tm %}<th class="text-end" title="{{ _("Tempo na rota otimizada") }}">{{ _("Tempo") }}</th>{% endif %}</tr></thead>
         <tbody>{% for r in rows %}<tr class="{{ 'table-active' if sel and r.order == sel.order }}">
-          <td>{% if svg %}<a href="{{ link }}order={{ r.order|urlencode }}">{{ r.order }}</a>{% else %}{{ r.order }}{% endif %}</td><td class="text-end">{{ r.lines }}</td>
+          <td>{% if svg %}<a href="{{ link }}order={{ r.order|urlencode }}">{{ r.order }}</a>{% else %}{{ r.order }}{% endif %}</td>{% if days %}<td>{{ fmt_datetime(r.date|todate, time=False) if r.date else '—' }}</td>{% endif %}<td class="text-end">{{ r.lines }}</td>
           <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td>{% if tm %}<td class="text-end">{{ mmss(r.opt_t) if r.opt_t is defined else '—' }}</td>{% endif %}</tr>{% endfor %}</tbody>
       </table></div>
       <div class="card-footer bg-white small text-muted">{{ _("Ordenados pela caminhada na lista (maiores primeiro)") }}{% if rows|length < sim.orders %} {{ _h("· {rows} de {orders}", rows=(rows|length), orders=(sim.orders)) }}{% endif %}.</div>

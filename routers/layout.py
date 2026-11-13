@@ -302,8 +302,9 @@ def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
 
 
 @router.get("/layout/plan/routes3d.json")
-def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", db: Session = Depends(get_db)):
-    from services.route_sim import order_payload, orders_payload
+def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", day: str = "",
+                     db: Session = Depends(get_db)):
+    from services.route_sim import day_payload, order_payload, orders_payload
 
     br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
     if br is None:
@@ -311,4 +312,6 @@ def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "
     sample, nodes, start, ref, _g, err = branch_route_setup(db, br.id, wid)
     if err:
         return {"error": err}
+    if day:
+        return day_payload(sample, nodes, start, ref, day)
     return orders_payload(sample, nodes, start, ref) if not order else order_payload(sample, nodes, start, ref, order)

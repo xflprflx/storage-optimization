@@ -44,6 +44,8 @@ R(P3D, "#nkWalls", "Mostrar paredes", "Liga ou desliga as paredes do imóvel em 
 R(P3D, "#nkGold", "Zona de ouro", "Mostra a faixa de altura mais fácil de pegar (zona de ouro da pega) em cada estrutura.", "view3d:gold")
 R(P3D, r"#nkA-.*|#row-check", "Corredores visíveis", "Marque um ou mais corredores para ver só eles; nenhum marcado mostra todos.", "addr:aisle")
 R(P3D, "#nkOrder", "Pedido", "O pedido da amostra que será percorrido. A lista vem com as maiores caminhadas primeiro.", "route:order")
+R(P3D, "#nkScope", "Simular", "Um pedido por vez ou um dia inteiro: todos os pedidos do dia, um depois do outro, saindo e voltando à referência a cada pedido. Aparece quando o histórico de pedidos tem a coluna Data.", "route:order")
+R(P3D, "#nkDay", "Dia", "O dia do histórico que será percorrido inteiro, com o total de pedidos e a caminhada na lista e na rota otimizada.", "route:order")
 R(P3D, "#nkRoute", "Rota", "Qual rota o separador segue: lista, serpentina, otimizada ou as três ao mesmo tempo para comparar.", "route:opt")
 R(P3D, "#nkProg", "Andamento", "Arraste para avançar ou voltar a caminhada.", "view3d:prog")
 R(P3D, "#nkSpeed", "Velocidade do vídeo", "Quantas vezes mais rápido que o tempo real a animação roda (não muda o tempo calculado do pedido).", "time:speed")

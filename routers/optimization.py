@@ -1164,10 +1164,11 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
             return by_addr[(b if a.key == "REF" else a).key].walk_m * 100
         return geo_dist(by_addr[a.key], by_addr[b.key]) * 100
 
-    from services.route_sim import add_times, time_params
+    from services.route_sim import add_times, day_rows, time_params
 
     sim = add_times(simulate(sample, nodes, start, d), time_params(qp))
-    ctx.update(keep=[(k, v) for k, v in qp.multi_items() if not k.startswith("t_")], rows=sorted(sim["rows"], key=lambda r: -r["list_m"])[:500], ref_label=_("ponta do corredor {ref}", ref=ref),
+    ctx.update(keep=[(k, v) for k, v in qp.multi_items() if not k.startswith("t_")], rows=day_rows(sorted(sim["rows"], key=lambda r: -r["list_m"]), qp.get("day"))[:500],
+               day_link="?" + urlencode([(k, v) for k, v in qp.multi_items() if k not in ("day", "order")]) + "&", ref_label=_("ponta do corredor {ref}", ref=ref),
                how=_("letras por rua") + (_(" em serpentina") if spec.get("serpentine") else "") if spec.get("rows")
                else _("uma letra por corredor"))
     return render(request, "slotting/routes.html", **ctx, sim=sim, error="" if sim["orders"] else
@@ -1180,20 +1181,23 @@ def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp
     from services.route_sim import path_points, simulate
 
     q_no_order = urlencode([(k, v) for k, v in qp.multi_items() if k != "order"])
-    ctx.update(link=f"/optimization/slotting/routes?{q_no_order}&", walk3d=f"/layout/plan/3d?{plan_qs}&walk=1&",
+    ctx.update(link=f"/optimization/slotting/routes?{q_no_order}&",
+               day_link="/optimization/slotting/routes?" + urlencode([(k, v) for k, v in qp.multi_items() if k not in ("day", "order")]) + "&",
+               walk3d=f"/layout/plan/3d?{plan_qs}&walk=1&",
                ref_label=f"{ref['label']} (planta, {wlabel})", how="planta desenhada",
                dist_note=_("Distância pelo menor caminho na planta desenhada: pelos corredores (respeitando a mão única), "
                          "saindo pela ponta da fileira ou por uma passagem para trocar de corredor, contornando fileiras e "
                          "obstáculos."),
                plan_link=f"/layout/plan?{plan_qs}")
-    from services.route_sim import add_times, time_params
+    from services.route_sim import add_times, day_rows, time_params
 
     sim = add_times(simulate(sample, nodes, start), time_params(qp))
     ctx["keep"] = [(k, v) for k, v in qp.multi_items() if not k.startswith("t_")]
     if not sim["orders"]:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=_("Nenhum pedido da amostra tem SKUs com saldo "
                       "em estantes da planta."))
-    rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
+    rows = day_rows(sorted(sim["rows"], key=lambda r: -r["list_m"]), qp.get("day")) or \
+        sorted(sim["rows"], key=lambda r: -r["list_m"])
     chosen = qp.get("order") or rows[0]["order"]
     one = simulate([o for o in sample if o[0] == chosen], nodes, start, keep_routes={chosen})
     sel = next((r for r in rows if r["order"] == chosen), None)

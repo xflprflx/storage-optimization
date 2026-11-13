@@ -64,6 +64,19 @@ def url_with(request: Request, **params) -> str:
 
 
 templates.env.filters["dec"] = fmt_dec
+
+
+def to_date(value: Any):
+    """'2026-10-05' -> date (para fmt_datetime); o que não for data volta igual."""
+    from datetime import date
+
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return value
+
+
+templates.env.filters["todate"] = to_date
 templates.env.filters["dec_input"] = dec_input
 templates.env.globals["url_with"] = url_with
 

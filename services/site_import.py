@@ -51,6 +51,7 @@ ORDER_COLS = {
 MAX_PAIR_LINES = 40  # pedidos com mais SKUs que isso não entram na contagem de pares (combinações demais)
 MAX_PAIRS = 5000  # pares guardados (os que mais saem juntos)
 MAX_SAMPLE = 3000  # pedidos guardados (amostra) para o simulador de trajeto
+MAX_DAY_ORDERS = 5000  # com data: dias com mais pedidos que isso não entram na amostra (simulação pesada demais)
 STRUCT_COLS = {
     "code": ["codigo", "cod", "code"],
     "name": ["nome", "descricao"],
@@ -601,18 +602,23 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
 
 
 def _iso_date(raw: str) -> str:
-    """Data como AAAA-MM-DD (aceita ISO e DD/MM/AAAA); vazio se não reconhecer."""
+    """Data como AAAA-MM-DD; vazio se não reconhecer. Aceita AAAA-MM-DD (com hora ou não), AAAA/MM/DD,
+    DD/MM/AAAA, DD.MM.AAAA e DD-MM-AAAA; MM/DD/AAAA quando o 2º número passa de 12 ou o idioma é o inglês."""
     import re
 
+    from services.i18n import get_lang
+
     raw = (raw or "").strip()
-    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", raw)
+    m = re.match(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})", raw)
     if m:
-        return m.group(0)
-    m = re.match(r"(\d{1,2})/(\d{1,2})/(\d{2,4})", raw)
+        y, mo, d = m.groups()
+        return f"{y}-{int(mo):02d}-{int(d):02d}" if 1 <= int(mo) <= 12 and 1 <= int(d) <= 31 else ""
+    m = re.match(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})", raw)
     if m:
-        d, mo, y = m.groups()
-        y = ("20" + y) if len(y) == 2 else y
-        return f"{y}-{int(mo):02d}-{int(d):02d}"
+        a, b, y = (int(x) for x in m.groups())
+        y = 2000 + y if y < 100 else y
+        d, mo = (b, a) if b > 12 or (get_lang() == "en" and a <= 12) else (a, b)
+        return f"{y}-{mo:02d}-{d:02d}" if 1 <= mo <= 12 and 1 <= d <= 31 else ""
     return ""
 
 
@@ -629,6 +635,7 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
     lines: dict[tuple, float] = {}
     neg = ignored = bad = 0
     dates = []
+    day_of: dict[str, str] = {}
     for i, row in enumerate(rows, start=2):
         order, sku = _cell(row, cm["order"]), _cell(row, cm["sku"])
         if not order or not sku:
@@ -653,6 +660,7 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
             d = _iso_date(_cell(row, cm["date"]))
             if d:
                 dates.append(d)
+                day_of.setdefault(order[:60], d)  # data do pedido (a da 1ª linha)
     if not lines:
         return {"error": _("Pedidos: nenhuma linha válida (pedido, SKU e quantidade)")
                          + (_("; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto.", neg=neg)
@@ -677,16 +685,35 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
     import random
 
     ids = sorted(orders)
-    pick = random.Random(1).sample(ids, min(MAX_SAMPLE, len(ids)))
-    # [pedido, SKUs, unidades de cada SKU] — as unidades entram no tempo de pega (tempo por peça) do simulador
+    per_day: dict[str, int] = {}
+    for o in ids:
+        if day_of.get(o):
+            per_day[day_of[o]] = per_day.get(day_of[o], 0) + 1
+    pick: list = []
+    if per_day:
+        # com data: dias inteiros (o simulador roda um dia completo), dos mais recentes para trás, até MAX_SAMPLE
+        # pedidos (pelo menos um dia, até MAX_DAY_ORDERS); pedidos sem data não entram
+        keep_days, total = set(), 0
+        for day in sorted(per_day, reverse=True):
+            n = per_day[day]
+            if keep_days and total + n > MAX_SAMPLE or n > MAX_DAY_ORDERS:
+                continue
+            keep_days.add(day)
+            total += n
+        pick = [o for o in ids if day_of.get(o) in keep_days]
+    if not per_day or not pick:
+        pick = random.Random(1).sample(ids, min(MAX_SAMPLE, len(ids)))
+    # [pedido, SKUs, unidades de cada SKU, data] — as unidades entram no tempo de pega (tempo por peça) do simulador;
+    # a data permite simular um dia inteiro
     sample = []
     for o in sorted(pick):
         ss = sorted(set(orders[o]))
-        sample.append([o, ss, [round(lines[(o, x)], 3) for x in ss]])
+        sample.append([o, ss, [round(lines[(o, x)], 3) for x in ss], day_of.get(o, "")])
     return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3), "sample": sample,
             "skus": {s: [n, round(u, 3)] for s, (n, u) in skus.items()}, "pairs": top, "neg": neg, "abs": to_abs,
             "ignored": ignored, "bad": bad, "big_orders": big,
-            "dates": [min(dates), max(dates)] if dates else None}
+            "dates": [min(dates), max(dates)] if dates else None,
+            "days": {d: n for d, n in sorted(per_day.items())}}
 
 
 def template_xlsx(db: Session, cfg: dict) -> bytes:

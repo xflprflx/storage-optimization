@@ -578,10 +578,11 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
     sample, plan, nodes, start, ref, error = _route_setup(db, pr)
     if error:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=error)
-    from services.route_sim import add_times, time_params
+    from services.route_sim import add_times, day_rows, time_params
 
     rows_first = add_times(simulate(sample, nodes, start), time_params(request.query_params))
-    rows = sorted(rows_first["rows"], key=lambda r: -r["list_m"])
+    day = request.query_params.get("day", "")
+    rows = day_rows(sorted(rows_first["rows"], key=lambda r: -r["list_m"]), day)
     chosen = order or (rows[0]["order"] if rows else "")
     sim = simulate([o for o in sample if o[0] == chosen], nodes, start, keep_routes={chosen}) if chosen else {}
     svg, sel = "", next((r for r in rows if r["order"] == chosen), None)
@@ -605,19 +606,20 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
         if plan.building.address_mode == "row" else _("uma letra por corredor (ímpares/pares)")
     keep = [(k, v) for k, v in request.query_params.multi_items() if not k.startswith("t_")]
     tq = "&".join(f"{k}={v}" for k, v in rows_first.get("times", {}).get("params", {}).items())
-    ctx["link"] = f"/optimization/site/{pid}/routes?{tq}&"
+    ctx["link"] = f"/optimization/site/{pid}/routes?{tq}&" + (f"day={day}&" if day else "")
+    ctx["day_link"] = f"/optimization/site/{pid}/routes?{tq}&"
     return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
                                                       "ref_label": ref["label"], "how": how, "keep": keep},
                   sim=rows_first, error="")
 
 
 @router.get("/{pid}/routes3d.json")
-def routes_3d_json(pid: int, order: str = "", db: Session = Depends(get_db)):
-    """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias).
-    Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
+def routes_3d_json(pid: int, order: str = "", day: str = "", db: Session = Depends(get_db)):
+    """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias) e
+    os totais por dia. Com `day`: o dia inteiro (pedidos em sequência). Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
     from fastapi.responses import JSONResponse
 
-    from services.route_sim import order_payload, orders_payload
+    from services.route_sim import day_payload, order_payload, orders_payload
 
     pr = _get(db, pid)
     if not pr:
@@ -625,6 +627,8 @@ def routes_3d_json(pid: int, order: str = "", db: Session = Depends(get_db)):
     sample, _plan, nodes, start, ref, error = _route_setup(db, pr)
     if error:
         return JSONResponse({"error": error})
+    if day:  # o dia inteiro: os pedidos do dia um depois do outro
+        return JSONResponse(day_payload(sample, nodes, start, ref, day))
     if not order:
         return JSONResponse(orders_payload(sample, nodes, start, ref))
     return JSONResponse(order_payload(sample, nodes, start, ref, order))

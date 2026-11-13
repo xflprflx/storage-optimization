@@ -40,7 +40,7 @@ AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" 
 HISTORY_KINDS = {"orders": N_("Pedidos (pedido, SKU, quantidade[, data])"), "column": N_("Lista de SKUs com a coluna Saída")}
 HISTORY_FIELDS = {
     "orders": {"order": (N_("Pedido (identificador)"), True), "sku": ("SKU", True), "qty": (N_("Quantidade"), True),
-               "date": (N_("Data"), False)},
+               "date": (N_("Data do pedido (para simular um dia inteiro)"), False)},
     "column": {"sku": ("SKU", True), "out": (N_("Saída (linhas ou unidades no período)"), True)},
 }
 

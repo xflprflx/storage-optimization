@@ -56,6 +56,16 @@ log = logging.getLogger("neokioski")
 async def lifespan(_app: FastAPI):
     init_db()
     cleanup_old_uploads()
+    try:  # projetos de exemplo antigos: pedidos com a data (simulação de um dia inteiro)
+        from database import SessionLocal
+        from services.site_examples import refresh_example_orders
+
+        with SessionLocal() as db:
+            names = refresh_example_orders(db)
+        if names:
+            log.info("Pedidos reimportados com data nos projetos de exemplo: %s", ", ".join(names))
+    except Exception:  # noqa: BLE001 — não impede o app de subir
+        log.exception("Falha ao reimportar os pedidos dos projetos de exemplo")
     log.info("Neokioski iniciado - banco de dados pronto.")
     yield
 

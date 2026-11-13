@@ -58,3 +58,31 @@ def test_day_totals_and_day_payload_chain_orders():
     assert all(r["pts"][i] for i in r["stops"])  # índices das paradas dentro dos pontos
     assert abs(r["m"] - d1["list_m"]) < 0.02
     assert "error" in day_payload(sample, nodes, start, {}, "2026-12-25")
+
+
+def test_old_example_projects_get_dated_orders(db):
+    """Projeto criado de um exemplo antes da data por pedido: ao iniciar, os pedidos são reimportados do exemplo
+    (com data); projeto com pedidos do próprio usuário não muda."""
+    import copy
+
+    from models import SiteProject
+    from services import site_examples
+    from services.site_import import ORDER_COLS, _map, _orders, read_sheets
+
+    ex = site_examples.BY_SLUG["imovel-estreito"]
+    rows = read_sheets(site_examples.path_of(ex["slug"]))["Pedidos"]
+    res = _orders(rows, _map(rows[0], ORDER_COLS), True)
+    old = copy.deepcopy(res)
+    old["sample"] = [e[:3] for e in old["sample"]]  # formato antigo: sem a data
+    old.pop("days")
+    user = {"orders": 1, "lines": 1, "sample": [["X1", ["ABC"], [1]]], "skus": {"ABC": [1, 1]}, "pairs": []}
+    a = SiteProject(name="ex antigo", config={"orders": old})
+    b = SiteProject(name="do usuário", config={"orders": user})
+    db.add_all([a, b])
+    db.commit()
+    assert "ex antigo" in site_examples.refresh_example_orders(db)
+    db.refresh(a)
+    db.refresh(b)
+    assert all(e[3] for e in a.config["orders"]["sample"]) and a.config["orders"]["days"]
+    assert b.config["orders"] == user
+    assert site_examples.refresh_example_orders(db) == []  # só uma vez

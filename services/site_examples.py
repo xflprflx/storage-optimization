@@ -325,3 +325,67 @@ def preview_svg(slug: str, width_px: int = 520) -> str:
 
 def write_all() -> list[Path]:
     return [write_workbook(ex) for ex in EXAMPLES]
+
+
+def refresh_example_orders(db) -> list[str]:
+    """Projetos criados a partir de um exemplo antes da data por pedido: reimporta a aba Pedidos do exemplo (com a
+    data de cada pedido, para a simulação de um dia inteiro). O exemplo de cada projeto é reconhecido pelos pedidos
+    da amostra guardada (mesmo pedido com os mesmos SKUs). Só mexe no histórico de pedidos; o resto do projeto fica
+    como está. Roda ao iniciar e não faz nada nos projetos já atualizados. Retorna os nomes dos projetos atualizados."""
+    import copy
+
+    from sqlalchemy import select
+
+    from models import SiteProject
+    from services.site_import import ORDER_COLS, _map, _orders, read_sheets
+
+    todo = []
+    for pr in db.scalars(select(SiteProject)):
+        sample = ((pr.config or {}).get("orders") or {}).get("sample") or []
+        if sample and not any(len(e) > 3 and e[3] for e in sample):
+            todo.append((pr, {(e[0], tuple(sorted(e[1]))) for e in sample}))
+    skus_mine = {id(pr): {x for e in ((pr.config or {}).get("orders") or {}).get("sample") or [] for x in e[1]}
+                 for pr, _m in todo}
+    if not todo:
+        return []
+    done = []
+    for ex in EXAMPLES:
+        if not ex.get("orders") or not todo:
+            continue
+        path = path_of(ex["slug"])
+        if not path.exists():
+            write_workbook(ex, path)
+        sheets = read_sheets(path)
+        rows = next((r for n, r in sheets.items() if n.lower() == "pedidos"), None)
+        if not rows or len(rows) < 2:
+            continue
+        cm = _map(rows[0], ORDER_COLS)
+        skus_of: dict[str, set] = {}
+        for r in rows[1:]:
+            o, s = (r[cm["order"]] or "").strip(), (r[cm["sku"]] or "").strip()
+            if o and s:
+                skus_of.setdefault(o, set()).add(s)
+        sig = {(o, tuple(sorted(ss))) for o, ss in skus_of.items()}
+        ex_skus = {x for ss in skus_of.values() for x in ss}
+        res = None
+        for pr, mine in list(todo):
+            # o mesmo exemplo: os mesmos pedidos ou, se veio de uma versão anterior da planilha do exemplo, os
+            # mesmos SKUs (códigos próprios de cada exemplo: GM…, CD…); senão é outro exemplo ou um arquivo do usuário
+            mine_skus = skus_mine[id(pr)]
+            same_orders = len(mine & sig) >= 0.9 * len(mine)
+            same_skus = len(mine_skus) >= 10 and len(mine_skus & ex_skus) >= 0.95 * len(mine_skus)
+            if not (same_orders or same_skus):
+                continue
+            if res is None:
+                res = _orders(rows, cm, True)
+                if res.get("error"):
+                    break
+                res["sheet"] = "Pedidos"
+            cfg = copy.deepcopy(pr.config)
+            cfg["orders"] = copy.deepcopy(res)
+            pr.config = cfg
+            todo.remove((pr, mine))
+            done.append(pr.name)
+    if done:
+        db.commit()
+    return done

@@ -1,4 +1,4 @@
-"""Configurações do sistema (endereços)."""
+"""Configurações do sistema (endereços e tempos padrão da simulação de separação)."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
@@ -21,6 +21,21 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
 
 @router.post("")
 def settings_save(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
-    app_settings.save(db, {"addr_sort": "alpha" if form.get("addr_sort") == "alpha" else "natural",
-                           "addr_zero_eq": form.get("addr_zero_eq") == "1"})
+    from services.file_reader import parse_decimal
+
+    values = {"addr_sort": "alpha" if form.get("addr_sort") == "alpha" else "natural",
+              "addr_zero_eq": form.get("addr_zero_eq") == "1"}
+    bad = []
+    for k, (lo, hi) in app_settings.SIM_LIMITS.items():  # tempos padrão da simulação
+        try:
+            v = parse_decimal(form.get(k))
+        except ValueError:
+            v = None
+        if v is None or not (lo <= float(v) <= hi):
+            bad.append(k)
+            continue
+        values[k] = float(v)
+    app_settings.save(db, values)
+    if bad:
+        return redirect("/settings", _("Configurações salvas, exceto tempos de simulação inválidos (fora dos limites)."), "warning")
     return redirect("/settings", _("Configurações salvas."))

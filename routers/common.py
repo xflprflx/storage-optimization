@@ -28,6 +28,15 @@ templates.env.globals.update(_=_, _h=_h, fmt_datetime=i18n.fmt_datetime, tr=i18n
                              i18n_version=i18n.catalog_version, fmt_money=i18n.fmt_money, currency=i18n.currency)
 
 
+def _sim_times():
+    from services.app_settings import sim_times
+
+    return sim_times()
+
+
+templates.env.globals["sim_times"] = _sim_times  # tempos padrão da simulação (Configurações)
+
+
 # --------------------------------------------------------------------------- #
 # Filtros e globais Jinja
 # --------------------------------------------------------------------------- #

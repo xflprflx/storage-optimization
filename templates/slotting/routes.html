@@ -40,15 +40,15 @@
         · <span class="text-success">{{ mmss(tm.opt_avg) }}</span> <span class="text-muted small fw-normal">{{ _("otimizada") }}</span></div>
       <div class="text-muted">{{ _h("pega: {mmss} por pedido ({units_avg} peça(s) e {out_gold_avg} item(ns) / {out_units_avg} peça(s) fora da zona de ouro em média) · total {list_h} h na lista, {opt_h} h na otimizada", mmss=(mmss(tm.pick_avg)), units_avg=(tm.units_avg|dec(1)), out_gold_avg=(tm.out_gold_avg|dec(1)), out_units_avg=(tm.out_units_avg|dec(1)), list_h=(tm.list_h|dec(1)), opt_h=(tm.opt_h|dec(1))) }}{% if not sim.has_qty %} {{ _h("· <span class=\"text-warning-emphasis\">amostra sem quantidades: cada linha = 1 peça (reenvie o histórico)</span>") }}{% endif %}</div></div>
     <div class="col-auto ms-auto"><label class="form-label mb-0" for="t_v">{{ _("Caminhada (m/s)") }}</label>
-      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.1" min="0.2" max="3" name="t_v" data-u="m/s" id="t_v" value="{{ tm.params.t_v }}"></div>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.1" min="0.2" max="3" name="t_v" data-u="m/s" id="t_v" value="{{ '%g'|format(tm.params.t_v) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_stop" title="{{ _("Tempo fixo em cada endereço (chegar, localizar, conferir)") }}">{{ _("Por parada (s)") }}</label>
-      <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="0" name="t_stop" id="t_stop" value="{{ tm.params.t_stop }}"></div>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="0" name="t_stop" id="t_stop" value="{{ '%g'|format(tm.params.t_stop) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_piece" title="{{ _("Tempo para pegar cada peça") }}">{{ _("Por peça (s)") }}</label>
-      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_piece" id="t_piece" value="{{ tm.params.t_piece }}"></div>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_piece" id="t_piece" value="{{ '%g'|format(tm.params.t_piece) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_gold" title="{{ _("Tempo a mais para pegar um item (linha do pedido) num nível fora da zona de ouro da pega (agachar, escada…)") }}">{{ _("Fora do ouro (s/item)") }}</label>
-      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold" id="t_gold" value="{{ tm.params.t_gold }}"></div>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold" id="t_gold" value="{{ '%g'|format(tm.params.t_gold) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_gold_piece" title="{{ _("Tempo a mais por PEÇA num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/peça)") }}</label>
-      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ tm.params.t_gold_piece }}"></div>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ '%g'|format(tm.params.t_gold_piece) }}"></div>
     <div class="col-auto"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-stopwatch"></i> {{ _("Recalcular") }}</button></div>
   </form>
   <div class="text-muted small mt-1">{{ _h("Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.") }}</div>

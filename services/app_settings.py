@@ -1,6 +1,9 @@
 """
 Configurações do sistema (tabela app_settings), com cache em memória.
 
+Simulação de separação (sim_*): velocidade de caminhada (m/s), tempo fixo por parada, tempo por peça e tempos a mais
+fora da zona de ouro da pega (por item e por peça) — valores iniciais das telas de simulação, otimização e 3D.
+
 Endereços:
   - addr_sort: "natural" (os números ordenam pelo valor: 2 antes de 10) ou "alpha" (ordem alfabética: 10 antes de 2);
   - addr_zero_eq: True = zeros à esquerda não diferenciam os códigos, em qualquer parte do endereço (corredor,
@@ -13,7 +16,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
-DEFAULTS: dict[str, Any] = {"addr_sort": "natural", "addr_zero_eq": False}
+DEFAULTS: dict[str, Any] = {"addr_sort": "natural", "addr_zero_eq": False,
+                            # simulação de separação (valores iniciais das telas; cada tela ainda pode mudar)
+                            "sim_v": 1.0, "sim_stop": 10.0, "sim_piece": 2.0, "sim_gold": 5.0, "sim_gold_piece": 0.0}
+# limites de cada valor da simulação (mínimo, máximo)
+SIM_LIMITS = {"sim_v": (0.2, 3.0), "sim_stop": (0.0, 600.0), "sim_piece": (0.0, 600.0), "sim_gold": (0.0, 600.0),
+              "sim_gold_piece": (0.0, 600.0)}
 _cache: dict[str, Any] = dict(DEFAULTS)
 _DIGITS = re.compile(r"\d+")
 
@@ -45,6 +53,12 @@ def save(db, values: dict) -> None:
         db.add(row)
     db.commit()
     load(db)
+
+
+def sim_times() -> dict[str, float]:
+    """Tempos padrão da simulação de separação, com as chaves do simulador (t_v, t_stop, t_piece, t_gold, t_gold_piece)."""
+    return {"t_v": float(get("sim_v")), "t_stop": float(get("sim_stop")), "t_piece": float(get("sim_piece")),
+            "t_gold": float(get("sim_gold")), "t_gold_piece": float(get("sim_gold_piece"))}
 
 
 def canon(code: str) -> str:

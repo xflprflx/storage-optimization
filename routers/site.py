@@ -103,7 +103,10 @@ def _example_file(slug: str) -> Path | None:
 
 
 def _new_project(db: Session, name: str) -> SiteProject:
+    from services.app_settings import get as setting
+
     cfg = merged(None)
+    cfg["params"].update(t_v=f"{setting('sim_v'):g}", t_gold=f"{setting('sim_gold'):g}")  # padrão das Configurações
     for st in db.scalars(select(StructureType)):
         cfg["structures"][str(st.id)] = {"mode": "auto", "qty": "", "min_qty": "", "max_qty": ""}
     pr = SiteProject(name=name[:150] or _("Nova filial"), config=cfg)

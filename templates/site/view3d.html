@@ -24,6 +24,7 @@
 </style>
 {% endblock %}
 {% block content %}
+{% set st = sim_times() %}
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
   <div>
     <a href="{{ v3.back_url }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ v3.back_label }}</a>
@@ -108,15 +109,15 @@
         <select class="form-select form-select-sm" id="nkCam"><option value="follow">{{ _("Seguir o separador") }}</option><option value="fp">{{ _("Primeira pessoa") }}</option>
           <option value="top">{{ _("De cima (rota toda)") }}</option><option value="free">{{ _("Livre (mouse)") }}</option></select></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkWalkV" data-u="m/s" min="0.2" max="3" step="0.1" value="1.0"></div>
+        <input class="form-control form-control-sm" type="number" id="nkWalkV" data-u="m/s" min="0.2" max="3" step="0.1" value="{{ '%g'|format(st.t_v) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="{{ _("Tempo fixo parado em cada endereço (chegar, localizar, conferir)") }}">{{ _("Tempo por parada (s)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="10"></div>
+        <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="{{ '%g'|format(st.t_stop) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkPiece" title="{{ _("Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo") }}">{{ _("Tempo por peça (s)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkPiece" min="0" max="120" step="0.5" value="2"></div>
+        <input class="form-control form-control-sm" type="number" id="nkPiece" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_piece) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkGoldItem" title="{{ _("Tempo a mais por item (linha) num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/item)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkGoldItem" min="0" max="120" step="0.5" value="5"></div>
+        <input class="form-control form-control-sm" type="number" id="nkGoldItem" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkGoldP" title="{{ _("Tempo a mais por peça num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/peça)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="0"></div>
+        <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold_piece) }}"></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="{{ _("Grava a simulação do início ao fim e baixa o vídeo (.webm)") }}"><i class="bi bi-record-circle"></i> {{ _("Gravar vídeo") }}</button>

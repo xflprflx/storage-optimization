@@ -293,13 +293,16 @@ TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0, "t_g
 
 def time_params(qp) -> dict:
     """Parâmetros de tempo da tela (velocidade de caminhada, tempo por parada e por peça), com limites."""
+    from services.app_settings import sim_times
+
+    dflt = {**TIME_DEFAULTS, **sim_times()}  # padrão das Configurações (a tela pode mudar)
     out = {}
     for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0)),
                         ("t_gold_piece", (0.0, 600.0))):
         try:
-            v = float(str(qp.get(k) if qp.get(k) not in (None, "") else TIME_DEFAULTS[k]).replace(",", "."))
+            v = float(str(qp.get(k) if qp.get(k) not in (None, "") else dflt[k]).replace(",", "."))
         except ValueError:
-            v = TIME_DEFAULTS[k]
+            v = dflt[k]
         out[k] = min(hi, max(lo, v))
     return out
 

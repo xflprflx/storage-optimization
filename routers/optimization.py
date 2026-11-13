@@ -192,8 +192,11 @@ def _slot_raw(src: Mapping, raw: dict) -> dict:
     """Parâmetros da posição pela saída (slot_*) no `raw` da tela (padrões quando o formulário não foi enviado)."""
     from services.slotting import SLOT_DEFAULTS
 
+    from services.app_settings import get as setting
+
     submitted = "objective" in src
-    raw.update({k: (src.get(k, "") if submitted else d) for k, d in SLOT_DEFAULTS.items()})
+    dflt = {**SLOT_DEFAULTS, "slot_v": f"{setting('sim_v'):g}", "slot_gold_s": f"{setting('sim_gold'):g}"}  # Configurações
+    raw.update({k: (src.get(k, "") if submitted else d) for k, d in dflt.items()})
     return raw
 
 

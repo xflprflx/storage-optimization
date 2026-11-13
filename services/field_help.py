@@ -363,6 +363,12 @@ R(PLEV, "warehouse_id", "Armazém", "Armazém dos níveis mostrados.", "scope:wh
 
 # =========================================================================== estruturas
 PST = r"/structures"
+PSET = r"/settings"
+R(PSET, "sim_v", "Velocidade de caminhada (m/s)", "Padrão da simulação de separação: velocidade média do separador. Cada tela de simulação pode mudar na hora.", "time:v")
+R(PSET, "sim_stop", "Tempo por parada (s)", "Padrão da simulação: tempo fixo em cada parada (chegar, localizar, conferir).", "time:stop")
+R(PSET, "sim_piece", "Tempo por peça (s)", "Padrão da simulação: tempo para pegar cada peça.", "time:piece")
+R(PSET, "sim_gold", "Fora da zona de ouro (s por item)", "Padrão da simulação: tempo a mais por item pego fora da zona de ouro da pega.", "time:goldp")
+R(PSET, "sim_gold_piece", "Fora da zona de ouro (s por peça)", "Padrão da simulação: tempo a mais por peça pega fora da zona de ouro da pega.", "time:goldp")
 R(PST, "code", "Código da estrutura", "Identificador curto e único (ex.: EST-100).", "tag:code")
 R(PST, "name", "Nome da estrutura", "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).", "tag:name")
 R(PST, "kind", "Tipo", "Estante, porta-palete, palete no chão… O palete no chão é desenhado sem montantes, em camadas.", "rack:pallet")

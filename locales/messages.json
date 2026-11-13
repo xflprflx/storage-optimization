@@ -600,7 +600,7 @@
  },
  "07 e 7 passam a ser o mesmo local em qualquer parte do endereço. Os códigos gravados não mudam.": {
   "src": [
-   "services/field_help.py:446"
+   "services/field_help.py:447"
   ],
   "help": true
  },
@@ -1504,7 +1504,7 @@
  },
  "A fileira do outro lado do corredor: as duas formam um corredor de caminhada. Automático usa a mais perto que olha para esta.": {
   "src": [
-   "services/field_help.py:78"
+   "services/field_help.py:79"
   ],
   "help": true
  },
@@ -1572,7 +1572,7 @@
  },
  "A primeira linha tem os nomes das colunas": {
   "src": [
-   "services/field_help.py:268"
+   "services/field_help.py:269"
   ],
   "help": true
  },
@@ -1643,7 +1643,7 @@
  },
  "Aba": {
   "src": [
-   "services/field_help.py:272",
+   "services/field_help.py:273",
    "templates/imports/mapping_history.html:25",
    "templates/site/mapping.html:22"
   ],
@@ -1657,13 +1657,13 @@
  },
  "Aba da planilha": {
   "src": [
-   "services/field_help.py:190"
+   "services/field_help.py:191"
   ],
   "help": true
  },
  "Aba da planilha que tem os dados.": {
   "src": [
-   "services/field_help.py:272"
+   "services/field_help.py:273"
   ],
   "help": true
  },
@@ -1700,7 +1700,7 @@
  },
  "Aceita linhas com quantidade negativa em vez de recusá-las.": {
   "src": [
-   "services/field_help.py:280"
+   "services/field_help.py:281"
   ],
   "help": true
  },
@@ -1742,7 +1742,7 @@
  },
  "Afastamento das paredes (m)": {
   "src": [
-   "services/field_help.py:112",
+   "services/field_help.py:113",
    "services/site_service.py:54"
   ],
   "help": true,
@@ -1750,7 +1750,7 @@
  },
  "Agrupa produtos parecidos (ex.: fixação, elétrico), para filtros e para o posicionamento.": {
   "src": [
-   "services/field_help.py:401"
+   "services/field_help.py:402"
   ],
   "help": true
  },
@@ -1815,7 +1815,7 @@
  },
  "Alinhamento das cabeceiras": {
   "src": [
-   "services/field_help.py:120"
+   "services/field_help.py:121"
   ],
   "help": true
  },
@@ -1866,7 +1866,7 @@
  },
  "Altura (cm)": {
   "src": [
-   "services/field_help.py:386",
+   "services/field_help.py:387",
    "services/master_importer.py:47",
    "services/site_import.py:193",
    "services/site_import.py:196",
@@ -1885,13 +1885,13 @@
  },
  "Altura da unidade (cm)": {
   "src": [
-   "services/field_help.py:402"
+   "services/field_help.py:403"
   ],
   "help": true
  },
  "Altura de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:402"
+   "services/field_help.py:403"
   ],
   "help": true
  },
@@ -1903,8 +1903,8 @@
  },
  "Altura do 1º nível (cm)": {
   "src": [
-   "services/field_help.py:349",
-   "services/field_help.py:373",
+   "services/field_help.py:350",
+   "services/field_help.py:374",
    "services/site_import.py:192",
    "services/site_import.py:811",
    "templates/structures/form.html:61"
@@ -1954,7 +1954,7 @@
  },
  "Altura interna útil da bin. Precisa caber no vão do nível, com a folga para tirá-la.": {
   "src": [
-   "services/field_help.py:386"
+   "services/field_help.py:387"
   ],
   "help": true
  },
@@ -1965,13 +1965,13 @@
  },
  "Altura livre de cada nível. Vale para os níveis sem vão próprio.": {
   "src": [
-   "services/field_help.py:372"
+   "services/field_help.py:373"
   ],
   "help": true
  },
  "Altura livre do piso até o obstáculo mais baixo do teto. Estruturas mais altas que isso ficam de fora.": {
   "src": [
-   "services/field_help.py:110"
+   "services/field_help.py:111"
   ],
   "help": true
  },
@@ -1982,19 +1982,19 @@
  },
  "Altura máxima (cm)": {
   "src": [
-   "services/field_help.py:257"
+   "services/field_help.py:258"
   ],
   "help": true
  },
  "Altura máxima das bins do endereço.": {
   "src": [
-   "services/field_help.py:257"
+   "services/field_help.py:258"
   ],
   "help": true
  },
  "Altura onde termina a faixa mais fácil de pegar (tipicamente 75 a 150 cm).": {
   "src": [
-   "services/field_help.py:378"
+   "services/field_help.py:379"
   ],
   "help": true
  },
@@ -2011,7 +2011,7 @@
  },
  "Altura total (cm)": {
   "src": [
-   "services/field_help.py:370",
+   "services/field_help.py:371",
    "services/site_import.py:188"
   ],
   "help": true,
@@ -2024,7 +2024,7 @@
  },
  "Altura, a partir do piso, onde começa a faixa mais fácil de pegar.": {
   "src": [
-   "services/field_help.py:377"
+   "services/field_help.py:378"
   ],
   "help": true
  },
@@ -2121,25 +2121,25 @@
  },
  "Ao mudar a largura, as fileiras que ficam depois do vizinho andam junto, mantendo os outros corredores.": {
   "src": [
-   "services/field_help.py:80"
+   "services/field_help.py:81"
   ],
   "help": true
  },
  "Ao sincronizar, os níveis que ficarem sem endereço também saem.": {
   "src": [
-   "services/field_help.py:286"
+   "services/field_help.py:287"
   ],
   "help": true
  },
  "Apaga o mínimo, o máximo e o endereço padrão do produto nesta filial.": {
   "src": [
-   "services/field_help.py:410"
+   "services/field_help.py:411"
   ],
   "help": true
  },
  "Apaga o vão cadastrado dos níveis: eles voltam a usar a altura das bins.": {
   "src": [
-   "services/field_help.py:344"
+   "services/field_help.py:345"
   ],
   "help": true
  },
@@ -2161,7 +2161,7 @@
  },
  "Aplica uma estrutura às estantes geradas: preenche o vão e a capacidade dos níveis.": {
   "src": [
-   "services/field_help.py:304"
+   "services/field_help.py:305"
   ],
   "help": true
  },
@@ -2280,11 +2280,11 @@
  "Armazém": {
   "src": [
    "routers/optimization.py:977",
-   "services/field_help.py:94",
-   "services/field_help.py:99",
-   "services/field_help.py:214",
-   "services/field_help.py:308",
-   "services/field_help.py:319"
+   "services/field_help.py:95",
+   "services/field_help.py:100",
+   "services/field_help.py:215",
+   "services/field_help.py:309",
+   "services/field_help.py:320"
   ],
   "help": true,
   "lazy": true
@@ -2313,37 +2313,37 @@
  },
  "Armazém da filial a que a planta pertence.": {
   "src": [
-   "services/field_help.py:94"
+   "services/field_help.py:95"
   ],
   "help": true
  },
  "Armazém da filial a que a tela se refere; vazio ou \"sem armazém\" = endereços sem armazém.": {
   "src": [
-   "services/field_help.py:456"
+   "services/field_help.py:457"
   ],
   "help": true
  },
  "Armazém da filial mostrado no mapa.": {
   "src": [
-   "services/field_help.py:99"
+   "services/field_help.py:100"
   ],
   "help": true
  },
  "Armazém da filial nova (criado se não existir); vazio = sem armazém.": {
   "src": [
-   "services/field_help.py:181"
+   "services/field_help.py:182"
   ],
   "help": true
  },
  "Armazém da filial onde os endereços serão criados.": {
   "src": [
-   "services/field_help.py:308"
+   "services/field_help.py:309"
   ],
   "help": true
  },
  "Armazém de origem": {
   "src": [
-   "services/field_help.py:149"
+   "services/field_help.py:150"
   ],
   "help": true
  },
@@ -2354,13 +2354,13 @@
  },
  "Armazém do endereço (ou filtro da lista).": {
   "src": [
-   "services/field_help.py:319"
+   "services/field_help.py:320"
   ],
   "help": true
  },
  "Armazém dos níveis mostrados.": {
   "src": [
-   "services/field_help.py:361"
+   "services/field_help.py:362"
   ],
   "help": true
  },
@@ -2383,7 +2383,7 @@
  },
  "Armazém padrão": {
   "src": [
-   "services/field_help.py:276",
+   "services/field_help.py:277",
    "templates/imports/mapping_master.html:53",
    "templates/imports/mapping_products.html:52",
    "templates/imports/mapping_stock.html:63"
@@ -2451,7 +2451,7 @@
  },
  "Armazéns da filial": {
   "src": [
-   "services/field_help.py:436"
+   "services/field_help.py:437"
   ],
   "help": true
  },
@@ -2468,14 +2468,14 @@
  },
  "Armazéns que esta filial usa. Um armazém pode servir a mais de uma filial.": {
   "src": [
-   "services/field_help.py:436"
+   "services/field_help.py:437"
   ],
   "help": true
  },
  "Arquivo": {
   "src": [
-   "services/field_help.py:267",
-   "services/field_help.py:460"
+   "services/field_help.py:268",
+   "services/field_help.py:461"
   ],
   "help": true
  },
@@ -2497,13 +2497,13 @@
  },
  "Arquivo CSV, TXT ou XLSX. O delimitador e a codificação do CSV são detectados sozinhos.": {
   "src": [
-   "services/field_help.py:267"
+   "services/field_help.py:268"
   ],
   "help": true
  },
  "Arquivo do histórico de pedidos": {
   "src": [
-   "services/field_help.py:232"
+   "services/field_help.py:233"
   ],
   "help": true
  },
@@ -2514,7 +2514,7 @@
  },
  "Arquivo enviado para o sistema.": {
   "src": [
-   "services/field_help.py:460"
+   "services/field_help.py:461"
   ],
   "help": true
  },
@@ -2647,13 +2647,13 @@
  },
  "As bins informadas substituem as atuais, em vez de somar.": {
   "src": [
-   "services/field_help.py:285"
+   "services/field_help.py:286"
   ],
   "help": true
  },
  "As colunas marcadas são somadas em cada linha (ex.: disponível + reservado).": {
   "src": [
-   "services/field_help.py:274"
+   "services/field_help.py:275"
   ],
   "help": true
  },
@@ -2669,7 +2669,7 @@
  },
  "As medidas e o peso deste SKU são copiados para os produtos marcados.": {
   "src": [
-   "services/field_help.py:415"
+   "services/field_help.py:416"
   ],
   "help": true
  },
@@ -2690,8 +2690,8 @@
  },
  "As unidades podem só girar no plano (altura para cima) ou ficar em qualquer orientação.": {
   "src": [
-   "services/field_help.py:164",
-   "services/field_help.py:250"
+   "services/field_help.py:165",
+   "services/field_help.py:251"
   ],
   "help": true
  },
@@ -2742,13 +2742,13 @@
  },
  "Atribuir os SKUs aos endereços": {
   "src": [
-   "services/field_help.py:183"
+   "services/field_help.py:184"
   ],
   "help": true
  },
  "Atualiza nome, medidas e peso com o que veio na planilha.": {
   "src": [
-   "services/field_help.py:185"
+   "services/field_help.py:186"
   ],
   "help": true
  },
@@ -2760,13 +2760,13 @@
  },
  "Atualizar o endereço padrão": {
   "src": [
-   "services/field_help.py:283"
+   "services/field_help.py:284"
   ],
   "help": true
  },
  "Atualizar os existentes": {
   "src": [
-   "services/field_help.py:281"
+   "services/field_help.py:282"
   ],
   "help": true
  },
@@ -2782,7 +2782,7 @@
  },
  "Atualizar produtos existentes": {
   "src": [
-   "services/field_help.py:185"
+   "services/field_help.py:186"
   ],
   "help": true
  },
@@ -2793,14 +2793,14 @@
  },
  "Até quanto do volume de cada bin pode ser ocupado.": {
   "src": [
-   "services/field_help.py:160",
-   "services/field_help.py:246"
+   "services/field_help.py:161",
+   "services/field_help.py:247"
   ],
   "help": true
  },
  "Aumenta ou diminui o desenho das estantes.": {
   "src": [
-   "services/field_help.py:103"
+   "services/field_help.py:104"
   ],
   "help": true
  },
@@ -2841,7 +2841,7 @@
  },
  "Automático, junto às docas, no fundo, nas laterais ou em posição fixa.": {
   "src": [
-   "services/field_help.py:140"
+   "services/field_help.py:141"
   ],
   "help": true
  },
@@ -2877,7 +2877,7 @@
  },
  "Ação com as bins": {
   "src": [
-   "services/field_help.py:324"
+   "services/field_help.py:325"
   ],
   "help": true
  },
@@ -2921,7 +2921,7 @@
  },
  "Base do 1º nível a partir do piso; 0 = no chão.": {
   "src": [
-   "services/field_help.py:373"
+   "services/field_help.py:374"
   ],
   "help": true
  },
@@ -2966,7 +2966,7 @@
  },
  "Bin pai": {
   "src": [
-   "services/field_help.py:392",
+   "services/field_help.py:393",
    "services/master_importer.py:53",
    "templates/bin_types/form.html:32"
   ],
@@ -3049,7 +3049,7 @@
  "Bins atuais": {
   "src": [
    "routers/optimization.py:985",
-   "services/field_help.py:218",
+   "services/field_help.py:219",
    "templates/optimization/index.html:75",
    "templates/optimization/index.html:214",
    "templates/optimization/page.html:95",
@@ -3088,7 +3088,7 @@
  },
  "Bins disponíveis": {
   "src": [
-   "services/field_help.py:220"
+   "services/field_help.py:221"
   ],
   "help": true
  },
@@ -3191,7 +3191,7 @@
  "Bins que podem ser usadas": {
   "src": [
    "routers/optimization.py:1029",
-   "services/field_help.py:221"
+   "services/field_help.py:222"
   ],
   "help": true
  },
@@ -3280,12 +3280,12 @@
  },
  "Busca": {
   "src": [
-   "services/field_help.py:199",
-   "services/field_help.py:380",
-   "services/field_help.py:395",
-   "services/field_help.py:413",
-   "services/field_help.py:437",
-   "services/field_help.py:442"
+   "services/field_help.py:200",
+   "services/field_help.py:381",
+   "services/field_help.py:396",
+   "services/field_help.py:414",
+   "services/field_help.py:438",
+   "services/field_help.py:443"
   ],
   "help": true
  },
@@ -3318,7 +3318,7 @@
  },
  "Buscar em": {
   "src": [
-   "services/field_help.py:411"
+   "services/field_help.py:412"
   ],
   "help": true
  },
@@ -3367,7 +3367,7 @@
  },
  "Cabeceiras": {
   "src": [
-   "services/field_help.py:119",
+   "services/field_help.py:120",
    "services/site_report.py:108"
   ],
   "help": true
@@ -3384,13 +3384,13 @@
  },
  "Cabem (bins do tipo)": {
   "src": [
-   "services/field_help.py:357"
+   "services/field_help.py:358"
   ],
   "help": true
  },
  "Cabem (bins)": {
   "src": [
-   "services/field_help.py:342"
+   "services/field_help.py:343"
   ],
   "help": true
  },
@@ -3414,13 +3414,13 @@
  },
  "Cada SKU (ou endereço) usa bins de um só tipo.": {
   "src": [
-   "services/field_help.py:253"
+   "services/field_help.py:254"
   ],
   "help": true
  },
  "Cada SKU usa bins de um único tipo.": {
   "src": [
-   "services/field_help.py:165"
+   "services/field_help.py:166"
   ],
   "help": true
  },
@@ -3459,13 +3459,13 @@
  },
  "Cada nível da estante recebe bins de um só tipo.": {
   "src": [
-   "services/field_help.py:260"
+   "services/field_help.py:261"
   ],
   "help": true
  },
  "Cada nível recebe o vão da estrutura (com vão por nível, o de cada um).": {
   "src": [
-   "services/field_help.py:350"
+   "services/field_help.py:351"
   ],
   "help": true
  },
@@ -3487,7 +3487,7 @@
  },
  "Cadastrar produtos que faltam": {
   "src": [
-   "services/field_help.py:184"
+   "services/field_help.py:185"
   ],
   "help": true
  },
@@ -3541,7 +3541,7 @@
  },
  "Calcula quantas bins de cada tipo cabem em cada nível, pela frente, profundidade e vão.": {
   "src": [
-   "services/field_help.py:351"
+   "services/field_help.py:352"
   ],
   "help": true
  },
@@ -3569,7 +3569,7 @@
  },
  "Calcular as capacidades": {
   "src": [
-   "services/field_help.py:351"
+   "services/field_help.py:352"
   ],
   "help": true
  },
@@ -3591,7 +3591,7 @@
  "Caminhada (m/s)": {
   "src": [
    "services/field_help.py:53",
-   "services/field_help.py:60",
+   "services/field_help.py:61",
    "templates/optimization/page.html:240",
    "templates/site/view3d.html:110",
    "templates/slotting/routes.html:42"
@@ -3688,7 +3688,7 @@
  },
  "Canto do setor, quando a posição é fixa.": {
   "src": [
-   "services/field_help.py:141"
+   "services/field_help.py:142"
   ],
   "help": true
  },
@@ -3811,7 +3811,7 @@
  },
  "Carga máxima por nível (kg)": {
   "src": [
-   "services/field_help.py:375"
+   "services/field_help.py:376"
   ],
   "help": true
  },
@@ -3882,7 +3882,7 @@
  },
  "Cenários do depois": {
   "src": [
-   "services/field_help.py:209"
+   "services/field_help.py:210"
   ],
   "help": true
  },
@@ -3925,7 +3925,7 @@
  },
  "Coloca os SKUs mais procurados perto da expedição e na altura boa de pegar.": {
   "src": [
-   "services/field_help.py:170"
+   "services/field_help.py:171"
   ],
   "help": true
  },
@@ -3936,7 +3936,7 @@
  },
  "Colorir por": {
   "src": [
-   "services/field_help.py:102",
+   "services/field_help.py:103",
    "templates/layout/index.html:61"
   ],
   "help": true
@@ -3960,8 +3960,8 @@
  },
  "Coluna da planilha": {
   "src": [
-   "services/field_help.py:191",
-   "services/field_help.py:273"
+   "services/field_help.py:192",
+   "services/field_help.py:274"
   ],
   "help": true
  },
@@ -3973,7 +3973,7 @@
  },
  "Colunas de quantidade": {
   "src": [
-   "services/field_help.py:274"
+   "services/field_help.py:275"
   ],
   "help": true
  },
@@ -4052,13 +4052,13 @@
  },
  "Com letra por rua: a rua de frente é numerada ao contrário, para a lista de separação descer uma e voltar pela outra.": {
   "src": [
-   "services/field_help.py:122"
+   "services/field_help.py:123"
   ],
   "help": true
  },
  "Com letras por rua: a rua de frente começa onde a outra termina.": {
   "src": [
-   "services/field_help.py:243"
+   "services/field_help.py:244"
   ],
   "help": true
  },
@@ -4080,7 +4080,7 @@
  },
  "Com ou sem capacidade cadastrada, acima da capacidade, reservados.": {
   "src": [
-   "services/field_help.py:337"
+   "services/field_help.py:338"
   ],
   "help": true
  },
@@ -4129,14 +4129,14 @@
  },
  "Como comparar": {
   "src": [
-   "services/field_help.py:412",
+   "services/field_help.py:413",
    "templates/products/list.html:19"
   ],
   "help": true
  },
  "Como escolher as bins: menor volume (o mesmo que maior ocupação das bins), menos bins ou menor custo.": {
   "src": [
-   "services/field_help.py:159"
+   "services/field_help.py:160"
   ],
   "help": true
  },
@@ -4149,7 +4149,7 @@
  },
  "Como gerar a parte afetada dentro da exceção.": {
   "src": [
-   "services/field_help.py:298"
+   "services/field_help.py:299"
   ],
   "help": true
  },
@@ -4160,19 +4160,19 @@
  },
  "Como o obstáculo aparece na planta (pilar, escritório, rampa). O trajeto desvia dele.": {
   "src": [
-   "services/field_help.py:83"
+   "services/field_help.py:84"
   ],
   "help": true
  },
  "Como o projeto aparece na lista. Um projeto guarda o imóvel, as estruturas e os parâmetros.": {
   "src": [
-   "services/field_help.py:188"
+   "services/field_help.py:189"
   ],
   "help": true
  },
  "Como os endereços usam as letras": {
   "src": [
-   "services/field_help.py:88"
+   "services/field_help.py:89"
   ],
   "help": true
  },
@@ -4296,7 +4296,7 @@
  },
  "Comprimento (cm)": {
   "src": [
-   "services/field_help.py:388",
+   "services/field_help.py:389",
    "services/master_importer.py:49",
    "services/site_import.py:194",
    "services/site_import.py:197",
@@ -4314,45 +4314,45 @@
  },
  "Comprimento da bin: o lado que vai para o fundo da estante.": {
   "src": [
-   "services/field_help.py:388"
+   "services/field_help.py:389"
   ],
   "help": true
  },
  "Comprimento da unidade (cm)": {
   "src": [
-   "services/field_help.py:404"
+   "services/field_help.py:405"
   ],
   "help": true
  },
  "Comprimento da zona (m)": {
   "src": [
-   "services/field_help.py:124"
+   "services/field_help.py:125"
   ],
   "help": true
  },
  "Comprimento de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:404"
+   "services/field_help.py:405"
   ],
   "help": true
  },
  "Comprimento do imóvel (m)": {
   "src": [
-   "services/field_help.py:69",
-   "services/field_help.py:108"
+   "services/field_help.py:70",
+   "services/field_help.py:109"
   ],
   "help": true
  },
  "Comprimento do obstáculo (m)": {
   "src": [
-   "services/field_help.py:86",
-   "services/field_help.py:135"
+   "services/field_help.py:87",
+   "services/field_help.py:136"
   ],
   "help": true
  },
  "Comprimento e largura do setor, quando a posição é fixa.": {
   "src": [
-   "services/field_help.py:142"
+   "services/field_help.py:143"
   ],
   "help": true
  },
@@ -4369,7 +4369,7 @@
  },
  "Confere se as unidades cabem na bin pelas medidas, não só pelo volume.": {
   "src": [
-   "services/field_help.py:249"
+   "services/field_help.py:250"
   ],
   "help": true
  },
@@ -4426,20 +4426,20 @@
  },
  "Considera o peso máximo da bin e a carga máxima do nível.": {
   "src": [
-   "services/field_help.py:166"
+   "services/field_help.py:167"
   ],
   "help": true
  },
  "Considerar a saída dos SKUs": {
   "src": [
-   "services/field_help.py:234",
+   "services/field_help.py:235",
    "templates/optimization/page.html:190"
   ],
   "help": true
  },
  "Considerar encaixe geométrico": {
   "src": [
-   "services/field_help.py:249",
+   "services/field_help.py:250",
    "templates/optimization/index.html:129",
    "templates/optimization/page.html:271",
    "templates/optimization/pool.html:114"
@@ -4453,7 +4453,7 @@
  },
  "Conteúdo da bin": {
   "src": [
-   "services/field_help.py:330"
+   "services/field_help.py:331"
   ],
   "help": true
  },
@@ -4474,15 +4474,15 @@
  },
  "Contém, começa com, termina com ou igual.": {
   "src": [
-   "services/field_help.py:412"
+   "services/field_help.py:413"
   ],
   "help": true
  },
  "Converter quantidades negativas": {
   "src": [
-   "services/field_help.py:192",
-   "services/field_help.py:233",
-   "services/field_help.py:270"
+   "services/field_help.py:193",
+   "services/field_help.py:234",
+   "services/field_help.py:271"
   ],
   "help": true
  },
@@ -4503,7 +4503,7 @@
  },
  "Copiar as medidas do SKU": {
   "src": [
-   "services/field_help.py:415"
+   "services/field_help.py:416"
   ],
   "help": true
  },
@@ -4521,8 +4521,8 @@
  "Corredor": {
   "src": [
    "services/batch_generator.py:54",
-   "services/field_help.py:100",
-   "services/field_help.py:334",
+   "services/field_help.py:101",
+   "services/field_help.py:335",
    "services/field_help.py:30",
    "services/level_service.py:308",
    "services/master_importer.py:63"
@@ -4539,13 +4539,13 @@
  },
  "Corredor (em lote)": {
   "src": [
-   "services/field_help.py:338"
+   "services/field_help.py:339"
   ],
   "help": true
  },
  "Corredor (estrutura)": {
   "src": [
-   "services/field_help.py:345"
+   "services/field_help.py:346"
   ],
   "help": true
  },
@@ -4578,19 +4578,19 @@
  },
  "Corredor / rua da fileira": {
   "src": [
-   "services/field_help.py:72"
+   "services/field_help.py:73"
   ],
   "help": true
  },
  "Corredor da estante que ganha um nível sem endereço.": {
   "src": [
-   "services/field_help.py:354"
+   "services/field_help.py:355"
   ],
   "help": true
  },
  "Corredor da zona (m)": {
   "src": [
-   "services/field_help.py:129"
+   "services/field_help.py:130"
   ],
   "help": true
  },
@@ -4601,13 +4601,13 @@
  },
  "Corredor do nível reservado": {
   "src": [
-   "services/field_help.py:354"
+   "services/field_help.py:355"
   ],
   "help": true
  },
  "Corredor mais perto da expedição": {
   "src": [
-   "services/field_help.py:236",
+   "services/field_help.py:237",
    "templates/optimization/page.html:226"
   ],
   "help": true
@@ -4655,14 +4655,14 @@
  },
  "Corredores com outra largura": {
   "src": [
-   "services/field_help.py:91",
+   "services/field_help.py:92",
    "templates/layout/plan.html:134"
   ],
   "help": true
  },
  "Corredores cujas estantes recebem a estrutura.": {
   "src": [
-   "services/field_help.py:345"
+   "services/field_help.py:346"
   ],
   "help": true
  },
@@ -4676,7 +4676,7 @@
  },
  "Corredores transversais (qtd.)": {
   "src": [
-   "services/field_help.py:115",
+   "services/field_help.py:116",
    "services/site_service.py:57"
   ],
   "help": true,
@@ -4701,7 +4701,7 @@
  },
  "Cotas completas por fora da planta (em volta) ou por dentro (tamanho de cada zona e distância até as paredes).": {
   "src": [
-   "services/field_help.py:450"
+   "services/field_help.py:451"
   ],
   "help": true
  },
@@ -4735,19 +4735,19 @@
  },
  "Cria os níveis 1..N que a estante ainda não tem, como níveis reservados.": {
   "src": [
-   "services/field_help.py:353"
+   "services/field_help.py:354"
   ],
   "help": true
  },
  "Cria os produtos da planilha que ainda não existem no catálogo.": {
   "src": [
-   "services/field_help.py:184"
+   "services/field_help.py:185"
   ],
   "help": true
  },
  "Cria um registro de saldo (zerado) de cada SKU no endereço que o plano escolheu.": {
   "src": [
-   "services/field_help.py:183"
+   "services/field_help.py:184"
   ],
   "help": true
  },
@@ -4764,7 +4764,7 @@
  },
  "Criar endereços inexistentes": {
   "src": [
-   "services/field_help.py:282"
+   "services/field_help.py:283"
   ],
   "help": true
  },
@@ -4780,7 +4780,7 @@
  },
  "Criar níveis que faltam": {
   "src": [
-   "services/field_help.py:353"
+   "services/field_help.py:354"
   ],
   "help": true
  },
@@ -4791,7 +4791,7 @@
  },
  "Criar produtos inexistentes": {
   "src": [
-   "services/field_help.py:278"
+   "services/field_help.py:279"
   ],
   "help": true
  },
@@ -4813,8 +4813,8 @@
  },
  "Critério de desempate": {
   "src": [
-   "services/field_help.py:158",
-   "services/field_help.py:228"
+   "services/field_help.py:159",
+   "services/field_help.py:229"
   ],
   "help": true
  },
@@ -4879,7 +4879,7 @@
  },
  "Custo por bin (R$)": {
   "src": [
-   "services/field_help.py:391",
+   "services/field_help.py:392",
    "services/master_importer.py:52",
    "services/site_import.py:195",
    "services/site_import.py:815",
@@ -4896,7 +4896,7 @@
  },
  "Custo por módulo (R$)": {
   "src": [
-   "services/field_help.py:376",
+   "services/field_help.py:377",
    "services/site_import.py:189",
    "services/site_import.py:810",
    "templates/structures/form.html:78"
@@ -4971,13 +4971,13 @@
  },
  "Código da estrutura": {
   "src": [
-   "services/field_help.py:365"
+   "services/field_help.py:366"
   ],
   "help": true
  },
  "Código da filial": {
   "src": [
-   "services/field_help.py:434",
+   "services/field_help.py:435",
    "services/master_importer.py:36"
   ],
   "help": true,
@@ -4990,13 +4990,13 @@
  },
  "Código da filial nova": {
   "src": [
-   "services/field_help.py:179"
+   "services/field_help.py:180"
   ],
   "help": true
  },
  "Código da filial que será criada a partir do plano.": {
   "src": [
-   "services/field_help.py:179"
+   "services/field_help.py:180"
   ],
   "help": true
  },
@@ -5026,8 +5026,8 @@
  },
  "Código do armazém": {
   "src": [
-   "services/field_help.py:181",
-   "services/field_help.py:438",
+   "services/field_help.py:182",
+   "services/field_help.py:439",
    "services/master_importer.py:40"
   ],
   "help": true,
@@ -5035,7 +5035,7 @@
  },
  "Código do nível reservado": {
   "src": [
-   "services/field_help.py:356"
+   "services/field_help.py:357"
   ],
   "help": true
  },
@@ -5047,7 +5047,7 @@
  },
  "Código do tipo de bin": {
   "src": [
-   "services/field_help.py:384"
+   "services/field_help.py:385"
   ],
   "help": true
  },
@@ -5073,13 +5073,13 @@
  },
  "Código único do produto no catálogo, o mesmo em todas as filiais.": {
   "src": [
-   "services/field_help.py:399"
+   "services/field_help.py:400"
   ],
   "help": true
  },
  "Código único usado dentro da exceção.": {
   "src": [
-   "services/field_help.py:301"
+   "services/field_help.py:302"
   ],
   "help": true
  },
@@ -5100,7 +5100,7 @@
  },
  "Códigos das estruturas que podem ser usadas nesta zona; vazio = todas.": {
   "src": [
-   "services/field_help.py:131"
+   "services/field_help.py:132"
   ],
   "help": true
  },
@@ -5127,13 +5127,13 @@
  },
  "Da face do corredor até o fundo da fileira. Cada estante usa a profundidade da sua estrutura, se for menor.": {
   "src": [
-   "services/field_help.py:76"
+   "services/field_help.py:77"
   ],
   "help": true
  },
  "Da frente ao fundo do nível.": {
   "src": [
-   "services/field_help.py:369",
+   "services/field_help.py:370",
    "templates/structures/form.html:37"
   ],
   "help": true
@@ -5167,7 +5167,7 @@
  },
  "De baixo para cima, ex.: 60; 40; 35. A sobra da altura vira a espessura das longarinas.": {
   "src": [
-   "services/field_help.py:374"
+   "services/field_help.py:375"
   ],
   "help": true
  },
@@ -5184,19 +5184,19 @@
  },
  "De onde a separação sai e volta: um setor, as docas ou um X/Y informado.": {
   "src": [
-   "services/field_help.py:173"
+   "services/field_help.py:174"
   ],
   "help": true
  },
  "De onde vêm os SKUs": {
   "src": [
-   "services/field_help.py:147"
+   "services/field_help.py:148"
   ],
   "help": true
  },
  "De qual corredor dos endereços são as estantes desta fileira.": {
   "src": [
-   "services/field_help.py:72"
+   "services/field_help.py:73"
   ],
   "help": true
  },
@@ -5222,7 +5222,7 @@
  },
  "Define o 1º endereço do SKU na filial nova como padrão: só para quem não tem, para todos ou não altera.": {
   "src": [
-   "services/field_help.py:187"
+   "services/field_help.py:188"
   ],
   "help": true
  },
@@ -5246,7 +5246,7 @@
  },
  "Deixa lado a lado os SKUs que costumam sair no mesmo pedido.": {
   "src": [
-   "services/field_help.py:178"
+   "services/field_help.py:179"
   ],
   "help": true
  },
@@ -5334,19 +5334,19 @@
  },
  "Descrição do produto, como aparece nas listas e nos relatórios.": {
   "src": [
-   "services/field_help.py:400"
+   "services/field_help.py:401"
   ],
   "help": true
  },
  "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).": {
   "src": [
-   "services/field_help.py:366"
+   "services/field_help.py:367"
   ],
   "help": true
  },
  "Descrição que aparece nas telas.": {
   "src": [
-   "services/field_help.py:385"
+   "services/field_help.py:386"
   ],
   "help": true
  },
@@ -5401,7 +5401,7 @@
  },
  "Destacar endereço ou SKU": {
   "src": [
-   "services/field_help.py:101"
+   "services/field_help.py:102"
   ],
   "help": true
  },
@@ -5490,13 +5490,13 @@
  },
  "Digite um endereço ou SKU: as posições que combinam ficam em destaque no mapa.": {
   "src": [
-   "services/field_help.py:101"
+   "services/field_help.py:102"
   ],
   "help": true
  },
  "Dimensiona as bins pelo saldo atual, pelo mínimo ou pelo máximo do produto.": {
   "src": [
-   "services/field_help.py:223"
+   "services/field_help.py:224"
   ],
   "help": true
  },
@@ -5534,7 +5534,7 @@
  },
  "Direção das fileiras dentro desta zona.": {
   "src": [
-   "services/field_help.py:128"
+   "services/field_help.py:129"
   ],
   "help": true
  },
@@ -5560,7 +5560,7 @@
  },
  "Distância até o nível de cima. Nunca fica menor que a bin mais alta do nível.": {
   "src": [
-   "services/field_help.py:358"
+   "services/field_help.py:359"
   ],
   "help": true
  },
@@ -5571,32 +5571,32 @@
  },
  "Distância do canto da fileira até a parede de cima do imóvel.": {
   "src": [
-   "services/field_help.py:75"
+   "services/field_help.py:76"
   ],
   "help": true
  },
  "Distância do canto da fileira até a parede esquerda do imóvel.": {
   "src": [
-   "services/field_help.py:74"
+   "services/field_help.py:75"
   ],
   "help": true
  },
  "Distância do canto do obstáculo até a parede das docas.": {
   "src": [
-   "services/field_help.py:133"
+   "services/field_help.py:134"
   ],
   "help": true
  },
  "Distância do canto do obstáculo até a parede de cima.": {
   "src": [
-   "services/field_help.py:85",
-   "services/field_help.py:134"
+   "services/field_help.py:86",
+   "services/field_help.py:135"
   ],
   "help": true
  },
  "Distância do canto do obstáculo até a parede esquerda.": {
   "src": [
-   "services/field_help.py:84"
+   "services/field_help.py:85"
   ],
   "help": true
  },
@@ -5612,7 +5612,7 @@
  },
  "Distância entre este nível e o de cima.": {
   "src": [
-   "services/field_help.py:343"
+   "services/field_help.py:344"
   ],
   "help": true
  },
@@ -5656,7 +5656,7 @@
  },
  "Divide o saldo informado entre os endereços do SKU, na proporção do plano.": {
   "src": [
-   "services/field_help.py:186"
+   "services/field_help.py:187"
   ],
   "help": true
  },
@@ -5673,7 +5673,7 @@
  },
  "Divisões na largura": {
   "src": [
-   "services/field_help.py:393",
+   "services/field_help.py:394",
    "services/master_importer.py:54"
   ],
   "help": true,
@@ -5681,7 +5681,7 @@
  },
  "Divisões no comprimento": {
   "src": [
-   "services/field_help.py:394",
+   "services/field_help.py:395",
    "services/master_importer.py:55"
   ],
   "help": true,
@@ -5694,7 +5694,7 @@
  },
  "Do catálogo e saldos de uma filial existente ou da planilha enviada para o projeto.": {
   "src": [
-   "services/field_help.py:147"
+   "services/field_help.py:148"
   ],
   "help": true
  },
@@ -5705,7 +5705,7 @@
  },
  "Do piso ao topo. Precisa caber no pé-direito útil do imóvel.": {
   "src": [
-   "services/field_help.py:370"
+   "services/field_help.py:371"
   ],
   "help": true
  },
@@ -5735,7 +5735,7 @@
  },
  "Dois sentidos (contra fluxo permitido) ou mão única: o separador só anda no sentido das setas e dá a volta para retornar.": {
   "src": [
-   "services/field_help.py:81"
+   "services/field_help.py:82"
   ],
   "help": true
  },
@@ -5847,25 +5847,25 @@
  },
  "Em níveis sem capacidade cadastrada, as bins novas não ocupam mais frente que as atuais.": {
   "src": [
-   "services/field_help.py:261"
+   "services/field_help.py:262"
   ],
   "help": true
  },
  "Em quais corredores aplicar: valor, lista (A,C) ou faixa (A-D); vazio = todos.": {
   "src": [
-   "services/field_help.py:338"
+   "services/field_help.py:339"
   ],
   "help": true
  },
  "Em quais estantes aplicar: valor, lista ou faixa (01-04); vazio = todas.": {
   "src": [
-   "services/field_help.py:339"
+   "services/field_help.py:340"
   ],
   "help": true
  },
  "Em quais níveis aplicar: valor, lista ou faixa; vazio = todos.": {
   "src": [
-   "services/field_help.py:340"
+   "services/field_help.py:341"
   ],
   "help": true
  },
@@ -5876,19 +5876,19 @@
  },
  "Em qual campo procurar: SKU, nome, material ou endereço.": {
   "src": [
-   "services/field_help.py:411"
+   "services/field_help.py:412"
   ],
   "help": true
  },
  "Em quantas partes a bin pai é dividida na largura.": {
   "src": [
-   "services/field_help.py:393"
+   "services/field_help.py:394"
   ],
   "help": true
  },
  "Em quantas partes a bin pai é dividida no comprimento.": {
   "src": [
-   "services/field_help.py:394"
+   "services/field_help.py:395"
   ],
   "help": true
  },
@@ -5921,7 +5921,7 @@
  },
  "Empurrar as seguintes": {
   "src": [
-   "services/field_help.py:80"
+   "services/field_help.py:81"
   ],
   "help": true
  },
@@ -5994,8 +5994,8 @@
  },
  "Enchimento máximo (%)": {
   "src": [
-   "services/field_help.py:160",
-   "services/field_help.py:246"
+   "services/field_help.py:161",
+   "services/field_help.py:247"
   ],
   "help": true
  },
@@ -6031,7 +6031,7 @@
  },
  "Encostadas na fileira mais longa ou alinhadas à borda do trecho.": {
   "src": [
-   "services/field_help.py:120"
+   "services/field_help.py:121"
   ],
   "help": true
  },
@@ -6045,9 +6045,9 @@
    "routers/optimization.py:485",
    "routers/products.py:142",
    "services/action_plan.py:181",
-   "services/field_help.py:320",
-   "services/field_help.py:422",
-   "services/field_help.py:427"
+   "services/field_help.py:321",
+   "services/field_help.py:423",
+   "services/field_help.py:428"
   ],
   "lazy": true,
   "help": true
@@ -6081,7 +6081,7 @@
  "Endereço contém": {
   "src": [
    "routers/optimization.py:978",
-   "services/field_help.py:215",
+   "services/field_help.py:216",
    "templates/optimization/index.html:69",
    "templates/optimization/page.html:89",
    "templates/optimization/pool.html:49"
@@ -6100,13 +6100,13 @@
  },
  "Endereço físico onde esta quantidade do produto está guardada.": {
   "src": [
-   "services/field_help.py:427"
+   "services/field_help.py:428"
   ],
   "help": true
  },
  "Endereço genérico": {
   "src": [
-   "services/field_help.py:314"
+   "services/field_help.py:315"
   ],
   "help": true
  },
@@ -6142,7 +6142,7 @@
  },
  "Endereço onde o produto normalmente fica nesta filial.": {
   "src": [
-   "services/field_help.py:407"
+   "services/field_help.py:408"
   ],
   "help": true
  },
@@ -6153,7 +6153,7 @@
  },
  "Endereço padrão": {
   "src": [
-   "services/field_help.py:407",
+   "services/field_help.py:408",
    "services/product_importer.py:52",
    "templates/products/detail.html:34",
    "templates/products/form.html:47",
@@ -6164,7 +6164,7 @@
  },
  "Endereço padrão do produto": {
   "src": [
-   "services/field_help.py:187",
+   "services/field_help.py:188",
    "templates/locations/list.html:84"
   ],
   "help": true
@@ -6264,7 +6264,7 @@
  },
  "Endereços até esta caminhada da referência; vazio = os 20% mais perto.": {
   "src": [
-   "services/field_help.py:239"
+   "services/field_help.py:240"
   ],
   "help": true
  },
@@ -6313,7 +6313,7 @@
  },
  "Endereços do arquivo que não existem são criados.": {
   "src": [
-   "services/field_help.py:282"
+   "services/field_help.py:283"
   ],
   "help": true
  },
@@ -6375,39 +6375,39 @@
  },
  "Entram só os endereços cujo código contém este texto (ex.: A-01).": {
   "src": [
-   "services/field_help.py:215"
+   "services/field_help.py:216"
   ],
   "help": true
  },
  "Entram só os endereços que hoje têm este tipo de bin, alguma bin ou nenhuma.": {
   "src": [
-   "services/field_help.py:218"
+   "services/field_help.py:219"
   ],
   "help": true
  },
  "Entram só os produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:151",
-   "services/field_help.py:217"
+   "services/field_help.py:152",
+   "services/field_help.py:218"
   ],
   "help": true
  },
  "Entre corredores (m)": {
   "src": [
-   "services/field_help.py:237",
+   "services/field_help.py:238",
    "templates/optimization/page.html:228"
   ],
   "help": true
  },
  "Entre planos iguais no critério anterior, qual o próximo a decidir.": {
   "src": [
-   "services/field_help.py:158"
+   "services/field_help.py:159"
   ],
   "help": true
  },
  "Entre planos iguais no objetivo, qual critério decide em seguida.": {
   "src": [
-   "services/field_help.py:228"
+   "services/field_help.py:229"
   ],
   "help": true
  },
@@ -6456,7 +6456,7 @@
  },
  "Escala": {
   "src": [
-   "services/field_help.py:103"
+   "services/field_help.py:104"
   ],
   "help": true
  },
@@ -6519,7 +6519,7 @@
  },
  "Escolha das bins de cada SKU": {
   "src": [
-   "services/field_help.py:159"
+   "services/field_help.py:160"
   ],
   "help": true
  },
@@ -6568,7 +6568,7 @@
  },
  "Esconde os registros com quantidade zero (atribuições sem saldo).": {
   "src": [
-   "services/field_help.py:423"
+   "services/field_help.py:424"
   ],
   "help": true
  },
@@ -6610,14 +6610,14 @@
  },
  "Espaço entre o topo da bin e o nível de cima, para conseguir tirá-la.": {
   "src": [
-   "services/field_help.py:162",
-   "services/field_help.py:348"
+   "services/field_help.py:163",
+   "services/field_help.py:349"
   ],
   "help": true
  },
  "Espaço entre uma bin e a vizinha no nível.": {
   "src": [
-   "services/field_help.py:163"
+   "services/field_help.py:164"
   ],
   "help": true
  },
@@ -6628,7 +6628,7 @@
  },
  "Espaço livre entre as colunas, onde as bins ficam lado a lado.": {
   "src": [
-   "services/field_help.py:368"
+   "services/field_help.py:369"
   ],
   "help": true
  },
@@ -6639,13 +6639,13 @@
  },
  "Espaço que o setor precisa, em metros quadrados; o sistema escolhe as proporções do retângulo.": {
   "src": [
-   "services/field_help.py:138"
+   "services/field_help.py:139"
   ],
   "help": true
  },
  "Espaço sem estantes entre a parede e o início das fileiras, onde fica a expedição.": {
   "src": [
-   "services/field_help.py:90"
+   "services/field_help.py:91"
   ],
   "help": true
  },
@@ -6676,7 +6676,7 @@
    "routers/structures.py:17",
    "routers/structures.py:107",
    "services/batch_generator.py:54",
-   "services/field_help.py:335",
+   "services/field_help.py:336",
    "services/field_help.py:31",
    "services/level_service.py:308"
   ],
@@ -6692,13 +6692,13 @@
  },
  "Estante (em lote)": {
   "src": [
-   "services/field_help.py:339"
+   "services/field_help.py:340"
   ],
   "help": true
  },
  "Estante (estrutura)": {
   "src": [
-   "services/field_help.py:346"
+   "services/field_help.py:347"
   ],
   "help": true
  },
@@ -6710,13 +6710,13 @@
  },
  "Estante do nível reservado": {
   "src": [
-   "services/field_help.py:355"
+   "services/field_help.py:356"
   ],
   "help": true
  },
  "Estante que ganha um nível sem endereço.": {
   "src": [
-   "services/field_help.py:355"
+   "services/field_help.py:356"
   ],
   "help": true
  },
@@ -6739,7 +6739,7 @@
  },
  "Estante, porta-palete, palete no chão… O palete no chão é desenhado sem montantes, em camadas.": {
   "src": [
-   "services/field_help.py:367"
+   "services/field_help.py:368"
   ],
   "help": true
  },
@@ -6755,7 +6755,7 @@
  },
  "Estantes da fileira": {
   "src": [
-   "services/field_help.py:73"
+   "services/field_help.py:74"
   ],
   "help": true
  },
@@ -6766,7 +6766,7 @@
  },
  "Estantes que recebem a estrutura: valor, lista ou faixa; vazio = todas.": {
   "src": [
-   "services/field_help.py:346"
+   "services/field_help.py:347"
   ],
   "help": true
  },
@@ -6817,7 +6817,7 @@
  "Estrutura": {
   "src": [
    "routers/site.py:187",
-   "services/field_help.py:347",
+   "services/field_help.py:348",
    "services/site_report.py:331",
    "services/site_report.py:337",
    "services/site_report.py:343",
@@ -6833,7 +6833,7 @@
  },
  "Estrutura aplicada às estantes: define frente, profundidade, níveis, vãos e zona de ouro.": {
   "src": [
-   "services/field_help.py:347"
+   "services/field_help.py:348"
   ],
   "help": true
  },
@@ -6844,7 +6844,7 @@
  },
  "Estrutura das estantes": {
   "src": [
-   "services/field_help.py:304"
+   "services/field_help.py:305"
   ],
   "help": true
  },
@@ -6972,7 +6972,7 @@
  },
  "Estruturas permitidas na zona": {
   "src": [
-   "services/field_help.py:131"
+   "services/field_help.py:132"
   ],
   "help": true
  },
@@ -7098,37 +7098,37 @@
  },
  "Exceção: dígitos": {
   "src": [
-   "services/field_help.py:302"
+   "services/field_help.py:303"
   ],
   "help": true
  },
  "Exceção: fim": {
   "src": [
-   "services/field_help.py:300"
+   "services/field_help.py:301"
   ],
   "help": true
  },
  "Exceção: início": {
   "src": [
-   "services/field_help.py:299"
+   "services/field_help.py:300"
   ],
   "help": true
  },
  "Exceção: parte afetada": {
   "src": [
-   "services/field_help.py:297"
+   "services/field_help.py:298"
   ],
   "help": true
  },
  "Exceção: tipo do código": {
   "src": [
-   "services/field_help.py:298"
+   "services/field_help.py:299"
   ],
   "help": true
  },
  "Exceção: valor fixo": {
   "src": [
-   "services/field_help.py:301"
+   "services/field_help.py:302"
   ],
   "help": true
  },
@@ -7151,7 +7151,7 @@
  },
  "Exclui os registros que não estão no arquivo, dentro das filiais/armazéns que aparecem nele.": {
   "src": [
-   "services/field_help.py:284"
+   "services/field_help.py:285"
   ],
   "help": true
  },
@@ -7219,7 +7219,7 @@
  },
  "Excluir níveis sem endereços": {
   "src": [
-   "services/field_help.py:286"
+   "services/field_help.py:287"
   ],
   "help": true
  },
@@ -7311,7 +7311,7 @@
  },
  "Excluir também a posição física": {
   "src": [
-   "services/field_help.py:328"
+   "services/field_help.py:329"
   ],
   "help": true
  },
@@ -7322,13 +7322,13 @@
  },
  "Excluir também os ocupados": {
   "src": [
-   "services/field_help.py:329"
+   "services/field_help.py:330"
   ],
   "help": true
  },
  "Excluir também os relacionados": {
   "src": [
-   "services/field_help.py:447"
+   "services/field_help.py:448"
   ],
   "help": true
  },
@@ -7401,7 +7401,7 @@
  },
  "Existentes: só as bins que há hoje. Recurso infinito: o plano pode usar bins que ainda não existem.": {
   "src": [
-   "services/field_help.py:220"
+   "services/field_help.py:221"
   ],
   "help": true
  },
@@ -7436,7 +7436,7 @@
  },
  "Faixa junto às docas/expedição que fica sem estruturas.": {
   "src": [
-   "services/field_help.py:113"
+   "services/field_help.py:114"
   ],
   "help": true
  },
@@ -7448,13 +7448,13 @@
  },
  "Faixa no fundo do imóvel que fica sem estruturas.": {
   "src": [
-   "services/field_help.py:114"
+   "services/field_help.py:115"
   ],
   "help": true
  },
  "Faixa reservada na frente (m)": {
   "src": [
-   "services/field_help.py:113"
+   "services/field_help.py:114"
   ],
   "help": true
  },
@@ -7466,7 +7466,7 @@
  },
  "Faixa reservada no fundo (m)": {
   "src": [
-   "services/field_help.py:114",
+   "services/field_help.py:115",
    "services/site_service.py:56"
   ],
   "help": true,
@@ -7579,7 +7579,7 @@
  },
  "Fator da demanda (%)": {
   "src": [
-   "services/field_help.py:154",
+   "services/field_help.py:155",
    "templates/site/project.html:295"
   ],
   "help": true
@@ -7607,7 +7607,7 @@
  },
  "Ferramenta da planta": {
   "src": [
-   "services/field_help.py:452"
+   "services/field_help.py:453"
   ],
   "help": true
  },
@@ -7663,7 +7663,7 @@
  },
  "Fileiras ao longo do comprimento, da largura, ou a que couber mais estruturas (automático).": {
   "src": [
-   "services/field_help.py:118"
+   "services/field_help.py:119"
   ],
   "help": true
  },
@@ -7720,7 +7720,7 @@
  },
  "Filiais do armazém": {
   "src": [
-   "services/field_help.py:440"
+   "services/field_help.py:441"
   ],
   "help": true
  },
@@ -7743,7 +7743,7 @@
  },
  "Filiais que usam este armazém.": {
   "src": [
-   "services/field_help.py:440"
+   "services/field_help.py:441"
   ],
   "help": true
  },
@@ -7761,11 +7761,11 @@
  "Filial": {
   "src": [
    "routers/optimization.py:974",
-   "services/field_help.py:93",
-   "services/field_help.py:98",
-   "services/field_help.py:198",
-   "services/field_help.py:213",
-   "services/field_help.py:307"
+   "services/field_help.py:94",
+   "services/field_help.py:99",
+   "services/field_help.py:199",
+   "services/field_help.py:214",
+   "services/field_help.py:308"
   ],
   "help": true,
   "lazy": true
@@ -7781,43 +7781,43 @@
  },
  "Filial a que a tela se refere.": {
   "src": [
-   "services/field_help.py:455"
+   "services/field_help.py:456"
   ],
   "help": true
  },
  "Filial a que o histórico de pedidos pertence (um histórico por filial).": {
   "src": [
-   "services/field_help.py:269"
+   "services/field_help.py:270"
   ],
   "help": true
  },
  "Filial cuja planta está sendo desenhada. Há uma planta por filial e armazém.": {
   "src": [
-   "services/field_help.py:93"
+   "services/field_help.py:94"
   ],
   "help": true
  },
  "Filial cujos endereços e bins entram na otimização.": {
   "src": [
-   "services/field_help.py:213"
+   "services/field_help.py:214"
   ],
   "help": true
  },
  "Filial cujos produtos e saldos servem de base para a filial nova.": {
   "src": [
-   "services/field_help.py:148"
+   "services/field_help.py:149"
   ],
   "help": true
  },
  "Filial da política": {
   "src": [
-   "services/field_help.py:406"
+   "services/field_help.py:407"
   ],
   "help": true
  },
  "Filial de origem": {
   "src": [
-   "services/field_help.py:148"
+   "services/field_help.py:149"
   ],
   "help": true
  },
@@ -7828,25 +7828,25 @@
  },
  "Filial do endereço (ou filtro da lista).": {
   "src": [
-   "services/field_help.py:318"
+   "services/field_help.py:319"
   ],
   "help": true
  },
  "Filial do histórico": {
   "src": [
-   "services/field_help.py:269"
+   "services/field_help.py:270"
   ],
   "help": true
  },
  "Filial dos níveis mostrados.": {
   "src": [
-   "services/field_help.py:360"
+   "services/field_help.py:361"
   ],
   "help": true
  },
  "Filial em que este mínimo, máximo e endereço padrão valem.": {
   "src": [
-   "services/field_help.py:406"
+   "services/field_help.py:407"
   ],
   "help": true
  },
@@ -7857,7 +7857,7 @@
  },
  "Filial mostrada no mapa do estoque.": {
   "src": [
-   "services/field_help.py:98"
+   "services/field_help.py:99"
   ],
   "help": true
  },
@@ -7873,13 +7873,13 @@
  },
  "Filial onde os endereços serão criados.": {
   "src": [
-   "services/field_help.py:307"
+   "services/field_help.py:308"
   ],
   "help": true
  },
  "Filial padrão": {
   "src": [
-   "services/field_help.py:275"
+   "services/field_help.py:276"
   ],
   "help": true
  },
@@ -7969,31 +7969,31 @@
  },
  "Filtra os níveis de um corredor.": {
   "src": [
-   "services/field_help.py:334"
+   "services/field_help.py:335"
   ],
   "help": true
  },
  "Filtra os níveis de uma estante.": {
   "src": [
-   "services/field_help.py:335"
+   "services/field_help.py:336"
   ],
   "help": true
  },
  "Filtra os produtos que entram no projeto. Aceita 10*, *10, =10.": {
   "src": [
-   "services/field_help.py:150"
+   "services/field_help.py:151"
   ],
   "help": true
  },
  "Filtra pelo tipo de material do produto.": {
   "src": [
-   "services/field_help.py:458"
+   "services/field_help.py:459"
   ],
   "help": true
  },
  "Filtra por produto. Aceita 10* (começa com), *10 (termina com), =10 (igual).": {
   "src": [
-   "services/field_help.py:216"
+   "services/field_help.py:217"
   ],
   "help": true
  },
@@ -8012,14 +8012,14 @@
  },
  "Filtrar SKUs": {
   "src": [
-   "services/field_help.py:206"
+   "services/field_help.py:207"
   ],
   "help": true
  },
  "Filtrar a tabela": {
   "src": [
-   "services/field_help.py:193",
-   "services/field_help.py:461"
+   "services/field_help.py:194",
+   "services/field_help.py:462"
   ],
   "help": true
  },
@@ -8031,7 +8031,7 @@
  },
  "Filtrar linhas": {
   "src": [
-   "services/field_help.py:203"
+   "services/field_help.py:204"
   ],
   "help": true
  },
@@ -8042,7 +8042,7 @@
  },
  "Filtrar pedidos": {
   "src": [
-   "services/field_help.py:65"
+   "services/field_help.py:66"
   ],
   "help": true
  },
@@ -8083,7 +8083,7 @@
  "Foco nos SKUs filtrados": {
   "src": [
    "routers/optimization.py:1028",
-   "services/field_help.py:219",
+   "services/field_help.py:220",
    "templates/optimization/page.html:104"
   ],
   "help": true
@@ -8095,8 +8095,8 @@
  },
  "Folga acima da bin (cm)": {
   "src": [
-   "services/field_help.py:162",
-   "services/field_help.py:348",
+   "services/field_help.py:163",
+   "services/field_help.py:349",
    "templates/site/project.html:332"
   ],
   "help": true
@@ -8113,7 +8113,7 @@
  },
  "Folga entre as paredes e as estruturas.": {
   "src": [
-   "services/field_help.py:112"
+   "services/field_help.py:113"
   ],
   "help": true
  },
@@ -8129,13 +8129,13 @@
  },
  "Folga lateral (cm)": {
   "src": [
-   "services/field_help.py:163"
+   "services/field_help.py:164"
   ],
   "help": true
  },
  "Folga somada à quantidade de cada SKU, para o saldo poder crescer.": {
   "src": [
-   "services/field_help.py:247"
+   "services/field_help.py:248"
   ],
   "help": true
  },
@@ -8151,7 +8151,7 @@
  },
  "Fonte da popularidade": {
   "src": [
-   "services/field_help.py:171"
+   "services/field_help.py:172"
   ],
   "help": true
  },
@@ -8168,22 +8168,23 @@
  },
  "Fora da zona de ouro (s por item)": {
   "src": [
-   "services/field_help.py:157",
-   "services/field_help.py:227",
+   "services/field_help.py:158",
+   "services/field_help.py:228",
    "templates/site/project.html:444"
   ],
   "help": true
  },
  "Fora do ouro (s por item)": {
   "src": [
-   "services/field_help.py:63"
+   "services/field_help.py:56",
+   "services/field_help.py:64"
   ],
   "help": true
  },
  "Fora do ouro (s por peça)": {
   "src": [
-   "services/field_help.py:56",
-   "services/field_help.py:64"
+   "services/field_help.py:57",
+   "services/field_help.py:65"
   ],
   "help": true
  },
@@ -8266,7 +8267,7 @@
  },
  "Frente (largura útil, cm)": {
   "src": [
-   "services/field_help.py:368"
+   "services/field_help.py:369"
   ],
   "help": true
  },
@@ -8277,14 +8278,14 @@
  },
  "Frente da estante (m)": {
   "src": [
-   "services/field_help.py:238",
+   "services/field_help.py:239",
    "templates/optimization/page.html:230"
   ],
   "help": true
  },
  "Frente das estantes (m)": {
   "src": [
-   "services/field_help.py:77"
+   "services/field_help.py:78"
   ],
   "help": true
  },
@@ -8295,7 +8296,7 @@
  },
  "Frente de cada estante que não tem estrutura cadastrada. Com estrutura, vale a frente dela.": {
   "src": [
-   "services/field_help.py:77"
+   "services/field_help.py:78"
   ],
   "help": true
  },
@@ -8312,7 +8313,7 @@
  },
  "Frente livre (m)": {
   "src": [
-   "services/field_help.py:90",
+   "services/field_help.py:91",
    "templates/layout/plan.html:133"
   ],
   "help": true
@@ -8431,7 +8432,7 @@
  },
  "Gravar o vão dos níveis": {
   "src": [
-   "services/field_help.py:350"
+   "services/field_help.py:351"
   ],
   "help": true
  },
@@ -8494,7 +8495,7 @@
  },
  "Heurístico (rápido) ou pesquisa operacional (OR-Tools), que busca a melhor solução comprovada.": {
   "src": [
-   "services/field_help.py:229"
+   "services/field_help.py:230"
   ],
   "help": true
  },
@@ -8523,7 +8524,7 @@
  },
  "Histórico de pedidos da planilha, a coluna Saída ou automático (pedidos, se houver).": {
   "src": [
-   "services/field_help.py:171"
+   "services/field_help.py:172"
   ],
   "help": true
  },
@@ -8628,25 +8629,25 @@
  },
  "Identificador curto e único (ex.: CX-P).": {
   "src": [
-   "services/field_help.py:384"
+   "services/field_help.py:385"
   ],
   "help": true
  },
  "Identificador curto e único (ex.: EST-100).": {
   "src": [
-   "services/field_help.py:365"
+   "services/field_help.py:366"
   ],
   "help": true
  },
  "Identificador curto e único da filial (ex.: 01).": {
   "src": [
-   "services/field_help.py:434"
+   "services/field_help.py:435"
   ],
   "help": true
  },
  "Identificador curto e único do armazém (ex.: CD1).": {
   "src": [
-   "services/field_help.py:438"
+   "services/field_help.py:439"
   ],
   "help": true
  },
@@ -8984,14 +8985,14 @@
  },
  "Itens que perderem a bin": {
   "src": [
-   "services/field_help.py:222",
+   "services/field_help.py:223",
    "templates/optimization/page.html:134"
   ],
   "help": true
  },
  "Itens que saem juntos": {
   "src": [
-   "services/field_help.py:178",
+   "services/field_help.py:179",
    "templates/optimization/page.html:404",
    "templates/site/project.html:578"
   ],
@@ -8999,7 +9000,7 @@
  },
  "Itens que saem juntos perto": {
   "src": [
-   "services/field_help.py:244"
+   "services/field_help.py:245"
   ],
   "help": true
  },
@@ -9078,7 +9079,7 @@
  },
  "Lado mínimo (m)": {
   "src": [
-   "services/field_help.py:139",
+   "services/field_help.py:140",
    "services/site_import.py:204",
    "services/site_import.py:794"
   ],
@@ -9092,7 +9093,7 @@
  },
  "Lançar o saldo da planilha": {
   "src": [
-   "services/field_help.py:186"
+   "services/field_help.py:187"
   ],
   "help": true
  },
@@ -9141,7 +9142,7 @@
  },
  "Largura (cm)": {
   "src": [
-   "services/field_help.py:387",
+   "services/field_help.py:388",
    "services/master_importer.py:48",
    "services/site_import.py:193",
    "services/site_import.py:196",
@@ -9160,31 +9161,31 @@
  },
  "Largura da bin: o lado que fica ao longo da frente da estante.": {
   "src": [
-   "services/field_help.py:387"
+   "services/field_help.py:388"
   ],
   "help": true
  },
  "Largura da unidade (cm)": {
   "src": [
-   "services/field_help.py:403"
+   "services/field_help.py:404"
   ],
   "help": true
  },
  "Largura da zona (m)": {
   "src": [
-   "services/field_help.py:125"
+   "services/field_help.py:126"
   ],
   "help": true
  },
  "Largura da zona; vazio = toda a largura do imóvel.": {
   "src": [
-   "services/field_help.py:125"
+   "services/field_help.py:126"
   ],
   "help": true
  },
  "Largura das avenidas (m)": {
   "src": [
-   "services/field_help.py:117"
+   "services/field_help.py:118"
   ],
   "help": true
  },
@@ -9196,7 +9197,7 @@
  },
  "Largura de cada corredor transversal.": {
   "src": [
-   "services/field_help.py:116"
+   "services/field_help.py:117"
   ],
   "help": true
  },
@@ -9216,34 +9217,34 @@
  },
  "Largura de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:403"
+   "services/field_help.py:404"
   ],
   "help": true
  },
  "Largura do corredor (m)": {
   "src": [
-   "services/field_help.py:79"
+   "services/field_help.py:80"
   ],
   "help": true
  },
  "Largura do imóvel (m)": {
   "src": [
-   "services/field_help.py:70",
-   "services/field_help.py:109"
+   "services/field_help.py:71",
+   "services/field_help.py:110"
   ],
   "help": true
  },
  "Largura do obstáculo (m)": {
   "src": [
-   "services/field_help.py:87",
-   "services/field_help.py:136"
+   "services/field_help.py:88",
+   "services/field_help.py:137"
   ],
   "help": true
  },
  "Largura dos corredores (m)": {
   "src": [
-   "services/field_help.py:89",
-   "services/field_help.py:111",
+   "services/field_help.py:90",
+   "services/field_help.py:112",
    "services/site_service.py:53"
   ],
   "help": true,
@@ -9251,13 +9252,13 @@
  },
  "Largura dos corredores só desta zona; vazio = a do imóvel.": {
   "src": [
-   "services/field_help.py:129"
+   "services/field_help.py:130"
   ],
   "help": true
  },
  "Largura dos transversais (m)": {
   "src": [
-   "services/field_help.py:116",
+   "services/field_help.py:117",
    "services/site_service.py:58"
   ],
   "help": true,
@@ -9281,13 +9282,13 @@
  },
  "Largura máxima (cm)": {
   "src": [
-   "services/field_help.py:256"
+   "services/field_help.py:257"
   ],
   "help": true
  },
  "Largura própria de alguns corredores, pela letra. Ex.: A=3,5; C=2,8.": {
   "src": [
-   "services/field_help.py:91"
+   "services/field_help.py:92"
   ],
   "help": true
  },
@@ -9298,14 +9299,14 @@
  },
  "Letras dos endereços": {
   "src": [
-   "services/field_help.py:121",
+   "services/field_help.py:122",
    "templates/site/project.html:89"
   ],
   "help": true
  },
  "Letras por rua": {
   "src": [
-   "services/field_help.py:242",
+   "services/field_help.py:243",
    "templates/optimization/page.html:245"
   ],
   "help": true
@@ -9350,7 +9351,7 @@
  },
  "Liga a posição pela saída: curva ABC, zonas de ouro e itens que saem juntos.": {
   "src": [
-   "services/field_help.py:234"
+   "services/field_help.py:235"
   ],
   "help": true
  },
@@ -9386,7 +9387,7 @@
  },
  "Ligado: a 1ª linha é o cabeçalho e não é importada como dado.": {
   "src": [
-   "services/field_help.py:268"
+   "services/field_help.py:269"
   ],
   "help": true
  },
@@ -9402,7 +9403,7 @@
  },
  "Limite de bins por SKU (Pool) ou por endereço.": {
   "src": [
-   "services/field_help.py:255"
+   "services/field_help.py:256"
   ],
   "help": true
  },
@@ -9428,7 +9429,7 @@
  },
  "Limpar vão": {
   "src": [
-   "services/field_help.py:344"
+   "services/field_help.py:345"
   ],
   "help": true
  },
@@ -9469,8 +9470,8 @@
  },
  "Linhas de pedido (quantas vezes o item é pego) ou unidades que saem.": {
   "src": [
-   "services/field_help.py:172",
-   "services/field_help.py:235"
+   "services/field_help.py:173",
+   "services/field_help.py:236"
   ],
   "help": true
  },
@@ -9493,7 +9494,7 @@
  },
  "Linhas repetidas": {
   "src": [
-   "services/field_help.py:277"
+   "services/field_help.py:278"
   ],
   "help": true
  },
@@ -9666,54 +9667,54 @@
  },
  "Marca a linha para a ação em massa.": {
   "src": [
-   "services/field_help.py:463"
+   "services/field_help.py:464"
   ],
   "help": true
  },
  "Marca todas as linhas da página.": {
   "src": [
-   "services/field_help.py:263",
-   "services/field_help.py:462"
+   "services/field_help.py:264",
+   "services/field_help.py:463"
   ],
   "help": true
  },
  "Marca todos os endereços da página.": {
   "src": [
-   "services/field_help.py:327"
+   "services/field_help.py:328"
   ],
   "help": true
  },
  "Marca todos os produtos da página.": {
   "src": [
-   "services/field_help.py:418"
+   "services/field_help.py:419"
   ],
   "help": true
  },
  "Marca todos os registros da página.": {
   "src": [
-   "services/field_help.py:431"
+   "services/field_help.py:432"
   ],
   "help": true
  },
  "Marca todos os resultados da página, para comparar ou excluir.": {
   "src": [
-   "services/field_help.py:200"
+   "services/field_help.py:201"
   ],
   "help": true
  },
  "Marcar todas": {
   "src": [
-   "services/field_help.py:263"
+   "services/field_help.py:264"
   ],
   "help": true
  },
  "Marcar todos": {
   "src": [
-   "services/field_help.py:200",
-   "services/field_help.py:327",
-   "services/field_help.py:418",
-   "services/field_help.py:431",
-   "services/field_help.py:462"
+   "services/field_help.py:201",
+   "services/field_help.py:328",
+   "services/field_help.py:419",
+   "services/field_help.py:432",
+   "services/field_help.py:463"
   ],
   "help": true
  },
@@ -9735,7 +9736,7 @@
  },
  "Margem de crescimento (%)": {
   "src": [
-   "services/field_help.py:153",
+   "services/field_help.py:154",
    "templates/site/project.html:297"
   ],
   "help": true
@@ -9765,25 +9766,25 @@
  },
  "Margem sobre a quantidade (%)": {
   "src": [
-   "services/field_help.py:247"
+   "services/field_help.py:248"
   ],
   "help": true
  },
  "Marque as linhas do plano que deseja aplicar.": {
   "src": [
-   "services/field_help.py:262"
+   "services/field_help.py:263"
   ],
   "help": true
  },
  "Marque dois ou mais para comparar lado a lado, ou para excluir.": {
   "src": [
-   "services/field_help.py:201"
+   "services/field_help.py:202"
   ],
   "help": true
  },
  "Marque os endereços para atribuir bins ou excluir.": {
   "src": [
-   "services/field_help.py:326"
+   "services/field_help.py:327"
   ],
   "help": true
  },
@@ -9804,13 +9805,13 @@
  },
  "Marque os produtos para alterar medidas em massa ou excluir.": {
   "src": [
-   "services/field_help.py:417"
+   "services/field_help.py:418"
   ],
   "help": true
  },
  "Marque os registros de saldo para excluir.": {
   "src": [
-   "services/field_help.py:430"
+   "services/field_help.py:431"
   ],
   "help": true
  },
@@ -9867,20 +9868,20 @@
  },
  "Medida da popularidade": {
   "src": [
-   "services/field_help.py:172",
-   "services/field_help.py:235"
+   "services/field_help.py:173",
+   "services/field_help.py:236"
   ],
   "help": true
  },
  "Medida interna do imóvel de uma parede lateral à outra.": {
   "src": [
-   "services/field_help.py:109"
+   "services/field_help.py:110"
   ],
   "help": true
  },
  "Medida interna do imóvel no sentido das docas para o fundo.": {
   "src": [
-   "services/field_help.py:108"
+   "services/field_help.py:109"
   ],
   "help": true
  },
@@ -9892,7 +9893,7 @@
  },
  "Medidas do setor (m)": {
   "src": [
-   "services/field_help.py:142"
+   "services/field_help.py:143"
   ],
   "help": true
  },
@@ -9903,7 +9904,7 @@
  },
  "Medidas na planta": {
   "src": [
-   "services/field_help.py:451"
+   "services/field_help.py:452"
   ],
   "help": true
  },
@@ -9959,7 +9960,7 @@
  },
  "Menor lado aceitável do retângulo do setor.": {
   "src": [
-   "services/field_help.py:139"
+   "services/field_help.py:140"
   ],
   "help": true
  },
@@ -10043,14 +10044,14 @@
  },
  "Mesmo SKU e endereço em mais de uma linha: somar as linhas ou valer a última.": {
   "src": [
-   "services/field_help.py:277"
+   "services/field_help.py:278"
   ],
   "help": true
  },
  "Mesmo SKU em mais de um endereço": {
   "src": [
    "routers/optimization.py:1031",
-   "services/field_help.py:254"
+   "services/field_help.py:255"
   ],
   "help": true
  },
@@ -10113,7 +10114,7 @@
  },
  "Modo": {
   "src": [
-   "services/field_help.py:197",
+   "services/field_help.py:198",
    "services/site_import.py:189",
    "services/site_import.py:810",
    "templates/runs/list.html:18",
@@ -10165,7 +10166,7 @@
  },
  "Mostra na tabela só os pedidos cujo número contém o texto digitado.": {
   "src": [
-   "services/field_help.py:65"
+   "services/field_help.py:66"
   ],
   "help": true
  },
@@ -10176,44 +10177,44 @@
  },
  "Mostra os endereços com produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:322"
+   "services/field_help.py:323"
   ],
   "help": true
  },
  "Mostra os endereços onde este produto está.": {
   "src": [
-   "services/field_help.py:321"
+   "services/field_help.py:322"
   ],
   "help": true
  },
  "Mostra só as linhas do detalhe que contêm o texto.": {
   "src": [
-   "services/field_help.py:203"
+   "services/field_help.py:204"
   ],
   "help": true
  },
  "Mostra só as linhas que combinam com o texto.": {
   "src": [
-   "services/field_help.py:459"
+   "services/field_help.py:460"
   ],
   "help": true
  },
  "Mostra só as linhas que contêm o texto digitado.": {
   "src": [
-   "services/field_help.py:193",
-   "services/field_help.py:461"
+   "services/field_help.py:194",
+   "services/field_help.py:462"
   ],
   "help": true
  },
  "Mostra só os SKUs que contêm o texto digitado.": {
   "src": [
-   "services/field_help.py:206"
+   "services/field_help.py:207"
   ],
   "help": true
  },
  "Mostra só os armazéns ligados a esta filial.": {
   "src": [
-   "services/field_help.py:441"
+   "services/field_help.py:442"
   ],
   "help": true
  },
@@ -10224,49 +10225,49 @@
  },
  "Mostra só os níveis com este código (o andar da estante, contado de baixo para cima).": {
   "src": [
-   "services/field_help.py:336"
+   "services/field_help.py:337"
   ],
   "help": true
  },
  "Mostra só os produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:414"
+   "services/field_help.py:415"
   ],
   "help": true
  },
  "Mostra só os resultados de um modo: Por endereço, Pool ou Projeto de filial nova.": {
   "src": [
-   "services/field_help.py:197"
+   "services/field_help.py:198"
   ],
   "help": true
  },
  "Mostra só os resultados de uma filial.": {
   "src": [
-   "services/field_help.py:198"
+   "services/field_help.py:199"
   ],
   "help": true
  },
  "Mostra só os saldos de produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:425"
+   "services/field_help.py:426"
   ],
   "help": true
  },
  "Mostra só os saldos de um armazém.": {
   "src": [
-   "services/field_help.py:429"
+   "services/field_help.py:430"
   ],
   "help": true
  },
  "Mostra só os saldos de uma filial.": {
   "src": [
-   "services/field_help.py:428"
+   "services/field_help.py:429"
   ],
   "help": true
  },
  "Mostra só um corredor (mais rápido em depósitos grandes) ou todos.": {
   "src": [
-   "services/field_help.py:100"
+   "services/field_help.py:101"
   ],
   "help": true
  },
@@ -10324,7 +10325,7 @@
  },
  "Motor do cálculo": {
   "src": [
-   "services/field_help.py:229"
+   "services/field_help.py:230"
   ],
   "help": true
  },
@@ -10374,7 +10375,7 @@
  },
  "Multiplica todas as quantidades. Ex.: 50 para uma filial com metade do volume.": {
   "src": [
-   "services/field_help.py:154"
+   "services/field_help.py:155"
   ],
   "help": true
  },
@@ -10419,7 +10420,7 @@
  },
  "Máximo (max level)": {
   "src": [
-   "services/field_help.py:409"
+   "services/field_help.py:410"
   ],
   "help": true
  },
@@ -10435,7 +10436,7 @@
  },
  "Máximo de bins": {
   "src": [
-   "services/field_help.py:255"
+   "services/field_help.py:256"
   ],
   "help": true
  },
@@ -10452,7 +10453,7 @@
  },
  "Máximo de módulos": {
   "src": [
-   "services/field_help.py:146"
+   "services/field_help.py:147"
   ],
   "help": true
  },
@@ -10496,7 +10497,7 @@
  },
  "Mínimo (min level)": {
   "src": [
-   "services/field_help.py:408"
+   "services/field_help.py:409"
   ],
   "help": true
  },
@@ -10525,7 +10526,7 @@
  },
  "Mínimo de módulos": {
   "src": [
-   "services/field_help.py:145"
+   "services/field_help.py:146"
   ],
   "help": true
  },
@@ -10549,7 +10550,7 @@
  },
  "Módulos girados 90° nas pontas das fileiras duplas, de frente para o corredor transversal.": {
   "src": [
-   "services/field_help.py:119"
+   "services/field_help.py:120"
   ],
   "help": true
  },
@@ -11042,31 +11043,31 @@
  },
  "Nome / observação": {
   "src": [
-   "services/field_help.py:202"
+   "services/field_help.py:203"
   ],
   "help": true
  },
  "Nome completo da filial, como aparece nas listas e nos filtros.": {
   "src": [
-   "services/field_help.py:435"
+   "services/field_help.py:436"
   ],
   "help": true
  },
  "Nome completo do armazém, como aparece nas listas e nos filtros.": {
   "src": [
-   "services/field_help.py:439"
+   "services/field_help.py:440"
   ],
   "help": true
  },
  "Nome da estrutura": {
   "src": [
-   "services/field_help.py:366"
+   "services/field_help.py:367"
   ],
   "help": true
  },
  "Nome da filial": {
   "src": [
-   "services/field_help.py:435"
+   "services/field_help.py:436"
   ],
   "help": true
  },
@@ -11077,71 +11078,71 @@
  },
  "Nome da filial nova": {
   "src": [
-   "services/field_help.py:180"
+   "services/field_help.py:181"
   ],
   "help": true
  },
  "Nome da filial que será criada.": {
   "src": [
-   "services/field_help.py:180"
+   "services/field_help.py:181"
   ],
   "help": true
  },
  "Nome da referência": {
   "src": [
-   "services/field_help.py:71",
+   "services/field_help.py:72",
    "templates/layout/plan.html:64"
   ],
   "help": true
  },
  "Nome da zona": {
   "src": [
-   "services/field_help.py:123"
+   "services/field_help.py:124"
   ],
   "help": true
  },
  "Nome de uma faixa da planta com orientação e estruturas próprias.": {
   "src": [
-   "services/field_help.py:123"
+   "services/field_help.py:124"
   ],
   "help": true
  },
  "Nome do armazém": {
   "src": [
-   "services/field_help.py:182",
-   "services/field_help.py:439",
+   "services/field_help.py:183",
+   "services/field_help.py:440",
    "templates/site/project.html:495"
   ],
   "help": true
  },
  "Nome do armazém, quando ele for criado.": {
   "src": [
-   "services/field_help.py:182"
+   "services/field_help.py:183"
   ],
   "help": true
  },
  "Nome do obstáculo": {
   "src": [
-   "services/field_help.py:83",
-   "services/field_help.py:132"
+   "services/field_help.py:84",
+   "services/field_help.py:133"
   ],
   "help": true
  },
  "Nome do ponto de onde a separação sai e para onde volta (ex.: expedição). A posição é marcada com o botão Referência.": {
   "src": [
-   "services/field_help.py:71"
+   "services/field_help.py:72"
   ],
   "help": true
  },
  "Nome do produto": {
   "src": [
-   "services/field_help.py:400"
+   "services/field_help.py:401"
   ],
   "help": true
  },
  "Nome do projeto": {
   "src": [
-   "services/field_help.py:188",
+   "services/field_help.py:189",
    "templates/site/index.html:22",
    "templates/site/project.html:66"
   ],
@@ -11149,13 +11150,13 @@
  },
  "Nome do setor": {
   "src": [
-   "services/field_help.py:137"
+   "services/field_help.py:138"
   ],
   "help": true
  },
  "Nome do tipo de bin": {
   "src": [
-   "services/field_help.py:385"
+   "services/field_help.py:386"
   ],
   "help": true
  },
@@ -11180,7 +11181,7 @@
  },
  "Nos endereços marcados ou em todos os endereços do filtro.": {
   "src": [
-   "services/field_help.py:325"
+   "services/field_help.py:326"
   ],
   "help": true
  },
@@ -11192,7 +11193,7 @@
  },
  "Nos produtos marcados ou em todos os produtos do filtro.": {
   "src": [
-   "services/field_help.py:416"
+   "services/field_help.py:417"
   ],
   "help": true
  },
@@ -11272,7 +11273,7 @@
  },
  "Numérica: 2, 3, 10. Alfabética: 10, 2, 3. A ordem física dos níveis é sempre numérica.": {
   "src": [
-   "services/field_help.py:445"
+   "services/field_help.py:446"
   ],
   "help": true
  },
@@ -11327,7 +11328,7 @@
  },
  "Não exceder o espaço atual": {
   "src": [
-   "services/field_help.py:261"
+   "services/field_help.py:262"
   ],
   "help": true
  },
@@ -11398,7 +11399,7 @@
  },
  "Não usa o próprio nível: as bins ficam no nível escolhido em cada linha ou ocupam a estante de baixo para cima.": {
   "src": [
-   "services/field_help.py:314"
+   "services/field_help.py:315"
   ],
   "help": true
  },
@@ -11411,7 +11412,7 @@
  },
  "Não usar, quantidade fixa ou deixar o sistema escolher a quantidade.": {
   "src": [
-   "services/field_help.py:143"
+   "services/field_help.py:144"
   ],
   "help": true
  },
@@ -11481,7 +11482,7 @@
  },
  "Níveis de ouro (pega)": {
   "src": [
-   "services/field_help.py:241",
+   "services/field_help.py:242",
    "templates/optimization/page.html:237"
   ],
   "help": true
@@ -11513,7 +11514,7 @@
  "Nível": {
   "src": [
    "services/batch_generator.py:54",
-   "services/field_help.py:336",
+   "services/field_help.py:337",
    "services/field_help.py:32",
    "services/level_service.py:309",
    "services/master_importer.py:65",
@@ -11531,7 +11532,7 @@
  },
  "Nível (em lote)": {
   "src": [
-   "services/field_help.py:340"
+   "services/field_help.py:341"
   ],
   "help": true
  },
@@ -11553,7 +11554,7 @@
  },
  "Nível das bins": {
   "src": [
-   "services/field_help.py:317"
+   "services/field_help.py:318"
   ],
   "help": true
  },
@@ -11633,7 +11634,7 @@
  },
  "Nível sem endereço próprio: só recebe bins de outros níveis da estante.": {
   "src": [
-   "services/field_help.py:356"
+   "services/field_help.py:357"
   ],
   "help": true
  },
@@ -11670,13 +11671,13 @@
  },
  "Número de níveis": {
   "src": [
-   "services/field_help.py:371"
+   "services/field_help.py:372"
   ],
   "help": true
  },
  "Número exato de módulos desta estrutura na planta.": {
   "src": [
-   "services/field_help.py:144"
+   "services/field_help.py:145"
   ],
   "help": true
  },
@@ -11736,7 +11737,7 @@
  },
  "O endereço informado vira o endereço padrão do produto na filial.": {
   "src": [
-   "services/field_help.py:283"
+   "services/field_help.py:284"
   ],
   "help": true
  },
@@ -11758,13 +11759,13 @@
  },
  "O excedente pode ir para outro nível da mesma estante que tenha espaço.": {
   "src": [
-   "services/field_help.py:259"
+   "services/field_help.py:260"
   ],
   "help": true
  },
  "O filtro de produto escolhe o que otimizar; as bins podem vir do resto do escopo.": {
   "src": [
-   "services/field_help.py:219"
+   "services/field_help.py:220"
   ],
   "help": true
  },
@@ -11786,7 +11787,7 @@
  },
  "O nível da estante que ficar sem nenhum endereço também é excluído.": {
   "src": [
-   "services/field_help.py:328"
+   "services/field_help.py:329"
   ],
   "help": true
  },
@@ -11819,7 +11820,7 @@
  },
  "O peso das unidades não pode passar do peso máximo da bin.": {
   "src": [
-   "services/field_help.py:251"
+   "services/field_help.py:252"
   ],
   "help": true
  },
@@ -11846,13 +11847,13 @@
  },
  "O plano usa no máximo esta quantidade; vazio = o que couber.": {
   "src": [
-   "services/field_help.py:146"
+   "services/field_help.py:147"
   ],
   "help": true
  },
  "O plano usa pelo menos esta quantidade da estrutura.": {
   "src": [
-   "services/field_help.py:145"
+   "services/field_help.py:146"
   ],
   "help": true
  },
@@ -11863,7 +11864,7 @@
  },
  "O que a cor de cada posição mostra: tipo de bin, ocupação ou uso do nível.": {
   "src": [
-   "services/field_help.py:102"
+   "services/field_help.py:103"
   ],
   "help": true
  },
@@ -11881,13 +11882,13 @@
  },
  "O que o plano deve melhorar primeiro: menos bins, menor volume (= maior ocupação das bins), menor largura, menos trocas, menor custo, menor caminhada, mais saídas na zona de ouro ou menor tempo de separação.": {
   "src": [
-   "services/field_help.py:224"
+   "services/field_help.py:225"
   ],
   "help": true
  },
  "O que o plano deve melhorar primeiro: menos módulos, custo, área ou bins; menor caminhada ou tempo de separação; mais saídas na zona de ouro; ou maior capacidade (enche o imóvel com níveis de armazenagem, atendendo à demanda).": {
   "src": [
-   "services/field_help.py:155"
+   "services/field_help.py:156"
   ],
   "help": true
  },
@@ -11958,7 +11959,7 @@
  },
  "O solver roda até comprovar a melhor solução. Pode demorar.": {
   "src": [
-   "services/field_help.py:169"
+   "services/field_help.py:170"
   ],
   "help": true
  },
@@ -11999,7 +12000,7 @@
  "Objetivo": {
   "src": [
    "routers/optimization.py:1006",
-   "services/field_help.py:224",
+   "services/field_help.py:225",
    "templates/optimization/page.html:150",
    "templates/site/project.html:419",
    "templates/site/project.html:421",
@@ -12009,7 +12010,7 @@
  },
  "Objetivo do projeto": {
   "src": [
-   "services/field_help.py:155"
+   "services/field_help.py:156"
   ],
   "help": true
  },
@@ -12029,14 +12030,14 @@
  },
  "Observação do nível": {
   "src": [
-   "services/field_help.py:359"
+   "services/field_help.py:360"
   ],
   "help": true
  },
  "Observações": {
   "src": [
    "services/action_plan.py:182",
-   "services/field_help.py:379",
+   "services/field_help.py:380",
    "templates/structures/form.html:107"
   ],
   "help": true
@@ -12109,7 +12110,7 @@
  },
  "Ocultar as medidas, mostrar só o tamanho do imóvel ou as cotas completas ao longo da planta.": {
   "src": [
-   "services/field_help.py:451"
+   "services/field_help.py:452"
   ],
   "help": true
  },
@@ -12135,7 +12136,7 @@
  },
  "Ocupado = tem item atrelado (saldo ou endereço padrão); livre = nenhum.": {
   "src": [
-   "services/field_help.py:323"
+   "services/field_help.py:324"
   ],
   "help": true
  },
@@ -12235,8 +12236,8 @@
  },
  "Onde aplicar": {
   "src": [
-   "services/field_help.py:325",
-   "services/field_help.py:416"
+   "services/field_help.py:326",
+   "services/field_help.py:417"
   ],
   "help": true
  },
@@ -12249,13 +12250,13 @@
  },
  "Onde deixar itens temporariamente quando o destino de uma troca ainda está ocupado.": {
   "src": [
-   "services/field_help.py:248"
+   "services/field_help.py:249"
   ],
   "help": true
  },
  "Onde estas bins ficam: no próprio nível do endereço ou num nível extra da mesma estante.": {
   "src": [
-   "services/field_help.py:317"
+   "services/field_help.py:318"
   ],
   "help": true
  },
@@ -12276,7 +12277,7 @@
  },
  "Onde fica o setor": {
   "src": [
-   "services/field_help.py:140"
+   "services/field_help.py:141"
   ],
   "help": true
  },
@@ -12299,14 +12300,14 @@
  },
  "Ordenação dos números": {
   "src": [
-   "services/field_help.py:445",
+   "services/field_help.py:446",
    "templates/settings.html:8"
   ],
   "help": true
  },
  "Orientação das fileiras": {
   "src": [
-   "services/field_help.py:118",
+   "services/field_help.py:119",
    "services/site_import.py:199",
    "services/site_import.py:781",
    "services/site_import.py:772",
@@ -12318,7 +12319,7 @@
  },
  "Orientação das fileiras na zona": {
   "src": [
-   "services/field_help.py:128"
+   "services/field_help.py:129"
   ],
   "help": true
  },
@@ -12344,13 +12345,13 @@
  },
  "Os endereços com saldo saem junto, e os saldos deles também.": {
   "src": [
-   "services/field_help.py:329"
+   "services/field_help.py:330"
   ],
   "help": true
  },
  "Os endereços livres do trecho são refeitos pela regra nova; os ocupados ficam.": {
   "src": [
-   "services/field_help.py:303"
+   "services/field_help.py:304"
   ],
   "help": true
  },
@@ -12362,7 +12363,7 @@
  },
  "Os endereços usam uma letra por rua: ruas de frente têm letras diferentes (A|B, C|D).": {
   "src": [
-   "services/field_help.py:242"
+   "services/field_help.py:243"
   ],
   "help": true
  },
@@ -12384,7 +12385,7 @@
  },
  "Os registros ligados aos itens (endereços, saldos, níveis…) saem junto. Sem isso, itens com relacionados ficam de fora.": {
   "src": [
-   "services/field_help.py:447"
+   "services/field_help.py:448"
   ],
   "help": true
  },
@@ -12512,19 +12513,19 @@
  },
  "Para estantes montadas diferente da estrutura; vazio = a altura da estrutura.": {
   "src": [
-   "services/field_help.py:349"
+   "services/field_help.py:350"
   ],
   "help": true
  },
  "Para estantes sem zona de ouro na estrutura: os níveis bons de pegar, ex.: 2,3.": {
   "src": [
-   "services/field_help.py:241"
+   "services/field_help.py:242"
   ],
   "help": true
  },
  "Para estruturas com 2 bins na profundidade e sem vizinho atrás: as bins do fundo são pegas pelo corredor de trás.": {
   "src": [
-   "services/field_help.py:82"
+   "services/field_help.py:83"
   ],
   "help": true
  },
@@ -12535,7 +12536,7 @@
  },
  "Para frações (compartimentos): a bin inteira que foi dividida.": {
   "src": [
-   "services/field_help.py:392"
+   "services/field_help.py:393"
   ],
   "help": true
  },
@@ -12730,7 +12731,7 @@
  },
  "Pedidos (uma linha por item de pedido) ou lista de SKUs com a coluna Saída.": {
   "src": [
-   "services/field_help.py:271"
+   "services/field_help.py:272"
   ],
   "help": true
  },
@@ -12774,8 +12775,8 @@
  },
  "Pega fora do ouro vale (m)": {
   "src": [
-   "services/field_help.py:176",
-   "services/field_help.py:240"
+   "services/field_help.py:177",
+   "services/field_help.py:241"
   ],
   "help": true
  },
@@ -12786,7 +12787,7 @@
  },
  "Pega pelos dois lados": {
   "src": [
-   "services/field_help.py:82"
+   "services/field_help.py:83"
   ],
   "help": true
  },
@@ -12803,13 +12804,13 @@
  },
  "Permite dividir o saldo de um SKU entre endereços.": {
   "src": [
-   "services/field_help.py:254"
+   "services/field_help.py:255"
   ],
   "help": true
  },
  "Permite guardar mais de um SKU na mesma bin.": {
   "src": [
-   "services/field_help.py:252"
+   "services/field_help.py:253"
   ],
   "help": true
  },
@@ -12828,7 +12829,7 @@
  },
  "Permitir quantidades negativas": {
   "src": [
-   "services/field_help.py:280",
+   "services/field_help.py:281",
    "templates/imports/mapping_stock.html:83"
   ],
   "help": true
@@ -12859,13 +12860,13 @@
  },
  "Peso da unidade (kg)": {
   "src": [
-   "services/field_help.py:405"
+   "services/field_help.py:406"
   ],
   "help": true
  },
  "Peso de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:405"
+   "services/field_help.py:406"
   ],
   "help": true
  },
@@ -12878,7 +12879,7 @@
  },
  "Peso máximo (kg)": {
   "src": [
-   "services/field_help.py:389",
+   "services/field_help.py:390",
    "services/master_importer.py:50",
    "templates/bin_types/form.html:69"
   ],
@@ -12893,13 +12894,13 @@
  },
  "Peso máximo que a bin suporta.": {
   "src": [
-   "services/field_help.py:389"
+   "services/field_help.py:390"
   ],
   "help": true
  },
  "Peso máximo que cada nível suporta.": {
   "src": [
-   "services/field_help.py:375"
+   "services/field_help.py:376"
   ],
   "help": true
  },
@@ -12939,7 +12940,7 @@
  },
  "Planilha com as abas Imóvel, Estruturas, SKUs, Pedidos, Zonas, Obstáculos e Setores. Na próxima etapa você confere as colunas.": {
   "src": [
-   "services/field_help.py:189"
+   "services/field_help.py:190"
   ],
   "help": true
  },
@@ -12951,13 +12952,13 @@
  },
  "Planilha com pedido, SKU e quantidade (ou SKU e Saída). Na próxima etapa você confere as colunas.": {
   "src": [
-   "services/field_help.py:232"
+   "services/field_help.py:233"
   ],
   "help": true
  },
  "Planilha da filial": {
   "src": [
-   "services/field_help.py:189"
+   "services/field_help.py:190"
   ],
   "help": true
  },
@@ -13114,7 +13115,7 @@
  },
  "Ponto de referência": {
   "src": [
-   "services/field_help.py:173"
+   "services/field_help.py:174"
   ],
   "help": true
  },
@@ -13248,7 +13249,7 @@
  },
  "Posicionar pela saída": {
   "src": [
-   "services/field_help.py:170"
+   "services/field_help.py:171"
   ],
   "help": true
  },
@@ -13288,37 +13289,37 @@
  },
  "Posição da zona a partir da parede das docas; vazio = em sequência.": {
   "src": [
-   "services/field_help.py:126"
+   "services/field_help.py:127"
   ],
   "help": true
  },
  "Posição da zona a partir da parede de cima; vazio = encostada.": {
   "src": [
-   "services/field_help.py:127"
+   "services/field_help.py:128"
   ],
   "help": true
  },
  "Posição das cotas": {
   "src": [
-   "services/field_help.py:450"
+   "services/field_help.py:451"
   ],
   "help": true
  },
  "Posição do ponto de referência a partir da parede das docas.": {
   "src": [
-   "services/field_help.py:174"
+   "services/field_help.py:175"
   ],
   "help": true
  },
  "Posição do ponto de referência a partir da parede de cima.": {
   "src": [
-   "services/field_help.py:175"
+   "services/field_help.py:176"
   ],
   "help": true
  },
  "Posição do setor (m)": {
   "src": [
-   "services/field_help.py:141"
+   "services/field_help.py:142"
   ],
   "help": true
  },
@@ -13372,7 +13373,7 @@
  },
  "Posições até esta distância da referência; vazio = as 20% mais perto.": {
   "src": [
-   "services/field_help.py:177"
+   "services/field_help.py:178"
   ],
   "help": true
  },
@@ -13394,7 +13395,7 @@
  },
  "Primeiro código da faixa dentro da exceção.": {
   "src": [
-   "services/field_help.py:299"
+   "services/field_help.py:300"
   ],
   "help": true
  },
@@ -13422,55 +13423,55 @@
  },
  "Procura no título e na observação dos resultados.": {
   "src": [
-   "services/field_help.py:199"
+   "services/field_help.py:200"
   ],
   "help": true
  },
  "Procura pelo código do endereço onde o saldo está.": {
   "src": [
-   "services/field_help.py:422"
+   "services/field_help.py:423"
   ],
   "help": true
  },
  "Procura pelo código do endereço. Aceita 10*, *10, =A-01-01.": {
   "src": [
-   "services/field_help.py:320"
+   "services/field_help.py:321"
   ],
   "help": true
  },
  "Procura pelo código ou nome da filial.": {
   "src": [
-   "services/field_help.py:437"
+   "services/field_help.py:438"
   ],
   "help": true
  },
  "Procura pelo código ou nome do armazém.": {
   "src": [
-   "services/field_help.py:442"
+   "services/field_help.py:443"
   ],
   "help": true
  },
  "Procura pelo código ou nome do tipo de bin.": {
   "src": [
-   "services/field_help.py:395"
+   "services/field_help.py:396"
   ],
   "help": true
  },
  "Procura pelo código, nome ou tipo da estrutura.": {
   "src": [
-   "services/field_help.py:380"
+   "services/field_help.py:381"
   ],
   "help": true
  },
  "Procura por produto. Aceita 10*, *10, =10.": {
   "src": [
-   "services/field_help.py:457"
+   "services/field_help.py:458"
   ],
   "help": true
  },
  "Procura produtos. Aceita 10*, *10, =10 e \"frase inteira\".": {
   "src": [
-   "services/field_help.py:413"
+   "services/field_help.py:414"
   ],
   "help": true
  },
@@ -13492,7 +13493,7 @@
  },
  "Produto a que o saldo pertence. Aceita 10*, *10 e =10 na busca.": {
   "src": [
-   "services/field_help.py:424"
+   "services/field_help.py:425"
   ],
   "help": true
  },
@@ -13605,7 +13606,7 @@
  },
  "Profundidade (cm)": {
   "src": [
-   "services/field_help.py:369",
+   "services/field_help.py:370",
    "services/site_import.py:187",
    "services/site_import.py:809",
    "services/site_report.py:332"
@@ -13630,7 +13631,7 @@
  },
  "Profundidade da fileira (m)": {
   "src": [
-   "services/field_help.py:76"
+   "services/field_help.py:77"
   ],
   "help": true
  },
@@ -13651,14 +13652,14 @@
  },
  "Projeto cujo plano vira a planta desta filial (os endereços precisam ter os mesmos códigos).": {
   "src": [
-   "services/field_help.py:92"
+   "services/field_help.py:93"
   ],
   "help": true
  },
  "Projeto de filial nova": {
   "src": [
    "routers/site.py:29",
-   "services/field_help.py:92",
+   "services/field_help.py:93",
    "services/run_history.py:22",
    "templates/runs/list.html:14",
    "templates/site/index.html:3",
@@ -13807,7 +13808,7 @@
  },
  "Pé-direito útil (m)": {
   "src": [
-   "services/field_help.py:110",
+   "services/field_help.py:111",
    "services/site_service.py:52"
   ],
   "help": true,
@@ -13853,49 +13854,49 @@
  },
  "Quais estantes do corredor ficam nesta fileira: as ímpares, as pares (do outro lado) ou todas.": {
   "src": [
-   "services/field_help.py:73"
+   "services/field_help.py:74"
   ],
   "help": true
  },
  "Quais quantidades mostrar no arranjo depois da otimização: saldo atual, mínimo ou máximo do produto.": {
   "src": [
-   "services/field_help.py:209"
+   "services/field_help.py:210"
   ],
   "help": true
  },
  "Qual aba da planilha tem este tipo de dado; vazio = não importar.": {
   "src": [
-   "services/field_help.py:190"
+   "services/field_help.py:191"
   ],
   "help": true
  },
  "Qual coluna da aba corresponde a este campo. Confira a sugestão feita pelo nome do cabeçalho.": {
   "src": [
-   "services/field_help.py:191"
+   "services/field_help.py:192"
   ],
   "help": true
  },
  "Qual coluna do arquivo corresponde a este campo. Confira a sugestão: ela vem do nome do cabeçalho.": {
   "src": [
-   "services/field_help.py:273"
+   "services/field_help.py:274"
   ],
   "help": true
  },
  "Qual parte do endereço recebe a regra diferente.": {
   "src": [
-   "services/field_help.py:297"
+   "services/field_help.py:298"
   ],
   "help": true
  },
  "Qual produto e quanto fica em cada bin do endereço.": {
   "src": [
-   "services/field_help.py:330"
+   "services/field_help.py:331"
   ],
   "help": true
  },
  "Qual quantidade dimensiona as bins de cada SKU: saldo, mínimo ou máximo.": {
   "src": [
-   "services/field_help.py:152"
+   "services/field_help.py:153"
   ],
   "help": true
  },
@@ -13931,25 +13932,25 @@
  },
  "Quantas bins deste tipo cabem em um nível. Vazio ou 0 remove a capacidade.": {
   "src": [
-   "services/field_help.py:342"
+   "services/field_help.py:343"
   ],
   "help": true
  },
  "Quantas bins deste tipo cabem neste nível. Vazio = sem capacidade para o tipo.": {
   "src": [
-   "services/field_help.py:357"
+   "services/field_help.py:358"
   ],
   "help": true
  },
  "Quantas bins deste tipo o endereço tem.": {
   "src": [
-   "services/field_help.py:316"
+   "services/field_help.py:317"
   ],
   "help": true
  },
  "Quantas bins do tipo em cada endereço gerado.": {
   "src": [
-   "services/field_help.py:306"
+   "services/field_help.py:307"
   ],
   "help": true
  },
@@ -13966,7 +13967,7 @@
    "routers/stock.py:120",
    "routers/stock.py:151",
    "services/action_plan.py:355",
-   "services/field_help.py:426"
+   "services/field_help.py:427"
   ],
   "lazy": true,
   "help": true
@@ -13986,14 +13987,14 @@
   "src": [
    "routers/optimization.py:1005",
    "routers/optimization.py:1021",
-   "services/field_help.py:152",
+   "services/field_help.py:153",
    "templates/site/project.html:291"
   ],
   "help": true
  },
  "Quantidade considerada por SKU": {
   "src": [
-   "services/field_help.py:223",
+   "services/field_help.py:224",
    "templates/optimization/index.html:91",
    "templates/optimization/page.html:142",
    "templates/optimization/pool.html:78"
@@ -14002,8 +14003,8 @@
  },
  "Quantidade de bins": {
   "src": [
-   "services/field_help.py:306",
-   "services/field_help.py:316"
+   "services/field_help.py:307",
+   "services/field_help.py:317"
   ],
   "help": true
  },
@@ -14040,25 +14041,25 @@
  },
  "Quantidade de corredores transversais só desta zona.": {
   "src": [
-   "services/field_help.py:130"
+   "services/field_help.py:131"
   ],
   "help": true
  },
  "Quantidade de dígitos com zeros à esquerda dentro da exceção.": {
   "src": [
-   "services/field_help.py:302"
+   "services/field_help.py:303"
   ],
   "help": true
  },
  "Quantidade de dígitos com zeros à esquerda: 2 gera 01, 02, 03.": {
   "src": [
-   "services/field_help.py:295"
+   "services/field_help.py:296"
   ],
   "help": true
  },
  "Quantidade fixa": {
   "src": [
-   "services/field_help.py:144",
+   "services/field_help.py:145",
    "services/site_planner.py:71"
   ],
   "help": true,
@@ -14081,7 +14082,7 @@
  },
  "Quantidade máxima do produto na filial.": {
   "src": [
-   "services/field_help.py:409"
+   "services/field_help.py:410"
   ],
   "help": true
  },
@@ -14097,7 +14098,7 @@
  },
  "Quantidade mínima do produto na filial.": {
   "src": [
-   "services/field_help.py:408"
+   "services/field_help.py:409"
   ],
   "help": true
  },
@@ -14125,13 +14126,13 @@
  },
  "Quanto da frente de cada nível pode ser ocupado por bins.": {
   "src": [
-   "services/field_help.py:161"
+   "services/field_help.py:162"
   ],
   "help": true
  },
  "Quanto do comprimento do imóvel a zona ocupa.": {
   "src": [
-   "services/field_help.py:124"
+   "services/field_help.py:125"
   ],
   "help": true
  },
@@ -14151,25 +14152,25 @@
  },
  "Quanto somar à quantidade de cada SKU para a filial ter folga.": {
   "src": [
-   "services/field_help.py:153"
+   "services/field_help.py:154"
   ],
   "help": true
  },
  "Quantos corredores cortam as fileiras para encurtar a troca de corredor.": {
   "src": [
-   "services/field_help.py:115"
+   "services/field_help.py:116"
   ],
   "help": true
  },
  "Quantos metros de caminhada um nível fora da zona de ouro da pega \"custa\" na escolha da posição.": {
   "src": [
-   "services/field_help.py:176"
+   "services/field_help.py:177"
   ],
   "help": true
  },
  "Quantos metros de caminhada um nível fora da zona de ouro da pega \"custa\".": {
   "src": [
-   "services/field_help.py:240"
+   "services/field_help.py:241"
   ],
   "help": true
  },
@@ -14180,7 +14181,7 @@
  },
  "Quantos níveis (andares) o módulo tem.": {
   "src": [
-   "services/field_help.py:371"
+   "services/field_help.py:372"
   ],
   "help": true
  },
@@ -14213,7 +14214,7 @@
  },
  "Realocar esses itens em outras bins ou deixá-los fora de bin para tratar à mão.": {
   "src": [
-   "services/field_help.py:222"
+   "services/field_help.py:223"
   ],
   "help": true
  },
@@ -14302,7 +14303,7 @@
  },
  "Registros que já existem são atualizados com os dados do arquivo.": {
   "src": [
-   "services/field_help.py:281"
+   "services/field_help.py:282"
   ],
   "help": true
  },
@@ -14345,9 +14346,9 @@
  },
  "Relatórios que lançam a saída com sinal negativo: a quantidade vira positiva.": {
   "src": [
-   "services/field_help.py:192",
-   "services/field_help.py:233",
-   "services/field_help.py:270"
+   "services/field_help.py:193",
+   "services/field_help.py:234",
+   "services/field_help.py:271"
   ],
   "help": true
  },
@@ -14380,7 +14381,7 @@
  },
  "Remover a política": {
   "src": [
-   "services/field_help.py:410"
+   "services/field_help.py:411"
   ],
   "help": true
  },
@@ -14397,7 +14398,7 @@
  },
  "Remover bins de endereços vazios": {
   "src": [
-   "services/field_help.py:258"
+   "services/field_help.py:259"
   ],
   "help": true
  },
@@ -14469,7 +14470,7 @@
  },
  "Respeitar peso máximo da bin": {
   "src": [
-   "services/field_help.py:251",
+   "services/field_help.py:252",
    "templates/optimization/index.html:134",
    "templates/optimization/page.html:276",
    "templates/optimization/pool.html:119"
@@ -14478,19 +14479,19 @@
  },
  "Respeitar pesos": {
   "src": [
-   "services/field_help.py:166"
+   "services/field_help.py:167"
   ],
   "help": true
  },
  "Restringe a base a um armazém da filial de origem.": {
   "src": [
-   "services/field_help.py:149"
+   "services/field_help.py:150"
   ],
   "help": true
  },
  "Restringe a otimização a um armazém da filial.": {
   "src": [
-   "services/field_help.py:214"
+   "services/field_help.py:215"
   ],
   "help": true
  },
@@ -14592,7 +14593,7 @@
  },
  "Roda até comprovar a melhor solução. Pode demorar.": {
   "src": [
-   "services/field_help.py:231"
+   "services/field_help.py:232"
   ],
   "help": true
  },
@@ -14610,7 +14611,7 @@
  },
  "Rota do separador": {
   "src": [
-   "services/field_help.py:225",
+   "services/field_help.py:226",
    "templates/optimization/page.html:427"
   ],
   "help": true
@@ -14635,7 +14636,7 @@
  },
  "Rota usada na simulação de separação do resultado (hoje × proposta): otimizada, serpentina ou lista de separação (ordem dos endereços).": {
   "src": [
-   "services/field_help.py:225"
+   "services/field_help.py:226"
   ],
   "help": true
  },
@@ -14652,8 +14653,8 @@
  },
  "Rotação das unidades": {
   "src": [
-   "services/field_help.py:164",
-   "services/field_help.py:250",
+   "services/field_help.py:165",
+   "services/field_help.py:251",
    "templates/site/project.html:336"
   ],
   "help": true
@@ -14703,8 +14704,8 @@
  },
  "Ruas em serpentina": {
   "src": [
-   "services/field_help.py:122",
-   "services/field_help.py:243",
+   "services/field_help.py:123",
+   "services/field_help.py:244",
    "templates/optimization/page.html:246"
   ],
   "help": true
@@ -14716,7 +14717,7 @@
  },
  "SKU": {
   "src": [
-   "services/field_help.py:399"
+   "services/field_help.py:400"
   ],
   "help": true
  },
@@ -14758,11 +14759,11 @@
  "SKU ou produto": {
   "src": [
    "routers/optimization.py:978",
-   "services/field_help.py:150",
-   "services/field_help.py:216",
-   "services/field_help.py:321",
-   "services/field_help.py:424",
-   "services/field_help.py:457"
+   "services/field_help.py:151",
+   "services/field_help.py:217",
+   "services/field_help.py:322",
+   "services/field_help.py:425",
+   "services/field_help.py:458"
   ],
   "help": true
  },
@@ -14810,13 +14811,13 @@
  },
  "SKUs diferentes na mesma bin": {
   "src": [
-   "services/field_help.py:252"
+   "services/field_help.py:253"
   ],
   "help": true
  },
  "SKUs do arquivo que não estão no catálogo são cadastrados.": {
   "src": [
-   "services/field_help.py:278"
+   "services/field_help.py:279"
   ],
   "help": true
  },
@@ -14838,7 +14839,7 @@
  },
  "SKUs que costumam sair no mesmo pedido ficam em endereços vizinhos.": {
   "src": [
-   "services/field_help.py:244"
+   "services/field_help.py:245"
   ],
   "help": true
  },
@@ -14934,7 +14935,7 @@
  },
  "Saldo físico do produto neste endereço.": {
   "src": [
-   "services/field_help.py:426"
+   "services/field_help.py:427"
   ],
   "help": true
  },
@@ -14985,7 +14986,7 @@
  },
  "Saldos que não vieram no arquivo são zerados nas filiais/armazéns do arquivo (sincronização completa).": {
   "src": [
-   "services/field_help.py:279"
+   "services/field_help.py:280"
   ],
   "help": true
  },
@@ -15109,38 +15110,38 @@
  },
  "Selecionar e mover o que já existe ou desenhar com o mouse uma zona, um obstáculo ou um setor.": {
   "src": [
-   "services/field_help.py:452"
+   "services/field_help.py:453"
   ],
   "help": true
  },
  "Selecionar endereço": {
   "src": [
-   "services/field_help.py:326"
+   "services/field_help.py:327"
   ],
   "help": true
  },
  "Selecionar linha": {
   "src": [
-   "services/field_help.py:262",
-   "services/field_help.py:463"
+   "services/field_help.py:263",
+   "services/field_help.py:464"
   ],
   "help": true
  },
  "Selecionar produto": {
   "src": [
-   "services/field_help.py:417"
+   "services/field_help.py:418"
   ],
   "help": true
  },
  "Selecionar resultado": {
   "src": [
-   "services/field_help.py:201"
+   "services/field_help.py:202"
   ],
   "help": true
  },
  "Selecionar saldo": {
   "src": [
-   "services/field_help.py:430"
+   "services/field_help.py:431"
   ],
   "help": true
  },
@@ -15325,8 +15326,8 @@
  },
  "Sem limite de tempo": {
   "src": [
-   "services/field_help.py:169",
-   "services/field_help.py:231",
+   "services/field_help.py:170",
+   "services/field_help.py:232",
    "templates/optimization/page.html:179"
   ],
   "help": true
@@ -15355,7 +15356,7 @@
  },
  "Sem planta desenhada: o corredor de onde a caminhada é contada.": {
   "src": [
-   "services/field_help.py:236"
+   "services/field_help.py:237"
   ],
   "help": true
  },
@@ -15366,13 +15367,13 @@
  },
  "Sem planta: distância de um corredor para o seguinte.": {
   "src": [
-   "services/field_help.py:237"
+   "services/field_help.py:238"
   ],
   "help": true
  },
  "Sem planta: frente de cada estante, ao longo do corredor.": {
   "src": [
-   "services/field_help.py:238"
+   "services/field_help.py:239"
   ],
   "help": true
  },
@@ -15459,7 +15460,7 @@
  },
  "Sentido do corredor": {
   "src": [
-   "services/field_help.py:81"
+   "services/field_help.py:82"
   ],
   "help": true
  },
@@ -15624,7 +15625,7 @@
  },
  "Sincronizar (excluir o que não veio)": {
   "src": [
-   "services/field_help.py:284"
+   "services/field_help.py:285"
   ],
   "help": true
  },
@@ -15651,8 +15652,8 @@
    "routers/optimization.py:923",
    "routers/site.py:190",
    "services/action_plan.py:181",
-   "services/field_help.py:323",
-   "services/field_help.py:337"
+   "services/field_help.py:324",
+   "services/field_help.py:338"
   ],
   "lazy": true,
   "help": true
@@ -15689,7 +15690,7 @@
  },
  "Soma das larguras das bins que cabe no endereço.": {
   "src": [
-   "services/field_help.py:256"
+   "services/field_help.py:257"
   ],
   "help": true
  },
@@ -15700,7 +15701,7 @@
  },
  "Somar, substituir, remover um tipo ou limpar as bins dos endereços escolhidos.": {
   "src": [
-   "services/field_help.py:324"
+   "services/field_help.py:325"
   ],
   "help": true
  },
@@ -15745,13 +15746,13 @@
  },
  "Substituir as bins dos endereços": {
   "src": [
-   "services/field_help.py:285"
+   "services/field_help.py:286"
   ],
   "help": true
  },
  "Substituir as capacidades existentes": {
   "src": [
-   "services/field_help.py:352"
+   "services/field_help.py:353"
   ],
   "help": true
  },
@@ -15762,7 +15763,7 @@
  },
  "Substituir posições desocupadas": {
   "src": [
-   "services/field_help.py:303",
+   "services/field_help.py:304",
    "templates/locations/batch.html:145"
   ],
   "help": true
@@ -15775,7 +15776,7 @@
  },
  "Sugere tirar as bins de endereços sem saldo e sem produto atribuído.": {
   "src": [
-   "services/field_help.py:258"
+   "services/field_help.py:259"
   ],
   "help": true
  },
@@ -15840,13 +15841,13 @@
  },
  "Só bins livres (sem saldo) ou qualquer bin, mesmo com saldo de outros itens.": {
   "src": [
-   "services/field_help.py:221"
+   "services/field_help.py:222"
   ],
   "help": true
  },
  "Só com saldo": {
   "src": [
-   "services/field_help.py:423"
+   "services/field_help.py:424"
   ],
   "help": true
  },
@@ -15888,13 +15889,13 @@
  },
  "Só os tipos marcados podem ser sugeridos pelo plano.": {
   "src": [
-   "services/field_help.py:245"
+   "services/field_help.py:246"
   ],
   "help": true
  },
  "Só os tipos marcados podem ser usados no projeto.": {
   "src": [
-   "services/field_help.py:167"
+   "services/field_help.py:168"
   ],
   "help": true
  },
@@ -15916,37 +15917,37 @@
  },
  "Tamanho do imóvel no eixo X. Também dá para arrastar a alça da borda direita no desenho.": {
   "src": [
-   "services/field_help.py:69"
+   "services/field_help.py:70"
   ],
   "help": true
  },
  "Tamanho do imóvel no eixo Y. Também dá para arrastar a alça da borda de baixo no desenho.": {
   "src": [
-   "services/field_help.py:70"
+   "services/field_help.py:71"
   ],
   "help": true
  },
  "Tamanho do obstáculo ao longo da largura do imóvel.": {
   "src": [
-   "services/field_help.py:136"
+   "services/field_help.py:137"
   ],
   "help": true
  },
  "Tamanho do obstáculo ao longo do comprimento do imóvel.": {
   "src": [
-   "services/field_help.py:135"
+   "services/field_help.py:136"
   ],
   "help": true
  },
  "Tamanho do obstáculo no eixo X.": {
   "src": [
-   "services/field_help.py:86"
+   "services/field_help.py:87"
   ],
   "help": true
  },
  "Tamanho do obstáculo no eixo Y.": {
   "src": [
-   "services/field_help.py:87"
+   "services/field_help.py:88"
   ],
   "help": true
  },
@@ -15982,13 +15983,19 @@
  },
  "Tempo a mais por PEÇA pega num nível fora da zona de ouro da pega (agachar, usar escada).": {
   "src": [
+   "services/field_help.py:57"
+  ],
+  "help": true
+ },
+ "Tempo a mais por item (linha do pedido) pego num nível fora da zona de ouro da pega (agachar, usar escada).": {
+  "src": [
    "services/field_help.py:56"
   ],
   "help": true
  },
  "Tempo a mais por item (linha do pedido) que está num nível fora da zona de ouro da pega.": {
   "src": [
-   "services/field_help.py:63"
+   "services/field_help.py:64"
   ],
   "help": true
  },
@@ -16004,13 +16011,13 @@
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega. No objetivo \"Menor tempo\", vira metros de caminhada pela velocidade.": {
   "src": [
-   "services/field_help.py:227"
+   "services/field_help.py:228"
   ],
   "help": true
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega. No objetivo \"Menor tempo\", é o que faz a pega pesar contra a caminhada.": {
   "src": [
-   "services/field_help.py:157"
+   "services/field_help.py:158"
   ],
   "help": true
  },
@@ -16021,7 +16028,7 @@
  },
  "Tempo a mais por peça pega num nível fora da zona de ouro da pega.": {
   "src": [
-   "services/field_help.py:64"
+   "services/field_help.py:65"
   ],
   "help": true
  },
@@ -16060,7 +16067,7 @@
  },
  "Tempo fixo em cada parada. Endereços do mesmo módulo contam como uma parada só.": {
   "src": [
-   "services/field_help.py:61"
+   "services/field_help.py:62"
   ],
   "help": true
  },
@@ -16082,7 +16089,7 @@
  },
  "Tempo limite (s)": {
   "src": [
-   "services/field_help.py:230"
+   "services/field_help.py:231"
   ],
   "help": true
  },
@@ -16098,7 +16105,7 @@
  },
  "Tempo limite do cálculo (s)": {
   "src": [
-   "services/field_help.py:168"
+   "services/field_help.py:169"
   ],
   "help": true
  },
@@ -16114,13 +16121,13 @@
  },
  "Tempo máximo da pesquisa operacional. Ao esgotar, fica a melhor solução achada.": {
   "src": [
-   "services/field_help.py:230"
+   "services/field_help.py:231"
   ],
   "help": true
  },
  "Tempo máximo do solver. Ao esgotar, fica a melhor solução achada (não comprovada ótima).": {
   "src": [
-   "services/field_help.py:168"
+   "services/field_help.py:169"
   ],
   "help": true
  },
@@ -16141,7 +16148,7 @@
  },
  "Tempo para pegar cada peça do pedido.": {
   "src": [
-   "services/field_help.py:62"
+   "services/field_help.py:63"
   ],
   "help": true
  },
@@ -16159,7 +16166,7 @@
  "Tempo por parada (s)": {
   "src": [
    "services/field_help.py:54",
-   "services/field_help.py:61",
+   "services/field_help.py:62",
    "templates/site/view3d.html:112"
   ],
   "help": true
@@ -16167,7 +16174,7 @@
  "Tempo por peça (s)": {
   "src": [
    "services/field_help.py:55",
-   "services/field_help.py:62",
+   "services/field_help.py:63",
    "templates/site/view3d.html:114"
   ],
   "help": true
@@ -16186,19 +16193,19 @@
  },
  "Texto livre para lembrar o que esta execução testou.": {
   "src": [
-   "services/field_help.py:202"
+   "services/field_help.py:203"
   ],
   "help": true
  },
  "Texto livre sobre a estrutura.": {
   "src": [
-   "services/field_help.py:379"
+   "services/field_help.py:380"
   ],
   "help": true
  },
  "Texto livre sobre o nível (ex.: reservado para itens pesados). Só para consulta.": {
   "src": [
-   "services/field_help.py:359"
+   "services/field_help.py:360"
   ],
   "help": true
  },
@@ -16210,7 +16217,7 @@
  },
  "Tipo": {
   "src": [
-   "services/field_help.py:367",
+   "services/field_help.py:368",
    "services/site_import.py:187",
    "services/site_import.py:809",
    "templates/optimization/page.html:533",
@@ -16222,16 +16229,16 @@
  },
  "Tipo das bins deste endereço (ou o tipo usado na ação em massa).": {
   "src": [
-   "services/field_help.py:315"
+   "services/field_help.py:316"
   ],
   "help": true
  },
  "Tipo de bin": {
   "src": [
    "routers/site.py:188",
-   "services/field_help.py:305",
-   "services/field_help.py:315",
-   "services/field_help.py:341",
+   "services/field_help.py:306",
+   "services/field_help.py:316",
+   "services/field_help.py:342",
    "services/master_importer.py:69",
    "services/master_importer.py:78"
   ],
@@ -16252,13 +16259,13 @@
  },
  "Tipo de bin colocado em cada endereço gerado.": {
   "src": [
-   "services/field_help.py:305"
+   "services/field_help.py:306"
   ],
   "help": true
  },
  "Tipo de bin cuja capacidade está sendo definida.": {
   "src": [
-   "services/field_help.py:341"
+   "services/field_help.py:342"
   ],
   "help": true
  },
@@ -16316,10 +16323,10 @@
   "src": [
    "routers/optimization.py:978",
    "routers/products.py:142",
-   "services/field_help.py:151",
-   "services/field_help.py:217",
-   "services/field_help.py:322",
-   "services/field_help.py:401"
+   "services/field_help.py:152",
+   "services/field_help.py:218",
+   "services/field_help.py:323",
+   "services/field_help.py:402"
   ],
   "lazy": true,
   "help": true
@@ -16336,7 +16343,7 @@
  },
  "Tipo do arquivo": {
   "src": [
-   "services/field_help.py:271"
+   "services/field_help.py:272"
   ],
   "help": true
  },
@@ -16402,8 +16409,8 @@
   "src": [
    "routers/optimization.py:1007",
    "routers/optimization.py:1023",
-   "services/field_help.py:167",
-   "services/field_help.py:245"
+   "services/field_help.py:168",
+   "services/field_help.py:246"
   ],
   "help": true
  },
@@ -16429,7 +16436,7 @@
  },
  "Tipos que não cabem na estrutura têm a capacidade removida.": {
   "src": [
-   "services/field_help.py:352"
+   "services/field_help.py:353"
   ],
   "help": true
  },
@@ -16574,7 +16581,7 @@
  },
  "Transversais da zona": {
   "src": [
-   "services/field_help.py:130"
+   "services/field_help.py:131"
   ],
   "help": true
  },
@@ -16647,13 +16654,13 @@
  },
  "Um tipo de bin por SKU": {
   "src": [
-   "services/field_help.py:165"
+   "services/field_help.py:166"
   ],
   "help": true
  },
  "Um tipo de bin por nível": {
   "src": [
-   "services/field_help.py:260"
+   "services/field_help.py:261"
   ],
   "help": true
  },
@@ -16669,7 +16676,7 @@
  },
  "Um único tipo de bin": {
   "src": [
-   "services/field_help.py:253"
+   "services/field_help.py:254"
   ],
   "help": true
  },
@@ -16718,13 +16725,13 @@
  },
  "Uma letra por corredor (ímpares de um lado, pares do outro) ou uma letra por rua (A de frente para B).": {
   "src": [
-   "services/field_help.py:88"
+   "services/field_help.py:89"
   ],
   "help": true
  },
  "Uma letra por corredor (ímpares e pares frente a frente) ou uma letra por rua (fileira).": {
   "src": [
-   "services/field_help.py:121"
+   "services/field_help.py:122"
   ],
   "help": true
  },
@@ -16805,19 +16812,19 @@
  },
  "Usada no objetivo \"Menor tempo\" e no indicador \"Tempo estimado por saída\" do resultado.": {
   "src": [
-   "services/field_help.py:226"
+   "services/field_help.py:227"
   ],
   "help": true
  },
  "Usada no objetivo \"Menor tempo\": converte a caminhada em segundos e o tempo extra fora da zona de ouro em metros.": {
   "src": [
-   "services/field_help.py:156"
+   "services/field_help.py:157"
   ],
   "help": true
  },
  "Usada quando a coluna Filial está vazia ou não foi mapeada.": {
   "src": [
-   "services/field_help.py:275"
+   "services/field_help.py:276"
   ],
   "help": true
  },
@@ -16837,13 +16844,13 @@
  },
  "Usado no objetivo de menor custo do projeto de filial nova.": {
   "src": [
-   "services/field_help.py:376"
+   "services/field_help.py:377"
   ],
   "help": true
  },
  "Usado nos objetivos de menor custo.": {
   "src": [
-   "services/field_help.py:391"
+   "services/field_help.py:392"
   ],
   "help": true
  },
@@ -16854,7 +16861,7 @@
  },
  "Usado quando a coluna Armazém está vazia ou não foi mapeada.": {
   "src": [
-   "services/field_help.py:276"
+   "services/field_help.py:277"
   ],
   "help": true
  },
@@ -16865,7 +16872,7 @@
  },
  "Usar outros níveis da estante": {
   "src": [
-   "services/field_help.py:259"
+   "services/field_help.py:260"
   ],
   "help": true
  },
@@ -16894,7 +16901,7 @@
  },
  "Uso da estrutura": {
   "src": [
-   "services/field_help.py:143"
+   "services/field_help.py:144"
   ],
   "help": true
  },
@@ -16905,7 +16912,7 @@
  },
  "Uso da frente do nível (%)": {
   "src": [
-   "services/field_help.py:161",
+   "services/field_help.py:162",
    "templates/site/project.html:330"
   ],
   "help": true
@@ -17004,8 +17011,8 @@
  },
  "Velocidade de caminhada (m/s)": {
   "src": [
-   "services/field_help.py:156",
-   "services/field_help.py:226",
+   "services/field_help.py:157",
+   "services/field_help.py:227",
    "templates/site/project.html:442"
   ],
   "help": true
@@ -17018,7 +17025,7 @@
  },
  "Velocidade de caminhada do separador, usada para transformar metros em tempo.": {
   "src": [
-   "services/field_help.py:60"
+   "services/field_help.py:61"
   ],
   "help": true
  },
@@ -17117,7 +17124,7 @@
  },
  "Vizinho de frente": {
   "src": [
-   "services/field_help.py:78",
+   "services/field_help.py:79",
    "templates/layout/plan.html:95"
   ],
   "help": true
@@ -17184,7 +17191,7 @@
  },
  "Volume (litros)": {
   "src": [
-   "services/field_help.py:390",
+   "services/field_help.py:391",
    "templates/bin_types/form.html:74"
   ],
   "help": true
@@ -17231,7 +17238,7 @@
  },
  "Volume útil; vazio = calculado pelas medidas.": {
   "src": [
-   "services/field_help.py:390"
+   "services/field_help.py:391"
   ],
   "help": true
  },
@@ -17255,7 +17262,7 @@
  },
  "Vão de cada nível (cm)": {
   "src": [
-   "services/field_help.py:374"
+   "services/field_help.py:375"
   ],
   "help": true
  },
@@ -17267,8 +17274,8 @@
  },
  "Vão do nível (cm)": {
   "src": [
-   "services/field_help.py:343",
-   "services/field_help.py:358"
+   "services/field_help.py:344",
+   "services/field_help.py:359"
   ],
   "help": true
  },
@@ -17286,19 +17293,19 @@
  },
  "Vão entre as duas fileiras de cada corredor na planta gerada automaticamente.": {
   "src": [
-   "services/field_help.py:89"
+   "services/field_help.py:90"
   ],
   "help": true
  },
  "Vão entre duas fileiras que se olham, por onde o separador (ou a empilhadeira) passa.": {
   "src": [
-   "services/field_help.py:111"
+   "services/field_help.py:112"
   ],
   "help": true
  },
  "Vão entre esta fileira e o vizinho de frente. Mudar aqui move o vizinho.": {
   "src": [
-   "services/field_help.py:79"
+   "services/field_help.py:80"
   ],
   "help": true
  },
@@ -17309,7 +17316,7 @@
  },
  "Vão entre uma zona e outra da planta.": {
   "src": [
-   "services/field_help.py:117"
+   "services/field_help.py:118"
   ],
   "help": true
  },
@@ -17343,7 +17350,7 @@
  },
  "Vão útil por nível (cm)": {
   "src": [
-   "services/field_help.py:372"
+   "services/field_help.py:373"
   ],
   "help": true
  },
@@ -17388,26 +17395,26 @@
  },
  "X da fileira (m)": {
   "src": [
-   "services/field_help.py:74"
+   "services/field_help.py:75"
   ],
   "help": true
  },
  "X da referência (m)": {
   "src": [
-   "services/field_help.py:174"
+   "services/field_help.py:175"
   ],
   "help": true
  },
  "X da zona (m)": {
   "src": [
-   "services/field_help.py:126"
+   "services/field_help.py:127"
   ],
   "help": true
  },
  "X do obstáculo (m)": {
   "src": [
-   "services/field_help.py:84",
-   "services/field_help.py:133"
+   "services/field_help.py:85",
+   "services/field_help.py:134"
   ],
   "help": true
  },
@@ -17418,26 +17425,26 @@
  },
  "Y da fileira (m)": {
   "src": [
-   "services/field_help.py:75"
+   "services/field_help.py:76"
   ],
   "help": true
  },
  "Y da referência (m)": {
   "src": [
-   "services/field_help.py:175"
+   "services/field_help.py:176"
   ],
   "help": true
  },
  "Y da zona (m)": {
   "src": [
-   "services/field_help.py:127"
+   "services/field_help.py:128"
   ],
   "help": true
  },
  "Y do obstáculo (m)": {
   "src": [
-   "services/field_help.py:85",
-   "services/field_help.py:134"
+   "services/field_help.py:86",
+   "services/field_help.py:135"
   ],
   "help": true
  },
@@ -17454,13 +17461,13 @@
  },
  "Zerar saldos ausentes": {
   "src": [
-   "services/field_help.py:279"
+   "services/field_help.py:280"
   ],
   "help": true
  },
  "Zeros à esquerda não diferenciam": {
   "src": [
-   "services/field_help.py:446"
+   "services/field_help.py:447"
   ],
   "help": true
  },
@@ -17490,8 +17497,8 @@
  },
  "Zona de ouro da caminhada (m)": {
   "src": [
-   "services/field_help.py:177",
-   "services/field_help.py:239"
+   "services/field_help.py:178",
+   "services/field_help.py:240"
   ],
   "help": true
  },
@@ -17554,7 +17561,7 @@
  },
  "Zona de ouro: fim (cm)": {
   "src": [
-   "services/field_help.py:378"
+   "services/field_help.py:379"
   ],
   "help": true
  },
@@ -17565,7 +17572,7 @@
  },
  "Zona de ouro: início (cm)": {
   "src": [
-   "services/field_help.py:377"
+   "services/field_help.py:378"
   ],
   "help": true
  },
@@ -21299,7 +21306,7 @@
  },
  "Área bloqueada do imóvel (escritório, pilar, rampa).": {
   "src": [
-   "services/field_help.py:132"
+   "services/field_help.py:133"
   ],
   "help": true
  },
@@ -21313,7 +21320,7 @@
   "src": [
    "routers/optimization.py:1016",
    "routers/optimization.py:1032",
-   "services/field_help.py:248"
+   "services/field_help.py:249"
   ],
   "help": true
  },
@@ -21326,13 +21333,13 @@
  },
  "Área de trabalho (recebimento, expedição, conferência). O sistema escolhe o lugar que perde menos armazenagem.": {
   "src": [
-   "services/field_help.py:137"
+   "services/field_help.py:138"
   ],
   "help": true
  },
  "Área necessária (m²)": {
   "src": [
-   "services/field_help.py:138",
+   "services/field_help.py:139",
    "services/site_import.py:204",
    "services/site_import.py:794"
   ],
@@ -21378,7 +21385,7 @@
  },
  "Último código da faixa dentro da exceção.": {
   "src": [
-   "services/field_help.py:300"
+   "services/field_help.py:301"
   ],
   "help": true
  },

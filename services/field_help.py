@@ -53,6 +53,7 @@ R(P3D, "#nkCam", "Câmera", "De onde a caminhada é vista: seguindo o separador,
 R(P3D, "#nkWalkV", "Caminhada (m/s)", "Velocidade de caminhada do separador. O tempo andando é a distância dividida por ela.", "time:v")
 R(P3D, "#nkPick", "Tempo por parada (s)", "Tempo fixo em cada parada (chegar, localizar, conferir). Endereços do mesmo módulo contam como uma parada.", "time:stop")
 R(P3D, "#nkPiece", "Tempo por peça (s)", "Tempo para pegar cada peça: a parada dura o tempo fixo mais as peças vezes este tempo.", "time:piece")
+R(P3D, "#nkGoldItem", "Fora do ouro (s por item)", "Tempo a mais por item (linha do pedido) pego num nível fora da zona de ouro da pega (agachar, usar escada).", "time:goldp")
 R(P3D, "#nkGoldP", "Fora do ouro (s por peça)", "Tempo a mais por PEÇA pega num nível fora da zona de ouro da pega (agachar, usar escada).", "time:goldp")
 
 # =========================================================================== simulador de trajeto

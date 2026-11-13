@@ -2731,6 +2731,7 @@
 "Tempo a mais para pegar um item (linha do pedido) num nível fora da zona de ouro da pega (agachar, escada…)": "在黄金区外的层拣取一个项目（订单行）的额外时间（下蹲、梯子…）",
 "Tempo a mais por PEÇA num nível fora da zona de ouro da pega": "在黄金区外的层每件的额外时间",
 "Tempo a mais por PEÇA pega num nível fora da zona de ouro da pega (agachar, usar escada).": "在拣取黄金区以外的层每拣一件的额外时间（下蹲、使用梯子）。",
+"Tempo a mais por item (linha do pedido) pego num nível fora da zona de ouro da pega (agachar, usar escada).": "在黄金区外的层拣取每个项目（订单行）的额外时间（下蹲、使用梯子）。",
 "Tempo a mais por item (linha do pedido) que está num nível fora da zona de ouro da pega.": "每个位于拣取黄金区以外层的项目（订单行）的额外时间。",
 "Tempo a mais por item (linha) num nível fora da zona de ouro da pega": "黄金区外的层每个项目（行）的额外时间",
 "Tempo a mais por item pego num nível fora da zona de ouro da pega": "在拣取黄金区以外的层每拣一项的额外时间",

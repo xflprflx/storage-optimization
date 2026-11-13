@@ -18,7 +18,11 @@ from typing import Any
 
 DEFAULTS: dict[str, Any] = {"addr_sort": "natural", "addr_zero_eq": False,
                             # simulação de separação (valores iniciais das telas; cada tela ainda pode mudar)
-                            "sim_v": 1.0, "sim_stop": 10.0, "sim_piece": 2.0, "sim_gold": 5.0, "sim_gold_piece": 0.0}
+                            "sim_v": 1.0, "sim_stop": 10.0, "sim_piece": 2.0, "sim_gold": 5.0, "sim_gold_piece": 0.0,
+                            # caminhada 3D: velocidade do vídeo (×) e câmera iniciais
+                            "sim_video": 10, "sim_camera": "follow"}
+SIM_VIDEO = (1, 2, 5, 10, 20, 50)
+SIM_CAMERAS = ("follow", "fp", "top", "free")
 # limites de cada valor da simulação (mínimo, máximo)
 SIM_LIMITS = {"sim_v": (0.2, 3.0), "sim_stop": (0.0, 600.0), "sim_piece": (0.0, 600.0), "sim_gold": (0.0, 600.0),
               "sim_gold_piece": (0.0, 600.0)}
@@ -58,7 +62,9 @@ def save(db, values: dict) -> None:
 def sim_times() -> dict[str, float]:
     """Tempos padrão da simulação de separação, com as chaves do simulador (t_v, t_stop, t_piece, t_gold, t_gold_piece)."""
     return {"t_v": float(get("sim_v")), "t_stop": float(get("sim_stop")), "t_piece": float(get("sim_piece")),
-            "t_gold": float(get("sim_gold")), "t_gold_piece": float(get("sim_gold_piece"))}
+            "t_gold": float(get("sim_gold")), "t_gold_piece": float(get("sim_gold_piece")),
+            "video": int(get("sim_video")) if get("sim_video") in SIM_VIDEO else 10,
+            "camera": get("sim_camera") if get("sim_camera") in SIM_CAMERAS else "follow"}
 
 
 def canon(code: str) -> str:

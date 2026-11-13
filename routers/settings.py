@@ -35,6 +35,12 @@ def settings_save(form: FormData = Depends(form_data), db: Session = Depends(get
             bad.append(k)
             continue
         values[k] = float(v)
+    try:  # caminhada 3D: velocidade do vídeo e câmera iniciais
+        video = int(form.get("sim_video") or 10)
+    except ValueError:
+        video = 10
+    values["sim_video"] = video if video in app_settings.SIM_VIDEO else 10
+    values["sim_camera"] = form.get("sim_camera") if form.get("sim_camera") in app_settings.SIM_CAMERAS else "follow"
     app_settings.save(db, values)
     if bad:
         return redirect("/settings", _("Configurações salvas, exceto tempos de simulação inválidos (fora dos limites)."), "warning")

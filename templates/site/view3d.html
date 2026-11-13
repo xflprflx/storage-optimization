@@ -103,11 +103,9 @@
     </div>
     <div class="row g-1 mb-1">
       <div class="col-6"><label class="form-label small mb-0" for="nkSpeed">{{ _("Velocidade do vídeo") }}</label>
-        <select class="form-select form-select-sm" id="nkSpeed"><option value="1">{{ _("tempo real") }}</option><option value="2">2×</option><option value="5">5×</option>
-          <option value="10" selected>10×</option><option value="20">20×</option><option value="50">50×</option></select></div>
+        <select class="form-select form-select-sm" id="nkSpeed">{% for v in (1, 2, 5, 10, 20, 50) %}<option value="{{ v }}" {% if st.video == v %}selected{% endif %}>{{ _("tempo real") if v == 1 else v ~ '×' }}</option>{% endfor %}</select></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkCam">{{ _("Câmera") }}</label>
-        <select class="form-select form-select-sm" id="nkCam"><option value="follow">{{ _("Seguir o separador") }}</option><option value="fp">{{ _("Primeira pessoa") }}</option>
-          <option value="top">{{ _("De cima (rota toda)") }}</option><option value="free">{{ _("Livre (mouse)") }}</option></select></div>
+        <select class="form-select form-select-sm" id="nkCam">{% for v, lbl in (('follow', _('Seguir o separador')), ('fp', _('Primeira pessoa')), ('top', _('De cima (rota toda)')), ('free', _('Livre (mouse)'))) %}<option value="{{ v }}" {% if st.camera == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkWalkV" data-u="m/s" min="0.2" max="3" step="0.1" value="{{ '%g'|format(st.t_v) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="{{ _("Tempo fixo parado em cada endereço (chegar, localizar, conferir)") }}">{{ _("Tempo por parada (s)") }}</label>

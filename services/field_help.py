@@ -368,6 +368,8 @@ R(PSET, "sim_v", "Velocidade de caminhada (m/s)", "Padrão da simulação de sep
 R(PSET, "sim_stop", "Tempo por parada (s)", "Padrão da simulação: tempo fixo em cada parada (chegar, localizar, conferir).", "time:stop")
 R(PSET, "sim_piece", "Tempo por peça (s)", "Padrão da simulação: tempo para pegar cada peça.", "time:piece")
 R(PSET, "sim_gold", "Fora da zona de ouro (s por item)", "Padrão da simulação: tempo a mais por item pego fora da zona de ouro da pega.", "time:goldp")
+R(PSET, "sim_video", "Velocidade do vídeo (caminhada 3D)", "Velocidade inicial da animação e do vídeo gravado na caminhada 3D (tempo real a 50×). Na tela 3D dá para mudar na hora.", "time:v")
+R(PSET, "sim_camera", "Câmera (caminhada 3D)", "Câmera inicial da caminhada 3D: seguir o separador, primeira pessoa, de cima ou livre. Na tela 3D dá para mudar na hora.", "time:v")
 R(PSET, "sim_gold_piece", "Fora da zona de ouro (s por peça)", "Padrão da simulação: tempo a mais por peça pega fora da zona de ouro da pega.", "time:goldp")
 R(PST, "code", "Código da estrutura", "Identificador curto e único (ex.: EST-100).", "tag:code")
 R(PST, "name", "Nome da estrutura", "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).", "tag:name")

@@ -490,7 +490,7 @@
  },
  "(volume dos produtos ÷ volume da bin)": {
   "src": [
-   "templates/site/view3d.html:346"
+   "templates/site/view3d.html:344"
   ],
   "js": true
  },
@@ -600,7 +600,7 @@
  },
  "07 e 7 passam a ser o mesmo local em qualquer parte do endereço. Os códigos gravados não mudam.": {
   "src": [
-   "services/field_help.py:453"
+   "services/field_help.py:455"
   ],
   "help": true
  },
@@ -830,7 +830,7 @@
  },
  "80% das saídas": {
   "src": [
-   "templates/site/view3d.html:351"
+   "templates/site/view3d.html:349"
   ],
   "js": true
  },
@@ -925,7 +925,7 @@
  },
  "<b>Busca:</b> {findSet} bin(s) encontradas <span class=\"nk3d-sw\" style=\"background:#e11d48\"></span>": {
   "src": [
-   "templates/site/view3d.html:344"
+   "templates/site/view3d.html:342"
   ],
   "js": true
  },
@@ -961,13 +961,13 @@
  },
  "<b>Curva ABC</b> <span class=\"text-muted\">(pela saída)</span>{v}{some}": {
   "src": [
-   "templates/site/view3d.html:351"
+   "templates/site/view3d.html:349"
   ],
   "js": true
  },
  "<b>Dia {day}</b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)": {
   "src": [
-   "templates/site/view3d.html:607"
+   "templates/site/view3d.html:605"
   ],
   "js": true
  },
@@ -979,7 +979,7 @@
  },
  "<b>Estruturas</b>{structs}": {
   "src": [
-   "templates/site/view3d.html:348"
+   "templates/site/view3d.html:346"
   ],
   "js": true
  },
@@ -1039,7 +1039,7 @@
  },
  "<b>Hoje × proposta do solver</b> · {orders} pedidos · média por pedido na rota otimizada: <span style=\"color:#d6604d\">hoje {a} m</span> → <span style=\"color:#1a9850\">proposta {b} m</span>. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam.": {
   "src": [
-   "templates/site/view3d.html:482"
+   "templates/site/view3d.html:480"
   ],
   "js": true
  },
@@ -1135,7 +1135,7 @@
  },
  "<b>Tipos de bin</b>{types}": {
   "src": [
-   "templates/site/view3d.html:361"
+   "templates/site/view3d.html:359"
   ],
   "js": true
  },
@@ -1305,7 +1305,7 @@
  },
  "<span class=\"nk3d-sw\" style=\"background:#b8c0c6\"></span>sem dimensões · média {fmt}%": {
   "src": [
-   "templates/site/view3d.html:346"
+   "templates/site/view3d.html:344"
   ],
   "js": true
  },
@@ -1578,13 +1578,13 @@
  },
  "A proposta anda <b>{fmt}%</b> mais que hoje.": {
   "src": [
-   "templates/site/view3d.html:607"
+   "templates/site/view3d.html:605"
   ],
   "js": true
  },
  "A proposta anda <b>{fmt}%</b> menos que hoje.": {
   "src": [
-   "templates/site/view3d.html:607"
+   "templates/site/view3d.html:605"
   ],
   "js": true
  },
@@ -1601,7 +1601,7 @@
  },
  "A rota otimizada anda <b>{fmt}%</b> menos que a lista.": {
   "src": [
-   "templates/site/view3d.html:607"
+   "templates/site/view3d.html:605"
   ],
   "js": true
  },
@@ -1750,7 +1750,7 @@
  },
  "Agrupa produtos parecidos (ex.: fixação, elétrico), para filtros e para o posicionamento.": {
   "src": [
-   "services/field_help.py:408"
+   "services/field_help.py:410"
   ],
   "help": true
  },
@@ -1866,7 +1866,7 @@
  },
  "Altura (cm)": {
   "src": [
-   "services/field_help.py:393",
+   "services/field_help.py:395",
    "services/master_importer.py:47",
    "services/site_import.py:193",
    "services/site_import.py:196",
@@ -1885,13 +1885,13 @@
  },
  "Altura da unidade (cm)": {
   "src": [
-   "services/field_help.py:409"
+   "services/field_help.py:411"
   ],
   "help": true
  },
  "Altura de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:409"
+   "services/field_help.py:411"
   ],
   "help": true
  },
@@ -1904,7 +1904,7 @@
  "Altura do 1º nível (cm)": {
   "src": [
    "services/field_help.py:350",
-   "services/field_help.py:380",
+   "services/field_help.py:382",
    "services/site_import.py:192",
    "services/site_import.py:811",
    "templates/structures/form.html:61"
@@ -1954,7 +1954,7 @@
  },
  "Altura interna útil da bin. Precisa caber no vão do nível, com a folga para tirá-la.": {
   "src": [
-   "services/field_help.py:393"
+   "services/field_help.py:395"
   ],
   "help": true
  },
@@ -1965,7 +1965,7 @@
  },
  "Altura livre de cada nível. Vale para os níveis sem vão próprio.": {
   "src": [
-   "services/field_help.py:379"
+   "services/field_help.py:381"
   ],
   "help": true
  },
@@ -1994,7 +1994,7 @@
  },
  "Altura onde termina a faixa mais fácil de pegar (tipicamente 75 a 150 cm).": {
   "src": [
-   "services/field_help.py:385"
+   "services/field_help.py:387"
   ],
   "help": true
  },
@@ -2011,7 +2011,7 @@
  },
  "Altura total (cm)": {
   "src": [
-   "services/field_help.py:377",
+   "services/field_help.py:379",
    "services/site_import.py:188"
   ],
   "help": true,
@@ -2024,7 +2024,7 @@
  },
  "Altura, a partir do piso, onde começa a faixa mais fácil de pegar.": {
   "src": [
-   "services/field_help.py:384"
+   "services/field_help.py:386"
   ],
   "help": true
  },
@@ -2046,7 +2046,7 @@
  },
  "Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).": {
   "src": [
-   "templates/site/view3d.html:612"
+   "templates/site/view3d.html:610"
   ],
   "js": true
  },
@@ -2133,7 +2133,7 @@
  },
  "Apaga o mínimo, o máximo e o endereço padrão do produto nesta filial.": {
   "src": [
-   "services/field_help.py:417"
+   "services/field_help.py:419"
   ],
   "help": true
  },
@@ -2319,7 +2319,7 @@
  },
  "Armazém da filial a que a tela se refere; vazio ou \"sem armazém\" = endereços sem armazém.": {
   "src": [
-   "services/field_help.py:463"
+   "services/field_help.py:465"
   ],
   "help": true
  },
@@ -2451,7 +2451,7 @@
  },
  "Armazéns da filial": {
   "src": [
-   "services/field_help.py:443"
+   "services/field_help.py:445"
   ],
   "help": true
  },
@@ -2468,14 +2468,14 @@
  },
  "Armazéns que esta filial usa. Um armazém pode servir a mais de uma filial.": {
   "src": [
-   "services/field_help.py:443"
+   "services/field_help.py:445"
   ],
   "help": true
  },
  "Arquivo": {
   "src": [
    "services/field_help.py:268",
-   "services/field_help.py:467"
+   "services/field_help.py:469"
   ],
   "help": true
  },
@@ -2514,7 +2514,7 @@
  },
  "Arquivo enviado para o sistema.": {
   "src": [
-   "services/field_help.py:467"
+   "services/field_help.py:469"
   ],
   "help": true
  },
@@ -2669,7 +2669,7 @@
  },
  "As medidas e o peso deste SKU são copiados para os produtos marcados.": {
   "src": [
-   "services/field_help.py:422"
+   "services/field_help.py:424"
   ],
   "help": true
  },
@@ -2921,7 +2921,7 @@
  },
  "Base do 1º nível a partir do piso; 0 = no chão.": {
   "src": [
-   "services/field_help.py:380"
+   "services/field_help.py:382"
   ],
   "help": true
  },
@@ -2944,7 +2944,7 @@
  },
  "Bin <span class=\"mono\">{esc}</span> · {same} bin(s) no endereço": {
   "src": [
-   "templates/site/view3d.html:400"
+   "templates/site/view3d.html:398"
   ],
   "js": true
  },
@@ -2966,7 +2966,7 @@
  },
  "Bin pai": {
   "src": [
-   "services/field_help.py:399",
+   "services/field_help.py:401",
    "services/master_importer.py:53",
    "templates/bin_types/form.html:32"
   ],
@@ -3281,11 +3281,11 @@
  "Busca": {
   "src": [
    "services/field_help.py:200",
-   "services/field_help.py:387",
-   "services/field_help.py:402",
-   "services/field_help.py:420",
-   "services/field_help.py:444",
-   "services/field_help.py:449"
+   "services/field_help.py:389",
+   "services/field_help.py:404",
+   "services/field_help.py:422",
+   "services/field_help.py:446",
+   "services/field_help.py:451"
   ],
   "help": true
  },
@@ -3318,7 +3318,7 @@
  },
  "Buscar em": {
   "src": [
-   "services/field_help.py:418"
+   "services/field_help.py:420"
   ],
   "help": true
  },
@@ -3557,13 +3557,13 @@
  },
  "Calculando as rotas do dia…": {
   "src": [
-   "templates/site/view3d.html:508"
+   "templates/site/view3d.html:506"
   ],
   "js": true
  },
  "Calculando as rotas…": {
   "src": [
-   "templates/site/view3d.html:497"
+   "templates/site/view3d.html:495"
   ],
   "js": true
  },
@@ -3593,7 +3593,7 @@
    "services/field_help.py:53",
    "services/field_help.py:61",
    "templates/optimization/page.html:240",
-   "templates/site/view3d.html:111",
+   "templates/site/view3d.html:109",
    "templates/slotting/routes.html:42"
   ],
   "help": true
@@ -3811,7 +3811,7 @@
  },
  "Carga máxima por nível (kg)": {
   "src": [
-   "services/field_help.py:382"
+   "services/field_help.py:384"
   ],
   "help": true
  },
@@ -3834,14 +3834,14 @@
  },
  "Carregando os pedidos…": {
   "src": [
-   "templates/site/view3d.html:474"
+   "templates/site/view3d.html:472"
   ],
   "js": true
  },
  "Carregando…": {
   "src": [
    "templates/layout/plan.html:40",
-   "templates/site/view3d.html:129"
+   "templates/site/view3d.html:127"
   ]
  },
  "Cede bins e é rearranjado": {
@@ -4084,6 +4084,11 @@
   ],
   "help": true
  },
+ "Com que velocidade a animação e o vídeo gravado andam.": {
+  "src": [
+   "templates/settings.html:46"
+  ]
+ },
  "Com tempo limite, cada critério recebe uma parte do tempo: se ele acabar, o plano é a <b>melhor solução encontrada</b>, sem prova de que é a ótima, e os critérios seguintes podem nem ser otimizados. Marque <b>Sem limite de tempo</b> para o solver ir até provar o ótimo em todos os critérios (pode levar muitos minutos em projetos grandes).": {
   "src": [
    "templates/site/project.html:453"
@@ -4121,6 +4126,11 @@
    "templates/site/running.html:15"
   ]
  },
+ "Como a câmera acompanha a caminhada ao abrir a simulação.": {
+  "src": [
+   "templates/settings.html:53"
+  ]
+ },
  "Como buscar": {
   "src": [
    "templates/_macros.html:149",
@@ -4129,7 +4139,7 @@
  },
  "Como comparar": {
   "src": [
-   "services/field_help.py:419",
+   "services/field_help.py:421",
    "templates/products/list.html:19"
   ],
   "help": true
@@ -4296,7 +4306,7 @@
  },
  "Comprimento (cm)": {
   "src": [
-   "services/field_help.py:395",
+   "services/field_help.py:397",
    "services/master_importer.py:49",
    "services/site_import.py:194",
    "services/site_import.py:197",
@@ -4314,13 +4324,13 @@
  },
  "Comprimento da bin: o lado que vai para o fundo da estante.": {
   "src": [
-   "services/field_help.py:395"
+   "services/field_help.py:397"
   ],
   "help": true
  },
  "Comprimento da unidade (cm)": {
   "src": [
-   "services/field_help.py:411"
+   "services/field_help.py:413"
   ],
   "help": true
  },
@@ -4332,7 +4342,7 @@
  },
  "Comprimento de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:411"
+   "services/field_help.py:413"
   ],
   "help": true
  },
@@ -4400,12 +4410,12 @@
  },
  "Configurações salvas, exceto tempos de simulação inválidos (fora dos limites).": {
   "src": [
-   "routers/settings.py:40"
+   "routers/settings.py:46"
   ]
  },
  "Configurações salvas.": {
   "src": [
-   "routers/settings.py:41"
+   "routers/settings.py:47"
   ]
  },
  "Conflito de hierarquia: este endereço já possui sub-endereços ({sample}); não é possível criá-lo como genérico.": {
@@ -4479,7 +4489,7 @@
  },
  "Contém, começa com, termina com ou igual.": {
   "src": [
-   "services/field_help.py:419"
+   "services/field_help.py:421"
   ],
   "help": true
  },
@@ -4508,7 +4518,7 @@
  },
  "Copiar as medidas do SKU": {
   "src": [
-   "services/field_help.py:422"
+   "services/field_help.py:424"
   ],
   "help": true
  },
@@ -4706,7 +4716,7 @@
  },
  "Cotas completas por fora da planta (em volta) ou por dentro (tamanho de cada zona e distância até as paredes).": {
   "src": [
-   "services/field_help.py:457"
+   "services/field_help.py:459"
   ],
   "help": true
  },
@@ -4884,7 +4894,7 @@
  },
  "Custo por bin (R$)": {
   "src": [
-   "services/field_help.py:398",
+   "services/field_help.py:400",
    "services/master_importer.py:52",
    "services/site_import.py:195",
    "services/site_import.py:815",
@@ -4901,7 +4911,7 @@
  },
  "Custo por módulo (R$)": {
   "src": [
-   "services/field_help.py:383",
+   "services/field_help.py:385",
    "services/site_import.py:189",
    "services/site_import.py:810",
    "templates/structures/form.html:78"
@@ -4927,7 +4937,20 @@
  "Câmera": {
   "src": [
    "services/field_help.py:52",
-   "templates/site/view3d.html:108"
+   "templates/site/view3d.html:107"
+  ],
+  "help": true
+ },
+ "Câmera (caminhada 3D)": {
+  "src": [
+   "services/field_help.py:372",
+   "templates/settings.html:49"
+  ],
+  "help": true
+ },
+ "Câmera inicial da caminhada 3D: seguir o separador, primeira pessoa, de cima ou livre. Na tela 3D dá para mudar na hora.": {
+  "src": [
+   "services/field_help.py:372"
   ],
   "help": true
  },
@@ -4976,13 +4999,13 @@
  },
  "Código da estrutura": {
   "src": [
-   "services/field_help.py:372"
+   "services/field_help.py:374"
   ],
   "help": true
  },
  "Código da filial": {
   "src": [
-   "services/field_help.py:441",
+   "services/field_help.py:443",
    "services/master_importer.py:36"
   ],
   "help": true,
@@ -5032,7 +5055,7 @@
  "Código do armazém": {
   "src": [
    "services/field_help.py:182",
-   "services/field_help.py:445",
+   "services/field_help.py:447",
    "services/master_importer.py:40"
   ],
   "help": true,
@@ -5052,7 +5075,7 @@
  },
  "Código do tipo de bin": {
   "src": [
-   "services/field_help.py:391"
+   "services/field_help.py:393"
   ],
   "help": true
  },
@@ -5078,7 +5101,7 @@
  },
  "Código único do produto no catálogo, o mesmo em todas as filiais.": {
   "src": [
-   "services/field_help.py:406"
+   "services/field_help.py:408"
   ],
   "help": true
  },
@@ -5138,7 +5161,7 @@
  },
  "Da frente ao fundo do nível.": {
   "src": [
-   "services/field_help.py:376",
+   "services/field_help.py:378",
    "templates/structures/form.html:37"
   ],
   "help": true
@@ -5172,13 +5195,14 @@
  },
  "De baixo para cima, ex.: 60; 40; 35. A sobra da altura vira a espessura das longarinas.": {
   "src": [
-   "services/field_help.py:381"
+   "services/field_help.py:383"
   ],
   "help": true
  },
  "De cima (rota toda)": {
   "src": [
-   "templates/site/view3d.html:110"
+   "templates/settings.html:51",
+   "templates/site/view3d.html:108"
   ]
  },
  "De onde a caminhada é vista: seguindo o separador, em primeira pessoa, de cima ou livre com o mouse.": {
@@ -5339,19 +5363,19 @@
  },
  "Descrição do produto, como aparece nas listas e nos relatórios.": {
   "src": [
-   "services/field_help.py:407"
+   "services/field_help.py:409"
   ],
   "help": true
  },
  "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).": {
   "src": [
-   "services/field_help.py:373"
+   "services/field_help.py:375"
   ],
   "help": true
  },
  "Descrição que aparece nas telas.": {
   "src": [
-   "services/field_help.py:392"
+   "services/field_help.py:394"
   ],
   "help": true
  },
@@ -5452,7 +5476,7 @@
  },
  "Dia {day} · {n} pedidos · {lines} linha(s){pcs} · {mmss}": {
   "src": [
-   "templates/site/view3d.html:663"
+   "templates/site/view3d.html:661"
   ],
   "js": true
  },
@@ -5678,7 +5702,7 @@
  },
  "Divisões na largura": {
   "src": [
-   "services/field_help.py:400",
+   "services/field_help.py:402",
    "services/master_importer.py:54"
   ],
   "help": true,
@@ -5686,7 +5710,7 @@
  },
  "Divisões no comprimento": {
   "src": [
-   "services/field_help.py:401",
+   "services/field_help.py:403",
    "services/master_importer.py:55"
   ],
   "help": true,
@@ -5710,7 +5734,7 @@
  },
  "Do piso ao topo. Precisa caber no pé-direito útil do imóvel.": {
   "src": [
-   "services/field_help.py:377"
+   "services/field_help.py:379"
   ],
   "help": true
  },
@@ -5881,19 +5905,19 @@
  },
  "Em qual campo procurar: SKU, nome, material ou endereço.": {
   "src": [
-   "services/field_help.py:418"
+   "services/field_help.py:420"
   ],
   "help": true
  },
  "Em quantas partes a bin pai é dividida na largura.": {
   "src": [
-   "services/field_help.py:400"
+   "services/field_help.py:402"
   ],
   "help": true
  },
  "Em quantas partes a bin pai é dividida no comprimento.": {
   "src": [
-   "services/field_help.py:401"
+   "services/field_help.py:403"
   ],
   "help": true
  },
@@ -6051,8 +6075,8 @@
    "routers/products.py:142",
    "services/action_plan.py:181",
    "services/field_help.py:321",
-   "services/field_help.py:429",
-   "services/field_help.py:434"
+   "services/field_help.py:431",
+   "services/field_help.py:436"
   ],
   "lazy": true,
   "help": true
@@ -6105,7 +6129,7 @@
  },
  "Endereço físico onde esta quantidade do produto está guardada.": {
   "src": [
-   "services/field_help.py:434"
+   "services/field_help.py:436"
   ],
   "help": true
  },
@@ -6147,7 +6171,7 @@
  },
  "Endereço onde o produto normalmente fica nesta filial.": {
   "src": [
-   "services/field_help.py:414"
+   "services/field_help.py:416"
   ],
   "help": true
  },
@@ -6158,7 +6182,7 @@
  },
  "Endereço padrão": {
   "src": [
-   "services/field_help.py:414",
+   "services/field_help.py:416",
    "services/product_importer.py:52",
    "templates/products/detail.html:34",
    "templates/products/form.html:47",
@@ -6573,7 +6597,7 @@
  },
  "Esconde os registros com quantidade zero (atribuições sem saldo).": {
   "src": [
-   "services/field_help.py:430"
+   "services/field_help.py:432"
   ],
   "help": true
  },
@@ -6633,7 +6657,7 @@
  },
  "Espaço livre entre as colunas, onde as bins ficam lado a lado.": {
   "src": [
-   "services/field_help.py:375"
+   "services/field_help.py:377"
   ],
   "help": true
  },
@@ -6738,13 +6762,13 @@
  },
  "Estante {esc} · {esc2}{cap} · altura {fmt} m": {
   "src": [
-   "templates/site/view3d.html:400"
+   "templates/site/view3d.html:398"
   ],
   "js": true
  },
  "Estante, porta-palete, palete no chão… O palete no chão é desenhado sem montantes, em camadas.": {
   "src": [
-   "services/field_help.py:374"
+   "services/field_help.py:376"
   ],
   "help": true
  },
@@ -6804,7 +6828,7 @@
  },
  "Este navegador não grava vídeo (use Chrome, Edge ou Firefox).": {
   "src": [
-   "templates/site/view3d.html:735"
+   "templates/site/view3d.html:733"
   ],
   "js": true
  },
@@ -7333,7 +7357,7 @@
  },
  "Excluir também os relacionados": {
   "src": [
-   "services/field_help.py:454"
+   "services/field_help.py:456"
   ],
   "help": true
  },
@@ -7495,25 +7519,25 @@
  },
  "Falha ao carregar o dia.": {
   "src": [
-   "templates/site/view3d.html:511"
+   "templates/site/view3d.html:509"
   ],
   "js": true
  },
  "Falha ao carregar o pedido.": {
   "src": [
-   "templates/site/view3d.html:500"
+   "templates/site/view3d.html:498"
   ],
   "js": true
  },
  "Falha ao carregar o plano.": {
   "src": [
-   "templates/site/view3d.html:151"
+   "templates/site/view3d.html:149"
   ],
   "js": true
  },
  "Falha ao carregar os pedidos.": {
   "src": [
-   "templates/site/view3d.html:475"
+   "templates/site/view3d.html:473"
   ],
   "js": true
  },
@@ -7598,7 +7622,7 @@
   "src": [
    "templates/layout/plan.html:70",
    "templates/site/view3d.html:82",
-   "templates/site/view3d.html:400"
+   "templates/site/view3d.html:398"
   ],
   "js": true
  },
@@ -7612,7 +7636,7 @@
  },
  "Ferramenta da planta": {
   "src": [
-   "services/field_help.py:459"
+   "services/field_help.py:461"
   ],
   "help": true
  },
@@ -7725,7 +7749,7 @@
  },
  "Filiais do armazém": {
   "src": [
-   "services/field_help.py:447"
+   "services/field_help.py:449"
   ],
   "help": true
  },
@@ -7748,7 +7772,7 @@
  },
  "Filiais que usam este armazém.": {
   "src": [
-   "services/field_help.py:447"
+   "services/field_help.py:449"
   ],
   "help": true
  },
@@ -7786,7 +7810,7 @@
  },
  "Filial a que a tela se refere.": {
   "src": [
-   "services/field_help.py:462"
+   "services/field_help.py:464"
   ],
   "help": true
  },
@@ -7816,7 +7840,7 @@
  },
  "Filial da política": {
   "src": [
-   "services/field_help.py:413"
+   "services/field_help.py:415"
   ],
   "help": true
  },
@@ -7851,7 +7875,7 @@
  },
  "Filial em que este mínimo, máximo e endereço padrão valem.": {
   "src": [
-   "services/field_help.py:413"
+   "services/field_help.py:415"
   ],
   "help": true
  },
@@ -7992,7 +8016,7 @@
  },
  "Filtra pelo tipo de material do produto.": {
   "src": [
-   "services/field_help.py:465"
+   "services/field_help.py:467"
   ],
   "help": true
  },
@@ -8024,7 +8048,7 @@
  "Filtrar a tabela": {
   "src": [
    "services/field_help.py:194",
-   "services/field_help.py:468"
+   "services/field_help.py:470"
   ],
   "help": true
  },
@@ -8183,7 +8207,7 @@
  },
  "Fora da zona de ouro (s por peça)": {
   "src": [
-   "services/field_help.py:371",
+   "services/field_help.py:373",
    "templates/settings.html:34"
   ],
   "help": true
@@ -8205,13 +8229,13 @@
  "Fora do ouro (s/item)": {
   "src": [
    "templates/optimization/page.html:242",
-   "templates/site/view3d.html:117",
+   "templates/site/view3d.html:115",
    "templates/slotting/routes.html:48"
   ]
  },
  "Fora do ouro (s/peça)": {
   "src": [
-   "templates/site/view3d.html:119",
+   "templates/site/view3d.html:117",
    "templates/slotting/routes.html:50"
   ]
  },
@@ -8281,7 +8305,7 @@
  },
  "Frente (largura útil, cm)": {
   "src": [
-   "services/field_help.py:375"
+   "services/field_help.py:377"
   ],
   "help": true
  },
@@ -8441,7 +8465,7 @@
  },
  "Grava a simulação do início ao fim e baixa o vídeo (.webm)": {
   "src": [
-   "templates/site/view3d.html:123"
+   "templates/site/view3d.html:121"
   ]
  },
  "Gravar o vão dos níveis": {
@@ -8458,8 +8482,8 @@
  },
  "Gravar vídeo": {
   "src": [
-   "templates/site/view3d.html:123",
-   "templates/site/view3d.html:764"
+   "templates/site/view3d.html:121",
+   "templates/site/view3d.html:762"
   ],
   "js": true
  },
@@ -8643,25 +8667,25 @@
  },
  "Identificador curto e único (ex.: CX-P).": {
   "src": [
-   "services/field_help.py:391"
+   "services/field_help.py:393"
   ],
   "help": true
  },
  "Identificador curto e único (ex.: EST-100).": {
   "src": [
-   "services/field_help.py:372"
+   "services/field_help.py:374"
   ],
   "help": true
  },
  "Identificador curto e único da filial (ex.: 01).": {
   "src": [
-   "services/field_help.py:441"
+   "services/field_help.py:443"
   ],
   "help": true
  },
  "Identificador curto e único do armazém (ex.: CD1).": {
   "src": [
-   "services/field_help.py:445"
+   "services/field_help.py:447"
   ],
   "help": true
  },
@@ -9156,7 +9180,7 @@
  },
  "Largura (cm)": {
   "src": [
-   "services/field_help.py:394",
+   "services/field_help.py:396",
    "services/master_importer.py:48",
    "services/site_import.py:193",
    "services/site_import.py:196",
@@ -9175,13 +9199,13 @@
  },
  "Largura da bin: o lado que fica ao longo da frente da estante.": {
   "src": [
-   "services/field_help.py:394"
+   "services/field_help.py:396"
   ],
   "help": true
  },
  "Largura da unidade (cm)": {
   "src": [
-   "services/field_help.py:410"
+   "services/field_help.py:412"
   ],
   "help": true
  },
@@ -9231,7 +9255,7 @@
  },
  "Largura de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:410"
+   "services/field_help.py:412"
   ],
   "help": true
  },
@@ -9563,7 +9587,8 @@
  },
  "Livre (mouse)": {
   "src": [
-   "templates/site/view3d.html:110"
+   "templates/settings.html:51",
+   "templates/site/view3d.html:108"
   ]
  },
  "Livres": {
@@ -9681,14 +9706,14 @@
  },
  "Marca a linha para a ação em massa.": {
   "src": [
-   "services/field_help.py:470"
+   "services/field_help.py:472"
   ],
   "help": true
  },
  "Marca todas as linhas da página.": {
   "src": [
    "services/field_help.py:264",
-   "services/field_help.py:469"
+   "services/field_help.py:471"
   ],
   "help": true
  },
@@ -9700,13 +9725,13 @@
  },
  "Marca todos os produtos da página.": {
   "src": [
-   "services/field_help.py:425"
+   "services/field_help.py:427"
   ],
   "help": true
  },
  "Marca todos os registros da página.": {
   "src": [
-   "services/field_help.py:438"
+   "services/field_help.py:440"
   ],
   "help": true
  },
@@ -9726,9 +9751,9 @@
   "src": [
    "services/field_help.py:201",
    "services/field_help.py:328",
-   "services/field_help.py:425",
-   "services/field_help.py:438",
-   "services/field_help.py:469"
+   "services/field_help.py:427",
+   "services/field_help.py:440",
+   "services/field_help.py:471"
   ],
   "help": true
  },
@@ -9819,13 +9844,13 @@
  },
  "Marque os produtos para alterar medidas em massa ou excluir.": {
   "src": [
-   "services/field_help.py:424"
+   "services/field_help.py:426"
   ],
   "help": true
  },
  "Marque os registros de saldo para excluir.": {
   "src": [
-   "services/field_help.py:437"
+   "services/field_help.py:439"
   ],
   "help": true
  },
@@ -9918,7 +9943,7 @@
  },
  "Medidas na planta": {
   "src": [
-   "services/field_help.py:458"
+   "services/field_help.py:460"
   ],
   "help": true
  },
@@ -10209,14 +10234,14 @@
  },
  "Mostra só as linhas que combinam com o texto.": {
   "src": [
-   "services/field_help.py:466"
+   "services/field_help.py:468"
   ],
   "help": true
  },
  "Mostra só as linhas que contêm o texto digitado.": {
   "src": [
    "services/field_help.py:194",
-   "services/field_help.py:468"
+   "services/field_help.py:470"
   ],
   "help": true
  },
@@ -10228,7 +10253,7 @@
  },
  "Mostra só os armazéns ligados a esta filial.": {
   "src": [
-   "services/field_help.py:448"
+   "services/field_help.py:450"
   ],
   "help": true
  },
@@ -10245,7 +10270,7 @@
  },
  "Mostra só os produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:421"
+   "services/field_help.py:423"
   ],
   "help": true
  },
@@ -10263,19 +10288,19 @@
  },
  "Mostra só os saldos de produtos deste tipo de material.": {
   "src": [
-   "services/field_help.py:432"
+   "services/field_help.py:434"
   ],
   "help": true
  },
  "Mostra só os saldos de um armazém.": {
   "src": [
-   "services/field_help.py:436"
+   "services/field_help.py:438"
   ],
   "help": true
  },
  "Mostra só os saldos de uma filial.": {
   "src": [
-   "services/field_help.py:435"
+   "services/field_help.py:437"
   ],
   "help": true
  },
@@ -10434,7 +10459,7 @@
  },
  "Máximo (max level)": {
   "src": [
-   "services/field_help.py:416"
+   "services/field_help.py:418"
   ],
   "help": true
  },
@@ -10511,7 +10536,7 @@
  },
  "Mínimo (min level)": {
   "src": [
-   "services/field_help.py:415"
+   "services/field_help.py:417"
   ],
   "help": true
  },
@@ -10774,7 +10799,7 @@
  },
  "Nenhum pedido da amostra tem SKUs no plano.": {
   "src": [
-   "templates/site/view3d.html:485"
+   "templates/site/view3d.html:483"
   ],
   "js": true
  },
@@ -11063,25 +11088,25 @@
  },
  "Nome completo da filial, como aparece nas listas e nos filtros.": {
   "src": [
-   "services/field_help.py:442"
+   "services/field_help.py:444"
   ],
   "help": true
  },
  "Nome completo do armazém, como aparece nas listas e nos filtros.": {
   "src": [
-   "services/field_help.py:446"
+   "services/field_help.py:448"
   ],
   "help": true
  },
  "Nome da estrutura": {
   "src": [
-   "services/field_help.py:373"
+   "services/field_help.py:375"
   ],
   "help": true
  },
  "Nome da filial": {
   "src": [
-   "services/field_help.py:442"
+   "services/field_help.py:444"
   ],
   "help": true
  },
@@ -11124,7 +11149,7 @@
  "Nome do armazém": {
   "src": [
    "services/field_help.py:183",
-   "services/field_help.py:446",
+   "services/field_help.py:448",
    "templates/site/project.html:495"
   ],
   "help": true
@@ -11150,7 +11175,7 @@
  },
  "Nome do produto": {
   "src": [
-   "services/field_help.py:407"
+   "services/field_help.py:409"
   ],
   "help": true
  },
@@ -11170,7 +11195,7 @@
  },
  "Nome do tipo de bin": {
   "src": [
-   "services/field_help.py:392"
+   "services/field_help.py:394"
   ],
   "help": true
  },
@@ -11207,7 +11232,7 @@
  },
  "Nos produtos marcados ou em todos os produtos do filtro.": {
   "src": [
-   "services/field_help.py:423"
+   "services/field_help.py:425"
   ],
   "help": true
  },
@@ -11287,7 +11312,7 @@
  },
  "Numérica: 2, 3, 10. Alfabética: 10, 2, 3. A ordem física dos níveis é sempre numérica.": {
   "src": [
-   "services/field_help.py:452"
+   "services/field_help.py:454"
   ],
   "help": true
  },
@@ -11384,7 +11409,7 @@
  },
  "Não foi possível iniciar a gravação.": {
   "src": [
-   "templates/site/view3d.html:742"
+   "templates/site/view3d.html:740"
   ],
   "js": true
  },
@@ -11685,7 +11710,7 @@
  },
  "Número de níveis": {
   "src": [
-   "services/field_help.py:378"
+   "services/field_help.py:380"
   ],
   "help": true
  },
@@ -12051,7 +12076,7 @@
  "Observações": {
   "src": [
    "services/action_plan.py:182",
-   "services/field_help.py:386",
+   "services/field_help.py:388",
    "templates/structures/form.html:107"
   ],
   "help": true
@@ -12124,7 +12149,7 @@
  },
  "Ocultar as medidas, mostrar só o tamanho do imóvel ou as cotas completas ao longo da planta.": {
   "src": [
-   "services/field_help.py:458"
+   "services/field_help.py:460"
   ],
   "help": true
  },
@@ -12189,7 +12214,7 @@
  },
  "Ocupação das bins: <b>{fmt}%</b>": {
   "src": [
-   "templates/site/view3d.html:400"
+   "templates/site/view3d.html:398"
   ],
   "js": true
  },
@@ -12251,7 +12276,7 @@
  "Onde aplicar": {
   "src": [
    "services/field_help.py:326",
-   "services/field_help.py:423"
+   "services/field_help.py:425"
   ],
   "help": true
  },
@@ -12314,7 +12339,7 @@
  },
  "Ordenação dos números": {
   "src": [
-   "services/field_help.py:452",
+   "services/field_help.py:454",
    "templates/settings.html:8"
   ],
   "help": true
@@ -12399,7 +12424,7 @@
  },
  "Os registros ligados aos itens (endereços, saldos, níveis…) saem junto. Sem isso, itens com relacionados ficam de fora.": {
   "src": [
-   "services/field_help.py:454"
+   "services/field_help.py:456"
   ],
   "help": true
  },
@@ -12497,7 +12522,7 @@
  },
  "Padrão da simulação: tempo a mais por peça pega fora da zona de ouro da pega.": {
   "src": [
-   "services/field_help.py:371"
+   "services/field_help.py:373"
   ],
   "help": true
  },
@@ -12580,7 +12605,7 @@
  },
  "Para frações (compartimentos): a bin inteira que foi dividida.": {
   "src": [
-   "services/field_help.py:399"
+   "services/field_help.py:401"
   ],
   "help": true
  },
@@ -12607,7 +12632,7 @@
  },
  "Paradas — {esc}:": {
   "src": [
-   "templates/site/view3d.html:608"
+   "templates/site/view3d.html:606"
   ],
   "js": true
  },
@@ -12625,7 +12650,7 @@
  },
  "Parar e salvar": {
   "src": [
-   "templates/site/view3d.html:757"
+   "templates/site/view3d.html:755"
   ],
   "js": true
  },
@@ -12728,8 +12753,8 @@
  },
  "Pedido {k} de {n}: {order} ({lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:609",
-   "templates/site/view3d.html:664"
+   "templates/site/view3d.html:607",
+   "templates/site/view3d.html:662"
   ],
   "js": true
  },
@@ -12740,7 +12765,7 @@
  },
  "Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}": {
   "src": [
-   "templates/site/view3d.html:658"
+   "templates/site/view3d.html:656"
   ],
   "js": true
  },
@@ -12904,13 +12929,13 @@
  },
  "Peso da unidade (kg)": {
   "src": [
-   "services/field_help.py:412"
+   "services/field_help.py:414"
   ],
   "help": true
  },
  "Peso de uma unidade do produto.": {
   "src": [
-   "services/field_help.py:412"
+   "services/field_help.py:414"
   ],
   "help": true
  },
@@ -12923,7 +12948,7 @@
  },
  "Peso máximo (kg)": {
   "src": [
-   "services/field_help.py:396",
+   "services/field_help.py:398",
    "services/master_importer.py:50",
    "templates/bin_types/form.html:69"
   ],
@@ -12938,13 +12963,13 @@
  },
  "Peso máximo que a bin suporta.": {
   "src": [
-   "services/field_help.py:396"
+   "services/field_help.py:398"
   ],
   "help": true
  },
  "Peso máximo que cada nível suporta.": {
   "src": [
-   "services/field_help.py:382"
+   "services/field_help.py:384"
   ],
   "help": true
  },
@@ -13345,7 +13370,7 @@
  },
  "Posição das cotas": {
   "src": [
-   "services/field_help.py:457"
+   "services/field_help.py:459"
   ],
   "help": true
  },
@@ -13434,7 +13459,8 @@
  },
  "Primeira pessoa": {
   "src": [
-   "templates/site/view3d.html:109"
+   "templates/settings.html:51",
+   "templates/site/view3d.html:108"
   ]
  },
  "Primeiro código da faixa dentro da exceção.": {
@@ -13473,7 +13499,7 @@
  },
  "Procura pelo código do endereço onde o saldo está.": {
   "src": [
-   "services/field_help.py:429"
+   "services/field_help.py:431"
   ],
   "help": true
  },
@@ -13485,37 +13511,37 @@
  },
  "Procura pelo código ou nome da filial.": {
   "src": [
-   "services/field_help.py:444"
+   "services/field_help.py:446"
   ],
   "help": true
  },
  "Procura pelo código ou nome do armazém.": {
   "src": [
-   "services/field_help.py:449"
+   "services/field_help.py:451"
   ],
   "help": true
  },
  "Procura pelo código ou nome do tipo de bin.": {
   "src": [
-   "services/field_help.py:402"
+   "services/field_help.py:404"
   ],
   "help": true
  },
  "Procura pelo código, nome ou tipo da estrutura.": {
   "src": [
-   "services/field_help.py:387"
+   "services/field_help.py:389"
   ],
   "help": true
  },
  "Procura por produto. Aceita 10*, *10, =10.": {
   "src": [
-   "services/field_help.py:464"
+   "services/field_help.py:466"
   ],
   "help": true
  },
  "Procura produtos. Aceita 10*, *10, =10 e \"frase inteira\".": {
   "src": [
-   "services/field_help.py:420"
+   "services/field_help.py:422"
   ],
   "help": true
  },
@@ -13537,7 +13563,7 @@
  },
  "Produto a que o saldo pertence. Aceita 10*, *10 e =10 na busca.": {
   "src": [
-   "services/field_help.py:431"
+   "services/field_help.py:433"
   ],
   "help": true
  },
@@ -13650,7 +13676,7 @@
  },
  "Profundidade (cm)": {
   "src": [
-   "services/field_help.py:376",
+   "services/field_help.py:378",
    "services/site_import.py:187",
    "services/site_import.py:809",
    "services/site_report.py:332"
@@ -14011,7 +14037,7 @@
    "routers/stock.py:120",
    "routers/stock.py:151",
    "services/action_plan.py:355",
-   "services/field_help.py:433"
+   "services/field_help.py:435"
   ],
   "lazy": true,
   "help": true
@@ -14126,7 +14152,7 @@
  },
  "Quantidade máxima do produto na filial.": {
   "src": [
-   "services/field_help.py:416"
+   "services/field_help.py:418"
   ],
   "help": true
  },
@@ -14142,7 +14168,7 @@
  },
  "Quantidade mínima do produto na filial.": {
   "src": [
-   "services/field_help.py:415"
+   "services/field_help.py:417"
   ],
   "help": true
  },
@@ -14225,7 +14251,7 @@
  },
  "Quantos níveis (andares) o módulo tem.": {
   "src": [
-   "services/field_help.py:378"
+   "services/field_help.py:380"
   ],
   "help": true
  },
@@ -14336,7 +14362,7 @@
  "Referência: {label}": {
   "src": [
    "services/branch_layout.py:583",
-   "templates/site/view3d.html:240"
+   "templates/site/view3d.html:238"
   ],
   "js": true
  },
@@ -14425,7 +14451,7 @@
  },
  "Remover a política": {
   "src": [
-   "services/field_help.py:417"
+   "services/field_help.py:419"
   ],
   "help": true
  },
@@ -14668,7 +14694,7 @@
  "Rota indisponível para este pedido.": {
   "src": [
    "services/route_compare.py:163",
-   "templates/site/view3d.html:535"
+   "templates/site/view3d.html:533"
   ],
   "js": true
  },
@@ -14761,7 +14787,7 @@
  },
  "SKU": {
   "src": [
-   "services/field_help.py:406"
+   "services/field_help.py:408"
   ],
   "help": true
  },
@@ -14806,8 +14832,8 @@
    "services/field_help.py:151",
    "services/field_help.py:217",
    "services/field_help.py:322",
-   "services/field_help.py:431",
-   "services/field_help.py:464"
+   "services/field_help.py:433",
+   "services/field_help.py:466"
   ],
   "help": true
  },
@@ -14979,7 +15005,7 @@
  },
  "Saldo físico do produto neste endereço.": {
   "src": [
-   "services/field_help.py:433"
+   "services/field_help.py:435"
   ],
   "help": true
  },
@@ -15050,7 +15076,7 @@
    "templates/branches/form.html:42",
    "templates/locations/form.html:61",
    "templates/products/form.html:78",
-   "templates/settings.html:42",
+   "templates/settings.html:56",
    "templates/stock/form.html:39"
   ]
  },
@@ -15149,12 +15175,13 @@
  },
  "Seguir o separador": {
   "src": [
-   "templates/site/view3d.html:109"
+   "templates/settings.html:51",
+   "templates/site/view3d.html:108"
   ]
  },
  "Selecionar e mover o que já existe ou desenhar com o mouse uma zona, um obstáculo ou um setor.": {
   "src": [
-   "services/field_help.py:459"
+   "services/field_help.py:461"
   ],
   "help": true
  },
@@ -15167,13 +15194,13 @@
  "Selecionar linha": {
   "src": [
    "services/field_help.py:263",
-   "services/field_help.py:470"
+   "services/field_help.py:472"
   ],
   "help": true
  },
  "Selecionar produto": {
   "src": [
-   "services/field_help.py:424"
+   "services/field_help.py:426"
   ],
   "help": true
  },
@@ -15185,7 +15212,7 @@
  },
  "Selecionar saldo": {
   "src": [
-   "services/field_help.py:437"
+   "services/field_help.py:439"
   ],
   "help": true
  },
@@ -15336,7 +15363,7 @@
  },
  "Sem dados de saída no projeto.": {
   "src": [
-   "templates/site/view3d.html:352"
+   "templates/site/view3d.html:350"
   ],
   "js": true
  },
@@ -15896,7 +15923,7 @@
  },
  "Só com saldo": {
   "src": [
-   "services/field_help.py:430"
+   "services/field_help.py:432"
   ],
   "help": true
  },
@@ -16055,7 +16082,7 @@
  },
  "Tempo a mais por item (linha) num nível fora da zona de ouro da pega": {
   "src": [
-   "templates/site/view3d.html:117"
+   "templates/site/view3d.html:115"
   ]
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega": {
@@ -16077,7 +16104,7 @@
  },
  "Tempo a mais por peça num nível fora da zona de ouro da pega": {
   "src": [
-   "templates/site/view3d.html:119"
+   "templates/site/view3d.html:117"
   ]
  },
  "Tempo a mais por peça pega fora da zona de ouro da pega.": {
@@ -16137,7 +16164,7 @@
  },
  "Tempo fixo parado em cada endereço (chegar, localizar, conferir)": {
   "src": [
-   "templates/site/view3d.html:113"
+   "templates/site/view3d.html:111"
   ]
  },
  "Tempo hoje": {
@@ -16223,7 +16250,7 @@
  },
  "Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo": {
   "src": [
-   "templates/site/view3d.html:115"
+   "templates/site/view3d.html:113"
   ]
  },
  "Tempo para pegar cada peça: a parada dura o tempo fixo mais as peças vezes este tempo.": {
@@ -16238,7 +16265,7 @@
    "services/field_help.py:62",
    "services/field_help.py:368",
    "templates/settings.html:31",
-   "templates/site/view3d.html:113"
+   "templates/site/view3d.html:111"
   ],
   "help": true
  },
@@ -16248,7 +16275,7 @@
    "services/field_help.py:63",
    "services/field_help.py:369",
    "templates/settings.html:32",
-   "templates/site/view3d.html:115"
+   "templates/site/view3d.html:113"
   ],
   "help": true
  },
@@ -16272,7 +16299,7 @@
  },
  "Texto livre sobre a estrutura.": {
   "src": [
-   "services/field_help.py:386"
+   "services/field_help.py:388"
   ],
   "help": true
  },
@@ -16290,7 +16317,7 @@
  },
  "Tipo": {
   "src": [
-   "services/field_help.py:374",
+   "services/field_help.py:376",
    "services/site_import.py:187",
    "services/site_import.py:809",
    "templates/optimization/page.html:533",
@@ -16399,7 +16426,7 @@
    "services/field_help.py:152",
    "services/field_help.py:218",
    "services/field_help.py:323",
-   "services/field_help.py:408"
+   "services/field_help.py:410"
   ],
   "lazy": true,
   "help": true
@@ -16917,13 +16944,13 @@
  },
  "Usado no objetivo de menor custo do projeto de filial nova.": {
   "src": [
-   "services/field_help.py:383"
+   "services/field_help.py:385"
   ],
   "help": true
  },
  "Usado nos objetivos de menor custo.": {
   "src": [
-   "services/field_help.py:398"
+   "services/field_help.py:400"
   ],
   "help": true
  },
@@ -17043,7 +17070,7 @@
    "routers/levels.py:124"
   ]
  },
- "Valores iniciais do tempo de separação no simulador de trajeto, na caminhada em 3D, no resultado das otimizações (hoje × proposta e objetivo \"Menor tempo\") e nos projetos novos. Em cada tela dá para mudar na hora, sem alterar o padrão.": {
+ "Valores iniciais do tempo de separação no simulador de trajeto, na caminhada em 3D (também a velocidade do vídeo e a câmera), no resultado das otimizações (hoje × proposta e objetivo \"Menor tempo\") e nos projetos novos. Em cada tela dá para mudar na hora, sem alterar o padrão.": {
   "src": [
    "templates/settings.html:27"
   ]
@@ -17100,7 +17127,7 @@
  "Velocidade de caminhada do separador": {
   "src": [
    "templates/optimization/page.html:240",
-   "templates/site/view3d.html:111"
+   "templates/site/view3d.html:109"
   ]
  },
  "Velocidade de caminhada do separador, usada para transformar metros em tempo.": {
@@ -17119,6 +17146,19 @@
   "src": [
    "services/field_help.py:51",
    "templates/site/view3d.html:105"
+  ],
+  "help": true
+ },
+ "Velocidade do vídeo (caminhada 3D)": {
+  "src": [
+   "services/field_help.py:371",
+   "templates/settings.html:42"
+  ],
+  "help": true
+ },
+ "Velocidade inicial da animação e do vídeo gravado na caminhada 3D (tempo real a 50×). Na tela 3D dá para mudar na hora.": {
+  "src": [
+   "services/field_help.py:371"
   ],
   "help": true
  },
@@ -17276,7 +17316,7 @@
  },
  "Volume (litros)": {
   "src": [
-   "services/field_help.py:397",
+   "services/field_help.py:399",
    "templates/bin_types/form.html:74"
   ],
   "help": true
@@ -17323,7 +17363,7 @@
  },
  "Volume útil; vazio = calculado pelas medidas.": {
   "src": [
-   "services/field_help.py:397"
+   "services/field_help.py:399"
   ],
   "help": true
  },
@@ -17347,7 +17387,7 @@
  },
  "Vão de cada nível (cm)": {
   "src": [
-   "services/field_help.py:381"
+   "services/field_help.py:383"
   ],
   "help": true
  },
@@ -17435,7 +17475,7 @@
  },
  "Vão útil por nível (cm)": {
   "src": [
-   "services/field_help.py:379"
+   "services/field_help.py:381"
   ],
   "help": true
  },
@@ -17469,7 +17509,7 @@
  },
  "Vídeo salvo ({fmt} MB).": {
   "src": [
-   "templates/site/view3d.html:753"
+   "templates/site/view3d.html:751"
   ],
   "js": true
  },
@@ -17552,7 +17592,7 @@
  },
  "Zeros à esquerda não diferenciam": {
   "src": [
-   "services/field_help.py:453"
+   "services/field_help.py:455"
   ],
   "help": true
  },
@@ -17569,7 +17609,7 @@
    "services/site_report.py:344",
    "templates/site/plan.html:144",
    "templates/site/view3d.html:62",
-   "templates/site/view3d.html:400"
+   "templates/site/view3d.html:398"
   ],
   "help": true,
   "js": true
@@ -17646,7 +17686,7 @@
  },
  "Zona de ouro: fim (cm)": {
   "src": [
-   "services/field_help.py:385"
+   "services/field_help.py:387"
   ],
   "help": true
  },
@@ -17657,7 +17697,7 @@
  },
  "Zona de ouro: início (cm)": {
   "src": [
-   "services/field_help.py:384"
+   "services/field_help.py:386"
   ],
   "help": true
  },
@@ -17708,7 +17748,7 @@
  },
  "Zonas de ouro": {
   "src": [
-   "templates/site/view3d.html:354"
+   "templates/site/view3d.html:352"
   ],
   "js": true
  },
@@ -17965,7 +18005,7 @@
  },
  "até 95%": {
   "src": [
-   "templates/site/view3d.html:351"
+   "templates/site/view3d.html:349"
   ],
   "js": true
  },
@@ -18547,7 +18587,7 @@
  },
  "fora das duas": {
   "src": [
-   "templates/site/view3d.html:356"
+   "templates/site/view3d.html:354"
   ],
   "js": true
  },
@@ -18645,13 +18685,13 @@
  },
  "hoje {a} km → proposta {b} km": {
   "src": [
-   "templates/site/view3d.html:481"
+   "templates/site/view3d.html:479"
   ],
   "js": true
  },
  "hoje {a} m → proposta {b} m": {
   "src": [
-   "templates/site/view3d.html:477"
+   "templates/site/view3d.html:475"
   ],
   "js": true
  },
@@ -18812,7 +18852,7 @@
  },
  "lista {a} km → otim. {b} km": {
   "src": [
-   "templates/site/view3d.html:481"
+   "templates/site/view3d.html:479"
   ],
   "js": true
  },
@@ -18975,7 +19015,7 @@
  },
  "nas duas (pega e caminhada)": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:353"
   ],
   "js": true
  },
@@ -19197,7 +19237,7 @@
  },
  "o resto": {
   "src": [
-   "templates/site/view3d.html:351"
+   "templates/site/view3d.html:349"
   ],
   "js": true
  },
@@ -19351,7 +19391,7 @@
  },
  "pega = altura por estrutura · caminhada = perto da referência": {
   "src": [
-   "templates/site/view3d.html:354"
+   "templates/site/view3d.html:352"
   ],
   "js": true
  },
@@ -19369,7 +19409,7 @@
  },
  "pegando {grpOf} ({fmt} pç)": {
   "src": [
-   "templates/site/view3d.html:671"
+   "templates/site/view3d.html:669"
   ],
   "js": true
  },
@@ -19848,7 +19888,7 @@
  },
  "só caminhada (perto da referência)": {
   "src": [
-   "templates/site/view3d.html:356"
+   "templates/site/view3d.html:354"
   ],
   "js": true
  },
@@ -19878,7 +19918,7 @@
  },
  "só pega (altura)": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:353"
   ],
   "js": true
  },
@@ -19925,6 +19965,7 @@
  },
  "tempo real": {
   "src": [
+   "templates/settings.html:44",
    "templates/site/view3d.html:106"
   ]
  },
@@ -20022,7 +20063,7 @@
  },
  "uma cor por SKU · {keys} SKUs": {
   "src": [
-   "templates/site/view3d.html:359"
+   "templates/site/view3d.html:357"
   ],
   "js": true
  },
@@ -20307,7 +20348,7 @@
  },
  "{c} · {t} · {n} bins": {
   "src": [
-   "templates/site/view3d.html:352"
+   "templates/site/view3d.html:350"
   ],
   "js": true
  },
@@ -20330,7 +20371,7 @@
  },
  "{esc} · {placed} bins · ocupação {fmt}%": {
   "src": [
-   "templates/site/view3d.html:361"
+   "templates/site/view3d.html:359"
   ],
   "js": true
  },
@@ -20342,7 +20383,7 @@
  },
  "{esc}: {fmt}–{fmt2} m · níveis {golden_levels}": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:353"
   ],
   "js": true
  },
@@ -20379,7 +20420,7 @@
  },
  "{fmt} × {fmt2} m · pé-direito {fmt3} m · {modules} estantes · {bins} bins · ocupação das bins {fmt4}%{level_fill}{note}": {
   "src": [
-   "templates/site/view3d.html:159"
+   "templates/site/view3d.html:157"
   ],
   "js": true
  },
@@ -20684,7 +20725,7 @@
  },
  "{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×": {
   "src": [
-   "templates/site/view3d.html:780"
+   "templates/site/view3d.html:778"
   ],
   "js": true
  },
@@ -20821,7 +20862,7 @@
  },
  "{n} pedidos": {
   "src": [
-   "templates/site/view3d.html:481"
+   "templates/site/view3d.html:479"
   ],
   "js": true
  },
@@ -20850,7 +20891,7 @@
  },
  "{orders} pedidos na amostra · média por pedido: <span style=\"color:#d62728\">lista {fmt} m</span> · <span style=\"color:#2f6db5\">serpentina {fmt2} m</span> · <span style=\"color:#1a9850\">otimizada {fmt3} m</span>": {
   "src": [
-   "templates/site/view3d.html:483"
+   "templates/site/view3d.html:481"
   ],
   "js": true
  },
@@ -20963,7 +21004,7 @@
  },
  "{split}: {fmt} de {fmt2} m · paradas {picked}/{keys} · peças {fmt3}/{fmt4} · {done}": {
   "src": [
-   "templates/site/view3d.html:671"
+   "templates/site/view3d.html:669"
   ],
   "js": true
  },
@@ -21069,7 +21110,7 @@
  },
  "{t} · {bins} bins": {
   "src": [
-   "templates/site/view3d.html:357"
+   "templates/site/view3d.html:355"
   ],
   "js": true
  },
@@ -21213,7 +21254,7 @@
  },
  "· <b>{fmt} pç</b>": {
   "src": [
-   "templates/site/view3d.html:611"
+   "templates/site/view3d.html:609"
   ],
   "js": true
  },
@@ -21237,7 +21278,7 @@
  },
  "· <span class=\"text-warning-emphasis\">{out} fora do ouro</span>": {
   "src": [
-   "templates/site/view3d.html:611"
+   "templates/site/view3d.html:609"
   ],
   "js": true
  },
@@ -21284,7 +21325,7 @@
  },
  "· ocupação dos níveis {fmt}%": {
   "src": [
-   "templates/site/view3d.html:159"
+   "templates/site/view3d.html:157"
   ],
   "js": true
  },
@@ -21338,8 +21379,8 @@
  },
  "· {fmt} peça(s)": {
   "src": [
-   "templates/site/view3d.html:607",
-   "templates/site/view3d.html:657"
+   "templates/site/view3d.html:605",
+   "templates/site/view3d.html:655"
   ],
   "js": true
  },

@@ -24,7 +24,7 @@
   </div>
   <hr class="my-4">
   <h5>{{ _("Simulação de separação") }}</h5>
-  <div class="form-text mb-2">{{ _("Valores iniciais do tempo de separação no simulador de trajeto, na caminhada em 3D, no resultado das otimizações (hoje × proposta e objetivo \"Menor tempo\") e nos projetos novos. Em cada tela dá para mudar na hora, sem alterar o padrão.") }}</div>
+  <div class="form-text mb-2">{{ _("Valores iniciais do tempo de separação no simulador de trajeto, na caminhada em 3D (também a velocidade do vídeo e a câmera), no resultado das otimizações (hoje × proposta e objetivo \"Menor tempo\") e nos projetos novos. Em cada tela dá para mudar na hora, sem alterar o padrão.") }}</div>
   <div class="row g-2 mb-3">
     {% for key, label, help, step, unit in [
         ('sim_v', _('Velocidade de caminhada (m/s)'), _('Velocidade média do separador andando com o carrinho.'), '0.1', 'm/s'),
@@ -38,6 +38,20 @@
       <div class="form-text">{{ help }}</div>
     </div>
     {% endfor %}
+    <div class="col-md-4 col-sm-6">
+      <label class="form-label small mb-0" for="sim_video">{{ _("Velocidade do vídeo (caminhada 3D)") }}</label>
+      <select class="form-select form-select-sm" name="sim_video" id="sim_video">
+        {% for v in (1, 2, 5, 10, 20, 50) %}<option value="{{ v }}" {% if s.sim_video == v %}selected{% endif %}>{{ _("tempo real") if v == 1 else v ~ '×' }}</option>{% endfor %}
+      </select>
+      <div class="form-text">{{ _("Com que velocidade a animação e o vídeo gravado andam.") }}</div>
+    </div>
+    <div class="col-md-4 col-sm-6">
+      <label class="form-label small mb-0" for="sim_camera">{{ _("Câmera (caminhada 3D)") }}</label>
+      <select class="form-select form-select-sm" name="sim_camera" id="sim_camera">
+        {% for v, lbl in (('follow', _('Seguir o separador')), ('fp', _('Primeira pessoa')), ('top', _('De cima (rota toda)')), ('free', _('Livre (mouse)'))) %}<option value="{{ v }}" {% if s.sim_camera == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      </select>
+      <div class="form-text">{{ _("Como a câmera acompanha a caminhada ao abrir a simulação.") }}</div>
+    </div>
   </div>
   <button class="btn btn-accent"><i class="bi bi-save"></i> {{ _("Salvar") }}</button>
 </div></form>

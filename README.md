@@ -438,6 +438,8 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 - **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
 - **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
 
+
+**Simulação de separação no resultado (hoje × proposta):** com o histórico de pedidos da filial (aba Pedidos), o resultado de *Por endereço* e *Pool* traz o cartão **Simulação de separação: hoje × proposta**: os pedidos da amostra percorridos com os SKUs **onde estão hoje** (saldo) e **onde ficam na proposta** do solver (no Pool, as bins realocadas; no Por endereço, as trocas sugeridas). Mostra caminhada total, horas de separação e caminhada média por pedido, **por dia** (com a coluna Data no histórico) e **por pedido** (os 400 de maior diferença), na rota otimizada, na serpentina ou na lista de separação. O tempo usa a velocidade e o tempo fora da zona de ouro da etapa Posição pela saída (mais 10 s por parada e 2 s por peça); a distância é a mesma da posição pela saída (planta desenhada, quando houver, ou a estimada pelo endereço). Sem saldo no escopo (filial recém-criada) não há situação atual para comparar.
 ## 6.0.6 Altura do 1º nível, vão por nível e palete no chão
 
 **Cadastro da estrutura** (Cadastros → Estruturas):

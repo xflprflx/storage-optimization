@@ -229,6 +229,29 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
     return out
 
 
+def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, qp: Mapping) -> Optional[dict]:
+    """Simulação dos pedidos da amostra do histórico com os SKUs onde estão hoje × onde ficam na proposta (por dia e
+    por pedido). None sem amostra de pedidos."""
+    from services.route_compare import compare
+    from services.route_sim import time_params
+
+    h = sl.get("history")
+    sample = (h.data or {}).get("sample") if h is not None else None
+    if not sample or not sl.get("geo"):
+        return None
+    if not any(before.values()):
+        return {"error": _("Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.")}
+    tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or ""}
+    tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece") if qp.get(k)})
+    lids = sorted({lid for d in (before, after) for lst in d.values() for lid, _q in lst})
+    addr = {}
+    for i in range(0, len(lids), 900):
+        addr.update(dict(db.execute(select(StorageLocation.id, StorageLocation.address)
+                                    .where(StorageLocation.id.in_(lids[i:i + 900]))).all()))
+    res = compare(sample, before, after, sl["geo"], addr, time_params(tq))
+    return res or {"error": _("Nenhum pedido da amostra tem SKUs nos endereços do escopo.")}
+
+
 def _sku_assign(db: Session, location_ids: list[int]) -> dict[str, list[tuple[int, float]]]:
     """Distribuição atual (saldo) dos SKUs nos endereços: SKU -> [(endereço, unidades)]."""
     from models import Product
@@ -295,7 +318,7 @@ def _address_slotting(db: Session, slot: dict, location_ids: list[int], results)
                       "to": addr.get(l_new, l_new), "to_m": geo[l_new].walk_m, "to_gold": geo[l_new].golden})
     swaps.sort(key=lambda x: -x["out"])
     return {"before": kpis(assign, pop, geo, slot["counts"], slot["aff"]),
-            "after": kpis(after, pop, geo, slot["counts"], slot["aff"]),
+            "after": kpis(after, pop, geo, slot["counts"], slot["aff"]), "assign_before": assign, "assign_after": after,
             "swaps": swaps, "n_pairs": len(pairs_done), "groups": sum(1 for g in groups.values() if len(g) > 1),
             "mono": sum(len(g) for g in groups.values())}
 
@@ -362,6 +385,8 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                 sl = _slot_setup(db, filters, raw, ids)
                 if sl.get("on"):
                     ctx["slot"] = {**_address_slotting(db, sl, ids, results), "ref": sl["ref"], "info": sl}
+                    ctx["slot"]["routes"] = _route_compare(db, sl, ctx["slot"]["assign_before"],
+                                                           ctx["slot"]["assign_after"], raw, qp)
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:
@@ -789,7 +814,8 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                              for r in results for p in r.plans}
                     ctx["slot"] = {"before": slot_kpis(before, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
                                    "after": slot_kpis(after, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
-                                   "ref": sl["ref"], "info": sl, "applied": bool(prm.slotting)}
+                                   "ref": sl["ref"], "info": sl, "applied": bool(prm.slotting),
+                                   "routes": _route_compare(db, sl, before, after, raw, qp)}
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:

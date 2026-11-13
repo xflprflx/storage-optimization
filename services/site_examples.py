@@ -328,7 +328,7 @@ def write_all() -> list[Path]:
 
 
 def refresh_example_orders(db) -> list[str]:
-    """Projetos criados a partir de um exemplo antes da data por pedido: reimporta a aba Pedidos do exemplo (com a
+    """Projetos (e históricos de filiais criadas a partir deles) feitos de um exemplo antes da data por pedido: reimporta a aba Pedidos do exemplo (com a
     data de cada pedido, para a simulação de um dia inteiro). O exemplo de cada projeto é reconhecido pelos pedidos
     da amostra guardada (mesmo pedido com os mesmos SKUs). Só mexe no histórico de pedidos; o resto do projeto fica
     como está. Roda ao iniciar e não faz nada nos projetos já atualizados. Retorna os nomes dos projetos atualizados."""
@@ -339,13 +339,18 @@ def refresh_example_orders(db) -> list[str]:
     from models import SiteProject
     from services.site_import import ORDER_COLS, _map, _orders, read_sheets
 
+    from models import PickHistory
+
+    def orders_of(obj) -> dict:  # projeto: config["orders"]; histórico da filial: data
+        return ((obj.config or {}).get("orders") or {}) if isinstance(obj, SiteProject) else (obj.data or {})
+
     todo = []
-    for pr in db.scalars(select(SiteProject)):
-        sample = ((pr.config or {}).get("orders") or {}).get("sample") or []
+    # projetos e históricos de filiais (a filial criada a partir de um projeto de exemplo copia os pedidos dele)
+    for pr in [*db.scalars(select(SiteProject)), *db.scalars(select(PickHistory))]:
+        sample = orders_of(pr).get("sample") or []
         if sample and not any(len(e) > 3 and e[3] for e in sample):
             todo.append((pr, {(e[0], tuple(sorted(e[1]))) for e in sample}))
-    skus_mine = {id(pr): {x for e in ((pr.config or {}).get("orders") or {}).get("sample") or [] for x in e[1]}
-                 for pr, _m in todo}
+    skus_mine = {id(pr): {x for e in orders_of(pr).get("sample") or [] for x in e[1]} for pr, _m in todo}
     if not todo:
         return []
     done = []
@@ -381,11 +386,15 @@ def refresh_example_orders(db) -> list[str]:
                 if res.get("error"):
                     break
                 res["sheet"] = "Pedidos"
-            cfg = copy.deepcopy(pr.config)
-            cfg["orders"] = copy.deepcopy(res)
-            pr.config = cfg
+            if isinstance(pr, SiteProject):
+                cfg = copy.deepcopy(pr.config)
+                cfg["orders"] = copy.deepcopy(res)
+                pr.config = cfg
+                done.append(pr.name)
+            else:  # histórico de saídas da filial
+                pr.data = {**copy.deepcopy(res), "kind": "orders"}
+                done.append(f"histórico da filial {pr.branch_id}")
             todo.remove((pr, mine))
-            done.append(pr.name)
     if done:
         db.commit()
     return done

@@ -86,3 +86,22 @@ def test_old_example_projects_get_dated_orders(db):
     assert all(e[3] for e in a.config["orders"]["sample"]) and a.config["orders"]["days"]
     assert b.config["orders"] == user
     assert site_examples.refresh_example_orders(db) == []  # só uma vez
+
+
+def test_compare_today_vs_proposal_by_day_and_order():
+    """Resultado da otimização: os mesmos pedidos com os SKUs onde estão hoje × na proposta."""
+    from services.route_compare import compare
+    from services.slotting import Geo
+
+    # endereço 1 perto da referência, 2 longe
+    geo = {1: Geo(0, 1.0, 0.0, True, 1.0, 1.0), 2: Geo(0, 30.0, 0.0, True, 30.0, 30.0)}
+    addr = {1: "A-01", 2: "A-30"}
+    sample = [["O1", ["X"], [1], "2026-10-01"], ["O2", ["X"], [1], "2026-10-01"], ["O3", ["X"], [1], "2026-10-02"]]
+    res = compare(sample, {"X": [(2, 5.0)]}, {"X": [(1, 5.0)]}, geo, addr)
+    assert res["n_orders"] == 3
+    assert abs(res["cur"]["opt_km"] - 3 * 60 / 1000) < 1e-9 and abs(res["new"]["opt_km"] - 3 * 2 / 1000) < 1e-9
+    assert res["new"]["opt_h"] < res["cur"]["opt_h"]
+    d1 = next(d for d in res["days"] if d["date"] == "2026-10-01")
+    assert d1["orders"] == 2 and abs(d1["opt_m_cur"] - 120) < 1e-9 and abs(d1["opt_m_new"] - 4) < 1e-9
+    o = res["orders"][0]
+    assert o["opt_m_cur"] == 60 and o["opt_m_new"] == 2 and o["opt_t_new"] < o["opt_t_cur"]

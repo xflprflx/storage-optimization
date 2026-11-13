@@ -405,6 +405,83 @@
           {% if not POOL %}<div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Trocas sugeridas") }}</div>
             <div class="fs-6 fw-semibold">{{ _h("{n_pairs} troca(s)", n_pairs=(slot.n_pairs)) }}</div><div class="text-muted" style="font-size:.72rem">{{ _h("{swaps} SKUs mudam · entre {mono} endereços com 1 SKU e as mesmas bins de outros ({groups} grupos) · só quando o mais procurado ganha {v} m ou mais", swaps=(slot.swaps|length), mono=(slot.mono), groups=(slot.groups), v=([2, 2 * (slot.info.spec.bay_m)]|max|dec(1))) }}</div></div></div>{% endif %}
         </div>
+        {% set rc = slot.get('routes') %}
+        {% if rc and rc.error %}
+        <div class="text-muted mt-2"><i class="bi bi-person-walking"></i> {{ _("Simulação de separação (hoje × proposta):") }} {{ rc.error }}</div>
+        {% elif rc %}
+        {% macro hm(v) %}{% if v is none %}—{% else %}{{ (v // 3600)|int }}:{{ '%02d'|format(((v % 3600) // 60)|int) }}:{{ '%02d'|format((v % 60)|int) }}{% endif %}{% endmacro %}
+        {% macro rc_delta(a, b, places=1, unit='') %}{% if a is not none and b is not none %}{% set dl = b - a %}<span class="{{ ('text-success' if dl < 0 else 'text-danger') if dl|abs > 1e-6 else 'text-muted' }}">{{ '+' if dl > 0 }}{{ dl|dec(places) }}{{ unit }}{% if a %} ({{ '+' if dl > 0 }}{{ (dl / a * 100)|dec(0) }}%){% endif %}</span>{% else %}—{% endif %}{% endmacro %}
+        <div class="border rounded p-2 mt-2" id="rcBox" data-k="opt" data-v="{{ 'day' if rc.days else 'order' }}">
+          <style>
+            #rcBox[data-k="list"] .rk:not(.rk-list), #rcBox[data-k="s"] .rk:not(.rk-s), #rcBox[data-k="opt"] .rk:not(.rk-opt) { display: none; }
+            #rcBox[data-v="day"] .rv-order, #rcBox[data-v="order"] .rv-day { display: none; }
+          </style>
+          <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <strong><i class="bi bi-person-walking"></i> {{ _("Simulação de separação: hoje × proposta") }}</strong>
+            <span class="text-muted">{{ _h("{n} pedidos do histórico, com os SKUs onde estão hoje e onde ficam na proposta do solver", n=(rc.n_orders)) }}</span>
+            <div class="ms-auto d-flex gap-2 align-items-center">
+              {% if rc.days %}<div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" data-rv="day">{{ _("Por dia") }}</button>
+                <button type="button" class="btn btn-outline-secondary" data-rv="order">{{ _("Por pedido") }}</button></div>{% endif %}
+              <select class="form-select form-select-sm" style="width:auto" id="rcKind" title="{{ _("Rota do separador") }}">
+                <option value="opt">{{ _("Rota otimizada") }}</option><option value="s">{{ _("Serpentina (rota em S)") }}</option><option value="list">{{ _("Lista de separação") }}</option></select>
+            </div>
+          </div>
+          <div class="row g-2 mb-2">
+            {% for k in ('list', 's', 'opt') %}
+            <div class="col-md-4 col-12 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Caminhada total") }}</div>
+              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_km')|dec(2) }} km → {{ rc.new.get(k ~ '_km')|dec(2) }} km</div>
+              <div>{{ rc_delta(rc.cur.get(k ~ '_km'), rc.new.get(k ~ '_km'), 2, ' km') }}</div></div></div>
+            <div class="col-md-4 col-6 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Horas de separação") }}</div>
+              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_h')|dec(1) }} h → {{ rc.new.get(k ~ '_h')|dec(1) }} h</div>
+              <div>{{ rc_delta(rc.cur.get(k ~ '_h'), rc.new.get(k ~ '_h'), 1, ' h') }}</div></div></div>
+            <div class="col-md-4 col-6 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Caminhada média por pedido") }}</div>
+              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_avg')|dec(1) }} m → {{ rc.new.get(k ~ '_avg')|dec(1) }} m</div>
+              <div>{{ rc_delta(rc.cur.get(k ~ '_avg'), rc.new.get(k ~ '_avg'), 1, ' m') }}</div></div></div>
+            {% endfor %}
+          </div>
+          {% if rc.days %}
+          <div class="table-responsive rv-day" style="max-height:340px"><table class="table table-sm table-hover mb-0" data-no-resize>
+            <thead class="sticky-top bg-white"><tr><th>{{ _("Dia") }}</th><th class="text-end">{{ _("Pedidos") }}</th><th class="text-end">{{ _("Linhas") }}</th>
+              <th class="text-end">{{ _("Hoje (km)") }}</th><th class="text-end">{{ _("Proposta (km)") }}</th><th class="text-end">{{ _("Diferença") }}</th>
+              <th class="text-end">{{ _("Hoje (h)") }}</th><th class="text-end">{{ _("Proposta (h)") }}</th><th class="text-end">{{ _("Diferença") }}</th></tr></thead>
+            <tbody>{% for d in rc.days %}<tr><td>{{ fmt_datetime(d.date|todate, time=False) }}</td><td class="text-end">{{ d.orders }}</td><td class="text-end">{{ d.lines }}</td>
+              {% for k in ('list', 's', 'opt') %}
+              <td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_cur') or 0) / 1000)|dec(2) }}</td><td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_new') or 0) / 1000)|dec(2) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ rc_delta((d.get(k ~ '_m_cur') or 0) / 1000, (d.get(k ~ '_m_new') or 0) / 1000, 2, ' km') }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_new')|dec(1) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ rc_delta(d.get(k ~ '_h_cur'), d.get(k ~ '_h_new'), 1) }}</td>
+              {% endfor %}</tr>{% endfor %}</tbody>
+          </table></div>
+          {% endif %}
+          <div class="table-responsive rv-order" style="max-height:340px"><table class="table table-sm table-hover mb-0" data-no-resize>
+            <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th>{% if rc.days %}<th>{{ _("Data") }}</th>{% endif %}<th class="text-end">{{ _("Linhas") }}</th>
+              <th class="text-end" title="{{ _("Paradas hoje → na proposta") }}">{{ _("Paradas") }}</th>
+              <th class="text-end">{{ _("Hoje (m)") }}</th><th class="text-end">{{ _("Proposta (m)") }}</th><th class="text-end">{{ _("Diferença") }}</th>
+              <th class="text-end">{{ _("Tempo hoje") }}</th><th class="text-end">{{ _("Tempo proposta") }}</th></tr></thead>
+            <tbody>{% for o in rc.orders %}<tr><td class="mono">{{ o.order }}</td>{% if rc.days %}<td>{{ fmt_datetime(o.date|todate, time=False) if o.date else '—' }}</td>{% endif %}<td class="text-end">{{ o.lines }}</td>
+              <td class="text-end">{{ o.stops_cur }} → {{ o.stops_new }}</td>
+              {% for k in ('list', 's', 'opt') %}
+              <td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_new')|dec(1) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ rc_delta(o.get(k ~ '_m_cur'), o.get(k ~ '_m_new'), 1, ' m') }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_cur')) }}</td><td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_new')) }}</td>
+              {% endfor %}</tr>{% endfor %}</tbody>
+          </table></div>
+          <div class="text-muted mt-1" style="font-size:.75rem">{{ _h("Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.", shown=(rc.orders|length), n=(rc.n_orders), v=(rc.params.t_v|dec(1)), stop=(rc.params.t_stop|dec(0)), piece=(rc.params.t_piece|dec(1)), gold=(rc.params.t_gold|dec(1))) }}</div>
+          <script>
+          (function () {
+            const box = document.getElementById('rcBox');
+            document.getElementById('rcKind').addEventListener('change', e => { box.dataset.k = e.target.value; });
+            box.querySelectorAll('[data-rv]').forEach(b => b.addEventListener('click', () => {
+              box.dataset.v = b.dataset.rv;
+              box.querySelectorAll('[data-rv]').forEach(x => x.classList.toggle('active', x === b));
+            }));
+          })();
+          </script>
+        </div>
+        {% elif slot.info.history %}
+        <div class="text-muted mt-2">{{ _("A simulação de separação (hoje × proposta) usa a amostra de pedidos do histórico: envie a aba Pedidos (pedido, SKU, quantidade e data).") }}</div>
+        {% endif %}
         {% if not POOL and slot.swaps %}
         <details class="mt-2" open><summary>{{ _("Trocas de endereço sugeridas (mais procurados primeiro)") }}</summary>
           <div class="table-responsive" style="max-height:340px"><table class="table table-sm mb-0 mt-1" data-no-resize>

@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ _("Histórico de pedidos — colunas") }}{% endblock %}
 {% block content %}
+<!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
+
 <div class="page-header">
   <div><h1><i class="bi bi-clock-history"></i> {{ _("Histórico de pedidos — conferir colunas") }}</h1>
     <div class="small text-muted">{{ _h("Filial {code} - {name} · {filename}", code=(branch.code), name=(branch.name), filename=(filename)) }}</div></div>
@@ -47,6 +49,7 @@
   <div class="card-header bg-white"><strong>{{ _("Amostra da aba") }}</strong> <small class="text-muted" id="pvName"></small></div>
   <div class="table-responsive"><table class="table table-sm table-bordered mb-0 preview-table" id="pv"></table></div>
 </div>
+<!--/nk-metric-->
 {% endblock %}
 {% block scripts %}
 <script>
@@ -73,7 +76,7 @@
     const used = {};
     document.querySelectorAll('.map-col').forEach(s => { if (s.value !== '') used[+s.value] = s.closest('div').querySelector('label').textContent.replace('*', '').trim(); });
     const dup = Object.keys(used).length !== [...document.querySelectorAll('.map-col')].filter(s => s.value !== '').length;
-    $('pvName').textContent = `${$('sheet').value} · ${sh.rows.length} primeira(s) linha(s)`;
+    $('pvName').textContent = _t('{sheet} · {n} primeira(s) linha(s)', {sheet: $('sheet').value, n: sh.rows.length});
     $('pv').innerHTML = '<thead><tr>' + sh.headers.map((h, i) => `<th class="${used[i] != null ? 'table-primary' : ''}"><span class="text-muted">#${i + 1}</span> ${esc(h)}` +
       (used[i] != null ? `<div class="small text-primary">→ ${esc(used[i])}</div>` : '') + '</th>').join('') + '</tr></thead><tbody>' +
       sh.rows.map(r => '<tr>' + sh.headers.map((_h, i) => `<td class="${used[i] != null ? 'table-primary' : ''}" title="${esc(r[i])}">${esc(r[i])}</td>`).join('') + '</tr>').join('') + '</tbody>';

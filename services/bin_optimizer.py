@@ -24,7 +24,7 @@ import itertools
 import math
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
-from services.i18n import N_, _, seps
+from services.i18n import N_, _, fmt_num, seps
 
 EPS = 1e-9
 MAX_COMBOS = 20_000
@@ -438,9 +438,9 @@ def violations(cfg: dict[int, int], m: Metrics, prm: Params, max_w: float, max_h
             v.append(_("tipo de bin sem dimensões (não dá para checar o espaço)"))
         else:
             if m.width_cm > max_w + 0.01:
-                v.append(f"largura {m.width_cm:g} cm > {max_w:g} cm")
+                v.append(_("largura {a} cm > {b} cm", a=fmt_num(round(m.width_cm, 2)), b=fmt_num(round(max_w, 2))))
             if m.height_cm > max_h + 0.01:
-                v.append(f"altura {m.height_cm:g} cm > {max_h:g} cm")
+                v.append(_("altura {a} cm > {b} cm", a=fmt_num(round(m.height_cm, 2)), b=fmt_num(round(max_h, 2))))
     return v
 
 

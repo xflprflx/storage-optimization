@@ -19,8 +19,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
+from services.bin_optimizer import BASES, OBJECTIVES
 from services.site_planner import DEMAND_STATUS, ORIENTATIONS, SITE_CRITERIA, STRUCT_MODES, SitePlan, struct_colors
-from services.i18n import N_, _, fmt_datetime, localize_number_text, tr, translate_workbook
+from services.i18n import N_, _, currency, fmt_datetime, fmt_money, localize_number_text, tr, localize_rows, pdf_fonts, translate_workbook, units_in_text
 
 PHASES = {
     1: N_("Compras"),
@@ -40,7 +41,7 @@ def _fmt(v, places=0) -> str:
 
 
 def _money(v) -> str:
-    return "—" if v is None else "R$ " + _fmt(v, 2)
+    return fmt_money(v)
 
 
 @dataclass
@@ -102,31 +103,31 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     scope = [
         (_("Imóvel"), _("{fmt} × {fmt2} m · pé-direito útil {fmt3} m · {fmt4} m²", fmt=_fmt(b.length_m, 2), fmt2=_fmt(b.width_m, 2), fmt3=_fmt(b.clear_height_m, 2), fmt4=_fmt(b.area_m2, 0))),
         (_("Corredores"), _("{fmt} m · afastamento das paredes {fmt2} m", fmt=_fmt(b.aisle_m, 2), fmt2=_fmt(b.wall_gap_m, 2))),
-        (_("Faixas reservadas"), f"frente {_fmt(b.front_reserved_m, 2)} m · fundo {_fmt(b.back_reserved_m, 2)} m"),
+        (_("Faixas reservadas"), _("frente {f} m · fundo {b} m", f=_fmt(b.front_reserved_m, 2), b=_fmt(b.back_reserved_m, 2))),
         (_("Corredores transversais"), f"{b.cross_aisles} × {_fmt(b.cross_aisle_m, 2)} m"),
         (_("Cabeceiras"), (_("permitidas nas pontas com acesso") if b.end_caps else _("não usar"))
          + (_(" · {end_caps} módulo(s) girado(s)", end_caps=plan.end_caps) if plan.end_caps else "")),
-        (_("Fileiras"), (_("{len} fileira(s) ao longo do {v} ({get}) · ", len=len(fl.rows), v='comprimento' if fl.along == 'length' else 'largura', get=ORIENTATIONS.get(b.orientation, b.orientation)) if not fl.mixed else
+        (_("Fileiras"), (_("{len} fileira(s) ao longo do {v} ({get}) · ", len=len(fl.rows), v=_('comprimento') if fl.along == 'length' else _('largura'), get=ORIENTATIONS.get(b.orientation, b.orientation)) if not fl.mixed else
                       _("{len} fileira(s) em {len2} zonas · ", len=len(fl.rows), len2=len(fl.zones)))
-         + f"{fl.real_aisles} corredor(es) · profundidade {_fmt(fl.depth, 0)} cm"),
+         + _("{n} corredor(es) · profundidade {d} cm", n=fl.real_aisles, d=_fmt(fl.depth, 0))),
     ] + ([(_("Zonas"), " · ".join(
-        _("{name}: {fmt} m, fileiras ao longo da {v}, {len} fileira(s), corredor {fmt2} m", name=z.name, fmt=_fmt(z.cross_cm / 100 if z.rot else z.run_cm / 100, 2), v='largura' if z.rot else 'comprimento', len=len(z.rows), fmt2=_fmt(z.aisle_cm / 100, 2))
+        _("{name}: {fmt} m, fileiras ao longo da {v}, {len} fileira(s), corredor {fmt2} m", name=z.name, fmt=_fmt(z.cross_cm / 100 if z.rot else z.run_cm / 100, 2), v=_('largura') if z.rot else _('comprimento'), len=len(z.rows), fmt2=_fmt(z.aisle_cm / 100, 2))
         for z in fl.zones) + _(" · avenidas de {fmt} m", fmt=_fmt(b.avenue_m, 2)))] if fl.mixed else []) + [
-        (_("Demanda"), f"{src} · base {d.get('basis', '')} · fator {d.get('factor', '100')}% · crescimento "
-                    f"{d.get('growth', '0')}%"),
+        (_("Demanda"), _("{src} · base {basis} · fator {factor}% · crescimento {growth}%", src=src, basis=tr(BASES.get(d.get('basis', ''), d.get('basis', ''))),
+                      factor=d.get('factor', '100'), growth=d.get('growth', '0'))),
         ("SKUs", _("{len} SKU(s) · {sum} alocado(s)", len=len(plan.demands), sum=sum(1 for x in plan.demands if x.status == 'ok'))),
     ]
     order = [tr(st["label"]) for st in plan.solver.get("stages", [])]
     params = [
         (_("Prioridade dos critérios"), " > ".join(order) or SITE_CRITERIA.get(p.get("objective"), "")),
-        (_("Bins de cada SKU"), p.get("bin_objective", "")),
+        (_("Bins de cada SKU"), tr(OBJECTIVES.get(p.get("bin_objective", ""), p.get("bin_objective", "")))),
         (_("Enchimento máx. da bin"), f"{p.get('fill_limit', '')}%"),
         (_("Uso da frente do nível"), f"{p.get('level_fill', '')}%"),
         (_("Folgas"), _("acima da bin {top_gap_cm} cm · entre bins {side_gap_cm} cm", top_gap_cm=p.get('top_gap_cm', ''), side_gap_cm=p.get('side_gap_cm', ''))),
-        (_("Rotação / tipo único / peso"), f"{'qualquer' if p.get('rotation') == 'any' else _('altura na vertical')} · "
+        (_("Rotação / tipo único / peso"), f"{_('qualquer') if p.get('rotation') == 'any' else _('altura na vertical')} · "
                                        f"{_('1 tipo de bin por SKU') if p.get('single_type') else _('combina tipos')} · "
                                        f"{_('respeita peso') if p.get('weight') else _('sem peso')}"),
-        (_("Estruturas"), "; ".join(f"{s.struct.code}: {STRUCT_MODES[s.struct.mode].lower()}"
+        (_("Estruturas"), "; ".join(f"{s.struct.code}: {tr(STRUCT_MODES[s.struct.mode]).lower()}"
                                  + (f" {s.struct.qty}" if s.struct.mode == "fixed" else "")
                                  for s in plan.structs if s.struct.mode != "off") or "—"),
         (_("Solver"), _("{status} em {time} s", status=plan.solver.get('status', ''), time=_fmt(plan.solver.get('time', 0), 1))),
@@ -136,10 +137,10 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     rep.kpis = [
         (_("Módulos de estrutura"), _fmt(plan.total_modules), ", ".join(f"{s.qty}× {s.struct.code}" for s in plan.structs if s.qty)),
         (N_("Bins"), _fmt(plan.bins_needed), ", ".join(f"{t.needed}× {t.spec.code}" for t in plan.types if t.needed)),
-        (_("Custo total"), _money(plan.total_cost), f"estruturas {_money(plan.structures_cost)} + bins {_money(plan.bins_cost)}"
+        (_("Custo total"), _money(plan.total_cost), _("estruturas {a} + bins {b}", a=_money(plan.structures_cost), b=_money(plan.bins_cost))
          + (_(" · sem custo (R$ 0): {v}", v=', '.join(dict.fromkeys(plan.missing_costs))) if plan.missing_costs else "")),
         (_("Endereços"), _fmt(len(plan.positions)), _("{fmt} níveis em {len} estantes", fmt=_fmt(plan.levels_total), len=len(plan.modules))
-         + (f" ({plan.end_caps} cabeceiras)" if plan.end_caps else "")),
+         + (_(" ({n} cabeceiras)", n=plan.end_caps) if plan.end_caps else "")),
         (_("Ocupação dos níveis"), (_fmt(plan.fill, 1) + "%") if plan.fill is not None else "—",
          _("{levels_used} de {levels_total} níveis em uso", levels_used=plan.levels_used, levels_total=plan.levels_total)),
         (_("Ocupação das bins"), (_fmt(plan.bin_fill, 1) + "%") if plan.bin_fill is not None else "—",
@@ -157,7 +158,7 @@ def build_report(plan: SitePlan, project_name: str, cfg: dict, types: dict, bin_
     # ---- compras ----
     for s in plan.structs:
         if s.qty:
-            rep.purchases.append({"kind": N_("Estrutura"), "code": s.struct.code, "name": s.struct.name, "qty": s.qty,
+            rep.purchases.append({"kind": _("Estrutura"), "code": s.struct.code, "name": s.struct.name, "qty": s.qty,
                                   "unit": s.struct.cost, "total": s.cost,
                                   "note": _("{fmt} × {fmt2} × {fmt3} cm, {levels} níveis × {fmt4} cm", fmt=_fmt(s.struct.width), fmt2=_fmt(s.struct.depth), fmt3=_fmt(s.struct.height), levels=s.struct.levels, fmt4=_fmt(s.struct.level_h))})
     for t in plan.types:
@@ -283,7 +284,7 @@ def to_xlsx(rep: SiteReport) -> bytes:
             ws.column_dimensions[letter].width = max(8, min(60, w))
             if i in money_cols:
                 for c in ws[letter][start:]:
-                    c.number_format = 'R$ #,##0.00'
+                    c.number_format = ('#,##0.00 "€"' if currency() == "€" else f'"{currency()}" #,##0.00')
         if start == 1:
             ws.freeze_panes = "A2"
         return start
@@ -363,9 +364,11 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
     """Planta vista de cima (reportlab), na mesma escala do SVG da tela. `dims`: none | summary | full (cotas);
     `pos`: cotas completas por fora da planta (out) ou por dentro, em cada zona e obstáculo (in)."""
     from reportlab.graphics.shapes import Drawing, Group, Line, Rect, String
+    _S = String
+    String = lambda *a, **k: _S(*a, **{"fontName": pdf_fonts()[1 if 'Bold' in str(k.get('fontName', '')) else 0], **k})  # noqa: E731
     from reportlab.lib import colors
 
-    from services.site_planner import SHAPE_STYLE, _m, aisle_labels, area_label, dim_chains, inner_dims
+    from services.site_planner import SHAPE_STYLE, _m, _md, aisle_labels, area_label, dim_chains, inner_dims
 
     fl, b = plan.floor, plan.building
     if not fl.length_cm or not fl.width_cm or not fl.zones:
@@ -419,8 +422,8 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
             st.x, st.y = X * sc, 14 + H - Y * sc - 2
             dw.add(st)
     desc = (f"{len(fl.zones)} zonas" if fl.mixed else
-            _("fileiras ao longo do {v}", v='comprimento' if fl.along == 'length' else 'largura'))
-    size = _("{fmt} m × {fmt2} m (comprimento na horizontal) · ", fmt=_fmt(b.length_m, 1), fmt2=_fmt(b.width_m, 1)) if dims != "none" else ""
+            _("fileiras ao longo do {v}", v=_('comprimento') if fl.along == 'length' else _('largura')))
+    size = units_in_text(_("{fmt} m × {fmt2} m (comprimento na horizontal) · ", fmt=_fmt(b.length_m, 1), fmt2=_fmt(b.width_m, 1))) if dims != "none" else ""
     dw.add(String(0, 2, _("{size}{desc} · amarelo = docas/áreas reservadas · azul = avenidas · verde = setores · preto = obstáculos · tracejado = cabeceiras", size=size, desc=desc),
                   fontSize=7, fillColor=colors.HexColor("#5B6770")))
     if inside:
@@ -447,15 +450,15 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
         xs, ys = dim_chains(fl, 16 / sc, 16 / sc)
         for _x, X, Y, w, d, _x in (k for k in fl.shapes() if k[0] == "obstacle"):  # zonas: as cotas encadeadas bastam
             if w * sc >= 30 and d * sc >= 14:
-                dw.add(String(X * sc + 2, Yp(Y, d) + 2, f"{_m(w)} × {_m(d)} m", fontSize=5,
+                dw.add(String(X * sc + 2, Yp(Y, d) + 2, units_in_text(f"{_m(w)} × {_m(d)} m"), fontSize=5,
                               fillColor=colors.HexColor("#DFE5EA")))
         for y_off, pts, total in ((20, [0, fl.length_cm], True), (8, xs, False)):
             y = top + y_off
             dw.add(Line(0, y, W, y, strokeColor=ink, strokeWidth=0.4))
             for p in pts:
                 dw.add(Line(p * sc, y - 2, p * sc, y + 2, strokeColor=ink, strokeWidth=0.4))
-            segs = [(0, fl.length_cm, f"{_m(fl.length_cm)} m (comprimento)")] if total else \
-                [(a, c, _m(c - a)) for a, c in zip(pts, pts[1:])]
+            segs = [(0, fl.length_cm, units_in_text(_("{v} m (comprimento)", v=_m(fl.length_cm))))] if total else \
+                [(a, c, _md(c - a)) for a, c in zip(pts, pts[1:])]
             for a, c, t in segs:
                 dw.add(String((a + c) / 2 * sc, y + 1.5, t, fontSize=6 if total else 5, textAnchor="middle", fillColor=ink))
         for x_off, pts, total in ((20, [0, fl.width_cm], True), (8, ys, False)):
@@ -463,8 +466,8 @@ def _floor_drawing(plan: SitePlan, max_w: float, max_h: float, dims: str = "summ
             dw.add(Line(x, 14, x, top, strokeColor=ink, strokeWidth=0.4))
             for p in pts:
                 dw.add(Line(x - 2, top - p * sc, x + 2, top - p * sc, strokeColor=ink, strokeWidth=0.4))
-            segs = [(0, fl.width_cm, f"{_m(fl.width_cm)} m (largura)")] if total else \
-                [(a, c, _m(c - a)) for a, c in zip(pts, pts[1:])]
+            segs = [(0, fl.width_cm, units_in_text(_("{v} m (largura)", v=_m(fl.width_cm))))] if total else \
+                [(a, c, _md(c - a)) for a, c in zip(pts, pts[1:])]
             for a, c, t in segs:
                 g = Group(String(0, 0, t, fontSize=6 if total else 5, textAnchor="middle", fillColor=ink))
                 g.translate(x - 1.5, top - (a + c) / 2 * sc)
@@ -489,12 +492,16 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
     accent = colors.HexColor("#0F766E")
     grid = colors.HexColor("#D0D7DC")
     ss = getSampleStyleSheet()
+    FONT, FONT_B = pdf_fonts()
+    for _st in ss.byName.values():
+        if hasattr(_st, "fontName"):
+            _st.fontName = FONT_B if "Bold" in _st.fontName else FONT
     h1 = ParagraphStyle("h1", parent=ss["Heading1"], textColor=accent, fontSize=16, spaceAfter=4)
     h2 = ParagraphStyle("h2", parent=ss["Heading2"], textColor=accent, fontSize=12, spaceBefore=8, spaceAfter=4)
     h3 = ParagraphStyle("h3", parent=ss["Heading3"], fontSize=9.5, spaceBefore=6, spaceAfter=2)
     small = ParagraphStyle("small", parent=ss["Normal"], fontSize=8, leading=10)
     cell = ParagraphStyle("cell", parent=small, fontSize=7.2, leading=8.8)
-    big = ParagraphStyle("big", parent=small, fontSize=12, leading=14, fontName="Helvetica-Bold")
+    big = ParagraphStyle("big", parent=small, fontSize=12, leading=14, fontName=FONT_B)
     P = lambda s, st=cell: Paragraph(_t(s), st)  # noqa: E731
 
     buf = io.BytesIO()
@@ -505,21 +512,21 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
 
     def footer(canvas, d):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7)
+        canvas.setFont(FONT, 7)
         canvas.setFillColor(colors.grey)
         canvas.drawString(12 * mm, 7 * mm, _t(f"{rep.title} - " + _("gerado em {created}", created=fmt_datetime(rep.created))).replace("&amp;", "&"))
         canvas.drawRightString(page[0] - 12 * mm, 7 * mm, _("Página {page}", page=d.page))
         canvas.restoreState()
 
     def table(data, widths, header=True, zebra=True, extra=()):
-        data = [[tr(c) if isinstance(c, str) else c for c in row] for row in data]  # textos fixos no idioma atual
+        data = localize_rows(data)  # textos fixos no idioma atual e medidas no sistema escolhido
         t = Table(data, colWidths=widths, repeatRows=1 if header else 0)
-        st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("FONTNAME", (0, 0), (-1, -1), FONT),
               ("FONTSIZE", (0, 0), (-1, -1), 7.2), ("TOPPADDING", (0, 0), (-1, -1), 1.6),
               ("BOTTOMPADDING", (0, 0), (-1, -1), 1.6)]
         if header:
             st += [("BACKGROUND", (0, 0), (-1, 0), accent), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                   ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold")]
+                   ("FONTNAME", (0, 0), (-1, 0), FONT_B)]
         if zebra:
             st += [("BACKGROUND", (0, i), (-1, i), colors.HexColor("#F4F6F8")) for i in range(2, len(data), 2)]
         t.setStyle(TableStyle(st + list(extra)))
@@ -551,7 +558,7 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
     if fd is not None:
         story.append(fd)
         leg = " · ".join(f"{s.struct.code} ({s.qty})" for s in rep.plan.structs if s.qty)
-        story.append(Paragraph(_t("Estruturas: " + leg), small))
+        story.append(Paragraph(_t(_("Estruturas: {leg}", leg=leg)), small))
     story.append(Paragraph(_("Lista de compras"), h2))
     pd_ = [[_("Item"), _("Código"), _("Nome"), "Qtd.", _("Custo unit."), _("Custo total"), _("Especificação")]]
     for pc in rep.purchases:
@@ -559,7 +566,7 @@ def to_pdf(rep: SiteReport, dims: str = "summary", pos: str = "out") -> bytes:
                     _money(pc["total"]), P(pc["note"])])
     pd_.append([P(_("Total"), small), "", "", "", "", _money(rep.purchase_total), ""])
     story.append(table(pd_, [42 * mm, 25 * mm, 45 * mm, 15 * mm, 25 * mm, 27 * mm, width - 179 * mm],
-                       extra=[("ALIGN", (3, 1), (5, -1), "RIGHT"), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold")]))
+                       extra=[("ALIGN", (3, 1), (5, -1), "RIGHT"), ("FONTNAME", (0, -1), (-1, -1), FONT_B)]))
 
     # passo a passo
     story.append(PageBreak())

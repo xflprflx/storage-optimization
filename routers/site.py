@@ -24,7 +24,7 @@ from services.site_planner import (ADDRESS_MODES, CAP_ALIGN, ORIENTATIONS, SECTO
                                    floor_svg, struct_colors, dim_mode, dim_pos)
 from services.site_service import (BUILDING_FIELDS, DEFAULT_LOCATION_MODES, SLOT_METRICS, SLOT_SOURCES,
                                    config_from_form, create_branch, merged, run_project)
-from services.i18n import N_, _, tr
+from services.i18n import N_, _, currency, tr
 
 router = APIRouter(prefix="/optimization/site", tags=[N_("Projeto de filial nova")])
 
@@ -60,7 +60,10 @@ def _cfg_key(db: Session, cfg: dict) -> str:
 
     marks = [db.execute(select(func.count(), func.max(M.updated_at))).one()
              for M in (StructureType, BinType, Product, StockItem)]
-    return json.dumps([cfg, [tuple(map(str, m)) for m in marks]], sort_keys=True, default=str)
+    # idioma/unidades também: o plano guarda textos prontos (critérios, avisos, rótulos)
+    from services import i18n
+
+    return json.dumps([cfg, [tuple(map(str, m)) for m in marks], i18n.get_lang(), i18n.unit_system()], sort_keys=True, default=str)
 
 
 def _plan_for(db: Session, pr: SiteProject, fresh: bool = False):
@@ -165,9 +168,9 @@ def _save_site_run(db: Session, pr: SiteProject, cfg: dict, plan) -> Optional[in
         num = lambda label, v, unit="", places=0, better=None: {"label": label, "value": v, "unit": unit,  # noqa: E731
                                                                "places": places, "better": better}
         kpis = [num(_("Módulos de estrutura"), plan.total_modules, "", 0, "low"),
-                num(_("Custo total"), plan.total_cost, " R$", 2, "low"),
-                num(_("Custo das estruturas"), plan.structures_cost, " R$", 2, "low"),
-                num(_("Custo das bins"), plan.bins_cost, " R$", 2, "low"),
+                num(_("Custo total"), plan.total_cost, " " + currency(), 2, "low"),
+                num(_("Custo das estruturas"), plan.structures_cost, " " + currency(), 2, "low"),
+                num(_("Custo das bins"), plan.bins_cost, " " + currency(), 2, "low"),
                 num(_("Bins alocadas"), plan.bins_placed, "", 0, "high"),
                 num(_("Bins sem lugar"), plan.shortage, "", 0, "low"),
                 num(_("Ocupação dos níveis"), plan.fill, "%", 1, "high"),

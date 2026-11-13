@@ -129,8 +129,8 @@
         <option value="aisle">{{ _("Uma letra por corredor (ímpares de um lado, pares do outro)") }}</option>
         <option value="row">{{ _("Uma letra por rua (A|B, C|D… frente a frente)") }}</option></select>
       <div class="row g-1">
-        <div class="col-6"><label class="form-label mb-0">{{ _("Corredor (m)") }}</label><input class="form-control form-control-sm" id="aW" type="number" step="0.1" value="3"></div>
-        <div class="col-6"><label class="form-label mb-0" title="{{ _("Espaço livre antes das fileiras (expedição)") }}">{{ _("Frente livre (m)") }}</label><input class="form-control form-control-sm" id="aF" type="number" step="0.1" value="4"></div>
+        <div class="col-6"><label class="form-label mb-0">{{ _("Corredor (m)") }}</label><input class="form-control form-control-sm" id="aW" data-u="m" type="number" step="0.1" value="3"></div>
+        <div class="col-6"><label class="form-label mb-0" title="{{ _("Espaço livre antes das fileiras (expedição)") }}">{{ _("Frente livre (m)") }}</label><input class="form-control form-control-sm" id="aF" data-u="m" type="number" step="0.1" value="4"></div>
         <div class="col-12"><label class="form-label mb-0" title="{{ _("Largura própria de alguns corredores, pela letra: A=3,5; C=2,8") }}">{{ _("Corredores com outra largura") }}</label>
           <input class="form-control form-control-sm" id="aWs" placeholder="{{ _("ex.: A=3,5; C=2,8") }}"></div>
       </div>
@@ -162,6 +162,7 @@
   const svg = $('svg'), NS = 'http://www.w3.org/2000/svg';
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString(NK_I18N.locale, { maximumFractionDigits: d });
+  const mv = c => Math.round(nkU.toDisp(c / 100, 'm') * 100) / 100;
   let D = null, BAYS = {}, INFO = {}, saved = false, dirty = false, sel = null, refMode = false;
   let pick = new Set();  // estantes marcadas na fileira selecionada (para separar)
   let multi = [];  // objetos selecionados ({kind, i}); `sel` é o principal (o do painel)
@@ -246,7 +247,7 @@
       if (c.rows.length > 1) {  // largura do corredor (vão entre as fileiras frente a frente)
         const at = c.orient === 'h' ? { x: c.lo + fs * 0.4, y: c.center - fs * 0.25 } : { x: c.center, y: c.lo + fs, transform: `rotate(-90 ${c.center} ${c.lo + fs})` };
         const t = el('text', { ...at, 'font-size': fs * 0.55, fill: '#2f6db5', 'text-anchor': c.orient === 'h' ? 'start' : 'end' }, svg);
-        t.textContent = `${fmt(c.width / 100, 2)} m`;
+        t.textContent = nkU.text(`${fmt(c.width / 100, 2)} m`);
       }
     });
     D.obstacles.forEach((o, i) => {
@@ -337,12 +338,12 @@
   });
   svg.addEventListener('pointermove', e => {
     const p = pt(e);
-    $('coord').textContent = `x ${fmt(p.x / 100, 1)} m · y ${fmt(p.y / 100, 1)} m`;
+    $('coord').textContent = nkU.text(`x ${fmt(p.x / 100, 1)} m · y ${fmt(p.y / 100, 1)} m`);
     if (!drag) return;
     if (drag.handle) {
       if (drag.handle.includes('e')) D.L = Math.max(100, snap(p.x, e));
       if (drag.handle.includes('s')) D.W = Math.max(100, snap(p.y, e));
-      $('bL').value = D.L / 100; $('bW').value = D.W / 100; drag.moved = true; draw(); return;
+      $('bL').value = mv(D.L); $('bW').value = mv(D.W); drag.moved = true; draw(); return;
     }
     if (drag.band) { band.x1 = p.x; band.y1 = p.y; draw(); return; }
     if (drag.pan) {
@@ -392,8 +393,8 @@
       const SIDE = { odd: _t('ímpares'), even: 'pares', all: _t('todas') };
       $('propTitle').textContent = _t('Fileira {aisle} ({SIDE})', {aisle: r.aisle, SIDE: SIDE[r.side]});
       $('pAisle').value = r.aisle; $('pSide').value = r.side;
-      $('pX').value = r.x / 100; $('pY').value = r.y / 100; $('pDepth').value = r.depth / 100; $('pBayW').value = r.bay_w / 100;
-      $('pInfo').textContent = (G.bays.length ? `${G.bays.length} estante(s): ${G.bays[0].bay} → ${G.bays[G.bays.length - 1].bay} · ${fmt(G.len / 100)} m`
+      $('pX').value = mv(r.x); $('pY').value = mv(r.y); $('pDepth').value = mv(r.depth); $('pBayW').value = mv(r.bay_w);
+      $('pInfo').textContent = (G.bays.length ? _t('{n} estante(s): {a} → {b} · {len} m', {n: G.bays.length, a: G.bays[0].bay, b: G.bays[G.bays.length - 1].bay, len: fmt(G.len / 100)})
         : _t('Nenhuma estante deste corredor/lado nos endereços.')) + (r.bays && r.bays.length ? ' ' + _t('· lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)') : '');
       corridorProps(r);
       $('pBays').innerHTML = G.bays.map(b => `<button type="button" class="btn btn-sm py-0 px-1 ${pick.has(b.bay) ? 'btn-warning' : 'btn-outline-secondary'}" data-bay="${esc(b.bay)}">${esc(b.bay)}</button>`).join('')
@@ -404,7 +405,7 @@
     } else {
       const o = D.obstacles[sel.i];
       $('propTitle').textContent = _t('Obstáculo');
-      $('oName').value = o.name; $('oX').value = o.x / 100; $('oY').value = o.y / 100; $('oW').value = o.w / 100; $('oD').value = o.d / 100;
+      $('oName').value = o.name; $('oX').value = mv(o.x); $('oY').value = mv(o.y); $('oW').value = mv(o.w); $('oD').value = mv(o.d);
     }
   }
   // ---------------------------------------------------------------- corredor: vizinho de frente, largura e sentido
@@ -419,7 +420,7 @@
     $('pPair').value = String(r.pair || 0);
     const ps = partners(r);
     $('pGap').disabled = !ps.length;
-    $('pGap').value = ps.length ? fmt(ps[0].gap / 100, 2).replace(',', '.') : '';
+    $('pGap').value = ps.length ? mv(ps[0].gap) : '';
     $('pGap').title = ps.length ? `Vizinho: ${ps.map(p => rowLabel(p.row)).join(', ')}` : _t('Sem vizinho de frente: o corredor fica a 1 m da face');
     const h = r.orient === 'h';
     $('pFlow').innerHTML = '<option value="">' + _t('Dois sentidos (contra fluxo permitido)') + '<\/option><option value="+">' + _t('Mão única {h}', {h: h ? '→ (X crescente)' : '↓ (Y crescente)'}) + '<\/option><option value="-">' + _t('Mão única {h}', {h: h ? '← (X decrescente)' : '↑ (Y decrescente)'}) + '<\/option>';
@@ -499,7 +500,8 @@
     select('row', D.rows.length - 1); changed();
   });
 
-  const cm = v => Math.round(parseFloat(String(v).replace(',', '.')) * 100);
+  // campos em m (ft no imperial) <-> cm do desenho
+  const cm = v => Math.round(nkU.toMetric(parseFloat(String(v).replace(',', '.')), 'm') * 100);
   const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
   bind('pAisle', r => { r.aisle = $('pAisle').value; delete r.bays; });
   bind('pSide', r => { r.side = $('pSide').value; delete r.bays; });
@@ -601,7 +603,7 @@
   function load(r) {
     D = r.data; INFO = r; BAYS = r.bays || BAYS;
     $('pAisle').innerHTML = Object.keys(BAYS).map(a => `<option>${esc(a)}</option>`).join('') || '<option>A</option>';
-    $('bL').value = D.L / 100; $('bW').value = D.W / 100; $('refLabel').value = D.ref.label;
+    $('bL').value = mv(D.L); $('bW').value = mv(D.W); $('refLabel').value = D.ref.label;
     select(null); fit(); info(); status();
   }
   $('btnAuto').addEventListener('click', async () => {

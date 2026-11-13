@@ -57,7 +57,7 @@
             <tr>
               <td><input type="checkbox" class="form-check-input bulk-projects" value="{{ p.id }}"></td>
               <td><a class="fw-semibold" href="/optimization/site/{{ p.id }}">{{ p.name }}</a></td>
-              <td class="small">{% if b.get('length_m') and b.get('width_m') %}{{ b.length_m }} × {{ b.width_m }} m{% if b.get('clear_height_m') %} {{ _h("· pé-direito {clear_height_m} m", clear_height_m=(b.clear_height_m)) }}{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td class="small">{% if b.get('length_m') and b.get('width_m') %}{{ b.length_m|dec }} × {{ b.width_m|dec }} m{% if b.get('clear_height_m') %} {{ _h("· pé-direito {clear_height_m} m", clear_height_m=(b.clear_height_m|dec)) }}{% endif %}{% else %}<span class="text-muted">—</span>{% endif %}</td>
               <td class="small text-muted">{{ fmt_datetime(p.updated_at) if p.updated_at else '' }}</td>
               <td class="text-end text-nowrap">
                 <a class="btn btn-sm btn-outline-primary" href="/optimization/site/{{ p.id }}" title="{{ _("Abrir") }}"><i class="bi bi-pencil"></i></a>

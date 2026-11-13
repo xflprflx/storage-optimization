@@ -19,14 +19,14 @@
    "services/action_plan.py:140"
   ]
  },
- " ({unplaced} fora do plano, sem endereço)": {
+ " ({n} cabeceiras)": {
   "src": [
-   "routers/site.py:691"
+   "services/site_report.py:143"
   ]
  },
- " + bins ": {
+ " ({unplaced} fora do plano, sem endereço)": {
   "src": [
-   "templates/site/project.html:533"
+   "routers/site.py:694"
   ]
  },
  " + {gh} de reserva": {
@@ -36,7 +36,7 @@
  },
  " / filial de referência": {
   "src": [
-   "services/site_report.py:101"
+   "services/site_report.py:102"
   ]
  },
  " ATENÇÃO: ": {
@@ -82,7 +82,7 @@
  },
  " e histórico de pedidos copiado do projeto": {
   "src": [
-   "routers/site.py:699"
+   "routers/site.py:702"
   ]
  },
  " e mais {v}": {
@@ -168,12 +168,12 @@
  },
  " · avenidas de {fmt} m": {
   "src": [
-   "services/site_report.py:114"
+   "services/site_report.py:115"
   ]
  },
  " · cabeceira girada 90°, de frente para {faces}": {
   "src": [
-   "services/site_planner.py:2132"
+   "services/site_planner.py:2138"
   ]
  },
  " · endereço padrão": {
@@ -183,7 +183,7 @@
  },
  " · etiquetar {sum} endereço(s)": {
   "src": [
-   "services/site_report.py:245"
+   "services/site_report.py:246"
   ]
  },
  " · nas duas: ": {
@@ -208,7 +208,7 @@
  },
  " · plano informativo (não pode ser aplicado)": {
   "src": [
-   "services/plan_export.py:214"
+   "services/plan_export.py:220"
   ]
  },
  " · sem bin: {shortage} un.": {
@@ -223,18 +223,18 @@
  },
  " · sem custo (R$ 0): {v}": {
   "src": [
-   "services/site_report.py:140"
+   "services/site_report.py:141"
   ]
  },
  " · sem limite de tempo": {
   "src": [
    "routers/optimization.py:461",
-   "routers/site.py:193"
+   "routers/site.py:196"
   ]
  },
  " · {end_caps} módulo(s) girado(s)": {
   "src": [
-   "services/site_report.py:108"
+   "services/site_report.py:109"
   ]
  },
  " · {overflow} un. não cabem": {
@@ -457,14 +457,14 @@
  },
  "(sem título)": {
   "src": [
-   "templates/site/mapping.html:80"
+   "templates/site/mapping.html:83"
   ],
   "js": true
  },
  "(sugerido automaticamente pelo nome)": {
   "src": [
-   "templates/imports/mapping_master.html:24",
-   "templates/imports/mapping_products.html:24"
+   "templates/imports/mapping_master.html:26",
+   "templates/imports/mapping_products.html:26"
   ]
  },
  "(só campos preenchidos": {
@@ -558,7 +558,7 @@
  },
  ", {defaults} endereço(s) padrão definido(s)": {
   "src": [
-   "routers/site.py:695"
+   "routers/site.py:698"
   ]
  },
  ", {len} fora da planilha marcada(s) como \"Não usar\".": {
@@ -568,7 +568,7 @@
  },
  ", {stock_units} unidade(s) de saldo lançadas": {
   "src": [
-   "routers/site.py:696"
+   "routers/site.py:699"
   ]
  },
  ". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje": {
@@ -606,15 +606,15 @@
  },
  "1 tipo de bin por SKU": {
   "src": [
-   "services/site_report.py:127"
+   "services/site_report.py:128"
   ]
  },
  "1. Arquivo enviado": {
   "src": [
-   "templates/imports/mapping_history.html:9",
-   "templates/imports/mapping_master.html:11",
-   "templates/imports/mapping_products.html:11",
-   "templates/imports/mapping_stock.html:11",
+   "templates/imports/mapping_history.html:11",
+   "templates/imports/mapping_master.html:13",
+   "templates/imports/mapping_products.html:13",
+   "templates/imports/mapping_stock.html:13",
    "templates/imports/result.html:12",
    "templates/imports/result_master.html:12"
   ]
@@ -627,7 +627,7 @@
  "1. Enviar arquivo": {
   "src": [
    "templates/imports/history.html:12",
-   "templates/imports/upload.html:11"
+   "templates/imports/upload.html:13"
   ]
  },
  "1. Escopo": {
@@ -638,7 +638,7 @@
  },
  "1. Filiais": {
   "src": [
-   "templates/imports/index.html:8"
+   "templates/imports/index.html:10"
   ]
  },
  "1. Reduzir tudo por igual": {
@@ -705,7 +705,7 @@
  },
  "2. Armazéns": {
   "src": [
-   "templates/imports/index.html:9"
+   "templates/imports/index.html:11"
   ]
  },
  "2. Colunas mapeadas": {
@@ -717,7 +717,7 @@
  "2. Conferir aba e colunas": {
   "src": [
    "templates/imports/history.html:13",
-   "templates/imports/mapping_history.html:10"
+   "templates/imports/mapping_history.html:12"
   ]
  },
  "2. Limitar só os SKUs que ficaram sem lugar": {
@@ -727,10 +727,10 @@
  },
  "2. Mapear colunas": {
   "src": [
-   "templates/imports/mapping_master.html:12",
-   "templates/imports/mapping_products.html:12",
-   "templates/imports/mapping_stock.html:12",
-   "templates/imports/upload.html:12"
+   "templates/imports/mapping_master.html:14",
+   "templates/imports/mapping_products.html:14",
+   "templates/imports/mapping_stock.html:14",
+   "templates/imports/upload.html:14"
   ]
  },
  "2. O que otimizar": {
@@ -762,23 +762,23 @@
  },
  "3. Resultado": {
   "src": [
-   "templates/imports/mapping_master.html:13",
-   "templates/imports/mapping_products.html:13",
-   "templates/imports/mapping_stock.html:13",
+   "templates/imports/mapping_master.html:15",
+   "templates/imports/mapping_products.html:15",
+   "templates/imports/mapping_stock.html:15",
    "templates/imports/result.html:14",
    "templates/imports/result_master.html:14",
-   "templates/imports/upload.html:13"
+   "templates/imports/upload.html:15"
   ]
  },
  "3. Resumo salvo": {
   "src": [
    "templates/imports/history.html:14",
-   "templates/imports/mapping_history.html:11"
+   "templates/imports/mapping_history.html:13"
   ]
  },
  "3. Tipos de bin": {
   "src": [
-   "templates/imports/index.html:10"
+   "templates/imports/index.html:12"
   ]
  },
  "4. Conflitos": {
@@ -788,7 +788,7 @@
  },
  "4. Endereços": {
   "src": [
-   "templates/imports/index.html:11"
+   "templates/imports/index.html:13"
   ]
  },
  "5 zonas X/Y": {
@@ -799,17 +799,17 @@
  },
  "5. Capacidade dos níveis": {
   "src": [
-   "templates/imports/index.html:12"
+   "templates/imports/index.html:14"
   ]
  },
  "6. Produtos": {
   "src": [
-   "templates/imports/index.html:26"
+   "templates/imports/index.html:28"
   ]
  },
  "7. Saldos de estoque": {
   "src": [
-   "templates/imports/index.html:34"
+   "templates/imports/index.html:36"
   ]
  },
  "70% da frente": {
@@ -825,7 +825,7 @@
  },
  "8. Histórico de pedidos (saídas)": {
   "src": [
-   "templates/imports/index.html:42"
+   "templates/imports/index.html:44"
   ]
  },
  "80% das saídas": {
@@ -856,7 +856,7 @@
  },
  "; fileira ao longo da largura": {
   "src": [
-   "services/site_report.py:239"
+   "services/site_report.py:240"
   ],
   "lazy": true
  },
@@ -889,13 +889,13 @@
  },
  "<b class=\"text-danger\">Sincronizar:</b> excluir o que <b>não está no arquivo</b>": {
   "src": [
-   "templates/imports/mapping_master.html:72"
+   "templates/imports/mapping_master.html:74"
   ],
   "html": true
  },
  "<b class=\"text-danger\">Sincronizar:</b> excluir os produtos que <b>não estão no arquivo</b>": {
   "src": [
-   "templates/imports/mapping_products.html:69"
+   "templates/imports/mapping_products.html:71"
   ],
   "html": true
  },
@@ -943,7 +943,7 @@
  },
  "<b>Coluna Saída</b>: uma linha por SKU com o total que saiu no período (sem pedidos: não há pares que saem juntos nem simulador de trajeto).": {
   "src": [
-   "templates/imports/mapping_history.html:36"
+   "templates/imports/mapping_history.html:38"
   ],
   "html": true
  },
@@ -955,7 +955,7 @@
  },
  "<b>Converter quantidades para valor absoluto</b> (relatórios em que a saída vem com sinal negativo). Sem marcar, linhas com quantidade negativa são ignoradas.": {
   "src": [
-   "templates/site/mapping.html:43"
+   "templates/site/mapping.html:45"
   ],
   "html": true
  },
@@ -1081,7 +1081,7 @@
  },
  "<b>Pedidos</b>: cada linha é um item de pedido. Linhas do mesmo pedido e SKU são somadas; quantidade vazia conta 1 unidade.": {
   "src": [
-   "templates/imports/mapping_history.html:35"
+   "templates/imports/mapping_history.html:37"
   ],
   "html": true
  },
@@ -1220,7 +1220,7 @@
  },
  "<b>{multi} objetos selecionados</b> — arraste qualquer um para mover todos; setas movem, Del apaga, R gira as fileiras. O painel abaixo é do último clicado. Shift+clique soma ou tira; Shift+arrastar o fundo seleciona por área.": {
   "src": [
-   "templates/layout/plan.html:386"
+   "templates/layout/plan.html:387"
   ],
   "js": true
  },
@@ -1317,20 +1317,20 @@
  },
  "<span class=\"spinner-border spinner-border-sm\"></span> Importando...": {
   "src": [
-   "templates/imports/mapping_history.html:87"
+   "templates/imports/mapping_history.html:90"
   ],
   "js": true
  },
  "<span class=\"spinner-border spinner-border-sm\"></span> Processando...": {
   "src": [
-   "templates/imports/mapping_stock.html:113"
+   "templates/imports/mapping_stock.html:116"
   ],
   "js": true
  },
  "<span class='spinner-border spinner-border-sm'></span> Processando...": {
   "src": [
-   "templates/imports/mapping_master.html:86",
-   "templates/imports/mapping_products.html:76"
+   "templates/imports/mapping_master.html:88",
+   "templates/imports/mapping_products.html:78"
   ],
   "js": true
  },
@@ -1408,12 +1408,12 @@
  },
  "A busca expirou ou ainda não terminou: rode de novo.": {
   "src": [
-   "routers/site.py:385"
+   "routers/site.py:388"
   ]
  },
  "A busca expirou ou o servidor foi reiniciado: rode de novo.": {
   "src": [
-   "routers/site.py:366"
+   "routers/site.py:369"
   ]
  },
  "A busca parou no limite de {v}× a demanda atual.": {
@@ -1510,7 +1510,7 @@
  },
  "A mesma coluna está em mais de um campo.": {
   "src": [
-   "templates/imports/mapping_history.html:80"
+   "templates/imports/mapping_history.html:83"
   ],
   "js": true
  },
@@ -1556,7 +1556,7 @@
  },
  "A primeira linha contém os nomes das colunas": {
   "src": [
-   "templates/imports/upload.html:24"
+   "templates/imports/upload.html:26"
   ]
  },
  "A primeira linha tem os nomes das colunas": {
@@ -1616,8 +1616,8 @@
  "Aba": {
   "src": [
    "services/field_help.py:269",
-   "templates/imports/mapping_history.html:23",
-   "templates/site/mapping.html:20"
+   "templates/imports/mapping_history.html:25",
+   "templates/site/mapping.html:22"
   ],
   "help": true
  },
@@ -1646,12 +1646,12 @@
  },
  "Abastecer": {
   "src": [
-   "services/site_report.py:249"
+   "services/site_report.py:250"
   ]
  },
  "Abastecimento (bins e produtos)": {
   "src": [
-   "services/site_report.py:29"
+   "services/site_report.py:30"
   ],
   "lazy": true
  },
@@ -1667,7 +1667,7 @@
  },
  "Abrir o projeto": {
   "src": [
-   "routers/site.py:485"
+   "routers/site.py:488"
   ]
  },
  "Aceita linhas com quantidade negativa em vez de recusá-las.": {
@@ -1728,7 +1728,7 @@
  },
  "Ajuda nos campos": {
   "src": [
-   "templates/base.html:135"
+   "templates/base.html:136"
   ]
  },
  "Ajuda nos campos: desligada (clique para ligar)": {
@@ -1793,7 +1793,7 @@
  },
  "Alocadas": {
   "src": [
-   "routers/site.py:185"
+   "routers/site.py:188"
   ],
   "lazy": true
  },
@@ -1821,7 +1821,7 @@
  },
  "Alterações não salvas": {
   "src": [
-   "templates/layout/plan.html:592"
+   "templates/layout/plan.html:594"
   ],
   "js": true
  },
@@ -2002,7 +2002,7 @@
  },
  "Amostra da aba": {
   "src": [
-   "templates/imports/mapping_history.html:47"
+   "templates/imports/mapping_history.html:49"
   ]
  },
  "Amostra do arquivo": {
@@ -2037,7 +2037,7 @@
  },
  "Anterior": {
   "src": [
-   "templates/base.html:358"
+   "templates/base.html:359"
   ],
   "js": true
  },
@@ -2045,10 +2045,10 @@
   "src": [
    "routers/runs.py:93",
    "services/plan_export.py:64",
-   "services/plan_export.py:227",
+   "services/plan_export.py:233",
    "services/plan_export.py:128",
-   "services/plan_export.py:295",
-   "services/plan_export.py:259"
+   "services/plan_export.py:301",
+   "services/plan_export.py:265"
   ]
  },
  "Antes (hoje)": {
@@ -2061,7 +2061,7 @@
  "Antes × depois": {
   "src": [
    "services/plan_export.py:93",
-   "services/plan_export.py:226",
+   "services/plan_export.py:232",
    "templates/optimization/plan.html:48"
   ]
  },
@@ -2127,7 +2127,7 @@
  },
  "Apagar os {all} objetos selecionados?": {
   "src": [
-   "templates/layout/plan.html:537"
+   "templates/layout/plan.html:539"
   ],
   "js": true
  },
@@ -2356,9 +2356,9 @@
  "Armazém padrão": {
   "src": [
    "services/field_help.py:273",
-   "templates/imports/mapping_master.html:51",
-   "templates/imports/mapping_products.html:50",
-   "templates/imports/mapping_stock.html:61"
+   "templates/imports/mapping_master.html:53",
+   "templates/imports/mapping_products.html:52",
+   "templates/imports/mapping_stock.html:63"
   ],
   "help": true
  },
@@ -2395,8 +2395,8 @@
  "Armazéns": {
   "src": [
    "routers/warehouses.py:25",
-   "templates/base.html:91",
-   "templates/base.html:112",
+   "templates/base.html:92",
+   "templates/base.html:113",
    "templates/branches/list.html:24",
    "templates/dashboard.html:16",
    "templates/warehouses/list.html:3"
@@ -2453,7 +2453,7 @@
  },
  "Arquivo (CSV, TXT ou XLSX)": {
   "src": [
-   "templates/imports/upload.html:18"
+   "templates/imports/upload.html:20"
   ]
  },
  "Arquivo (XLSX, CSV ou TXT)": {
@@ -2463,7 +2463,7 @@
  },
  "Arquivo <b>{filename}</b> · projeto <b>{name}</b>. Para cada tipo de dado, escolha a aba e a coluna de cada campo. As sugestões vêm dos nomes das colunas e da última importação deste projeto. Use <i>— não importar —</i> para pular um tipo e <i>— não usar —</i> para ignorar um campo. Campos com * são obrigatórios. A primeira linha de cada aba é o cabeçalho.": {
   "src": [
-   "templates/site/mapping.html:9"
+   "templates/site/mapping.html:11"
   ],
   "html": true
  },
@@ -2497,7 +2497,7 @@
  },
  "Arquivo importado": {
   "src": [
-   "services/site_report.py:100"
+   "services/site_report.py:101"
   ]
  },
  "Arquivo importado ({items} SKUs)": {
@@ -2569,7 +2569,7 @@
  },
  "Arraste para ajustar a largura · duplo clique: automático": {
   "src": [
-   "templates/base.html:298"
+   "templates/base.html:299"
   ],
   "js": true
  },
@@ -2586,7 +2586,7 @@
  },
  "Arraste para desenhar · arraste a forma para mover · canto para redimensionar · Delete apaga a selecionada · medidas de 10 em 10 cm": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -2608,7 +2608,7 @@
  },
  "As bins do arquivo <b>substituem</b> as bins dos endereços (desmarcado: somam às existentes)": {
   "src": [
-   "templates/imports/mapping_master.html:65"
+   "templates/imports/mapping_master.html:67"
   ],
   "html": true
  },
@@ -2631,7 +2631,7 @@
  },
  "As colunas sugeridas vêm dos nomes do cabeçalho — confira se \"Código\" ou \"Produto\" não foram tomados pelo SKU errado.": {
   "src": [
-   "templates/imports/mapping_history.html:37"
+   "templates/imports/mapping_history.html:39"
   ]
  },
  "As faixas reservadas ocupam todo o imóvel.": {
@@ -2644,6 +2644,16 @@
    "services/field_help.py:412"
   ],
   "help": true
+ },
+ "As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.": {
+  "src": [
+   "templates/imports/index.html:4",
+   "templates/imports/mapping_history.html:4",
+   "templates/imports/mapping_master.html:4",
+   "templates/imports/mapping_products.html:4",
+   "templates/imports/mapping_stock.html:4",
+   "templates/imports/upload.html:4"
+  ]
  },
  "As trocas não são aplicadas automaticamente: a troca de endereço move o saldo dos dois SKUs (e o endereço padrão).": {
   "src": [
@@ -2734,7 +2744,7 @@
  },
  "Atualizar os já existentes (somente campos preenchidos)": {
   "src": [
-   "templates/imports/mapping_master.html:59"
+   "templates/imports/mapping_master.html:61"
   ]
  },
  "Atualizar os produtos que já existem com os dados do arquivo": {
@@ -2750,7 +2760,7 @@
  },
  "Atualizar produtos já existentes (somente campos preenchidos)": {
   "src": [
-   "templates/imports/mapping_products.html:56"
+   "templates/imports/mapping_products.html:58"
   ]
  },
  "Até quanto do volume de cada bin pode ser ocupado.": {
@@ -2780,7 +2790,7 @@
  },
  "Automático (a fileira mais perto que olha para esta)": {
   "src": [
-   "templates/layout/plan.html:418"
+   "templates/layout/plan.html:419"
   ],
   "js": true
  },
@@ -2809,7 +2819,7 @@
  },
  "Avenida {a} · {fmt} m": {
   "src": [
-   "templates/site/_plan_editor.html:187"
+   "templates/site/_plan_editor.html:190"
   ],
   "js": true
  },
@@ -2821,18 +2831,18 @@
  "Avisos": {
   "src": [
    "services/plan_export.py:80",
-   "services/plan_export.py:271",
-   "services/site_report.py:306",
-   "services/site_report.py:544",
+   "services/plan_export.py:277",
+   "services/site_report.py:307",
+   "services/site_report.py:551",
    "templates/imports/result.html:62"
   ]
  },
  "Ação": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
-   "services/site_report.py:322",
-   "services/site_report.py:570",
+   "services/plan_export.py:285",
+   "services/site_report.py:323",
+   "services/site_report.py:577",
    "templates/optimization/plan.html:93",
    "templates/site/plan.html:96"
   ]
@@ -2845,7 +2855,7 @@
  },
  "Ação inválida.": {
   "src": [
-   "routers/site.py:417"
+   "routers/site.py:420"
   ]
  },
  "Ações": {
@@ -2865,10 +2875,10 @@
  },
  "Baixar modelo CSV": {
   "src": [
-   "templates/imports/index.html:18",
-   "templates/imports/index.html:29",
-   "templates/imports/index.html:37",
-   "templates/imports/upload.html:6"
+   "templates/imports/index.html:20",
+   "templates/imports/index.html:31",
+   "templates/imports/index.html:39",
+   "templates/imports/upload.html:8"
   ]
  },
  "Base de cálculo inválida.": {
@@ -2889,13 +2899,13 @@
  },
  "Bin": {
   "src": [
-   "services/site_report.py:171",
+   "services/site_report.py:172",
    "templates/locations/form.html:100"
   ]
  },
  "Bin (inteira, para compartimentos)": {
   "src": [
-   "services/site_report.py:167"
+   "services/site_report.py:168"
   ]
  },
  "Bin (opcional, ex.: CX-M #2)": {
@@ -2966,7 +2976,7 @@
    "routers/optimization.py:955",
    "routers/optimization.py:971",
    "routers/runs.py:97",
-   "routers/site.py:187",
+   "routers/site.py:190",
    "services/action_plan.py:123"
   ],
   "lazy": true
@@ -2989,7 +2999,7 @@
  },
  "Bins alocadas": {
   "src": [
-   "routers/site.py:171"
+   "routers/site.py:174"
   ]
  },
  "Bins alocadas ÷ posições reservadas para o tipo nos níveis": {
@@ -3033,7 +3043,7 @@
  },
  "Bins de cada SKU": {
   "src": [
-   "services/site_report.py:122",
+   "services/site_report.py:123",
    "templates/site/project.html:323"
   ]
  },
@@ -3144,7 +3154,7 @@
   "src": [
    "services/plan_export.py:126",
    "services/plan_export.py:136",
-   "services/plan_export.py:264",
+   "services/plan_export.py:270",
    "templates/optimization/page.html:447",
    "templates/optimization/plan.html:69",
    "templates/optimization/pool.html:163"
@@ -3175,7 +3185,7 @@
  },
  "Bins sem lugar": {
   "src": [
-   "routers/site.py:172"
+   "routers/site.py:175"
   ]
  },
  "Bins sugeridas": {
@@ -3253,7 +3263,7 @@
  },
  "Busca cancelada.": {
   "src": [
-   "routers/site.py:316"
+   "routers/site.py:319"
   ]
  },
  "Busca cancelada: o fator sugerido é o melhor achado até ali (pode ser menor que o real).": {
@@ -3268,7 +3278,7 @@
  },
  "Busca sem resultado.": {
   "src": [
-   "routers/site.py:388"
+   "routers/site.py:391"
   ]
  },
  "Buscar SKU ou endereço": {
@@ -3319,18 +3329,18 @@
  },
  "CSV: delimitador (; , TAB |) e codificação (UTF-8/Latin-1) detectados automaticamente. XLSX: primeira planilha. Máx. 200 MB.": {
   "src": [
-   "templates/imports/upload.html:20"
+   "templates/imports/upload.html:22"
   ]
  },
  "Cabeceira {bay}": {
   "src": [
-   "services/site_report.py:231"
+   "services/site_report.py:232"
   ]
  },
  "Cabeceiras": {
   "src": [
    "services/field_help.py:117",
-   "services/site_report.py:107"
+   "services/site_report.py:108"
   ],
   "help": true
  },
@@ -3388,7 +3398,7 @@
  },
  "Cada bin é pega pelo corredor do seu lado: as da frente pela face laranja cheia, as do fundo pela tracejada.": {
   "src": [
-   "templates/layout/plan.html:430"
+   "templates/layout/plan.html:431"
   ],
   "js": true
  },
@@ -3433,7 +3443,7 @@
  },
  "Cadastra/atualiza produtos por SKU (nome e dimensões) e define o endereço padrão. Filiais e armazéns informados são criados automaticamente pelos códigos.": {
   "src": [
-   "templates/imports/index.html:27"
+   "templates/imports/index.html:29"
   ]
  },
  "Cadastrar": {
@@ -3472,7 +3482,7 @@
  },
  "Cadastro de produtos": {
   "src": [
-   "services/site_report.py:101"
+   "services/site_report.py:102"
   ]
  },
  "Cadastro de produtos / filial de referência": {
@@ -3482,17 +3492,17 @@
  },
  "Cadastros": {
   "src": [
-   "templates/base.html:88"
+   "templates/base.html:89"
   ]
  },
  "Cadastros-base — importe nesta ordem": {
   "src": [
-   "templates/imports/index.html:6"
+   "templates/imports/index.html:8"
   ]
  },
  "Calcula as fileiras e corredores com o mesmo motor da otimização (sem salvar)": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -3573,14 +3583,14 @@
  "Caminhada média por saída": {
   "src": [
    "routers/optimization.py:316",
-   "routers/site.py:177",
+   "routers/site.py:180",
    "templates/optimization/page.html:400",
    "templates/site/project.html:560"
   ]
  },
  "Caminhada por saída": {
   "src": [
-   "services/site_report.py:150"
+   "services/site_report.py:151"
   ]
  },
  "Campo": {
@@ -3614,7 +3624,7 @@
   "src": [
    "templates/bin_types/form.html:88",
    "templates/branches/form.html:43",
-   "templates/imports/mapping_history.html:41",
+   "templates/imports/mapping_history.html:43",
    "templates/locations/form.html:63",
    "templates/locations/list.html:157",
    "templates/products/form.html:79"
@@ -3665,7 +3675,7 @@
  },
  "Capacidade (bins)": {
   "src": [
-   "services/site_report.py:336"
+   "services/site_report.py:337"
   ]
  },
  "Capacidade de ": {
@@ -3699,8 +3709,8 @@
   "src": [
    "routers/levels.py:22",
    "routers/optimization.py:963",
-   "templates/base.html:95",
-   "templates/base.html:115",
+   "templates/base.html:96",
+   "templates/base.html:116",
    "templates/levels/index.html:2",
    "templates/levels/index.html:12"
   ],
@@ -3740,12 +3750,12 @@
  },
  "Carga (kg)": {
   "src": [
-   "services/site_report.py:337"
+   "services/site_report.py:338"
   ]
  },
  "Carga máx. (kg)": {
   "src": [
-   "services/site_report.py:337"
+   "services/site_report.py:338"
   ]
  },
  "Carga máx. por nível (kg)": {
@@ -3893,7 +3903,7 @@
  },
  "Coluna '{s}' não encontrada no arquivo.": {
   "src": [
-   "services/file_reader.py:263"
+   "services/file_reader.py:267"
   ]
  },
  "Coluna Filiais: uma ou mais filiais separadas por vírgula (01, 02). Filiais inexistentes são criadas com o código; as associações existentes são mantidas (só acrescenta).": {
@@ -3917,8 +3927,8 @@
  },
  "Coluna {v}": {
   "src": [
-   "services/file_reader.py:219",
-   "services/file_reader.py:216"
+   "services/file_reader.py:223",
+   "services/file_reader.py:220"
   ]
  },
  "Colunas de quantidade": {
@@ -3929,7 +3939,7 @@
  },
  "Colunas de quantidade <span class=\"text-danger\">*</span> <span class=\"text-muted\">— as colunas marcadas serão <b>somadas</b> em cada linha</span>": {
   "src": [
-   "templates/imports/mapping_stock.html:38"
+   "templates/imports/mapping_stock.html:40"
   ],
   "html": true
  },
@@ -3962,7 +3972,7 @@
  },
  "Com Endereço informado, ele vira o endereço padrão do produto. Filial e Armazém (opcionais) indicam em qual depósito procurar/criar o endereço.": {
   "src": [
-   "templates/imports/upload.html:35"
+   "templates/imports/upload.html:37"
   ]
  },
  "Com a configuração atual, <b>{shortage} bin(s)</b> ficam sem lugar. Escolha uma das formas de reduzir a demanda (ou volte e aumente estruturas/imóvel).": {
@@ -4063,7 +4073,7 @@
  },
  "Começando": {
   "src": [
-   "routers/site.py:303"
+   "routers/site.py:306"
   ]
  },
  "Começando…": {
@@ -4208,7 +4218,7 @@
  },
  "Completas": {
   "src": [
-   "templates/base.html:392"
+   "templates/base.html:393"
   ],
   "js": true
  },
@@ -4219,12 +4229,12 @@
  },
  "Comprar": {
   "src": [
-   "services/site_report.py:220"
+   "services/site_report.py:221"
   ]
  },
  "Compras": {
   "src": [
-   "services/site_report.py:26"
+   "services/site_report.py:27"
   ],
   "lazy": true
  },
@@ -4325,7 +4335,7 @@
  },
  "Configurar": {
   "src": [
-   "services/site_report.py:242"
+   "services/site_report.py:243"
   ]
  },
  "Configuração atual viola as restrições escolhidas.": {
@@ -4335,14 +4345,14 @@
  },
  "Configuração dos níveis e etiquetagem": {
   "src": [
-   "services/site_report.py:28"
+   "services/site_report.py:29"
   ],
   "lazy": true
  },
  "Configurações": {
   "src": [
    "routers/settings.py:13",
-   "templates/base.html:100",
+   "templates/base.html:101",
    "templates/settings.html:2",
    "templates/settings.html:4"
   ],
@@ -4371,7 +4381,7 @@
  },
  "Conforme o idioma": {
   "src": [
-   "templates/base.html:130"
+   "templates/base.html:131"
   ]
  },
  "Considera o peso máximo da bin e a carga máxima do nível.": {
@@ -4438,7 +4448,7 @@
  },
  "Converter quantidades negativas para valor absoluto": {
   "src": [
-   "templates/imports/mapping_history.html:33"
+   "templates/imports/mapping_history.html:35"
   ]
  },
  "Converter quantidades negativas para valor absoluto (relatórios que lançam a saída como negativa)": {
@@ -4571,10 +4581,10 @@
  "Corredor {aisle}": {
   "src": [
    "services/action_plan.py:166",
-   "services/site_report.py:238",
-   "services/site_report.py:242",
-   "services/site_report.py:231",
-   "services/site_report.py:249"
+   "services/site_report.py:239",
+   "services/site_report.py:243",
+   "services/site_report.py:232",
+   "services/site_report.py:250"
   ]
  },
  "Corredor {code}": {
@@ -4600,7 +4610,7 @@
  },
  "Corredores": {
   "src": [
-   "services/site_report.py:104"
+   "services/site_report.py:105"
   ]
  },
  "Corredores com outra largura": {
@@ -4620,7 +4630,7 @@
   "src": [
    "services/site_import.py:199",
    "services/site_import.py:755",
-   "services/site_report.py:106"
+   "services/site_report.py:107"
   ],
   "lazy": true
  },
@@ -4645,7 +4655,7 @@
  },
  "Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores": {
   "src": [
-   "templates/base.html:403"
+   "templates/base.html:404"
   ],
   "js": true
  },
@@ -4657,13 +4667,13 @@
  },
  "Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)": {
   "src": [
-   "templates/base.html:404"
+   "templates/base.html:405"
   ],
   "js": true
  },
  "Cotas encadeadas em volta da planta (bordas de cima e da esquerda)": {
   "src": [
-   "templates/base.html:403"
+   "templates/base.html:404"
   ],
   "js": true
  },
@@ -4720,7 +4730,7 @@
  },
  "Criar endereços informados que não existirem": {
   "src": [
-   "templates/imports/mapping_products.html:60"
+   "templates/imports/mapping_products.html:62"
   ]
  },
  "Criar filial": {
@@ -4736,7 +4746,7 @@
  },
  "Criar produtos (SKU) inexistentes": {
   "src": [
-   "templates/imports/mapping_stock.html:73"
+   "templates/imports/mapping_stock.html:75"
   ]
  },
  "Criar produtos inexistentes": {
@@ -4770,7 +4780,7 @@
  },
  "Curva ABC": {
   "src": [
-   "services/site_report.py:348",
+   "services/site_report.py:349",
    "services/slotting.py:499",
    "templates/slotting/skus.html:21"
   ]
@@ -4792,8 +4802,8 @@
  },
  "Custo": {
   "src": [
-   "routers/site.py:184",
-   "routers/site.py:186",
+   "routers/site.py:187",
+   "routers/site.py:189",
    "templates/site/project.html:609",
    "templates/site/project.html:632"
   ],
@@ -4807,12 +4817,12 @@
  },
  "Custo das bins": {
   "src": [
-   "routers/site.py:170"
+   "routers/site.py:173"
   ]
  },
  "Custo das estruturas": {
   "src": [
-   "routers/site.py:169"
+   "routers/site.py:172"
   ]
  },
  "Custo de bins (R$)": {
@@ -4856,17 +4866,17 @@
  },
  "Custo total": {
   "src": [
-   "routers/site.py:168",
-   "services/site_report.py:139",
-   "services/site_report.py:315",
-   "services/site_report.py:556",
+   "routers/site.py:171",
+   "services/site_report.py:140",
+   "services/site_report.py:316",
+   "services/site_report.py:563",
    "templates/site/project.html:533"
   ]
  },
  "Custo unit.": {
   "src": [
-   "services/site_report.py:315",
-   "services/site_report.py:556"
+   "services/site_report.py:316",
+   "services/site_report.py:563"
   ]
  },
  "Câmera": {
@@ -4882,20 +4892,20 @@
    "services/site_import.py:192",
    "services/site_import.py:782",
    "services/site_import.py:787",
-   "services/site_report.py:315",
-   "services/site_report.py:556"
+   "services/site_report.py:316",
+   "services/site_report.py:563"
   ],
   "lazy": true,
   "js": true
  },
  "Código (criada se não existir)": {
   "src": [
-   "templates/imports/mapping_products.html:46"
+   "templates/imports/mapping_products.html:48"
   ]
  },
  "Código (criado se não existir)": {
   "src": [
-   "templates/imports/mapping_products.html:51"
+   "templates/imports/mapping_products.html:53"
   ]
  },
  "Código *": {
@@ -5003,7 +5013,7 @@
  },
  "Código e nome. Atualiza o nome das existentes.": {
   "src": [
-   "templates/imports/index.html:8"
+   "templates/imports/index.html:10"
   ]
  },
  "Código vazio": {
@@ -5035,12 +5045,12 @@
  },
  "Código, nome e filiais (lista \"01, 02\"). Cria filiais inexistentes e as associações.": {
   "src": [
-   "templates/imports/index.html:9"
+   "templates/imports/index.html:11"
   ]
  },
  "Código, nome, dimensões (cm), peso máximo (kg) e volume (L).": {
   "src": [
-   "templates/imports/index.html:10"
+   "templates/imports/index.html:12"
   ]
  },
  "Códigos com no máximo 20 caracteres.": {
@@ -5211,7 +5221,7 @@
  },
  "Demanda": {
   "src": [
-   "services/site_report.py:115",
+   "services/site_report.py:116",
    "templates/site/project.html:264"
   ]
  },
@@ -5223,10 +5233,10 @@
  "Depois": {
   "src": [
    "services/plan_export.py:64",
-   "services/plan_export.py:227",
-   "services/plan_export.py:295",
+   "services/plan_export.py:233",
+   "services/plan_export.py:301",
    "services/plan_export.py:129",
-   "services/plan_export.py:259",
+   "services/plan_export.py:265",
    "templates/optimization/plan.html:66"
   ]
  },
@@ -5268,9 +5278,9 @@
  "Descrição": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
-   "services/site_report.py:322",
-   "services/site_report.py:570",
+   "services/plan_export.py:285",
+   "services/site_report.py:323",
+   "services/site_report.py:577",
    "templates/optimization/plan.html:93",
    "templates/site/plan.html:96"
   ]
@@ -5305,19 +5315,19 @@
  },
  "Desenhar obstáculo": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
  "Desenhar setor": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
  "Desenhar zona": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -5351,14 +5361,14 @@
  "Destino": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
+   "services/plan_export.py:285",
    "templates/optimization/plan.html:93"
   ]
  },
  "Destino no momento": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
+   "services/plan_export.py:285",
    "templates/optimization/plan.html:93"
   ]
  },
@@ -5545,7 +5555,7 @@
  "Distância entre itens que saem juntos": {
   "src": [
    "routers/optimization.py:319",
-   "routers/site.py:180"
+   "routers/site.py:183"
   ]
  },
  "Distância entre níveis compensada para o porta-palete ter a mesma altura das outras estantes do corredor ({fmt} cm)": {
@@ -5566,7 +5576,7 @@
  },
  "Distância pelo menor caminho no piso livre: pelos corredores, saindo pela ponta ou por um transversal para trocar de corredor, contornando estruturas e obstáculos.": {
   "src": [
-   "routers/site.py:573"
+   "routers/site.py:576"
   ]
  },
  "Distância {v}": {
@@ -5649,13 +5659,13 @@
  },
  "Docas · {m} m": {
   "src": [
-   "templates/site/_plan_editor.html:185"
+   "templates/site/_plan_editor.html:188"
   ],
   "js": true
  },
  "Dois sentidos (contra fluxo permitido)": {
   "src": [
-   "templates/layout/plan.html:425"
+   "templates/layout/plan.html:426"
   ],
   "js": true
  },
@@ -5762,7 +5772,7 @@
  },
  "Em mais de uma fileira (vale a primeira): {d}": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -5820,7 +5830,7 @@
  },
  "Em uso": {
   "src": [
-   "services/site_report.py:336",
+   "services/site_report.py:337",
    "templates/structures/list.html:30"
   ]
  },
@@ -5898,7 +5908,7 @@
  },
  "Enchimento máx. da bin": {
   "src": [
-   "services/site_report.py:123"
+   "services/site_report.py:124"
   ]
  },
  "Enchimento máx. da bin (%)": {
@@ -5996,7 +6006,7 @@
  },
  "Endereço completo ou corredor/estante/nível/posição/compartimento, com tipo e quantidade de bins.": {
   "src": [
-   "templates/imports/index.html:11"
+   "templates/imports/index.html:13"
   ]
  },
  "Endereço contém": {
@@ -6164,11 +6174,11 @@
  "Endereços": {
   "src": [
    "routers/locations.py:73",
-   "services/site_report.py:222",
-   "services/site_report.py:340",
-   "services/site_report.py:141",
-   "services/site_report.py:336",
-   "services/site_report.py:587"
+   "services/site_report.py:223",
+   "services/site_report.py:341",
+   "services/site_report.py:142",
+   "services/site_report.py:337",
+   "services/site_report.py:594"
   ],
   "lazy": true
  },
@@ -6228,7 +6238,7 @@
  },
  "Endereços dessas estantes usam a caminhada estimada pelo endereço.": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -6285,7 +6295,7 @@
  },
  "Endereços são associados aos existentes mesmo com pequenas diferenças de escrita (<span class=\"mono\">A-1-1-1</span> = <span class=\"mono\">A-01-01-01</span>, <span class=\"mono\">A010101</span> = <span class=\"mono\">A-01-01-01</span>). Sem armazém, o endereço é procurado nos armazéns da filial; sem filial, em todos os depósitos.": {
   "src": [
-   "templates/imports/mapping_products.html:73"
+   "templates/imports/mapping_products.html:75"
   ],
   "html": true
  },
@@ -6339,7 +6349,7 @@
  },
  "Enviar e mapear colunas": {
   "src": [
-   "templates/imports/upload.html:26"
+   "templates/imports/upload.html:28"
   ]
  },
  "Enviar histórico": {
@@ -6434,7 +6444,7 @@
  },
  "Escolha ao menos uma aba para importar.": {
   "src": [
-   "templates/site/mapping.html:127"
+   "templates/site/mapping.html:130"
   ],
   "js": true
  },
@@ -6502,7 +6512,7 @@
  "Escopo": {
   "src": [
    "services/plan_export.py:54",
-   "services/plan_export.py:217",
+   "services/plan_export.py:223",
    "templates/optimization/page.html:75",
    "templates/optimization/page.html:76",
    "templates/optimization/plan.html:39"
@@ -6572,8 +6582,8 @@
  },
  "Especificação": {
   "src": [
-   "services/site_report.py:315",
-   "services/site_report.py:556"
+   "services/site_report.py:316",
+   "services/site_report.py:563"
   ]
  },
  "Esta filial ainda não tem planta desenhada.": {
@@ -6588,7 +6598,7 @@
  },
  "Esta filial/armazém não tem endereços cadastrados.": {
   "src": [
-   "templates/layout/plan.html:628"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -6648,8 +6658,8 @@
  },
  "Estante {bay}": {
   "src": [
-   "services/site_report.py:238",
-   "services/site_report.py:242"
+   "services/site_report.py:239",
+   "services/site_report.py:243"
   ]
  },
  "Estante {esc} · {esc2}{cap} · altura {fmt} m": {
@@ -6737,12 +6747,12 @@
  },
  "Estrutura": {
   "src": [
-   "routers/site.py:184",
+   "routers/site.py:187",
    "services/field_help.py:344",
-   "services/site_report.py:330",
-   "services/site_report.py:336",
-   "services/site_report.py:342",
-   "services/site_report.py:580"
+   "services/site_report.py:331",
+   "services/site_report.py:337",
+   "services/site_report.py:343",
+   "services/site_report.py:587"
   ],
   "lazy": true,
   "help": true
@@ -6843,7 +6853,7 @@
    "routers/runs.py:97",
    "services/site_import.py:182",
    "services/site_import.py:781",
-   "services/site_report.py:129",
+   "services/site_report.py:130",
    "templates/runs/detail.html:42",
    "templates/site/project.html:119"
   ],
@@ -6857,7 +6867,7 @@
  "Estruturas de armazenagem": {
   "src": [
    "routers/structures.py:15",
-   "templates/base.html:96",
+   "templates/base.html:97",
    "templates/site/project.html:230",
    "templates/structures/list.html:3",
    "templates/structures/list.html:6"
@@ -6917,6 +6927,11 @@
    "services/site_import.py:463"
   ]
  },
+ "Estruturas: {leg}": {
+  "src": [
+   "services/site_report.py:561"
+  ]
+ },
  "Esvaziar": {
   "src": [
    "services/action_plan.py:159"
@@ -6924,18 +6939,18 @@
  },
  "Etapa {i}": {
   "src": [
-   "templates/base.html:345"
+   "templates/base.html:346"
   ],
   "js": true
  },
  "Etiquetas": {
   "src": [
-   "services/site_report.py:222"
+   "services/site_report.py:223"
   ]
  },
  "Etiquetas de {len} endereço(s) e de {len2} estante(s)": {
   "src": [
-   "services/site_report.py:223"
+   "services/site_report.py:224"
   ]
  },
  "Ex.: <span class=\"mono\">F.07.01.01</span> e <span class=\"mono\">F.7.01.02-A</span> ficam na mesma estante <span class=\"mono\">F.07</span> (útil quando um dígito é omitido para caber o compartimento). Com a opção ligada:": {
@@ -7233,7 +7248,7 @@
  },
  "Excluir também a posição física (nível da estante: vão e capacidades) que ficar sem endereços": {
   "src": [
-   "templates/imports/mapping_master.html:78"
+   "templates/imports/mapping_master.html:80"
   ]
  },
  "Excluir também os ocupados": {
@@ -7286,7 +7301,7 @@
  },
  "Exemplo não encontrado.": {
   "src": [
-   "routers/site.py:146"
+   "routers/site.py:149"
   ]
  },
  "Exemplo: <span class=\"mono fw-semibold\" id=\"exampleAddr\">—</span>": {
@@ -7308,8 +7323,8 @@
  "Existentes": {
   "src": [
    "services/plan_export.py:128",
-   "services/plan_export.py:258",
-   "services/plan_export.py:259",
+   "services/plan_export.py:264",
+   "services/plan_export.py:265",
    "templates/optimization/page.html:121",
    "templates/optimization/plan.html:66",
    "templates/optimization/pool.html:74"
@@ -7337,7 +7352,7 @@
  },
  "Extensão não suportada: {ext}": {
   "src": [
-   "services/file_reader.py:196"
+   "services/file_reader.py:200"
   ]
  },
  "Faixa de altura da zona de ouro de cada estrutura": {
@@ -7358,7 +7373,7 @@
  },
  "Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -7390,7 +7405,7 @@
  },
  "Faixas reservadas": {
   "src": [
-   "services/site_report.py:105"
+   "services/site_report.py:106"
   ]
  },
  "Faixas reservadas e corredores transversais ocupam todo o comprimento das fileiras.": {
@@ -7400,7 +7415,7 @@
  },
  "Falha ao calcular as fileiras.": {
   "src": [
-   "templates/site/_plan_editor.html:127"
+   "templates/site/_plan_editor.html:130"
   ],
   "js": true
  },
@@ -7484,7 +7499,7 @@
  },
  "Fase": {
   "src": [
-   "services/site_report.py:322"
+   "services/site_report.py:323"
   ]
  },
  "Fator da demanda (%)": {
@@ -7496,7 +7511,7 @@
  },
  "Fator da demanda ajustado para {val}%.": {
   "src": [
-   "routers/site.py:403"
+   "routers/site.py:406"
   ]
  },
  "Fechar": {
@@ -7509,9 +7524,9 @@
  },
  "Feito": {
   "src": [
-   "services/plan_export.py:279",
-   "services/site_report.py:322",
-   "services/site_report.py:570",
+   "services/plan_export.py:285",
+   "services/site_report.py:323",
+   "services/site_report.py:577",
    "templates/optimization/plan.html:93"
   ]
  },
@@ -7529,8 +7544,8 @@
  },
  "Fileira": {
   "src": [
-   "services/site_report.py:330",
-   "services/site_report.py:580",
+   "services/site_report.py:331",
+   "services/site_report.py:587",
    "templates/layout/plan.html:59",
    "templates/layout/plan.html:69",
    "templates/site/plan.html:122"
@@ -7543,13 +7558,13 @@
  },
  "Fileira {aisle} ({SIDE})": {
   "src": [
-   "templates/layout/plan.html:393"
+   "templates/layout/plan.html:394"
   ],
   "js": true
  },
  "Fileiras": {
   "src": [
-   "services/site_report.py:109"
+   "services/site_report.py:110"
   ]
  },
  "Fileiras ao longo da largura": {
@@ -7591,8 +7606,8 @@
  "Filiais": {
   "src": [
    "routers/branches.py:25",
-   "templates/base.html:90",
-   "templates/base.html:111",
+   "templates/base.html:91",
+   "templates/base.html:112",
    "templates/branches/list.html:3",
    "templates/branches/list.html:6",
    "templates/dashboard.html:15"
@@ -7636,7 +7651,7 @@
  },
  "Filiais e armazéns inexistentes são criados automaticamente apenas com o código.": {
   "src": [
-   "templates/imports/upload.html:34"
+   "templates/imports/upload.html:36"
   ]
  },
  "Filiais e armazéns inexistentes são criados com o código. Endereços existentes não são duplicados; conflitos de hierarquia (posição genérica × compartimentos) são recusados por linha.": {
@@ -7659,7 +7674,7 @@
  },
  "Filiais, armazéns e posições inexistentes são criados automaticamente.": {
   "src": [
-   "templates/imports/upload.html:41"
+   "templates/imports/upload.html:43"
   ]
  },
  "Filiais, armazéns, tipos de bin e endereços precisam existir (gere os endereços antes).": {
@@ -7795,9 +7810,9 @@
  },
  "Filial padrão (quando a coluna estiver vazia/ausente)": {
   "src": [
-   "templates/imports/mapping_master.html:46",
-   "templates/imports/mapping_products.html:45",
-   "templates/imports/mapping_stock.html:56"
+   "templates/imports/mapping_master.html:48",
+   "templates/imports/mapping_products.html:47",
+   "templates/imports/mapping_stock.html:58"
   ]
  },
  "Filial vazia": {
@@ -7818,7 +7833,7 @@
  },
  "Filial {code} - {name} · {filename}": {
   "src": [
-   "templates/imports/mapping_history.html:6"
+   "templates/imports/mapping_history.html:8"
   ],
   "html": true
  },
@@ -7839,7 +7854,7 @@
  },
  "Filial {code} criada: {bays} estantes com estrutura, {levels} níveis, {locations} endereços e {bins} bins.": {
   "src": [
-   "routers/site.py:688"
+   "routers/site.py:691"
   ]
  },
  "Filial {code} excluída.": {
@@ -8051,7 +8066,7 @@
  },
  "Folgas": {
   "src": [
-   "services/site_report.py:125"
+   "services/site_report.py:126"
   ]
  },
  "Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs).": {
@@ -8072,7 +8087,7 @@
  },
  "Fora da planta: {u}": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -8122,7 +8137,7 @@
  },
  "Formato Campo | Valor: uma linha por parâmetro (ex.: “Comprimento (m)” | 40). Os nomes reconhecidos são os mesmos do formulário do projeto.": {
   "src": [
-   "templates/site/mapping.html:29"
+   "templates/site/mapping.html:31"
   ]
  },
  "Fornecedor, modelo, prazo…": {
@@ -8165,7 +8180,7 @@
   "src": [
    "services/site_import.py:186",
    "services/site_import.py:782",
-   "services/site_report.py:331"
+   "services/site_report.py:332"
   ],
   "lazy": true
  },
@@ -8253,17 +8268,17 @@
  "Gerado em {created}": {
   "src": [
    "services/plan_export.py:52",
-   "services/site_report.py:296"
+   "services/site_report.py:297"
   ]
  },
  "Gerado em {created} · {len} passo(s)": {
   "src": [
-   "services/site_report.py:529"
+   "services/site_report.py:536"
   ]
  },
  "Gerado em {created} · {n_steps} passo(s)": {
   "src": [
-   "services/plan_export.py:213"
+   "services/plan_export.py:219"
   ]
  },
  "Gerado em {strftime} · {n_steps} passo(s)": {
@@ -8315,7 +8330,7 @@
  },
  "Gerar endereços em lote": {
   "src": [
-   "templates/base.html:93",
+   "templates/base.html:94",
    "templates/locations/batch.html:3"
   ]
  },
@@ -8356,9 +8371,9 @@
  "Grupo": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
-   "services/site_report.py:322",
-   "services/site_report.py:570"
+   "services/plan_export.py:285",
+   "services/site_report.py:323",
+   "services/site_report.py:577"
   ]
  },
  "Grupos de bins alocados em outro nível da estante": {
@@ -8439,7 +8454,7 @@
  },
  "Histórico de pedidos — conferir colunas": {
   "src": [
-   "templates/imports/mapping_history.html:5"
+   "templates/imports/mapping_history.html:7"
   ]
  },
  "Histórico de saídas da filial": {
@@ -8522,12 +8537,12 @@
  },
  "Idioma": {
   "src": [
-   "templates/base.html:126"
+   "templates/base.html:127"
   ]
  },
  "Idioma e unidades de medida": {
   "src": [
-   "templates/base.html:124"
+   "templates/base.html:125"
   ]
  },
  "Idênticos mantidos": {
@@ -8537,14 +8552,14 @@
  },
  "Imperial (in, lb, ft)": {
   "src": [
-   "templates/base.html:132"
+   "templates/base.html:133"
   ]
  },
  "Importar": {
   "src": [
    "templates/bin_types/list.html:7",
    "templates/branches/list.html:7",
-   "templates/imports/index.html:17",
+   "templates/imports/index.html:19",
    "templates/levels/index.html:14",
    "templates/locations/list.html:11",
    "templates/products/list.html:8"
@@ -8557,26 +8572,26 @@
  },
  "Importar histórico": {
   "src": [
-   "templates/imports/index.html:44",
-   "templates/imports/mapping_history.html:40"
+   "templates/imports/index.html:46",
+   "templates/imports/mapping_history.html:42"
   ]
  },
  "Importar produtos": {
   "src": [
    "templates/dashboard.html:8",
-   "templates/imports/index.html:28"
+   "templates/imports/index.html:30"
   ]
  },
  "Importar saldos": {
   "src": [
    "templates/dashboard.html:9",
-   "templates/imports/index.html:36",
+   "templates/imports/index.html:38",
    "templates/stock/list.html:8"
   ]
  },
  "Importação cancelada.": {
   "src": [
-   "routers/site.py:774"
+   "routers/site.py:777"
   ]
  },
  "Importação de Armazéns": {
@@ -8624,9 +8639,9 @@
  "Importações": {
   "src": [
    "routers/imports.py:28",
-   "templates/base.html:107",
+   "templates/base.html:108",
    "templates/imports/index.html:2",
-   "templates/imports/index.html:4"
+   "templates/imports/index.html:6"
   ],
   "lazy": true
  },
@@ -8640,7 +8655,7 @@
   "src": [
    "services/site_import.py:182",
    "services/site_import.py:743",
-   "services/site_report.py:103",
+   "services/site_report.py:104",
    "templates/layout/plan.html:53",
    "templates/site/index.html:53",
    "templates/site/project.html:62"
@@ -8655,8 +8670,8 @@
  },
  "Imóvel e demanda": {
   "src": [
-   "services/site_report.py:297",
-   "services/site_report.py:530",
+   "services/site_report.py:298",
+   "services/site_report.py:537",
    "templates/site/plan.html:38"
   ]
  },
@@ -8695,7 +8710,7 @@
   "src": [
    "routers/runs.py:93",
    "services/plan_export.py:64",
-   "services/plan_export.py:227",
+   "services/plan_export.py:233",
    "templates/runs/compare.html:11",
    "templates/runs/detail.html:25"
   ]
@@ -8703,7 +8718,7 @@
  "Indicadores": {
   "src": [
    "routers/runs.py:92",
-   "services/site_report.py:298",
+   "services/site_report.py:299",
    "templates/runs/detail.html:23",
    "templates/runs/list.html:41"
   ]
@@ -8736,18 +8751,18 @@
  },
  "Informe ao menos uma quantidade (Saldo, Min level ou Max level). Dimensões vazias são completadas pelo cadastro de produtos.": {
   "src": [
-   "templates/site/mapping.html:38"
+   "templates/site/mapping.html:40"
   ]
  },
  "Informe comprimento e largura do imóvel para ver a planta.": {
   "src": [
-   "templates/site/_plan_editor.html:145"
+   "templates/site/_plan_editor.html:148"
   ],
   "js": true
  },
  "Informe comprimento e largura do imóvel.": {
   "src": [
-   "routers/site.py:275"
+   "routers/site.py:278"
   ]
  },
  "Informe corredor, estante e nível.": {
@@ -8757,7 +8772,7 @@
  },
  "Informe código (até 30 caracteres) e nome da filial nova.": {
   "src": [
-   "routers/site.py:666"
+   "routers/site.py:669"
   ]
  },
  "Informe o endereço completo (A-01-02-03) OU as colunas Corredor, Estante, Nível, Posição e Compartimento (só o corredor é obrigatório). Se as duas formas forem mapeadas, valem as colunas separadas.": {
@@ -8826,8 +8841,8 @@
  },
  "Item": {
   "src": [
-   "services/site_report.py:315",
-   "services/site_report.py:556",
+   "services/site_report.py:316",
+   "services/site_report.py:563",
    "templates/bulk/confirm.html:36",
    "templates/site/plan.html:67"
   ]
@@ -8919,7 +8934,7 @@
  "Já existe uma filial com o código {code}.": {
   "src": [
    "routers/branches.py:45",
-   "routers/site.py:668"
+   "routers/site.py:671"
   ]
  },
  "Já existem sub-endereços abaixo deste": {
@@ -8930,7 +8945,7 @@
  },
  "Lado": {
   "src": [
-   "services/site_report.py:580",
+   "services/site_report.py:587",
    "templates/packing/case.html:62",
    "templates/packing/view3d.html:24",
    "templates/site/plan.html:122"
@@ -9278,12 +9293,12 @@
  },
  "Limite de quantidade aplicado a {len} SKU(s) (total com limite: {len2}).": {
   "src": [
-   "routers/site.py:412"
+   "routers/site.py:415"
   ]
  },
  "Limites por SKU removidos.": {
   "src": [
-   "routers/site.py:415"
+   "routers/site.py:418"
   ]
  },
  "Limpar": {
@@ -9366,7 +9381,7 @@
  },
  "Linhas repetidas (mesmo SKU + endereço no arquivo)": {
   "src": [
-   "templates/imports/mapping_stock.html:65"
+   "templates/imports/mapping_stock.html:67"
   ]
  },
  "Lista (m)": {
@@ -9382,8 +9397,8 @@
  },
  "Lista de compras": {
   "src": [
-   "services/site_report.py:314",
-   "services/site_report.py:555",
+   "services/site_report.py:315",
+   "services/site_report.py:562",
    "templates/site/plan.html:65"
   ]
  },
@@ -9473,7 +9488,7 @@
   "src": [
    "routers/layout.py:17",
    "routers/layout.py:239",
-   "templates/base.html:103",
+   "templates/base.html:104",
    "templates/layout/index.html:2",
    "templates/layout/index.html:27",
    "templates/layout/plan.html:24"
@@ -9482,14 +9497,14 @@
  },
  "Mapeamento de colunas": {
   "src": [
-   "templates/imports/mapping_master.html:24",
-   "templates/imports/mapping_products.html:24",
-   "templates/imports/mapping_stock.html:24"
+   "templates/imports/mapping_master.html:26",
+   "templates/imports/mapping_products.html:26",
+   "templates/imports/mapping_stock.html:26"
   ]
  },
  "Mapear colunas da planilha": {
   "src": [
-   "templates/site/mapping.html:5"
+   "templates/site/mapping.html:7"
   ]
  },
  "Mapear colunas — {name}": {
@@ -9500,7 +9515,7 @@
  },
  "Mapeie Filial, Armazém, Posição, SKU e <b>uma ou mais colunas de quantidade</b> — elas serão <b>somadas</b>.": {
   "src": [
-   "templates/imports/upload.html:40"
+   "templates/imports/upload.html:42"
   ],
   "html": true
  },
@@ -9694,7 +9709,7 @@
  "Material": {
   "src": [
    "services/site_import.py:793",
-   "services/site_report.py:348",
+   "services/site_report.py:349",
    "templates/site/project.html:50",
    "templates/site/project.html:664"
   ]
@@ -9769,7 +9784,7 @@
  },
  "Medidas:": {
   "src": [
-   "templates/base.html:402"
+   "templates/base.html:403"
   ],
   "js": true
  },
@@ -9983,13 +9998,13 @@
  },
  "Montagem": {
   "src": [
-   "services/site_report.py:329"
+   "services/site_report.py:330"
   ]
  },
  "Montagem das estantes": {
   "src": [
-   "services/site_report.py:27",
-   "services/site_report.py:579"
+   "services/site_report.py:28",
+   "services/site_report.py:586"
   ],
   "lazy": true
  },
@@ -10001,8 +10016,8 @@
  },
  "Montar": {
   "src": [
-   "services/site_report.py:238",
-   "services/site_report.py:231"
+   "services/site_report.py:239",
+   "services/site_report.py:232"
   ]
  },
  "Mostra a faixa de altura mais fácil de pegar (zona de ouro da pega) em cada estrutura.": {
@@ -10138,7 +10153,7 @@
  },
  "Mostrar fileiras": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -10150,7 +10165,7 @@
  },
  "Mostrar planta": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -10300,7 +10315,7 @@
  },
  "Mão única {h}": {
   "src": [
-   "templates/layout/plan.html:425"
+   "templates/layout/plan.html:426"
   ],
   "js": true
  },
@@ -10311,7 +10326,7 @@
  },
  "Métrico (cm, kg, m)": {
   "src": [
-   "templates/base.html:131"
+   "templates/base.html:132"
   ]
  },
  "Mín.": {
@@ -10384,8 +10399,8 @@
  },
  "Módulos de estrutura": {
   "src": [
-   "routers/site.py:167",
-   "services/site_report.py:137",
+   "routers/site.py:170",
+   "services/site_report.py:138",
    "templates/site/project.html:532"
   ]
  },
@@ -10432,12 +10447,12 @@
  },
  "Nada importado.": {
   "src": [
-   "routers/site.py:799"
+   "routers/site.py:802"
   ]
  },
  "Nada importado. ": {
   "src": [
-   "routers/site.py:798"
+   "routers/site.py:801"
   ]
  },
  "Nada é gravado até você aplicar.": {
@@ -10459,9 +10474,9 @@
  },
  "Necessárias": {
   "src": [
-   "routers/site.py:185",
+   "routers/site.py:188",
    "services/plan_export.py:129",
-   "services/plan_export.py:258",
+   "services/plan_export.py:264",
    "templates/optimization/page.html:451",
    "templates/optimization/plan.html:66",
    "templates/optimization/pool.html:165"
@@ -10632,7 +10647,7 @@
  },
  "Nenhum resultado": {
   "src": [
-   "templates/base.html:198"
+   "templates/base.html:199"
   ],
   "js": true
  },
@@ -10687,7 +10702,7 @@
  },
  "Nenhum — fileira sozinha": {
   "src": [
-   "templates/layout/plan.html:418"
+   "templates/layout/plan.html:419"
   ],
   "js": true
  },
@@ -10703,7 +10718,7 @@
  },
  "Nenhuma ação necessária.": {
   "src": [
-   "services/plan_export.py:289",
+   "services/plan_export.py:295",
    "templates/optimization/plan.html:103"
   ]
  },
@@ -10739,7 +10754,7 @@
  },
  "Nenhuma estante deste corredor/lado nos endereços.": {
   "src": [
-   "templates/layout/plan.html:397"
+   "templates/layout/plan.html:398"
   ],
   "js": true
  },
@@ -11047,8 +11062,8 @@
  },
  "Nova filial": {
   "src": [
-   "routers/site.py:106",
-   "routers/site.py:136",
+   "routers/site.py:109",
+   "routers/site.py:139",
    "templates/branches/form.html:6",
    "templates/branches/list.html:8"
   ]
@@ -11176,12 +11191,12 @@
  },
  "Não foi possível concluir a busca: {exc}": {
   "src": [
-   "routers/site.py:318"
+   "routers/site.py:321"
   ]
  },
  "Não foi possível gerar o plano.": {
   "src": [
-   "routers/site.py:449"
+   "routers/site.py:452"
   ]
  },
  "Não foi possível guardar o resultado da otimização": {
@@ -11191,12 +11206,12 @@
  },
  "Não foi possível guardar o resultado do projeto": {
   "src": [
-   "routers/site.py:204"
+   "routers/site.py:207"
   ]
  },
  "Não foi possível importar: {exc}": {
   "src": [
-   "routers/site.py:792"
+   "routers/site.py:795"
   ]
  },
  "Não foi possível iniciar a gravação.": {
@@ -11209,7 +11224,7 @@
   "src": [
    "routers/imports.py:144",
    "routers/imports.py:214",
-   "routers/site.py:744"
+   "routers/site.py:747"
   ]
  },
  "Não foi possível montar um plano com essas restrições (confira as quantidades fixas/mínimas e o tamanho do imóvel).": {
@@ -11225,7 +11240,7 @@
  },
  "Não será importado.": {
   "src": [
-   "templates/site/mapping.html:27"
+   "templates/site/mapping.html:29"
   ]
  },
  "Não usa o próprio nível: as bins ficam no nível escolhido em cada linha ou ocupam a estante de baixo para cima.": {
@@ -11264,10 +11279,10 @@
  },
  "Níveis": {
   "src": [
-   "routers/site.py:184",
+   "routers/site.py:187",
    "services/site_import.py:782",
-   "services/site_report.py:335",
-   "services/site_report.py:332",
+   "services/site_report.py:336",
+   "services/site_report.py:333",
    "templates/optimization/page.html:292",
    "templates/site/project.html:608"
   ],
@@ -11330,14 +11345,14 @@
  },
  "Níveis × bins": {
   "src": [
-   "services/site_report.py:332",
-   "services/site_report.py:580",
+   "services/site_report.py:333",
+   "services/site_report.py:587",
    "templates/site/plan.html:122"
   ]
  },
  "Níveis × vão": {
   "src": [
-   "services/site_report.py:580",
+   "services/site_report.py:587",
    "templates/site/plan.html:122",
    "templates/site/project.html:235"
   ]
@@ -11349,7 +11364,7 @@
    "services/field_help.py:32",
    "services/level_service.py:309",
    "services/master_importer.py:65",
-   "services/site_report.py:336"
+   "services/site_report.py:337"
   ],
   "lazy": true,
   "help": true,
@@ -11531,17 +11546,17 @@
  },
  "O arquivo não possui linhas.": {
   "src": [
-   "services/file_reader.py:213"
+   "services/file_reader.py:217"
   ]
  },
  "O arquivo não tem linhas.": {
   "src": [
-   "routers/site.py:747"
+   "routers/site.py:750"
   ]
  },
  "O arquivo é": {
   "src": [
-   "templates/imports/mapping_history.html:20"
+   "templates/imports/mapping_history.html:22"
   ]
  },
  "O cadastro acima é o mesmo em todas as filiais. Aqui fica o que muda em cada uma: o <b>endereço padrão</b> (onde o produto fica na filial; com saldo, vira o endereço de maior saldo se o escolhido não tiver saldo) e os <b>níveis de estoque</b> (min e max level, em unidades, usados na otimização). Linha sem endereço e sem níveis = sem política nessa filial.": {
@@ -11646,12 +11661,12 @@
  },
  "O plano não tem estruturas para mostrar. Rode a otimização.": {
   "src": [
-   "routers/site.py:500"
+   "routers/site.py:503"
   ]
  },
  "O plano não é válido para gerar o cadastro: ": {
   "src": [
-   "routers/site.py:671"
+   "routers/site.py:674"
   ]
  },
  "O plano reserva espaço para o planejado; as bins recebem só o saldo físico, o resto fica como reserva.": {
@@ -11727,7 +11742,7 @@
  },
  "O saldo do produto no endereço é <b>sobreposto</b> com a quantidade do arquivo.": {
   "src": [
-   "templates/imports/upload.html:42"
+   "templates/imports/upload.html:44"
   ],
   "html": true
  },
@@ -11748,7 +11763,7 @@
  },
  "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a aba Pedidos — se ela já foi importada antes desta versão, importe de novo.": {
   "src": [
-   "routers/site.py:550"
+   "routers/site.py:553"
   ]
  },
  "O sistema monta a planta, escolhe as bins de cada SKU, calcula quantos módulos de cada estrutura são necessários e gera os endereços.": {
@@ -11832,8 +11847,8 @@
  "Observação": {
   "src": [
    "services/action_plan.py:305",
-   "services/site_report.py:349",
-   "services/site_report.py:597",
+   "services/site_report.py:350",
+   "services/site_report.py:604",
    "templates/levels/index.html:121",
    "templates/site/project.html:664"
   ]
@@ -11857,15 +11872,15 @@
    "services/branch_layout.py:958",
    "services/branch_layout.py:250",
    "templates/layout/plan.html:60",
-   "templates/layout/plan.html:406",
-   "templates/layout/plan.html:510"
+   "templates/layout/plan.html:407",
+   "templates/layout/plan.html:512"
   ],
   "js": true
  },
  "Obstáculo {i}": {
   "src": [
    "services/site_service.py:223",
-   "templates/site/_plan_editor.html:72"
+   "templates/site/_plan_editor.html:75"
   ],
   "js": true
  },
@@ -11876,7 +11891,7 @@
  },
  "Obstáculo {n}": {
   "src": [
-   "templates/site/_plan_editor.html:103"
+   "templates/site/_plan_editor.html:106"
   ],
   "js": true
  },
@@ -11914,7 +11929,7 @@
  },
  "Ocultar": {
   "src": [
-   "templates/base.html:392"
+   "templates/base.html:393"
   ],
   "js": true
  },
@@ -11932,7 +11947,7 @@
  },
  "Ocup. bins": {
   "src": [
-   "services/site_report.py:588",
+   "services/site_report.py:595",
    "templates/site/plan.html:134"
   ]
  },
@@ -11967,8 +11982,8 @@
   "src": [
    "routers/optimization.py:407",
    "routers/optimization.py:848",
-   "routers/site.py:174",
-   "services/site_report.py:145",
+   "routers/site.py:177",
+   "services/site_report.py:146",
    "templates/site/project.html:537",
    "templates/site/project.html:632"
   ],
@@ -11976,9 +11991,9 @@
  },
  "Ocupação das bins (%)": {
   "src": [
-   "routers/site.py:186",
-   "services/site_report.py:342",
-   "services/site_report.py:348",
+   "routers/site.py:189",
+   "services/site_report.py:343",
+   "services/site_report.py:349",
    "templates/site/view3d.html:40"
   ],
   "lazy": true
@@ -12001,8 +12016,8 @@
  },
  "Ocupação dos níveis": {
   "src": [
-   "routers/site.py:173",
-   "services/site_report.py:143",
+   "routers/site.py:176",
+   "services/site_report.py:144",
    "templates/site/project.html:536"
   ]
  },
@@ -12024,8 +12039,8 @@
  },
  "Onde": {
   "src": [
-   "services/site_report.py:322",
-   "services/site_report.py:570",
+   "services/site_report.py:323",
+   "services/site_report.py:577",
    "templates/site/plan.html:96",
    "templates/site/project.html:169"
   ]
@@ -12040,7 +12055,7 @@
  "Onde / origem": {
   "src": [
    "services/plan_export.py:102",
-   "services/plan_export.py:279",
+   "services/plan_export.py:285",
    "templates/optimization/plan.html:93"
   ]
  },
@@ -12093,9 +12108,9 @@
  },
  "Opções": {
   "src": [
-   "templates/imports/mapping_master.html:42",
-   "templates/imports/mapping_products.html:42",
-   "templates/imports/mapping_stock.html:53"
+   "templates/imports/mapping_master.html:44",
+   "templates/imports/mapping_products.html:44",
+   "templates/imports/mapping_stock.html:55"
   ]
  },
  "Ordenados pela caminhada na lista (maiores primeiro)": {
@@ -12231,7 +12246,7 @@
  "Otimização de bins": {
   "src": [
    "routers/optimization.py:30",
-   "templates/base.html:104",
+   "templates/base.html:105",
    "templates/optimization/index.html:3",
    "templates/optimization/index.html:39",
    "templates/optimization/page.html:55",
@@ -12259,9 +12274,9 @@
  },
  "Outro arquivo": {
   "src": [
-   "templates/imports/mapping_master.html:8",
-   "templates/imports/mapping_products.html:8",
-   "templates/imports/mapping_stock.html:8"
+   "templates/imports/mapping_master.html:10",
+   "templates/imports/mapping_products.html:10",
+   "templates/imports/mapping_stock.html:10"
   ]
  },
  "Outros níveis da estante": {
@@ -12278,7 +12293,7 @@
  "Painel": {
   "src": [
    "routers/dashboard.py:15",
-   "templates/base.html:86",
+   "templates/base.html:87",
    "templates/dashboard.html:2",
    "templates/dashboard.html:5"
   ],
@@ -12411,7 +12426,7 @@
   "src": [
    "routers/runs.py:105",
    "services/plan_export.py:59",
-   "services/plan_export.py:217",
+   "services/plan_export.py:223",
    "templates/optimization/plan.html:43",
    "templates/runs/detail.html:36"
   ]
@@ -12429,9 +12444,9 @@
  "Passo a passo": {
   "src": [
    "services/plan_export.py:101",
-   "services/plan_export.py:277",
-   "services/site_report.py:321",
-   "services/site_report.py:566",
+   "services/plan_export.py:283",
+   "services/site_report.py:322",
+   "services/site_report.py:573",
    "templates/optimization/plan.html:88",
    "templates/site/plan.html:85"
   ]
@@ -12512,7 +12527,7 @@
  },
  "Pedidos da filial (pedido, SKU, quantidade, data) ou a saída por SKU. Você confere a aba e as colunas antes de importar; fica só o resumo, usado na posição pela saída e no simulador de trajeto.": {
   "src": [
-   "templates/imports/index.html:43"
+   "templates/imports/index.html:45"
   ]
  },
  "Pedidos juntos": {
@@ -12562,7 +12577,7 @@
  },
  "Pendências": {
   "src": [
-   "services/site_report.py:30"
+   "services/site_report.py:31"
   ],
   "lazy": true
  },
@@ -12599,7 +12614,7 @@
  "Permitir quantidades negativas": {
   "src": [
    "services/field_help.py:277",
-   "templates/imports/mapping_stock.html:81"
+   "templates/imports/mapping_stock.html:83"
   ],
   "help": true
  },
@@ -12622,8 +12637,8 @@
  "Peso (kg)": {
   "src": [
    "services/site_import.py:793",
-   "services/site_report.py:343",
-   "services/site_report.py:588",
+   "services/site_report.py:344",
+   "services/site_report.py:595",
    "templates/site/project.html:684"
   ]
  },
@@ -12693,7 +12708,7 @@
  },
  "Pilar": {
   "src": [
-   "templates/layout/plan.html:566"
+   "templates/layout/plan.html:568"
   ],
   "js": true
  },
@@ -12772,12 +12787,12 @@
  },
  "Plano de implantação — {project_name}": {
   "src": [
-   "services/site_report.py:134"
+   "services/site_report.py:135"
   ]
  },
  "Plano detalhado": {
   "src": [
-   "routers/site.py:482",
+   "routers/site.py:485",
    "templates/site/project.html:479"
   ]
  },
@@ -12794,7 +12809,7 @@
  },
  "Planta (vista de cima)": {
   "src": [
-   "services/site_report.py:549",
+   "services/site_report.py:556",
    "templates/site/plan.html:58",
    "templates/site/project.html:597"
   ]
@@ -12814,7 +12829,7 @@
  },
  "Planta da filial gerada a partir do plano ({layout_rows} fileiras)": {
   "src": [
-   "routers/site.py:698"
+   "routers/site.py:701"
   ]
  },
  "Planta da filial — {code}": {
@@ -12835,7 +12850,7 @@
  },
  "Planta salva": {
   "src": [
-   "templates/layout/plan.html:593"
+   "templates/layout/plan.html:595"
   ],
   "js": true
  },
@@ -12890,7 +12905,7 @@
  },
  "Ponto de referência: {label}": {
   "src": [
-   "services/site_planner.py:2151"
+   "services/site_planner.py:2157"
   ]
  },
  "Pool de bins": {
@@ -12931,12 +12946,12 @@
  },
  "Por corredor/estante/nível (aceita faixas): quantas bins de cada tipo cabem e o vão (cm).": {
   "src": [
-   "templates/imports/index.html:12"
+   "templates/imports/index.html:14"
   ]
  },
  "Por dentro": {
   "src": [
-   "templates/base.html:404"
+   "templates/base.html:405"
   ],
   "js": true
  },
@@ -12965,7 +12980,7 @@
  },
  "Por fora": {
   "src": [
-   "templates/base.html:403"
+   "templates/base.html:404"
   ],
   "js": true
  },
@@ -13100,7 +13115,7 @@
  },
  "Posição em relação ao corredor": {
   "src": [
-   "services/site_report.py:330"
+   "services/site_report.py:331"
   ]
  },
  "Posição fixa (X/Y)": {
@@ -13155,7 +13170,7 @@
  },
  "Prioridade dos critérios": {
   "src": [
-   "services/site_report.py:121"
+   "services/site_report.py:122"
   ]
  },
  "Priorizar os SKUs que mais saem": {
@@ -13165,14 +13180,14 @@
  },
  "Processamento em lotes de 500 linhas (memória constante mesmo em arquivos grandes).": {
   "src": [
-   "templates/imports/upload.html:36"
+   "templates/imports/upload.html:38"
   ]
  },
  "Processar importação": {
   "src": [
-   "templates/imports/mapping_master.html:87",
-   "templates/imports/mapping_products.html:77",
-   "templates/imports/mapping_stock.html:85"
+   "templates/imports/mapping_master.html:89",
+   "templates/imports/mapping_products.html:79",
+   "templates/imports/mapping_stock.html:87"
   ]
  },
  "Procura no título e na observação dos resultados.": {
@@ -13231,12 +13246,12 @@
  },
  "Produto": {
   "src": [
-   "routers/site.py:187",
+   "routers/site.py:190",
    "services/site_import.py:195",
    "services/site_import.py:793",
-   "services/site_report.py:342",
-   "services/site_report.py:348",
-   "services/site_report.py:588"
+   "services/site_report.py:343",
+   "services/site_report.py:349",
+   "services/site_report.py:595"
   ],
   "lazy": true
  },
@@ -13253,7 +13268,7 @@
  },
  "Produto com saldo é mantido. Só roda se <b>nenhuma linha</b> do arquivo der erro (senão nada é excluído).": {
   "src": [
-   "templates/imports/mapping_products.html:71"
+   "templates/imports/mapping_products.html:73"
   ],
   "html": true
  },
@@ -13298,7 +13313,7 @@
  "Produtos": {
   "src": [
    "routers/products.py:32",
-   "templates/base.html:98",
+   "templates/base.html:99",
    "templates/dashboard.html:19",
    "templates/products/detail.html:8",
    "templates/products/list.html:3",
@@ -13308,7 +13323,7 @@
  },
  "Produtos (CSV/Excel)": {
   "src": [
-   "templates/base.html:117"
+   "templates/base.html:118"
   ]
  },
  "Produtos atualizados": {
@@ -13329,7 +13344,7 @@
  },
  "Produtos e estoque": {
   "src": [
-   "templates/imports/index.html:22"
+   "templates/imports/index.html:24"
   ]
  },
  "Produtos excluídos": {
@@ -13344,7 +13359,7 @@
  },
  "Produtos: {products_created} cadastrado(s)": {
   "src": [
-   "routers/site.py:690"
+   "routers/site.py:693"
   ]
  },
  "Prof.": {
@@ -13363,7 +13378,7 @@
    "services/field_help.py:366",
    "services/site_import.py:186",
    "services/site_import.py:782",
-   "services/site_report.py:331"
+   "services/site_report.py:332"
   ],
   "help": true,
   "lazy": true
@@ -13401,7 +13416,7 @@
  },
  "Projeto criado. Informe as dimensões do imóvel e escolha as estruturas.": {
   "src": [
-   "routers/site.py:139"
+   "routers/site.py:142"
   ]
  },
  "Projeto cujo plano vira a planta desta filial (os endereços precisam ter os mesmos códigos).": {
@@ -13432,34 +13447,34 @@
  },
  "Projeto duplicado: compare cenários alterando a cópia.": {
   "src": [
-   "routers/site.py:431"
+   "routers/site.py:434"
   ]
  },
  "Projeto excluído.": {
   "src": [
-   "routers/site.py:440"
+   "routers/site.py:443"
   ]
  },
  "Projeto não encontrado.": {
   "src": [
    "routers/layout.py:162",
-   "routers/site.py:230",
-   "routers/site.py:244",
-   "routers/site.py:344",
-   "routers/site.py:354",
-   "routers/site.py:397"
+   "routers/site.py:233",
+   "routers/site.py:247",
+   "routers/site.py:347",
+   "routers/site.py:357",
+   "routers/site.py:400"
   ]
  },
  "Projeto salvo.": {
   "src": [
-   "routers/site.py:258"
+   "routers/site.py:261"
   ]
  },
  "Projeto {name}": {
   "src": [
-   "routers/site.py:538",
-   "routers/site.py:571",
-   "routers/site.py:637"
+   "routers/site.py:541",
+   "routers/site.py:574",
+   "routers/site.py:640"
   ]
  },
  "Projetos": {
@@ -13481,14 +13496,14 @@
  },
  "Proposta automática (ainda não salva)": {
   "src": [
-   "templates/layout/plan.html:593"
+   "templates/layout/plan.html:595"
   ],
   "js": true
  },
  "Providenciar": {
   "src": [
    "services/action_plan.py:290",
-   "services/site_report.py:222"
+   "services/site_report.py:223"
   ]
  },
  "Providenciar bins": {
@@ -13519,7 +13534,7 @@
  },
  "Próximo: {steps}": {
   "src": [
-   "templates/base.html:365"
+   "templates/base.html:366"
   ],
   "js": true
  },
@@ -13536,8 +13551,8 @@
  },
  "Página {page}": {
   "src": [
-   "services/plan_export.py:194",
-   "services/site_report.py:511"
+   "services/plan_export.py:200",
+   "services/site_report.py:518"
   ]
  },
  "Pé-direito útil (m)": {
@@ -13697,7 +13712,7 @@
  "Quantidade": {
   "src": [
    "routers/optimization.py:875",
-   "routers/site.py:187",
+   "routers/site.py:190",
    "routers/stock.py:120",
    "routers/stock.py:151",
    "services/action_plan.py:355",
@@ -13878,7 +13893,7 @@
  },
  "Quanto posso crescer?": {
   "src": [
-   "routers/site.py:289",
+   "routers/site.py:292",
    "templates/site/growth.html:6",
    "templates/site/project.html:478"
   ],
@@ -14019,7 +14034,7 @@
  },
  "Referência · X {fmt} · Y {fmt2}": {
   "src": [
-   "templates/site/_plan_editor.html:247"
+   "templates/site/_plan_editor.html:250"
   ],
   "js": true
  },
@@ -14053,8 +14068,8 @@
  },
  "Regras e critérios": {
   "src": [
-   "services/site_report.py:297",
-   "services/site_report.py:530",
+   "services/site_report.py:298",
+   "services/site_report.py:537",
    "templates/site/plan.html:42"
   ]
  },
@@ -14188,13 +14203,13 @@
  },
  "Reservada · {m} m": {
   "src": [
-   "templates/site/_plan_editor.html:186"
+   "templates/site/_plan_editor.html:189"
   ],
   "js": true
  },
  "Resolver": {
   "src": [
-   "services/site_report.py:253"
+   "services/site_report.py:254"
   ]
  },
  "Respeitar peso (bin e carga do nível)": {
@@ -14294,9 +14309,9 @@
  "Resumo": {
   "src": [
    "services/plan_export.py:49",
-   "services/site_report.py:293",
+   "services/site_report.py:294",
    "services/slotting.py:513",
-   "templates/base.html:392"
+   "templates/base.html:393"
   ],
   "js": true
  },
@@ -14333,7 +14348,7 @@
  },
  "Rode a otimização primeiro.": {
   "src": [
-   "routers/site.py:554"
+   "routers/site.py:557"
   ]
  },
  "Rota": {
@@ -14367,7 +14382,7 @@
  },
  "Rotação / tipo único / peso": {
   "src": [
-   "services/site_report.py:126"
+   "services/site_report.py:127"
   ]
  },
  "Rotação das unidades": {
@@ -14542,7 +14557,7 @@
  },
  "SKUs do arquivo removidos; a demanda volta a vir do cadastro.": {
   "src": [
-   "routers/site.py:812"
+   "routers/site.py:815"
   ]
  },
  "SKUs na mesma bin": {
@@ -14553,7 +14568,7 @@
  },
  "SKUs não alocados": {
   "src": [
-   "services/site_report.py:596"
+   "services/site_report.py:603"
   ]
  },
  "SKUs que costumam sair no mesmo pedido ficam em endereços vizinhos.": {
@@ -14579,7 +14594,7 @@
  },
  "SKUs: escolha ao menos uma coluna de quantidade (Saldo, Min level ou Max level).": {
   "src": [
-   "templates/site/mapping.html:125"
+   "templates/site/mapping.html:128"
   ],
   "js": true
  },
@@ -14683,7 +14698,7 @@
  },
  "Saldos": {
   "src": [
-   "templates/base.html:105",
+   "templates/base.html:106",
    "templates/stock/list.html:3"
   ]
  },
@@ -14695,7 +14710,7 @@
  },
  "Saldos de estoque (CSV/Excel)": {
   "src": [
-   "templates/base.html:118"
+   "templates/base.html:119"
   ]
  },
  "Saldos gravados": {
@@ -14761,7 +14776,7 @@
  },
  "Saída": {
   "src": [
-   "routers/site.py:188",
+   "routers/site.py:191",
    "templates/optimization/page.html:411",
    "templates/site/project.html:664"
   ],
@@ -14782,18 +14797,18 @@
  },
  "Saída (período)": {
   "src": [
-   "services/site_report.py:348"
+   "services/site_report.py:349"
   ]
  },
  "Saída e volta: {label}": {
   "src": [
-   "routers/site.py:599"
+   "routers/site.py:602"
   ]
  },
  "Saídas na zona de ouro da caminhada": {
   "src": [
    "routers/optimization.py:318",
-   "routers/site.py:179",
+   "routers/site.py:182",
    "templates/optimization/page.html:403",
    "templates/site/project.html:573"
   ]
@@ -14801,7 +14816,7 @@
  "Saídas na zona de ouro da pega": {
   "src": [
    "routers/optimization.py:317",
-   "routers/site.py:178",
+   "routers/site.py:181",
    "templates/optimization/page.html:402",
    "templates/site/project.html:568"
   ]
@@ -14876,7 +14891,7 @@
  },
  "Selecionar/mover": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
@@ -14933,7 +14948,7 @@
  "Selecione ao menos uma coluna de quantidade.": {
   "src": [
    "services/stock_importer.py:69",
-   "templates/imports/mapping_stock.html:107"
+   "templates/imports/mapping_stock.html:110"
   ],
   "js": true
  },
@@ -15053,13 +15068,13 @@
  },
  "Sem linhas.": {
   "src": [
-   "services/plan_export.py:313",
+   "services/plan_export.py:319",
    "templates/optimization/plan.html:143"
   ]
  },
  "Sem medidas": {
   "src": [
-   "templates/base.html:403"
+   "templates/base.html:404"
   ],
   "js": true
  },
@@ -15137,7 +15152,7 @@
  },
  "Sem vizinho de frente: o corredor fica a 1 m da face": {
   "src": [
-   "templates/layout/plan.html:423"
+   "templates/layout/plan.html:424"
   ],
   "js": true
  },
@@ -15185,7 +15200,7 @@
  },
  "Separar {pick} em nova fileira": {
   "src": [
-   "templates/layout/plan.html:402"
+   "templates/layout/plan.html:403"
   ],
   "js": true
  },
@@ -15203,14 +15218,14 @@
  },
  "Setor em posição fixa (para o sistema escolher o lugar, informe só a área na tabela de setores)": {
   "src": [
-   "templates/site/_plan_editor.html:398"
+   "templates/site/_plan_editor.html:401"
   ],
   "js": true
  },
  "Setor {i}": {
   "src": [
    "services/site_service.py:237",
-   "templates/site/_plan_editor.html:76"
+   "templates/site/_plan_editor.html:79"
   ],
   "js": true
  },
@@ -15228,7 +15243,7 @@
  },
  "Setor {n}": {
   "src": [
-   "templates/site/_plan_editor.html:103"
+   "templates/site/_plan_editor.html:106"
   ],
   "js": true
  },
@@ -15272,7 +15287,7 @@
  "Simulador de trajeto": {
   "src": [
    "routers/layout.py:241",
-   "routers/site.py:483",
+   "routers/site.py:486",
    "templates/layout/plan.html:26",
    "templates/site/project.html:553",
    "templates/slotting/routes.html:6"
@@ -15301,7 +15316,7 @@
  },
  "Sincroniza o saldo físico por Filial × Armazém × Posição × SKU. Várias colunas de quantidade podem ser somadas. Cria filiais, armazéns e posições inexistentes.": {
   "src": [
-   "templates/imports/index.html:35"
+   "templates/imports/index.html:37"
   ]
  },
  "Sincronizar (excluir o que não veio)": {
@@ -15312,8 +15327,8 @@
  },
  "Sincronizar: o que não está no arquivo (e não está em uso) será EXCLUÍDO. Continuar?": {
   "src": [
-   "templates/imports/mapping_master.html:86",
-   "templates/imports/mapping_products.html:76"
+   "templates/imports/mapping_master.html:88",
+   "templates/imports/mapping_products.html:78"
   ],
   "js": true
  },
@@ -15331,7 +15346,7 @@
   "src": [
    "routers/optimization.py:447",
    "routers/optimization.py:874",
-   "routers/site.py:187",
+   "routers/site.py:190",
    "services/action_plan.py:181",
    "services/field_help.py:320",
    "services/field_help.py:334"
@@ -15361,7 +15376,7 @@
  },
  "Solver": {
   "src": [
-   "services/site_report.py:132"
+   "services/site_report.py:133"
   ]
  },
  "Solver:": {
@@ -15377,7 +15392,7 @@
  },
  "Somar as linhas": {
   "src": [
-   "templates/imports/mapping_stock.html:68"
+   "templates/imports/mapping_stock.html:70"
   ]
  },
  "Somar, substituir, remover um tipo ou limpar as bins dos endereços escolhidos.": {
@@ -15388,7 +15403,7 @@
  },
  "Somente a coluna <b>SKU</b> é obrigatória; as demais são opcionais e mapeadas na próxima etapa.": {
   "src": [
-   "templates/imports/upload.html:33"
+   "templates/imports/upload.html:35"
   ],
   "html": true
  },
@@ -15409,13 +15424,13 @@
  },
  "Substituir a planta em edição pela do projeto?": {
   "src": [
-   "templates/layout/plan.html:614"
+   "templates/layout/plan.html:616"
   ],
   "js": true
  },
  "Substituir a planta em edição pela gerada automaticamente?": {
   "src": [
-   "templates/layout/plan.html:608"
+   "templates/layout/plan.html:610"
   ],
   "js": true
  },
@@ -15439,7 +15454,7 @@
  },
  "Substituir o endereço padrão dos produtos que já têm um": {
   "src": [
-   "templates/imports/mapping_products.html:64"
+   "templates/imports/mapping_products.html:66"
   ]
  },
  "Substituir posições desocupadas": {
@@ -15494,7 +15509,7 @@
  },
  "Sugestão de redução da demanda": {
   "src": [
-   "routers/site.py:288",
+   "routers/site.py:291",
    "templates/site/suggest.html:7"
   ],
   "lazy": true
@@ -15564,7 +15579,7 @@
  },
  "Só o tamanho do imóvel (ex.: 40 × 25 m)": {
   "src": [
-   "templates/base.html:403"
+   "templates/base.html:404"
   ],
   "js": true
  },
@@ -15900,7 +15915,7 @@
  },
  "Tipo de bin": {
   "src": [
-   "routers/site.py:185",
+   "routers/site.py:188",
    "services/field_help.py:302",
    "services/field_help.py:312",
    "services/field_help.py:338",
@@ -16053,7 +16068,7 @@
  "Tipos de Bin": {
   "src": [
    "routers/bin_types.py:27",
-   "templates/base.html:94",
+   "templates/base.html:95",
    "templates/bin_types/list.html:3",
    "templates/bin_types/list.html:6",
    "templates/dashboard.html:18"
@@ -16062,7 +16077,7 @@
  },
  "Tipos de bin": {
   "src": [
-   "templates/base.html:113"
+   "templates/base.html:114"
   ]
  },
  "Tipos de bin no plano": {
@@ -16132,7 +16147,7 @@
  },
  "Todas as estantes estão na planta.": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -16146,7 +16161,7 @@
  },
  "Todas as importações": {
   "src": [
-   "templates/base.html:109"
+   "templates/base.html:110"
   ]
  },
  "Todos": {
@@ -16200,8 +16215,8 @@
  },
  "Total": {
   "src": [
-   "services/site_report.py:560",
-   "services/site_report.py:317",
+   "services/site_report.py:567",
+   "services/site_report.py:318",
    "templates/site/plan.html:67",
    "templates/site/plan.html:77"
   ]
@@ -16392,7 +16407,7 @@
  },
  "Uma linha por item de pedido (pedido, SKU, quantidade). Serve para saber o que sai mais (linhas de pedido) e o que sai junto. Só o resumo fica no projeto.": {
   "src": [
-   "templates/site/mapping.html:40"
+   "templates/site/mapping.html:42"
   ]
  },
  "Unid.": {
@@ -16409,8 +16424,8 @@
  },
  "Unidades": {
   "src": [
-   "services/site_report.py:342",
-   "services/site_report.py:588",
+   "services/site_report.py:343",
+   "services/site_report.py:595",
    "services/site_service.py:78",
    "services/slotting.py:499",
    "templates/optimization/page.html:225",
@@ -16420,7 +16435,7 @@
  },
  "Unidades de medida": {
   "src": [
-   "templates/base.html:129"
+   "templates/base.html:130"
   ]
  },
  "Unidades de outros itens desalojadas": {
@@ -16475,7 +16490,7 @@
  "Usadas no plano": {
   "src": [
    "services/plan_export.py:129",
-   "services/plan_export.py:259",
+   "services/plan_export.py:265",
    "templates/optimization/page.html:451",
    "templates/optimization/plan.html:66",
    "templates/optimization/pool.html:165"
@@ -16551,7 +16566,7 @@
  },
  "Uso da frente do nível": {
   "src": [
-   "services/site_report.py:124"
+   "services/site_report.py:125"
   ]
  },
  "Uso da frente do nível (%)": {
@@ -16563,8 +16578,8 @@
  },
  "Uso das fileiras": {
   "src": [
-   "routers/site.py:175",
-   "services/site_report.py:153",
+   "routers/site.py:178",
+   "services/site_report.py:154",
    "templates/site/project.html:538"
   ]
  },
@@ -16617,7 +16632,7 @@
  "Variação": {
   "src": [
    "services/plan_export.py:64",
-   "services/plan_export.py:227"
+   "services/plan_export.py:233"
   ]
  },
  "Variação %": {
@@ -16752,7 +16767,7 @@
  },
  "Visual por endereço (antes × depois)": {
   "src": [
-   "services/plan_export.py:294"
+   "services/plan_export.py:300"
   ]
  },
  "Visual por endereço — antes × depois": {
@@ -16789,9 +16804,9 @@
  },
  "Voltar ao projeto": {
   "src": [
-   "routers/site.py:481",
+   "routers/site.py:484",
    "templates/site/growth.html:9",
-   "templates/site/mapping.html:6",
+   "templates/site/mapping.html:8",
    "templates/site/plan.html:26",
    "templates/site/running.html:9",
    "templates/site/suggest.html:10"
@@ -16889,7 +16904,7 @@
  "Vão (cm)": {
   "src": [
    "services/master_importer.py:80",
-   "services/site_report.py:332"
+   "services/site_report.py:333"
   ],
   "lazy": true
  },
@@ -17028,7 +17043,7 @@
  },
  "X = ao longo do comprimento, a partir da parede da esquerda da planta; Y = ao longo da largura, a partir da parede de cima (canto do módulo).": {
   "src": [
-   "services/site_report.py:585"
+   "services/site_report.py:592"
   ]
  },
  "X da fileira (m)": {
@@ -17058,7 +17073,7 @@
  },
  "X: ao longo do comprimento (m)": {
   "src": [
-   "services/site_report.py:331"
+   "services/site_report.py:332"
   ]
  },
  "Y da fileira (m)": {
@@ -17088,12 +17103,12 @@
  },
  "Y: ao longo da largura (m)": {
   "src": [
-   "services/site_report.py:331"
+   "services/site_report.py:332"
   ]
  },
  "Zerar saldos <b>ausentes</b> no arquivo (dentro das filiais/armazéns do arquivo) — sincronização completa. Só roda se <b>nenhuma linha</b> do arquivo der erro.": {
   "src": [
-   "templates/imports/mapping_stock.html:77"
+   "templates/imports/mapping_stock.html:79"
   ],
   "html": true
  },
@@ -17111,15 +17126,15 @@
  },
  "Zona": {
   "src": [
-   "services/site_report.py:330",
+   "services/site_report.py:331",
    "templates/site/project.html:206"
   ]
  },
  "Zona de ouro": {
   "src": [
    "services/field_help.py:44",
-   "services/site_report.py:337",
-   "services/site_report.py:343",
+   "services/site_report.py:338",
+   "services/site_report.py:344",
    "templates/site/plan.html:144",
    "templates/site/view3d.html:61",
    "templates/site/view3d.html:393"
@@ -17147,7 +17162,7 @@
  },
  "Zona de ouro da caminhada: até {m} m da referência": {
   "src": [
-   "services/site_planner.py:2149"
+   "services/site_planner.py:2155"
   ]
  },
  "Zona de ouro da pega": {
@@ -17227,14 +17242,14 @@
  "Zona {i}": {
   "src": [
    "services/site_service.py:209",
-   "templates/site/_plan_editor.html:54",
+   "templates/site/_plan_editor.html:57",
    "templates/site/project.html:708"
   ],
   "js": true
  },
  "Zona {n}": {
   "src": [
-   "templates/site/_plan_editor.html:103"
+   "templates/site/_plan_editor.html:106"
   ],
   "js": true
  },
@@ -17250,7 +17265,7 @@
   "src": [
    "services/site_import.py:182",
    "services/site_import.py:753",
-   "services/site_report.py:112"
+   "services/site_report.py:113"
   ],
   "lazy": true
  },
@@ -17388,7 +17403,7 @@
  },
  "a área livre": {
   "src": [
-   "services/site_report.py:183"
+   "services/site_report.py:184"
   ]
  },
  "aba da planilha": {
@@ -17399,7 +17414,7 @@
  },
  "acima da bin {top_gap_cm} cm · entre bins {side_gap_cm} cm": {
   "src": [
-   "services/site_report.py:125"
+   "services/site_report.py:126"
   ]
  },
  "alfabética": {
@@ -17432,7 +17447,7 @@
  },
  "altura na vertical": {
   "src": [
-   "services/site_report.py:126"
+   "services/site_report.py:127"
   ]
  },
  "altura total": {
@@ -17440,6 +17455,11 @@
    "static/field_help.js:73"
   ],
   "js": true
+ },
+ "altura {a} cm > {b} cm": {
+  "src": [
+   "services/bin_optimizer.py:443"
+  ]
  },
  "antes": {
   "src": [
@@ -17462,7 +17482,7 @@
  },
  "ao acaso {random_dist} m · até {ref}": {
   "src": [
-   "services/site_report.py:151"
+   "services/site_report.py:152"
   ]
  },
  "ao longo do comprimento": {
@@ -17608,7 +17628,7 @@
  },
  "cabeceira (girada 90°, de frente para {faces})": {
   "src": [
-   "services/site_report.py:180"
+   "services/site_report.py:181"
   ]
  },
  "cabeceiras": {
@@ -17690,12 +17710,12 @@
  },
  "combina tipos": {
   "src": [
-   "services/site_report.py:127"
+   "services/site_report.py:128"
   ]
  },
  "começa com": {
   "src": [
-   "routers/common.py:163"
+   "routers/common.py:170"
   ],
   "lazy": true
  },
@@ -17715,6 +17735,13 @@
    "services/action_plan.py:343"
   ]
  },
+ "comprimento": {
+  "src": [
+   "services/site_report.py:425",
+   "services/site_report.py:110",
+   "services/site_report.py:114"
+  ]
+ },
  "conflito com {address}: {message}": {
   "src": [
    "services/batch_generator.py:451"
@@ -17722,7 +17749,7 @@
  },
  "contém": {
   "src": [
-   "routers/common.py:163"
+   "routers/common.py:170"
   ],
   "lazy": true
  },
@@ -17755,7 +17782,7 @@
  },
  "de frente para {get}": {
   "src": [
-   "services/site_report.py:183"
+   "services/site_report.py:184"
   ]
  },
  "de {bins} bins no pool": {
@@ -17812,7 +17839,7 @@
  },
  "dupla": {
   "src": [
-   "services/site_report.py:230"
+   "services/site_report.py:231"
   ]
  },
  "dígitos: 1 → 01": {
@@ -17991,6 +18018,12 @@
    "templates/settings.html:21"
   ]
  },
+ "estruturas {a} + bins {b}": {
+  "src": [
+   "services/site_report.py:140",
+   "templates/site/project.html:533"
+  ]
+ },
  "está em {v} estante(s)": {
   "src": [
    "services/delete_service.py:173"
@@ -18021,7 +18054,7 @@
    "services/branch_layout.py:205",
    "services/branch_layout.py:254",
    "services/branch_layout.py:962",
-   "templates/layout/plan.html:570",
+   "templates/layout/plan.html:572",
    "static/field_help.js:166",
    "static/field_help.js:267"
   ],
@@ -18047,8 +18080,8 @@
  },
  "fileiras ao longo do {v}": {
   "src": [
-   "services/site_planner.py:2200",
-   "services/site_report.py:422"
+   "services/site_planner.py:2206",
+   "services/site_report.py:425"
   ]
  },
  "filtra a lista pela opção": {
@@ -18129,6 +18162,11 @@
   ],
   "js": true
  },
+ "frente {f} m · fundo {b} m": {
+  "src": [
+   "services/site_report.py:106"
+  ]
+ },
  "genérico": {
   "src": [
    "templates/locations/list.html:74"
@@ -18142,8 +18180,8 @@
  },
  "gerado em {created}": {
   "src": [
-   "services/plan_export.py:193",
-   "services/site_report.py:510"
+   "services/plan_export.py:199",
+   "services/site_report.py:517"
   ]
  },
  "heurística (escolhida)": {
@@ -18193,13 +18231,13 @@
  },
  "igual a": {
   "src": [
-   "routers/common.py:163"
+   "routers/common.py:170"
   ],
   "lazy": true
  },
  "imóvel": {
   "src": [
-   "routers/site.py:189"
+   "routers/site.py:192"
   ],
   "lazy": true
  },
@@ -18247,7 +18285,14 @@
  },
  "lado {s_txt} do corredor {aisle}": {
   "src": [
-   "services/site_report.py:237"
+   "services/site_report.py:238"
+  ]
+ },
+ "largura": {
+  "src": [
+   "services/site_report.py:425",
+   "services/site_report.py:110",
+   "services/site_report.py:114"
   ]
  },
  "largura máx.": {
@@ -18255,6 +18300,11 @@
    "static/field_help.js:250"
   ],
   "js": true
+ },
+ "largura {a} cm > {b} cm": {
+  "src": [
+   "services/bin_optimizer.py:441"
+  ]
  },
  "letra por corredor ou por rua": {
   "src": [
@@ -18488,7 +18538,7 @@
  "nenhuma bin": {
   "src": [
    "services/action_plan.py:100",
-   "services/plan_export.py:327",
+   "services/plan_export.py:335",
    "templates/optimization/index.html:8",
    "templates/optimization/page.html:9",
    "templates/optimization/plan.html:121"
@@ -18566,14 +18616,14 @@
  },
  "não usada": {
   "src": [
-   "templates/site/mapping.html:104"
+   "templates/site/mapping.html:107"
   ],
   "js": true
  },
  "não usar": {
   "src": [
-   "services/site_report.py:107",
-   "templates/imports/mapping_history.html:66"
+   "services/site_report.py:108",
+   "templates/imports/mapping_history.html:69"
   ],
   "js": true
  },
@@ -18819,13 +18869,13 @@
  },
  "palete no chao": {
   "src": [
-   "services/site_planner.py:2057"
+   "services/site_planner.py:2063"
   ],
   "lazy": true
  },
  "palete no chão": {
   "src": [
-   "services/site_planner.py:2057"
+   "services/site_planner.py:2063"
   ],
   "lazy": true
  },
@@ -18875,7 +18925,7 @@
  },
  "permitidas nas pontas com acesso": {
   "src": [
-   "services/site_report.py:107"
+   "services/site_report.py:108"
   ]
  },
  "peso máx. (kg)": {
@@ -18999,6 +19049,11 @@
   ],
   "js": true
  },
+ "qualquer": {
+  "src": [
+   "services/site_report.py:127"
+  ]
+ },
  "qualquer orientação": {
   "src": [
    "templates/packing/case.html:12",
@@ -19093,7 +19148,7 @@
  },
  "respeita peso": {
   "src": [
-   "services/site_report.py:128"
+   "services/site_report.py:129"
   ]
  },
  "restante": {
@@ -19128,12 +19183,12 @@
  },
  "ruas em serpentina": {
   "src": [
-   "routers/site.py:601"
+   "routers/site.py:604"
   ]
  },
  "ruas na mesma direção": {
   "src": [
-   "routers/site.py:601"
+   "routers/site.py:604"
   ]
  },
  "s por saída": {
@@ -19160,7 +19215,7 @@
  },
  "se": {
   "src": [
-   "templates/layout/plan.html:224"
+   "templates/layout/plan.html:225"
   ],
   "js": true
  },
@@ -19232,7 +19287,7 @@
  },
  "sem peso": {
   "src": [
-   "services/site_report.py:128"
+   "services/site_report.py:129"
   ]
  },
  "sem priorizar (desligado)": {
@@ -19292,7 +19347,7 @@
  },
  "simples": {
   "src": [
-   "services/site_report.py:230"
+   "services/site_report.py:231"
   ]
  },
  "sobram {v}": {
@@ -19420,7 +19475,7 @@
  },
  "termina com": {
   "src": [
-   "routers/common.py:163"
+   "routers/common.py:170"
   ],
   "lazy": true
  },
@@ -19465,8 +19520,8 @@
  },
  "todas": {
   "src": [
-   "templates/layout/plan.html:392",
-   "templates/layout/plan.html:411"
+   "templates/layout/plan.html:393",
+   "templates/layout/plan.html:412"
   ],
   "js": true
  },
@@ -19523,7 +19578,7 @@
  },
  "uma letra por corredor (ímpares/pares)": {
   "src": [
-   "routers/site.py:602"
+   "routers/site.py:605"
   ]
  },
  "uma letra por rua": {
@@ -19613,7 +19668,7 @@
  },
  "volume dos produtos ÷ volume útil das bins": {
   "src": [
-   "services/site_report.py:146",
+   "services/site_report.py:147",
    "templates/site/project.html:537"
   ]
  },
@@ -19685,8 +19740,20 @@
  },
  "{assigned} atribuição(ões) produto → endereço": {
   "src": [
-   "routers/site.py:694"
+   "routers/site.py:697"
   ]
+ },
+ "{a} m (comprimento, X)": {
+  "src": [
+   "templates/site/_plan_editor.html:172"
+  ],
+  "js": true
+ },
+ "{a} m (largura, Y)": {
+  "src": [
+   "templates/site/_plan_editor.html:173"
+  ],
+  "js": true
  },
  "{base} — posição OCUPADA, não pode ser substituída": {
   "src": [
@@ -19701,7 +19768,7 @@
  },
  "{bins}× {code} com {sku} — {name}": {
   "src": [
-   "services/site_report.py:250"
+   "services/site_report.py:251"
   ]
  },
  "{blocked} item(ns) têm registros relacionados que impedem a exclusão simples. Sem a opção acima, eles ficam de fora; com ela, saem junto com os relacionados.": {
@@ -19732,12 +19799,12 @@
  },
  "{code} GIRADA 90° na ponta da fileira {kind} ({zone}fileiras {v}), de frente para {faces}: {where}; {levels} níveis com vão de {fmt} cm": {
   "src": [
-   "services/site_report.py:232"
+   "services/site_report.py:233"
   ]
  },
  "{code} na fileira {v} ({zone}{face}{v2}): {where}; {levels} níveis com vão de {fmt} cm": {
   "src": [
-   "services/site_report.py:239"
+   "services/site_report.py:240"
   ]
  },
  "{code} — {levels} níveis × {level_height} cm, frente {width} cm": {
@@ -19826,7 +19893,7 @@
  },
  "{fmt} de {fmt2} m · {fmt3} m² de estruturas": {
   "src": [
-   "services/site_report.py:154"
+   "services/site_report.py:155"
   ]
  },
  "{fmt} endereço(s) · {fmt2} ocupado(s) · {fmt3} livre(s)": {
@@ -19837,17 +19904,17 @@
  },
  "{fmt} m · afastamento das paredes {fmt2} m": {
   "src": [
-   "services/site_report.py:104"
+   "services/site_report.py:105"
   ]
  },
  "{fmt} m × {fmt2} m (comprimento na horizontal) · ": {
   "src": [
-   "services/site_report.py:423"
+   "services/site_report.py:426"
   ]
  },
  "{fmt} níveis em {len} estantes": {
   "src": [
-   "services/site_report.py:141"
+   "services/site_report.py:142"
   ]
  },
  "{fmt} un. de {sku}": {
@@ -19863,12 +19930,12 @@
  },
  "{fmt} × {fmt2} m · pé-direito útil {fmt3} m · {fmt4} m²": {
   "src": [
-   "services/site_report.py:103"
+   "services/site_report.py:104"
   ]
  },
  "{fmt} × {fmt2} × {fmt3} cm, {levels} níveis × {fmt4} cm": {
   "src": [
-   "services/site_report.py:162"
+   "services/site_report.py:163"
   ]
  },
  "{fraction_label} de {code} ({grid_label})": {
@@ -20049,7 +20116,7 @@
  },
  "{len} SKU(s) · {sum} alocado(s)": {
   "src": [
-   "services/site_report.py:117"
+   "services/site_report.py:118"
   ]
  },
  "{len} endereço(s) excluído(s)": {
@@ -20064,12 +20131,12 @@
  },
  "{len} fileira(s) ao longo do {v} ({get}) · ": {
   "src": [
-   "services/site_report.py:109"
+   "services/site_report.py:110"
   ]
  },
  "{len} fileira(s) em {len2} zonas · ": {
   "src": [
-   "services/site_report.py:110"
+   "services/site_report.py:111"
   ]
  },
  "{len} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.": {
@@ -20096,7 +20163,7 @@
  },
  "{levels_used} de {levels_total} níveis em uso": {
   "src": [
-   "services/site_report.py:144"
+   "services/site_report.py:145"
   ]
  },
  "{levels} níveis × vão {level_height} cm": {
@@ -20157,7 +20224,7 @@
  },
  "{name} (cópia)": {
   "src": [
-   "routers/site.py:428"
+   "routers/site.py:431"
   ]
  },
  "{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×": {
@@ -20180,7 +20247,7 @@
  },
  "{name} · {fmt} m² (automático)": {
   "src": [
-   "templates/site/_plan_editor.html:198"
+   "templates/site/_plan_editor.html:201"
   ],
   "js": true
  },
@@ -20193,6 +20260,11 @@
  "{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm": {
   "src": [
    "templates/levels/index.html:129"
+  ]
+ },
+ "{name}: comprimento": {
+  "src": [
+   "services/site_service.py:210"
   ]
  },
  "{name}: comprimento e largura devem ser maiores que zero.": {
@@ -20240,7 +20312,7 @@
  },
  "{name}: {fmt} m, fileiras ao longo da {v}, {len} fileira(s), corredor {fmt2} m": {
   "src": [
-   "services/site_report.py:113"
+   "services/site_report.py:114"
   ]
  },
  "{name}: área": {
@@ -20250,7 +20322,7 @@
  },
  "{neg} de {rows} linha(s) da prévia com quantidade negativa.": {
   "src": [
-   "templates/site/mapping.html:94"
+   "templates/site/mapping.html:97"
   ],
   "js": true
  },
@@ -20272,7 +20344,18 @@
  },
  "{n} coluna(s) serão somadas.": {
   "src": [
-   "templates/imports/mapping_stock.html:106"
+   "templates/imports/mapping_stock.html:109"
+  ],
+  "js": true
+ },
+ "{n} corredor(es) · profundidade {d} cm": {
+  "src": [
+   "services/site_report.py:112"
+  ]
+ },
+ "{n} estante(s): {a} → {b} · {len} m": {
+  "src": [
+   "templates/layout/plan.html:397"
   ],
   "js": true
  },
@@ -20341,7 +20424,7 @@
  },
  "{placed} estante(s) na planta · {corridors} corredor(es) de caminhada": {
   "src": [
-   "templates/layout/plan.html:599"
+   "templates/layout/plan.html:601"
   ],
   "js": true
  },
@@ -20364,7 +20447,7 @@
  },
  "{rows} fileira(s), {aisles} corredor(es), {fmt} m de fileira disponíveis.": {
   "src": [
-   "templates/site/_plan_editor.html:266"
+   "templates/site/_plan_editor.html:269"
   ],
   "js": true
  },
@@ -20373,6 +20456,12 @@
    "services/action_plan.py:200"
   ]
  },
+ "{sheet} · {n} primeira(s) linha(s)": {
+  "src": [
+   "templates/imports/mapping_history.html:79"
+  ],
+  "js": true
+ },
  "{shortage} bin(s) ficaram sem lugar: aumente as estruturas (ou libere o modo \"Otimizar quantidade\"), o imóvel ou reduza a demanda.": {
   "src": [
    "services/site_planner.py:1209"
@@ -20380,12 +20469,12 @@
  },
  "{size}{desc} · amarelo = docas/áreas reservadas · azul = avenidas · verde = setores · preto = obstáculos · tracejado = cabeceiras": {
   "src": [
-   "services/site_report.py:424"
+   "services/site_report.py:427"
   ]
  },
  "{skus_without_product} SKU(s) sem cadastro de produto ficaram sem atribuição.": {
   "src": [
-   "routers/site.py:701"
+   "routers/site.py:704"
   ]
  },
  "{sku} (saldo {quantity})": {
@@ -20411,9 +20500,14 @@
   ],
   "js": true
  },
+ "{src} · base {basis} · fator {factor}% · crescimento {growth}%": {
+  "src": [
+   "services/site_report.py:116"
+  ]
+ },
  "{status} em {time} s": {
   "src": [
-   "services/site_report.py:132"
+   "services/site_report.py:133"
   ]
  },
  "{sum} SKU(s) com limite de quantidade (redução da demanda).": {
@@ -20429,7 +20523,7 @@
  },
  "{sync_help} Só roda se <b>nenhuma linha</b> do arquivo der erro (senão nada é excluído).": {
   "src": [
-   "templates/imports/mapping_master.html:74"
+   "templates/imports/mapping_master.html:76"
   ],
   "html": true
  },
@@ -20472,13 +20566,13 @@
  },
  "{title}: a coluna {letter} está em {seen} e {lbl}.": {
   "src": [
-   "templates/site/mapping.html:122"
+   "templates/site/mapping.html:125"
   ],
   "js": true
  },
  "{title}: escolha a coluna de {lbl}.": {
   "src": [
-   "templates/site/mapping.html:121"
+   "templates/site/mapping.html:124"
   ],
   "js": true
  },
@@ -20558,6 +20652,18 @@
    "services/product_importer.py:117"
   ]
  },
+ "{v} m (comprimento)": {
+  "src": [
+   "services/site_planner.py:2182",
+   "services/site_report.py:460"
+  ]
+ },
+ "{v} m (largura)": {
+  "src": [
+   "services/site_planner.py:2184",
+   "services/site_report.py:469"
+  ]
+ },
  "{v} não pode ser negativo(a)": {
   "src": [
    "services/product_importer.py:119"
@@ -20608,6 +20714,12 @@
   "src": [
    "services/import_sync.py:43"
   ]
+ },
+ "{w} × {h} cm (L×A) · prof. {d} cm": {
+  "src": [
+   "templates/layout/index.html:492"
+  ],
+  "js": true
  },
  "§Sem nível — preenche a estante de baixo para cima": {
   "src": [
@@ -20693,7 +20805,7 @@
  },
  "· lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)": {
   "src": [
-   "templates/layout/plan.html:397"
+   "templates/layout/plan.html:398"
   ],
   "js": true
  },
@@ -20818,7 +20930,7 @@
  },
  "Área das estruturas": {
   "src": [
-   "routers/site.py:176",
+   "routers/site.py:179",
    "templates/site/project.html:539"
   ]
  },
@@ -20881,12 +20993,12 @@
  },
  "Índice de coluna fora do intervalo: {idx}": {
   "src": [
-   "services/file_reader.py:265"
+   "services/file_reader.py:269"
   ]
  },
  "Última linha prevalece": {
   "src": [
-   "templates/imports/mapping_stock.html:69"
+   "templates/imports/mapping_stock.html:71"
   ]
  },
  "Último código da faixa dentro da exceção.": {
@@ -20907,15 +21019,15 @@
  },
  "ímp.": {
   "src": [
-   "templates/layout/plan.html:280"
+   "templates/layout/plan.html:281"
   ],
   "js": true
  },
  "ímpares": {
   "src": [
    "services/branch_layout.py:54",
-   "templates/layout/plan.html:392",
-   "templates/layout/plan.html:411"
+   "templates/layout/plan.html:393",
+   "templates/layout/plan.html:412"
   ],
   "lazy": true,
   "js": true
@@ -21034,15 +21146,15 @@
  },
  "— não importar —": {
   "src": [
-   "templates/imports/mapping_master.html:31",
-   "templates/imports/mapping_products.html:31",
-   "templates/imports/mapping_stock.html:31",
-   "templates/site/mapping.html:22"
+   "templates/imports/mapping_master.html:33",
+   "templates/imports/mapping_products.html:33",
+   "templates/imports/mapping_stock.html:33",
+   "templates/site/mapping.html:24"
   ]
  },
  "— não usar —": {
   "src": [
-   "templates/site/mapping.html:77"
+   "templates/site/mapping.html:80"
   ],
   "js": true
  },

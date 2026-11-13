@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ _("Importações") }}{% endblock %}
 {% block content %}
+<!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
+
 <div class="page-header"><h1><i class="bi bi-upload"></i> {{ _("Importações") }}</h1></div>
 <div class="row g-3">
   <div class="col-12"><h6 class="text-muted text-uppercase small mb-0">{{ _("Cadastros-base — importe nesta ordem") }}</h6></div>
@@ -45,4 +47,5 @@
     </div></div>
   </div>
 </div>
+<!--/nk-metric-->
 {% endblock %}

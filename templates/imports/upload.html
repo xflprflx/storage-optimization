@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
+<!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
+
 <div class="page-header">
   <h1><i class="bi bi-upload"></i> {{ title }}</h1>
   <a href="/imports/template/{{ kind }}.csv" class="btn btn-outline-secondary"><i class="bi bi-download"></i> {{ _("Baixar modelo CSV") }}</a>
@@ -44,4 +46,5 @@
     {% endif %}
   </div>
 </div>
+<!--/nk-metric-->
 {% endblock %}

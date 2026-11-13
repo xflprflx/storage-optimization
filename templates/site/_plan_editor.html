@@ -23,9 +23,12 @@
     const n = parseFloat(v);
     return isNaN(n) ? null : n;
   };
+  // fmt: número em metros (os textos com "m" passam por _t/nkU.text, que convertem no imperial);
+  // fmtD: cota sem unidade, já no sistema exibido (ft no imperial)
   const fmt = (v, d = 1) => (Math.round(v * 10 ** d) / 10 ** d).toLocaleString(NK_I18N.locale, { maximumFractionDigits: d });
+  const fmtD = (v, d = 1) => fmt(nkU.toDisp(v, 'm'), d);
   const snap = v => Math.round(v * 10) / 10;
-  const val = name => num(form.querySelector(`[name="${name}"]`)?.value);
+  const val = name => nkU.get(form.querySelector(`[name="${name}"]`));
   const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const NS = 'http://www.w3.org/2000/svg';
 
@@ -51,8 +54,8 @@
     const gap = val('b_wall_gap_m') || 0, front = val('b_front_reserved_m') || 0, back = val('b_back_reserved_m') || 0;
     const av = val('b_avenue_m') || 0;
     const zones = rowsOf('zone').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || _t('Zona {i}', {i: i + 1}), x: num(field(tr, 'x')?.value), y: num(field(tr, 'y')?.value),
-      len: num(field(tr, 'len')?.value), wid: num(field(tr, 'wid')?.value), ori: field(tr, 'ori')?.value || 'along' }));
+      tr, i, name: field(tr, 'name')?.value || _t('Zona {i}', {i: i + 1}), x: nkU.get(field(tr, 'x')), y: nkU.get(field(tr, 'y')),
+      len: nkU.get(field(tr, 'len')), wid: nkU.get(field(tr, 'wid')), ori: field(tr, 'ori')?.value || 'along' }));
     const positioned = zones.some(z => z.x != null && z.y != null);
     const avenues = [];
     if (positioned) {
@@ -69,17 +72,17 @@
       });
     }
     const obstacles = rowsOf('obstacle').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || _t('Obstáculo {i}', {i: i + 1}), X: num(field(tr, 'x')?.value),
-      Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
+      tr, i, name: field(tr, 'name')?.value || _t('Obstáculo {i}', {i: i + 1}), X: nkU.get(field(tr, 'x')),
+      Y: nkU.get(field(tr, 'y')), Lx: nkU.get(field(tr, 'len')), Wy: nkU.get(field(tr, 'wid')) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
     const sectors = rowsOf('sector').filter(tr => field(tr, 'place')?.value === 'fixed').map((tr, i) => ({
-      tr, i, name: field(tr, 'name')?.value || _t('Setor {i}', {i: i + 1}), X: num(field(tr, 'x')?.value),
-      Y: num(field(tr, 'y')?.value), Lx: num(field(tr, 'len')?.value), Wy: num(field(tr, 'wid')?.value) }))
+      tr, i, name: field(tr, 'name')?.value || _t('Setor {i}', {i: i + 1}), X: nkU.get(field(tr, 'x')),
+      Y: nkU.get(field(tr, 'y')), Lx: nkU.get(field(tr, 'len')), Wy: nkU.get(field(tr, 'wid')) }))
       .filter(o => o.X != null && o.Y != null && o.Lx && o.Wy);
     // ponto de referência da posição pela saída (etapa Posição dos SKUs), quando informado por X/Y
     let ref = null;
     if (form.querySelector('[name="slot_ref"]')?.value === 'xy') {
-      const rx = num(form.querySelector('[name="slot_ref_x"]')?.value), ry = num(form.querySelector('[name="slot_ref_y"]')?.value);
+      const rx = nkU.get(form.querySelector('[name="slot_ref_x"]')), ry = nkU.get(form.querySelector('[name="slot_ref_y"]'));
       if (rx != null && ry != null) ref = { x: rx, y: ry };
     }
     return { L, W, gap, front, back, av, zones, positioned, avenues, obstacles, sectors, ref };
@@ -88,7 +91,7 @@
   // ------------------------------------------------------------------ escrita nas tabelas
   function setField(tr, key, v) {
     const el = field(tr, key);
-    if (el) { el.value = v == null ? '' : fmt(v); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (el) { nkU.set(el, v, 1); el.dispatchEvent(new Event('input', { bubbles: true })); }
   }
   function nextIndex(kind) {
     const name = IDX[kind];
@@ -119,7 +122,7 @@
   const pid = form.dataset.projectId;
   function refreshServer() {
     if (ls.get('nk-plan-rows') !== '1' || !pid) { server = null; renderAll(); return; }
-    const fd = new FormData(form);
+    const fd = nkU.formData(form);
     const key = new URLSearchParams(fd).toString();
     if (key === serverKey) return;
     serverKey = key;
@@ -166,10 +169,10 @@
     const mk = el('marker', { id: arrow, viewBox: '0 0 10 10', refX: 5, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
     el('path', { d: 'M0,0 L10,5 L0,10 z', fill: '#5b6770' }, mk);
     if (full) {
-      dim(0, -m * 1.3, L, -m * 1.3, `${fmt(L, 2)} m (comprimento, X)`, false);
-      dim(-m * 1.3, 0, -m * 1.3, W, `${fmt(W, 2)} m (largura, Y)`, true);
+      dim(0, -m * 1.3, L, -m * 1.3, _t('{a} m (comprimento, X)', {a: fmt(L, 2)}), false);
+      dim(-m * 1.3, 0, -m * 1.3, W, _t('{a} m (largura, Y)', {a: fmt(W, 2)}), true);
     } else if (dims === 'summary' || inside) {
-      text(svg, 0, -m * 0.3, `${fmt(L, 2)} × ${fmt(W, 2)} m`, { 'font-size': fs * 1.2, 'font-weight': 'bold', fill: '#1f2d33' });
+      text(svg, 0, -m * 0.3, nkU.text(`${fmt(L, 2)} × ${fmt(W, 2)} m`), { 'font-size': fs * 1.2, 'font-weight': 'bold', fill: '#1f2d33' });
     }
     const brk = { x: [], y: [] };  // pontos das cotas encadeadas (modo completo)
     const addBrk = (x, y, w, h) => { if (w > 0 && h > 0) { brk.x.push(x, x + w); brk.y.push(y, y + h); } };
@@ -212,15 +215,15 @@
       const r = el('rect', { x: o.X, y: o.Y, width: Math.max(0, o.Lx), height: Math.max(0, o.Wy), class: edit ? 'shape' : '',
         fill: isZone ? 'rgba(47,126,216,.08)' : isSec ? 'rgba(59,140,90,.18)' : '#2b2f33', stroke: isZone ? '#2f6db5' : isSec ? '#3b8c5a' : '#111',
         'stroke-width': fs * (sel === o.tr ? 0.25 : 0.12), 'stroke-dasharray': isZone || isSec ? `${fs * 0.6} ${fs * 0.3}` : '' }, g);
-      const lbl = isZone ? `${o.name} · ${o.ori === 'across' ? '↕' : '↔'}` : isSec ? `${o.name} · ${fmt(o.Lx * o.Wy)} m²` : o.name;
+      const lbl = isZone ? `${o.name} · ${o.ori === 'across' ? '↕' : '↔'}` : isSec ? nkU.text(`${o.name} · ${fmt(o.Lx * o.Wy)} m²`) : o.name;
       const big = o.Lx > fs * 8 && o.Wy > fs * 3;
       const tAttrs = { 'font-size': fs * 0.85, fill: isZone ? '#24548c' : isSec ? '#24613a' : '#fff' };
       if (big) {
         text(g, o.X + fs * 0.4, o.Y + fs * 1.1, lbl, tAttrs);
-        if (full) text(g, o.X + fs * 0.4, o.Y + fs * 2.1, `${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} · Y ${fmt(o.Y)}`, { ...tAttrs, 'font-size': fs * 0.7 });
+        if (full) text(g, o.X + fs * 0.4, o.Y + fs * 2.1, nkU.text(`${fmt(o.Lx)} × ${fmt(o.Wy)} m · X ${fmt(o.X)} m · Y ${fmt(o.Y)} m`), { ...tAttrs, 'font-size': fs * 0.7 });
       } else {
         const cx = o.X + o.Lx / 2, cy = o.Y + o.Wy / 2, vert = o.Wy > o.Lx;
-        text(g, cx, cy, full ? `${lbl} (${fmt(o.Lx)} × ${fmt(o.Wy)})` : lbl, { ...tAttrs, 'font-size': fs * 0.7, 'text-anchor': 'middle',
+        text(g, cx, cy, full ? `${lbl} (${fmtD(o.Lx)} × ${fmtD(o.Wy)})` : lbl, { ...tAttrs, 'font-size': fs * 0.7, 'text-anchor': 'middle',
           'dominant-baseline': 'middle', transform: vert ? `rotate(-90 ${cx} ${cy})` : '' });
       }
       if (edit) {
@@ -256,7 +259,7 @@
         if (sel) { sel.value = 'xy'; sel.dispatchEvent(new Event('change', { bubbles: true })); }
         ['slot_ref_x', 'slot_ref_y'].forEach((n, i) => {
           const inp = form.querySelector(`[name="${n}"]`);
-          if (inp) { inp.value = fmt(i ? y : x); inp.dispatchEvent(new Event('input', { bubbles: true })); }
+          if (inp) { nkU.set(inp, i ? y : x, 1); inp.dispatchEvent(new Event('input', { bubbles: true })); }
         });
       });
     }
@@ -287,11 +290,11 @@
     const xs = chain(brk.x, st.L, minGap), y = -m * 0.45;
     el('line', { x1: 0, y1: y, x2: st.L, y2: y }, g);
     xs.forEach(p => el('line', { x1: p, y1: y - t, x2: p, y2: y + t }, g));
-    xs.slice(1).forEach((p, i) => text(g, (p + xs[i]) / 2, y - t, fmt(p - xs[i], 2), tA));
+    xs.slice(1).forEach((p, i) => text(g, (p + xs[i]) / 2, y - t, fmtD(p - xs[i], 2), tA));
     const ys = chain(brk.y, st.W, minGap), x = -m * 0.45;
     el('line', { x1: x, y1: 0, x2: x, y2: st.W }, g);
     ys.forEach(p => el('line', { x1: x - t, y1: p, x2: x + t, y2: p }, g));
-    ys.slice(1).forEach((p, i) => { const cy = (p + ys[i]) / 2; text(g, x - t, cy, fmt(p - ys[i], 2), { ...tA, transform: `rotate(-90 ${x - t} ${cy})` }); });
+    ys.slice(1).forEach((p, i) => { const cy = (p + ys[i]) / 2; text(g, x - t, cy, fmtD(p - ys[i], 2), { ...tA, transform: `rotate(-90 ${x - t} ${cy})` }); });
   }
   // cotas por dentro: comprimento e largura de cada zona/obstáculo (rente às bordas de baixo e da direita) e, para a
   // forma selecionada ou em desenho/arraste, a distância até a vizinha mais próxima (ou a parede) nos quatro lados
@@ -312,8 +315,8 @@
     const all = rects.concat(extra ? [extra] : []);
     all.forEach(o => {
       const { X, Y, Lx: w, Wy: d } = o, dark = !!o.obstacle;
-      if (w >= minLen) { const y = Y + d - Math.min(off, d / 2); line(X, y, X + w, y, fmt(w, 2), false, false, dark); }
-      if (d >= minLen) { const x = X + w - Math.min(off, w / 2); line(x, Y, x, Y + d, fmt(d, 2), true, false, dark); }
+      if (w >= minLen) { const y = Y + d - Math.min(off, d / 2); line(X, y, X + w, y, fmtD(w, 2), false, false, dark); }
+      if (d >= minLen) { const x = X + w - Math.min(off, w / 2); line(x, Y, x, Y + d, fmtD(d, 2), true, false, dark); }
     });
     const focus = extra || rects.find(o => o.tr && o.tr === sel);
     if (!focus) return;
@@ -325,10 +328,10 @@
     const left = Math.max(0, ...xe.filter(v => v <= X + eps)), right = Math.min(st.L, ...xe.filter(v => v >= X + w - eps));
     const top = Math.max(0, ...ye.filter(v => v <= Y + eps)), bottom = Math.min(st.W, ...ye.filter(v => v >= Y + d - eps));
     const gap = 0.05;
-    if (X - left > gap) line(left, my, X, my, fmt(X - left, 2), false, true);
-    if (right - (X + w) > gap) line(X + w, my, right, my, fmt(right - X - w, 2), false, true);
-    if (Y - top > gap) line(mx, top, mx, Y, fmt(Y - top, 2), true, true);
-    if (bottom - (Y + d) > gap) line(mx, Y + d, mx, bottom, fmt(bottom - Y - d, 2), true, true);
+    if (X - left > gap) line(left, my, X, my, fmtD(X - left, 2), false, true);
+    if (right - (X + w) > gap) line(X + w, my, right, my, fmtD(right - X - w, 2), false, true);
+    if (Y - top > gap) line(mx, top, mx, Y, fmtD(Y - top, 2), true, true);
+    if (bottom - (Y + d) > gap) line(mx, Y + d, mx, bottom, fmtD(bottom - Y - d, 2), true, true);
   }
   function point(svg, ev) {
     const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;

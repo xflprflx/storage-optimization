@@ -72,7 +72,7 @@
     if (h === 'width') s += dim(x, flo + 5, x + w, flo + 5, 'frente', true, true);
     if (h === 'height') s += dim(x + w + 10, top, x + w + 10, flo, _t('altura total'), true);
     if (h === 'vao') s += dim(x + w + 10, lv[2] - 3, x + w + 10, lv[3], _t('vão'), true) + R(x + 4, lv[3], w - 8, 21, true);
-    if (h === 'vaos') [60, 40, 35].forEach((v, i) => { s += T(x + w + 8, lv[i] - 8, v + ' cm', true, { 'font-size': 9, 'text-anchor': 'start' }); });
+    if (h === 'vaos') [60, 40, 35].forEach((v, i) => { s += T(x + w + 8, lv[i] - 8, nkU.text(v + ' cm'), true, { 'font-size': 9, 'text-anchor': 'start' }); });
     if (h === 'base') s += dim(x + w + 10, flo - base, x + w + 10, flo, _t('1º nível'), true);
     if (h === 'load') s += arrow(x + w / 2, lv[2] - 22, x + w / 2, lv[2] - 5, true) + T(x + w / 2 + 22, lv[2] - 14, 'kg', true);
     if (h === 'gap') s += dim(x + w + 10, lv[2], x + w + 10, lv[1] - 19, 'folga', true);
@@ -364,7 +364,7 @@
 
   // ==================================================================== catálogo e cartão
   let RULES = null;
-  const VER = (document.currentScript ? (document.currentScript.dataset.v || '1') : '1') + '-' + ((window.NK_I18N && window.NK_I18N.lang) || 'pt-BR');
+  const VER = (document.currentScript ? (document.currentScript.dataset.v || '1') : '1') + '-' + ((window.NK_I18N && window.NK_I18N.lang) || 'pt-BR') + '-' + ((window.NK_I18N && window.NK_I18N.units) || 'metric');
   function load() {
     try { const c = sessionStorage.getItem('nk-help-' + VER); if (c) { RULES = compile(JSON.parse(c)); return; } } catch (e) { /* sem cache */ }
     fetch('/help/fields.json?v=' + encodeURIComponent(VER)).then(r => r.json()).then(j => {

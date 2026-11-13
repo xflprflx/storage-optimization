@@ -3,7 +3,7 @@
 {% block title %}{{ _h("{name} — Projeto de filial", name=(project.name)) }}{% endblock %}
 
 {% macro pct(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}{{ v|dec(1) }}%{% endif %}{%- endmacro %}
-{% macro money(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}R$ {{ v|dec(2) }}{% endif %}{%- endmacro %}
+{% macro money(v) -%}{% if v is none %}<span class="text-muted">—</span>{% else %}{{ fmt_money(v) }}{% endif %}{%- endmacro %}
 
 {% block content %}
 {% set b = cfg.building %}{% set d = cfg.demand %}{% set p = cfg.params %}
@@ -121,12 +121,12 @@
             {% for z in zones %}{% set zi = loop.index0 %}
               <tr class="zone-row">
                 <td><input type="hidden" name="z_idx" value="{{ zi }}"><input class="form-control form-control-sm" name="z_name_{{ zi }}" value="{{ z.name }}" placeholder="{{ _("Zona {v}", v=(zi + 1)) }}" maxlength="40"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_x_{{ zi }}" inputmode="decimal" value="{{ z.x_m }}" placeholder="—"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_y_{{ zi }}" inputmode="decimal" value="{{ z.y_m }}" placeholder="—"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_len_{{ zi }}" inputmode="decimal" value="{{ z.length_m }}" placeholder="{{ _("restante") }}"></td>
-                <td><input class="form-control form-control-sm text-end" name="z_wid_{{ zi }}" inputmode="decimal" value="{{ z.width_m }}" placeholder="{{ _("até a parede") }}"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_x_{{ zi }}" data-u="m" inputmode="decimal" value="{{ z.x_m }}" placeholder="—"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_y_{{ zi }}" data-u="m" inputmode="decimal" value="{{ z.y_m }}" placeholder="—"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_len_{{ zi }}" data-u="m" inputmode="decimal" value="{{ z.length_m }}" placeholder="{{ _("restante") }}"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_wid_{{ zi }}" data-u="m" inputmode="decimal" value="{{ z.width_m }}" placeholder="{{ _("até a parede") }}"></td>
                 <td><select class="form-select form-select-sm" name="z_ori_{{ zi }}">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}" {% if z.orientation == k %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></td>
-                <td><input class="form-control form-control-sm text-end" name="z_aisle_{{ zi }}" inputmode="decimal" value="{{ z.aisle_m }}" placeholder="{{ _("padrão") }}"></td>
+                <td><input class="form-control form-control-sm text-end" name="z_aisle_{{ zi }}" data-u="m" inputmode="decimal" value="{{ z.aisle_m }}" placeholder="{{ _("padrão") }}"></td>
                 <td><input class="form-control form-control-sm text-end" name="z_cross_{{ zi }}" inputmode="numeric" value="{{ z.cross_aisles }}" placeholder="0"></td>
                 <td><select class="form-select form-select-sm" name="z_st_{{ zi }}" multiple size="2" title="{{ _("Nenhuma marcada = todas") }}">{% for st in structures %}<option value="{{ st.id }}" {% if st.id|string in (z.structures or []) %}selected{% endif %}>{{ st.code }}</option>{% endfor %}</select></td>
                 <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="{{ _("Remover zona") }}"><i class="bi bi-x-lg"></i></button></td>
@@ -204,12 +204,12 @@
   <template id="zoneTpl">
     <tr class="zone-row">
       <td><input type="hidden" name="z_idx" value="__i__"><input class="form-control form-control-sm" name="z_name___i__" placeholder="{{ _("Zona") }}" maxlength="40"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_x___i__" inputmode="decimal" placeholder="—"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_y___i__" inputmode="decimal" placeholder="—"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_len___i__" inputmode="decimal" placeholder="{{ _("restante") }}"></td>
-      <td><input class="form-control form-control-sm text-end" name="z_wid___i__" inputmode="decimal" placeholder="{{ _("até a parede") }}"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_x___i__" data-u="m" inputmode="decimal" placeholder="—"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_y___i__" data-u="m" inputmode="decimal" placeholder="—"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_len___i__" data-u="m" inputmode="decimal" placeholder="{{ _("restante") }}"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_wid___i__" data-u="m" inputmode="decimal" placeholder="{{ _("até a parede") }}"></td>
       <td><select class="form-select form-select-sm" name="z_ori___i__">{% for k, v in ZONE_ORIENTATIONS.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></td>
-      <td><input class="form-control form-control-sm text-end" name="z_aisle___i__" inputmode="decimal" placeholder="{{ _("padrão") }}"></td>
+      <td><input class="form-control form-control-sm text-end" name="z_aisle___i__" data-u="m" inputmode="decimal" placeholder="{{ _("padrão") }}"></td>
       <td><input class="form-control form-control-sm text-end" name="z_cross___i__" inputmode="numeric" placeholder="0"></td>
       <td><select class="form-select form-select-sm" name="z_st___i__" multiple size="2" title="{{ _("Nenhuma marcada = todas") }}">{% for st in structures %}<option value="{{ st.id }}">{{ st.code }}</option>{% endfor %}</select></td>
       <td><button type="button" class="btn btn-sm btn-outline-danger zone-del" title="{{ _("Remover zona") }}"><i class="bi bi-x-lg"></i></button></td>
@@ -396,8 +396,8 @@
                 </select></div>
               <div class="col-12"><div class="nk-plan" data-plan-mode="ref"></div>
                 <div class="form-text">{{ _("Clique na planta para marcar o ponto de referência (vira \"Ponto X/Y informado\"); o marcador vermelho aparece em todas as plantas.") }}</div></div>
-              <div class="col-6 slot-xy"><label class="form-label small mb-0">X (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_x" value="{{ sl.ref_x }}" inputmode="decimal"></div>
-              <div class="col-6 slot-xy"><label class="form-label small mb-0">Y (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_y" value="{{ sl.ref_y }}" inputmode="decimal"></div>
+              <div class="col-6 slot-xy"><label class="form-label small mb-0">X (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_x" data-u="m" value="{{ sl.ref_x }}" inputmode="decimal"></div>
+              <div class="col-6 slot-xy"><label class="form-label small mb-0">Y (m)</label><input class="form-control form-control-sm text-end" name="slot_ref_y" data-u="m" value="{{ sl.ref_y }}" inputmode="decimal"></div>
               <div class="col-12"><div class="small fw-semibold">{{ _("Duas zonas de ouro") }}</div>
                 <div class="form-text mt-0">{{ _h("Da <b>pega</b>: a faixa de altura mais fácil de pegar (cadastrada em cada estrutura). Da <b>caminhada</b>: as posições mais perto do ponto de referência. O ideal para os itens A é estar nas duas.") }}</div></div>
               <div class="col-12"><label class="form-label small mb-0">{{ _("Zona de ouro da caminhada: até quantos metros da referência?") }}</label>
@@ -440,7 +440,7 @@
         <div class="form-text mb-2">{{ _h("<b>Tempo de separação:</b> \"Menor tempo\" otimiza como a caminhada, mas um item fora da zona de ouro da pega \"custa\" o tempo extra abaixo (convertido em metros pela velocidade). O resultado mostra o tempo estimado por saída. <b>Maior capacidade do imóvel:</b> em vez de usar só o necessário, enche o imóvel com o máximo de níveis de armazenagem (as estruturas que couberem, até o máximo de cada uma), atendendo à demanda; o que sobra é capacidade livre para crescer.") }}</div>
         <div class="row g-2 mb-2">
           <div class="col-6"><label class="form-label small mb-0" for="p_t_v">{{ _("Velocidade de caminhada (m/s)") }}</label>
-            <input class="form-control form-control-sm text-end" name="p_t_v" id="p_t_v" inputmode="decimal" value="{{ p.get('t_v') or '1' }}"></div>
+            <input class="form-control form-control-sm text-end" name="p_t_v" data-u="m/s" id="p_t_v" inputmode="decimal" value="{{ p.get('t_v') or '1' }}"></div>
           <div class="col-6"><label class="form-label small mb-0" for="p_t_gold">{{ _("Fora da zona de ouro (s por item)") }}</label>
             <input class="form-control form-control-sm text-end" name="p_t_gold" id="p_t_gold" inputmode="decimal" value="{{ p.get('t_gold') or '5' }}"></div>
         </div>
@@ -530,7 +530,7 @@
 <div class="row g-3 mb-3">
   {% set kpis = [
     (_('Módulos de estrutura'), plan.total_modules, plan.structs|selectattr('qty')|map(attribute='struct.code')|join(', ')),
-    (_('Custo total'), money(plan.total_cost), 'estruturas ' ~ money(plan.structures_cost)|striptags ~ _(' + bins ') ~ money(plan.bins_cost)|striptags
+    (_('Custo total'), money(plan.total_cost), _('estruturas {a} + bins {b}', a=money(plan.structures_cost)|striptags, b=money(plan.bins_cost)|striptags)
       ~ ((_(' · sem custo (R$ 0): ') ~ plan.missing_costs|unique|join(', ')) if plan.missing_costs else '')),
     (_('Bins'), plan.bins_placed ~ ' / ' ~ plan.bins_needed, _('alocadas / necessárias')),
     (_('Ocupação dos níveis'), pct(plan.fill), plan.levels_used ~ _(' de ') ~ plan.levels_total ~ _(' níveis em uso')),
@@ -645,7 +645,7 @@
         {{ _h("em {time} s", time=(plan.solver.time|dec(1))) }}{% if plan.solver.unlimited %} {{ _("· sem limite de tempo") }}{% endif %}
         {% if plan.solver.optimal is defined and not plan.solver.optimal %}<div class="text-warning-emphasis mt-1"><i class="bi bi-info-circle"></i> {{ _("O tempo acabou antes de provar a melhor solução") }}{% if plan.solver.skipped %}{{ _h("; não chegaram a ser otimizados: {skipped}", skipped=(plan.solver.skipped|join(', '))) }}{% endif %}{{ _(". Para a solução do solver a qualquer custo, marque \"Sem limite de tempo\" na etapa Objetivo.") }}</div>{% endif %}
         <ol class="mb-0 ps-3 mt-1">
-        {% for st in plan.solver.stages %}<li>{{ st.label }}: <b>{% if st.unit == 'R$' %}R$ {{ st.display|dec(2) }}{% elif st.unit in ('m', 'm·módulo', 'm por saída', '% das saídas') %}{{ st.display|dec(1) }} {{ st.unit }}{% else %}{{ st.display|dec(0) }} {{ st.unit }}{% endif %}</b>
+        {% for st in plan.solver.stages %}<li>{{ st.label }}: <b>{% if st.unit == 'R$' %}{{ fmt_money(st.display) }}{% elif st.unit in ('m', 'm·módulo', 'm por saída', '% das saídas') %}{{ st.display|dec(1) }} {{ st.unit }}{% else %}{{ st.display|dec(0) }} {{ st.unit }}{% endif %}</b>
           {% if st.placement %}<span class="text-muted" title="{{ _("Decidido na posição dos SKUs (depois do solver): tipos e SKUs mais procurados nos melhores níveis/endereços") }}">{{ _("(posição dos SKUs)") }}</span>{% elif st.fixed %}<span class="text-muted">{{ _("(já definido pelas etapas anteriores)") }}</span>{% elif not st.optimal %}<span title="{{ _("o tempo acabou nesta etapa") }}">{{ _("(melhor encontrado)") }}</span>{% else %}<span class="text-success">{{ _("(ótimo)") }}</span>{% endif %}
           {% if st.criterion == 'walk' and not st.placement %}<span class="text-muted small">{{ _("— estruturas nos trechos mais perto da expedição") }}</span>{% endif %}</li>{% endfor %}
         </ol>

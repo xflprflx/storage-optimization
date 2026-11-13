@@ -489,7 +489,7 @@
       : lf.mark ? `<div class="mb-1 p-1 rounded text-danger" style="background:#fbe3ea">${esc(lf.mark)}</div>` : '';
     tip.innerHTML = markHead + extraHead + `<div class="d-flex justify-content-between gap-3"><b class="mono">${esc(lf.address)}</b>
         <span class="badge ${lf.occupied ? 'text-bg-warning' : 'text-bg-light border'}">${lf.occupied ? _t('Ocupado') : _t('Livre')}</span></div>
-      <div class="text-muted">${lf.dims ? `${fmt(lf.w,1)} × ${fmt(lf.h,1)} cm (L×A) · prof. ${fmt(lf.d,1)} cm` : _t('Sem dimensão (tamanho padrão no desenho)')}</div>
+      <div class="text-muted">${lf.dims ? _t('{w} × {h} cm (L×A) · prof. {d} cm', {w: fmt(lf.w,1), h: fmt(lf.h,1), d: fmt(lf.d,1)}) : _t('Sem dimensão (tamanho padrão no desenho)')}</div>
       <div class="mt-1">${bins}${extraList ? '<br>' + extraList : ''}</div>
       ${lf.fill != null ? '<div class="mt-1">' + _t('Enchimento: <b>{fmt}%<\/b> <span class="text-muted">(vol. {fmt2}%{fill_w}){fill_partial}<\/span>', {fmt: fmt(lf.fill, 1), fmt2: fmt(lf.fill_vol, 1), fill_w: lf.fill_w != null ? ` · peso ${fmt(lf.fill_w, 1)}%` : '', fill_partial: lf.fill_partial ? ' ' + _t('· parcial: há produto sem dimensão/peso') : ''}) + '<\/div>' : ''}
       ${items ? `<table class="mt-1">${items}</table>${lf.n_items > 8 ? `<div class="text-muted">+${lf.n_items - 8} SKU(s)</div>` : ''}` : ''}

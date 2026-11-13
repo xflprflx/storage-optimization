@@ -4,7 +4,7 @@ from __future__ import annotations
 import io
 
 from services.action_plan import ActionPlan, _fmt
-from services.i18n import N_, _, fmt_datetime, tr, translate_workbook
+from services.i18n import N_, _, fmt_datetime, tr, localize_rows, pdf_fonts, translate_workbook, units_in_text
 
 ACCENT = "0F766E"
 GOOD, BAD = "1A7A4C", "B42318"
@@ -152,7 +152,7 @@ _SAFE = {"→": "->", "Δ": "Var.", "☐": "", "↳": ">", "≤": "<=", "≥": "
 
 
 def _t(s) -> str:
-    s = "" if s is None else str(s)
+    s = units_in_text("" if s is None else str(s))
     for a, b in _SAFE.items():
         s = s.replace(a, b)
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -162,6 +162,8 @@ def to_pdf(plan: ActionPlan) -> bytes:
     from reportlab.graphics.charts.barcharts import VerticalBarChart
     from reportlab.graphics.charts.legends import Legend
     from reportlab.graphics.shapes import Drawing, String
+    _S = String
+    String = lambda *a, **k: _S(*a, **{"fontName": pdf_fonts()[1 if 'Bold' in str(k.get('fontName', '')) else 0], **k})  # noqa: E731
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.pagesizes import A4, landscape
@@ -174,6 +176,10 @@ def to_pdf(plan: ActionPlan) -> bytes:
     good, bad = colors.HexColor("#" + GOOD), colors.HexColor("#" + BAD)
     grid = colors.HexColor("#D0D7DC")
     ss = getSampleStyleSheet()
+    FONT, FONT_B = pdf_fonts()
+    for _st in ss.byName.values():
+        if hasattr(_st, "fontName"):
+            _st.fontName = FONT_B if "Bold" in _st.fontName else FONT
     h1 = ParagraphStyle("h1", parent=ss["Heading1"], textColor=accent, fontSize=16, spaceAfter=4)
     h2 = ParagraphStyle("h2", parent=ss["Heading2"], textColor=accent, fontSize=12, spaceBefore=10, spaceAfter=4)
     small = ParagraphStyle("small", parent=ss["Normal"], fontSize=8, leading=10, alignment=TA_LEFT)
@@ -188,20 +194,20 @@ def to_pdf(plan: ActionPlan) -> bytes:
 
     def footer(canvas, d):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7)
+        canvas.setFont(FONT, 7)
         canvas.setFillColor(colors.grey)
         canvas.drawString(12 * mm, 7 * mm, _t(f"{plan.title} - " + _("gerado em {created}", created=fmt_datetime(plan.created))).replace("&amp;", "&"))
         canvas.drawRightString(page[0] - 12 * mm, 7 * mm, _("Página {page}", page=d.page))
         canvas.restoreState()
 
     def table(data, col_widths=None, header=True, zebra=True):
-        data = [[tr(c) if isinstance(c, str) else c for c in row] for row in data]  # textos fixos no idioma atual
+        data = localize_rows(data)  # textos fixos no idioma atual e medidas no sistema escolhido
         t = Table(data, colWidths=col_widths, repeatRows=1 if header else 0)
-        st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        st = [("GRID", (0, 0), (-1, -1), 0.4, grid), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"), ("FONTNAME", (0, 0), (-1, -1), FONT),
               ("FONTSIZE", (0, 0), (-1, -1), 7.5), ("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2)]
         if header:
             st += [("BACKGROUND", (0, 0), (-1, 0), accent), ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                   ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold")]
+                   ("FONTNAME", (0, 0), (-1, 0), FONT_B)]
         if zebra:
             for i in range(1, len(data)):
                 if i % 2 == 0:
@@ -261,7 +267,7 @@ def to_pdf(plan: ActionPlan) -> bytes:
         lg.columnMaximum = 1
         lg.boxAnchor = "nw"
         dw.add(lg)
-        dw.add(String(0, 62 * mm - 10, _("Bins por tipo"), fontSize=8, fontName="Helvetica-Bold"))
+        dw.add(String(0, 62 * mm - 10, _("Bins por tipo"), fontSize=8, fontName=FONT_B))
         chart = dw
     top = Table([[kt, chart or ""]], colWidths=[180 * mm, width - 180 * mm])
     top.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
@@ -307,7 +313,7 @@ def to_pdf(plan: ActionPlan) -> bytes:
     if plan.depara:
         n = len(plan.depara_cols)
         dd = [plan.depara_cols] + [[P(_fmt(c, 1) if isinstance(c, float) else c) for c in row] for row in plan.depara]
-        story.append(table([[P(c, ParagraphStyle("hc", parent=cell, textColor=colors.white, fontName="Helvetica-Bold")) for c in dd[0]]] + dd[1:],
+        story.append(table([[P(c, ParagraphStyle("hc", parent=cell, textColor=colors.white, fontName=FONT_B)) for c in dd[0]]] + dd[1:],
                            [width / n] * n))
     else:
         story.append(Paragraph(_("Sem linhas."), small))
@@ -318,6 +324,8 @@ def to_pdf(plan: ActionPlan) -> bytes:
 def _bins_drawing(bins, max_w):
     """Bins lado a lado, largura proporcional (cm), com o código."""
     from reportlab.graphics.shapes import Drawing, Rect, String
+    _S = String
+    String = lambda *a, **k: _S(*a, **{"fontName": pdf_fonts()[1 if 'Bold' in str(k.get('fontName', '')) else 0], **k})  # noqa: E731
     from reportlab.lib import colors
 
     h = 14
@@ -340,6 +348,8 @@ def _bins_drawing(bins, max_w):
 
 def _bar_drawing(used, total, max_w):
     from reportlab.graphics.shapes import Drawing, Rect, String
+    _S = String
+    String = lambda *a, **k: _S(*a, **{"fontName": pdf_fonts()[1 if 'Bold' in str(k.get('fontName', '')) else 0], **k})  # noqa: E731
     from reportlab.lib import colors
 
     d = Drawing(max_w, 14)

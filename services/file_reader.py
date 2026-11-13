@@ -140,7 +140,11 @@ def parse_decimal(value) -> Optional[Decimal]:
 
 
 def normalize_header(text: str) -> str:
-    text = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode()
+    """Título/palavra-chave normalizado para comparação (sem acentos, só letras e números). Aceita os textos
+    traduzidos da interface: o título em inglês, espanhol... vira o original em português antes."""
+    from services.i18n import source_text
+
+    text = unicodedata.normalize("NFKD", str(source_text(text) or "")).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 

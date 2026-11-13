@@ -756,7 +756,10 @@ def cached(db, kind: str, location_ids, prm, extra, compute):
     """Executa `compute()` ou devolve o resultado guardado para os mesmos dados e parâmetros."""
     if getattr(prm, "engine", "heuristic") != "or":
         return compute()
-    key = (kind, hash(tuple(sorted(location_ids))), repr(prm), repr(extra), _fingerprint(db))
+    from services.i18n import get_lang
+
+    # idioma na chave: o resultado traz textos prontos (avisos, violações)
+    key = (kind, hash(tuple(sorted(location_ids))), repr(prm), repr(extra), _fingerprint(db), get_lang())
     now = time.monotonic()
     hit = _CACHE.get(key)
     if hit and now - hit[0] < _CACHE_TTL:

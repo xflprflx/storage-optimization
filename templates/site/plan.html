@@ -70,11 +70,11 @@
           <tr><td>{{ pc.kind }}<div class="text-muted" style="font-size:.72rem">{{ pc.note }}</div></td>
             <td class="mono">{{ pc.code }}{% if pc.name %}<div class="text-muted" style="font-size:.72rem">{{ pc.name }}</div>{% endif %}</td>
             <td class="text-end fw-semibold">{{ pc.qty|dec }}</td>
-            <td class="text-end">{{ ('R$ ' ~ pc.unit|dec(2)) if pc.unit is not none else '—' }}</td>
-            <td class="text-end">{{ ('R$ ' ~ pc.total|dec(2)) if pc.total is not none else '—' }}</td></tr>
+            <td class="text-end">{{ fmt_money(pc.unit) if pc.unit is not none else '—' }}</td>
+            <td class="text-end">{{ fmt_money(pc.total) if pc.total is not none else '—' }}</td></tr>
         {% endfor %}
         </tbody>
-        <tfoot><tr class="fw-semibold"><td colspan="4">{{ _("Total") }}</td><td class="text-end">{{ ('R$ ' ~ rep.purchase_total|dec(2)) if rep.purchase_total is not none else '—' }}</td></tr></tfoot>
+        <tfoot><tr class="fw-semibold"><td colspan="4">{{ _("Total") }}</td><td class="text-end">{{ fmt_money(rep.purchase_total) if rep.purchase_total is not none else '—' }}</td></tr></tfoot>
       </table></div>
     </div>
   </div>

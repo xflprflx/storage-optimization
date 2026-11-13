@@ -226,9 +226,9 @@
           <div class="col-12"><label class="form-label mb-0">{{ _("Corredor mais perto da expedição") }}</label>
             <input class="form-control form-control-sm text-uppercase" name="slot_ref" value="{{ params.slot_ref }}" placeholder="{{ _("o primeiro") }}" maxlength="20" title="{{ _("Corredor (ou rua) mais perto da expedição") }}"></div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Distância de um corredor para o seguinte") }}">{{ _("Entre corredores (m)") }}</label>
-            <input class="form-control form-control-sm text-end" name="slot_aisle_m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
+            <input class="form-control form-control-sm text-end" name="slot_aisle_m" data-u="m" value="{{ params.slot_aisle_m }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Frente de cada estante, ao longo do corredor") }}">{{ _("Frente da estante (m)") }}</label>
-            <input class="form-control form-control-sm text-end" name="slot_bay_m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
+            <input class="form-control form-control-sm text-end" name="slot_bay_m" data-u="m" value="{{ params.slot_bay_m }}" inputmode="decimal"></div>
           <div class="col-12 fw-semibold mt-1">{{ _("Duas zonas de ouro: da pega (altura) e da caminhada (perto da expedição)") }}</div>
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Endereços até esta caminhada estimada da referência; vazio = os 20% mais perto") }}">{{ _("Caminhada até (m)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_walk_m" value="{{ params.slot_walk_m }}" inputmode="decimal" placeholder="{{ _("20% mais perto") }}"></div>
@@ -238,7 +238,7 @@
             <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels }}" placeholder="{{ _("ex.: 2,3") }}"></div>
           <div class="col-12 fw-semibold mt-1">{{ _h("Tempo de separação <span class=\"fw-normal text-muted\">(objetivo \"Menor tempo\" e indicador do resultado)</span>") }}</div>
           <div class="col-6"><label class="form-label mb-0" for="slot_v" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
-            <input class="form-control form-control-sm text-end" name="slot_v" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
+            <input class="form-control form-control-sm text-end" name="slot_v" data-u="m/s" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" for="slot_gold_s" title="{{ _("Tempo a mais por item pego num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/item)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
         </div>
@@ -285,8 +285,8 @@
         {% else %}
         <div class="row g-2 mb-1">
           <div class="col-4"><label class="form-label mb-0">{{ _("Máx. bins") }}</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric" title="{{ _("por endereço") }}"></div>
-          <div class="col-4"><label class="form-label mb-0">{{ _("Larg. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_width" value="{{ params.max_width }}" inputmode="decimal"></div>
-          <div class="col-4"><label class="form-label mb-0">{{ _("Alt. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_height" value="{{ params.max_height }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Larg. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_width" data-u="cm" value="{{ params.max_width }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Alt. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_height" data-u="cm" value="{{ params.max_height }}" inputmode="decimal"></div>
         </div>
         {{ switch('clear_empty', _('Sugerir remover bins de endereços sem saldo e sem produto')) }}
         <div class="fw-semibold mt-2 mb-1">{{ _("Níveis") }}</div>

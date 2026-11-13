@@ -102,7 +102,7 @@
         <select class="form-select form-select-sm" id="nkCam"><option value="follow">{{ _("Seguir o separador") }}</option><option value="fp">{{ _("Primeira pessoa") }}</option>
           <option value="top">{{ _("De cima (rota toda)") }}</option><option value="free">{{ _("Livre (mouse)") }}</option></select></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkWalkV" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>
-        <input class="form-control form-control-sm" type="number" id="nkWalkV" min="0.2" max="3" step="0.1" value="1.0"></div>
+        <input class="form-control form-control-sm" type="number" id="nkWalkV" data-u="m/s" min="0.2" max="3" step="0.1" value="1.0"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkPick" title="{{ _("Tempo fixo parado em cada endereço (chegar, localizar, conferir)") }}">{{ _("Tempo por parada (s)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkPick" min="0" max="300" step="1" value="10"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkPiece" title="{{ _("Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo") }}">{{ _("Tempo por peça (s)") }}</label>
@@ -224,7 +224,7 @@ function label(text, x, y, z, color = '#5b6770', size = LBL) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(M(o.w), 0.04, M(o.d)), new THREE.MeshLambertMaterial({ color: '#bfe6cb', transparent: true, opacity: 0.9 }));
   m.position.set(M(o.x + o.w / 2), 0.02, M(o.y + o.d / 2)); scene.add(m);
   outline(o.x, o.y, o.w, o.d, '#3b8c5a', true, 0.045);
-  scene.add(label(`${o.name} · ${fmt(o.w * o.d / 10000)} m²`, M(o.x + o.w / 2), 0.6, M(o.y + o.d / 2), '#24613a'));
+  scene.add(label(nkU.text(`${o.name} · ${fmt(o.w * o.d / 10000)} m²`), M(o.x + o.w / 2), 0.6, M(o.y + o.d / 2), '#24613a'));
 });
 let refLabel = null;
 if (data.ref) {  // ponto de referência da separação (expedição): marcador
@@ -297,7 +297,7 @@ function binColor(b, mode) {
 function rebuild() {
   const sel = aisleSel(), cut = +$('nkCut').value, mode = $('nkColor').value;
   aisleText();
-  $('nkCutV').textContent = `${fmt(cut / 100, 2)} m`;
+  $('nkCutV').textContent = nkU.text(`${fmt(cut / 100, 2)} m`);
   const showMod = m => !sel.size || sel.has(aisleOf(m));
   let ip = 0, il = 0;
   mods.forEach(m => {
@@ -431,7 +431,7 @@ const segGeo = new THREE.BoxGeometry(1, 0.03, 0.16); segGeo.translate(0.5, 0, 0)
 const pinGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.6, 12); pinGeo.translate(0, 0.3, 0);
 const edgeGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-const walkV = () => Math.min(3, Math.max(0.2, +$('nkWalkV').value || 1));
+const walkV = () => Math.min(3, Math.max(0.2, nkU.get($('nkWalkV')) || 1));
 const pickS = () => Math.min(300, Math.max(0, +$('nkPick').value || 0));
 const pieceS = () => Math.min(120, Math.max(0, +$('nkPiece').value || 0));
 const goldS = () => Math.min(120, Math.max(0, +$('nkGold').value || 0));

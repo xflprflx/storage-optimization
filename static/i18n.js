@@ -7,7 +7,7 @@
   window._t = function (s, p) {
     let r = (window.NK_T && window.NK_T[s]) || s;
     if (p) r = r.replace(/\{(\w+)\}/g, (m, k) => (k in p ? (p[k] == null ? '' : String(p[k])) : m));
-    return r;
+    return window.nkU ? window.nkU.text(r) : r;  // medidas no sistema escolhido (units.js)
   };
   const fmts = {};
   window.nkNum = function (v, min, max) {

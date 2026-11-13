@@ -73,6 +73,7 @@
   <script>window.NK_I18N = {{ js_i18n()|tojson }};</script>
   {% if get_lang() != 'pt-BR' %}<script src="/i18n/{{ get_lang() }}.js?v={{ i18n_version() }}"></script>{% endif %}
   <script src="/static/i18n.js?v={{ i18n_version() }}"></script>
+  <script src="/static/units.js?v={{ i18n_version() }}"></script>
   {% block head %}{% endblock %}
 </head>
 <body>

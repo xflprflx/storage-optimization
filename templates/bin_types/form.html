@@ -57,7 +57,7 @@
         {% for key, label in [('height', _('Altura')), ('width', _('Largura')), ('length', _('Comprimento'))] %}
         <div class="col-md-4">
           <label class="form-label">{{ label }}</label>
-          <input class="form-control text-end dim {{ invalid(errors, key) }}" name="{{ key }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
+          <input class="form-control text-end dim {{ invalid(errors, key) }}" name="{{ key }}" data-u="cm" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
           {{ field_error(errors, key) }}
         </div>
         {% endfor %}
@@ -67,12 +67,12 @@
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">{{ _("Peso máximo (kg)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'max_weight') }}" name="max_weight" inputmode="decimal" value="{{ data.get('max_weight')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'max_weight') }}" name="max_weight" data-u="kg" inputmode="decimal" value="{{ data.get('max_weight')|dec_input }}">
           {{ field_error(errors, 'max_weight') }}
         </div>
         <div class="col-md-4">
           <label class="form-label">{{ _("Volume (litros)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'max_volume') }}" name="max_volume" id="max_volume" inputmode="decimal" value="{{ data.get('max_volume')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'max_volume') }}" name="max_volume" data-u="L" id="max_volume" inputmode="decimal" value="{{ data.get('max_volume')|dec_input }}">
           {{ field_error(errors, 'max_volume') }}
           <div class="form-text" id="volHint">{{ _("Vazio = calcular pelas dimensões.") }}</div>
         </div>
@@ -97,10 +97,10 @@
   const num = v => { v = (v || '').trim(); if (!v) return NaN; if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); return parseFloat(v); };
   const hint = document.getElementById('volHint');
   function upd() {
-    const [h, w, l] = [...document.querySelectorAll('.dim')].map(i => num(i.value));
+    const [h, w, l] = [...document.querySelectorAll('.dim')].map(i => nkU.get(i) ?? NaN);
     const calc = h * w * l / 1000;
     hint.textContent = isNaN(calc) ? _t('Vazio = calcular pelas dimensões.')
-      : _t('Vazio = calcular pelas dimensões ({calc} L).', {calc: calc.toLocaleString(NK_I18N.locale, { maximumFractionDigits: 2 })});
+      : _t('Vazio = calcular pelas dimensões ({calc} L).', {calc: nkU.toDisp(calc, 'L').toLocaleString(NK_I18N.locale, { maximumFractionDigits: 2 })}).replace(' L)', ' ' + nkU.unit('L') + ')');
   }
   document.getElementById('binForm').addEventListener('input', upd); upd();
   // Compartimento: prévia da grade (vista de cima) e das dimensões que virão da bin pai

@@ -207,7 +207,7 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
                  serpentine=bool(bc.get("serpentine")))
     for i, zc in enumerate(bc.get("zones") or [], start=1):
         name = zc.get("name") or _("Zona {i}", i=i)
-        ln = _num(zc.get("length_m"), f"{name}: comprimento", errors, None, lo=0.5)
+        ln = _num(zc.get("length_m"), _("{name}: comprimento", name=name), errors, None, lo=0.5)
         al = _num(zc.get("aisle_m"), _("{name}: largura do corredor", name=name), errors, None, lo=0.5)
         cr = _num(zc.get("cross_aisles"), _("{name}: corredores transversais", name=name), errors, 0, lo=0)
         zx = _num(zc.get("x_m"), f"{name}: X", errors, None, lo=0)

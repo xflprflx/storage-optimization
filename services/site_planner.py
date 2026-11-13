@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from services.bin_optimizer import BinSpec, Params, ProductUnit, _sku_options, _units, capacity
-from services.i18n import N_, _, fmt_num, seps, tr
+from services.i18n import N_, _, fmt_num, seps, to_display, tr
 
 EPS = 1e-9
 OPTIONS_COST = 5  # opções de bins por SKU que o solver compara no objetivo de custo total
@@ -2043,15 +2043,21 @@ def inner_dims(fl, off: float, min_len: float) -> list[tuple]:
             continue
         if w >= min_len:
             y = Y + d - min(off, d / 2)
-            out.append((X, y, X + w, y, _m(w), False, kind))
+            out.append((X, y, X + w, y, _md(w), False, kind))
         if d >= min_len:
             x = X + w - min(off, w / 2)
-            out.append((x, Y, x, Y + d, _m(d), True, kind))
+            out.append((x, Y, x, Y + d, _md(d), True, kind))
     return out
 
 
 def _m(cm: float) -> str:
     return f"{cm / 100:.2f}".rstrip("0").rstrip(".").replace(".", seps()[0])
+
+
+def _md(cm: float) -> str:
+    """Cota sem unidade (só o número), já no sistema exibido: metros, ou pés no imperial."""
+    v = float(to_display(cm / 100, "m"))
+    return f"{v:.2f}".rstrip("0").rstrip(".").replace(".", seps()[0])
 
 
 FLOOR_KINDS = (N_("palete no chao"), N_("palete no chão"), "blocado", "piso")
@@ -2161,21 +2167,21 @@ def floor_svg(plan: SitePlan, width_px: int = 1000) -> str:
             g.append(f'<text x="{W / 2:.1f}" y="{y - 3}" text-anchor="middle" stroke="none" font-weight="bold">{label_total}</text>')
             return
         for a, c in zip(pts, pts[1:]):
-            g.append(f'<text x="{(a + c) / 2 * sc:.1f}" y="{y - 3}" text-anchor="middle" stroke="none">{_m(c - a)}</text>')
+            g.append(f'<text x="{(a + c) / 2 * sc:.1f}" y="{y - 3}" text-anchor="middle" stroke="none">{_md(c - a)}</text>')
 
     def vchain(pts, x, label_total=None):
         g.append(f'<line x1="{x}" y1="0" x2="{x}" y2="{H:.1f}"/>')
         for p in pts:
             g.append(f'<line x1="{x - 3}" y1="{p * sc:.1f}" x2="{x + 3}" y2="{p * sc:.1f}"/>')
-        items = [((0, pts[-1]), label_total)] if label_total else [((a, c), _m(c - a)) for a, c in zip(pts, pts[1:])]
+        items = [((0, pts[-1]), label_total)] if label_total else [((a, c), _md(c - a)) for a, c in zip(pts, pts[1:])]
         for (a, c), t in items:
             cy = (a + c) / 2 * sc
             g.append(f'<text x="{x - 3}" y="{cy:.1f}" text-anchor="middle" stroke="none" transform="rotate(-90 {x - 3} {cy:.1f})"'
                      + (' font-weight="bold"' if label_total else "") + f'>{t}</text>')
 
-    hchain([0, fl.length_cm], -28, f"{_m(fl.length_cm)} m (comprimento)")
+    hchain([0, fl.length_cm], -28, _("{v} m (comprimento)", v=_m(fl.length_cm)))
     hchain(xs, -10)
-    vchain([0, fl.width_cm], -28, f"{_m(fl.width_cm)} m (largura)")
+    vchain([0, fl.width_cm], -28, _("{v} m (largura)", v=_m(fl.width_cm)))
     vchain(ys, -10)
     g.append("</g>")
     out += g

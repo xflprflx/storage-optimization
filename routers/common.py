@@ -25,14 +25,21 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.finalize = i18n.finalize
 templates.env.globals.update(_=_, _h=_h, fmt_datetime=i18n.fmt_datetime, tr=i18n.tr, LANGUAGES=i18n.LANGUAGES, get_lang=i18n.get_lang,
                              unit_label=i18n.unit_label, js_i18n=i18n.js_bootstrap, units_mode=i18n.get_units_mode,
-                             i18n_version=i18n.catalog_version)
+                             i18n_version=i18n.catalog_version, fmt_money=i18n.fmt_money, currency=i18n.currency)
 
 
 # --------------------------------------------------------------------------- #
 # Filtros e globais Jinja
 # --------------------------------------------------------------------------- #
 def fmt_dec(value: Any, places: Optional[int] = None) -> str:
-    """Formata Decimal no padrão do idioma atual (pt-BR: 1.234,5), removendo zeros à direita."""
+    """Formata Decimal no padrão do idioma atual (pt-BR: 1.234,5), removendo zeros à direita. Aceita também
+    número em texto (como foi digitado no formulário, ex.: "7,5")."""
+    if isinstance(value, str):
+        from services.file_reader import parse_decimal
+        try:
+            value = parse_decimal(value)
+        except ValueError:
+            return value
     return fmt_num(value, places)
 
 

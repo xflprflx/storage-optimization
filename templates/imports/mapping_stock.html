@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
+<!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
+
 {% set fv = form_values if form_values is defined else none %}
 {% macro chk(name, default) -%}{% if fv is not none %}{% if fv.get(name) %}checked{% endif %}{% elif default %}checked{% endif %}{%- endmacro %}
 <div class="page-header">
@@ -89,6 +91,7 @@
   </div>
 </form>
 {% include "imports/_preview.html" %}
+<!--/nk-metric-->
 {% endblock %}
 {% block scripts %}
 <script>

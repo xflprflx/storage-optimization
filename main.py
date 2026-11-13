@@ -84,10 +84,39 @@ class LanguageMiddleware:
         t1 = i18n.set_lang(i18n.normalize_lang(lang) or i18n.lang_from_accept(headers.get("accept-language")))
         t2 = i18n.set_units(cookies["nk_units"].value if "nk_units" in cookies else "auto")
         try:
+            if i18n.is_imperial():
+                return await self.inner(scope, receive, _imperial_html(send))
             return await self.inner(scope, receive, send)
         finally:
             i18n._LANG.reset(t1)
             i18n._UNITS.reset(t2)
+
+
+def _imperial_html(send):
+    """No sistema imperial, as páginas HTML passam por i18n.units_in_html (medidas dos textos em in/ft/lb)."""
+    state = {"start": None, "body": []}
+
+    async def wrapped(message):
+        if message["type"] == "http.response.start":
+            ctype = dict(message.get("headers") or []).get(b"content-type", b"")
+            if ctype.startswith(b"text/html"):
+                state["start"] = message
+                return
+            return await send(message)
+        if message["type"] == "http.response.body" and state["start"] is not None:
+            state["body"].append(message.get("body", b""))
+            if message.get("more_body"):
+                return
+            body = i18n.units_in_html(b"".join(state["body"]).decode("utf-8")).encode("utf-8")
+            start = state["start"]
+            start["headers"] = [(k, v) for k, v in start.get("headers") or [] if k.lower() != b"content-length"]
+            start["headers"].append((b"content-length", str(len(body)).encode()))
+            state["start"] = None
+            await send(start)
+            return await send({"type": "http.response.body", "body": body})
+        return await send(message)
+
+    return wrapped
 
 
 app.add_middleware(LanguageMiddleware)

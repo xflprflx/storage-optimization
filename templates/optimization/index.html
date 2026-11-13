@@ -141,8 +141,8 @@
         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="keep_space" value="1" id="space" {% if params.keep_space %}checked{% endif %}><label class="form-check-label" for="space">{{ _h("Não exceder o espaço atual do endereço <span class=\"text-muted\">(largura/altura das bins atuais; só para endereços cujo nível não tem capacidade cadastrada)</span>") }}</label></div>
         <div class="row g-2 mt-1">
           <div class="col-4"><label class="form-label mb-0">{{ _("Máx. bins") }}</label><input class="form-control form-control-sm text-end" name="max_bins" value="{{ params.max_bins }}" inputmode="numeric"></div>
-          <div class="col-4"><label class="form-label mb-0">{{ _("Larg. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_width" value="{{ params.max_width }}" inputmode="decimal"></div>
-          <div class="col-4"><label class="form-label mb-0">{{ _("Alt. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_height" value="{{ params.max_height }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Larg. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_width" data-u="cm" value="{{ params.max_width }}" inputmode="decimal"></div>
+          <div class="col-4"><label class="form-label mb-0">{{ _("Alt. máx. (cm)") }}</label><input class="form-control form-control-sm text-end" name="max_height" data-u="cm" value="{{ params.max_height }}" inputmode="decimal"></div>
         </div>
         <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" name="clear_empty" value="1" id="clr" {% if params.clear_empty %}checked{% endif %}><label class="form-check-label" for="clr">{{ _("Sugerir remover bins de endereços sem saldo e sem produto") }}</label></div>
       </div>

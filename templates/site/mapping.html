@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ _h("Mapear colunas — {name}", name=(project.name)) }}{% endblock %}
 {% block content %}
+<!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
+
 <div class="page-header">
   <h1><i class="bi bi-diagram-3"></i> {{ _("Mapear colunas da planilha") }}</h1>
   <a href="/optimization/site/{{ project.id }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar ao projeto") }}</a>
@@ -57,6 +59,7 @@
     <button class="btn btn-outline-secondary" name="action" value="cancel" formnovalidate><i class="bi bi-x-lg"></i> {{ _("Cancelar") }}</button>
   </div>
 </form>
+<!--/nk-metric-->
 {% endblock %}
 
 {% block scripts %}

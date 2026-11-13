@@ -66,7 +66,7 @@
             </select>
           </div>
           <div class="col-3 col-md-1"><input class="form-control form-control-sm text-end" name="max_bins" type="number" min="0" placeholder="{{ _("qtd") }}" title="{{ _("Vazio ou 0 = remover a capacidade deste tipo") }}"></div>
-          <div class="col-3 col-md-2"><input class="form-control form-control-sm text-end" name="height" inputmode="decimal" placeholder="{{ _("vão (cm)") }}" title="{{ _("Distância entre este nível e o de cima (cm). Ex.: porta-paletes: 150") }}"></div>
+          <div class="col-3 col-md-2"><input class="form-control form-control-sm text-end" name="height" data-u="cm" inputmode="decimal" placeholder="{{ _("vão (cm)") }}" title="{{ _("Distância entre este nível e o de cima (cm). Ex.: porta-paletes: 150") }}"></div>
           <div class="col-auto form-check ms-2 small"><input class="form-check-input" type="checkbox" name="clear_height" value="1" id="clrh"><label class="form-check-label" for="clrh">{{ _("limpar vão") }}</label></div>
           <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm(_t('Aplicar a todos os níveis que atendem às condições?'))">{{ _("Aplicar") }}</button></div>
         </form>
@@ -84,7 +84,7 @@
               <option value="remove">{{ _("— remover a estrutura das estantes —") }}</option>
             </select>
           </div>
-          <div class="col-4 col-md-1"><input class="form-control form-control-sm text-end" name="top_gap" inputmode="decimal" value="5" title="{{ _("Folga acima da bin (cm) para tirá-la do nível") }}"></div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm text-end" name="top_gap" data-u="cm" inputmode="decimal" value="5" title="{{ _("Folga acima da bin (cm) para tirá-la do nível") }}"></div>
           <div class="col-4 col-md-1"><input class="form-control form-control-sm text-end" name="first_level" inputmode="decimal" placeholder="{{ _("1º nível") }}"
               title="{{ _("Altura do 1º nível nessas estantes (cm), quando foram montadas diferente da estrutura — vazio = a da estrutura") }}"></div>
           <div class="col-auto small d-flex flex-wrap gap-3">
@@ -131,7 +131,7 @@
             {% for bt in bin_types %}
             <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:64px" type="number" min="0" name="cap_{{ r.level.id }}_{{ bt.id }}" value="{{ u.capacity.get(bt.id, '') }}"></td>
             {% endfor %}
-            <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:72px" inputmode="decimal" name="height_{{ r.level.id }}" value="{{ r.level.height_cm|dec_input }}" title="{{ _("Distância até o nível de cima (cm). Nunca fica menor que a bin mais alta do nível: a estrutura acompanha a bin.") }}">
+            <td class="text-center"><input class="form-control form-control-sm text-end mx-auto" style="width:72px" inputmode="decimal" name="height_{{ r.level.id }}" data-u="cm" value="{{ r.level.height_cm|dec_input }}" title="{{ _("Distância até o nível de cima (cm). Nunca fica menor que a bin mais alta do nível: a estrutura acompanha a bin.") }}">
               {% if r.tallest %}<div class="text-muted" style="font-size:.7rem">{{ _h("bin {tallest}", tallest=(r.tallest|dec)) }}</div>{% endif %}</td>
             <td class="text-nowrap">
               {% for tid, n in u.used.items() %}{% if n %}{% set bt = (bin_types|selectattr('id', 'equalto', tid)|first) %}

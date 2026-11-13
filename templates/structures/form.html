@@ -26,7 +26,7 @@
         <div class="col-md-3">
           <label class="form-label">{{ _("Tipo") }}</label>
           <select class="form-select" name="kind">
-            {% for k in kinds %}<option {% if data.get('kind') == k %}selected{% endif %}>{{ k }}</option>{% endfor %}
+            {% for k in kinds %}<option value="{{ k|e }}" {% if data.get('kind') == k %}selected{% endif %}>{{ k }}</option>{% endfor %}
           </select>
         </div>
       </div>
@@ -38,7 +38,7 @@
                                     ('height', _('Altura total *'), _('Precisa caber no pé-direito útil do imóvel.'))] %}
         <div class="col-md-4">
           <label class="form-label">{{ label }}</label>
-          <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" data-u="cm" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
           {{ field_error(errors, key) }}
           <div class="form-text">{{ hint }}</div>
         </div>
@@ -54,24 +54,24 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">{{ _("Vão útil por nível (cm) *") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'level_height') }}" name="level_height" inputmode="decimal" value="{{ data.get('level_height')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'level_height') }}" name="level_height" data-u="cm" inputmode="decimal" value="{{ data.get('level_height')|dec_input }}">
           {{ field_error(errors, 'level_height') }}
         </div>
         <div class="col-md-3">
           <label class="form-label">{{ _("Altura do 1º nível (cm)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'first_level_cm') }}" name="first_level_cm" inputmode="decimal" value="{{ data.get('first_level_cm')|dec_input }}" placeholder="0">
+          <input class="form-control text-end {{ invalid(errors, 'first_level_cm') }}" name="first_level_cm" data-u="cm" inputmode="decimal" value="{{ data.get('first_level_cm')|dec_input }}" placeholder="0">
           {{ field_error(errors, 'first_level_cm') }}
           <div class="form-text">{{ _("Base do 1º nível a partir do piso (0 = no chão). Pode ser outra por estante, em Capacidade dos níveis.") }}</div>
         </div>
         <div class="col-md-9">
           <label class="form-label">{{ _h("Vão de cada nível (cm), de baixo para cima <span class=\"text-muted\">(opcional)</span>") }}</label>
-          <input class="form-control mono {{ invalid(errors, 'level_heights') }}" name="level_heights" value="{{ (data.get('level_heights') or [])|join('; ') }}" placeholder="{{ _("ex.: 45; 40; 40; 35 — vazio = o vão útil em todos os níveis") }}">
+          <input class="form-control mono {{ invalid(errors, 'level_heights') }}" name="level_heights" data-u="cm" value="{{ (data.get('level_heights') or [])|join('; ') }}" placeholder="{{ _("ex.: 45; 40; 40; 35 — vazio = o vão útil em todos os níveis") }}">
           {{ field_error(errors, 'level_heights') }}
           <div class="form-text">{{ _("Os níveis sem vão informado (os de cima) usam o vão útil. A sobra da altura total vira a espessura das longarinas. Cada nível só recebe bins que cabem no seu vão (projeto de filial nova e Capacidade dos níveis).") }}</div>
         </div>
         <div class="col-md-3">
           <label class="form-label">{{ _("Carga máx. por nível (kg)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'max_load') }}" name="max_load" inputmode="decimal" value="{{ data.get('max_load')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'max_load') }}" name="max_load" data-u="kg" inputmode="decimal" value="{{ data.get('max_load')|dec_input }}">
           {{ field_error(errors, 'max_load') }}
         </div>
         <div class="col-md-3">
@@ -87,10 +87,10 @@
       <div class="row g-3 align-items-start">
         <div class="col-md-4">
           <label class="form-label">{{ _("Início (cm do piso)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'golden_from') }}" name="golden_from" inputmode="decimal" value="{{ data.get('golden_from')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'golden_from') }}" name="golden_from" data-u="cm" inputmode="decimal" value="{{ data.get('golden_from')|dec_input }}">
           {{ field_error(errors, 'golden_from') }}
           <label class="form-label mt-2">{{ _("Fim (cm do piso)") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'golden_to') }}" name="golden_to" inputmode="decimal" value="{{ data.get('golden_to')|dec_input }}">
+          <input class="form-control text-end {{ invalid(errors, 'golden_to') }}" name="golden_to" data-u="cm" inputmode="decimal" value="{{ data.get('golden_to')|dec_input }}">
           {{ field_error(errors, 'golden_to') }}
           <div class="d-flex gap-2 mt-2">
             <button type="button" class="btn btn-sm btn-outline-warning" id="gzSuggest" title="{{ _("75 a 150 cm do piso") }}">{{ _("Sugerir 75–150 cm") }}</button>
@@ -130,9 +130,9 @@
   const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a || {})) e.setAttribute(k, v); if (p) p.appendChild(e); return e; };
   let drag = null;
   function geo() {
-    const H = num(inp('height').value) || 200, W = num(inp('width').value) || 100, n = Math.max(1, parseInt(inp('levels').value, 10) || 1);
-    const clear = num(inp('level_height').value) || H / n, base = num(inp('first_level_cm').value) || 0;
-    const hs = String(inp('level_heights').value || '').split(/[;/\s]+/).map(v => num(v)).filter(v => v != null && v > 0);
+    const H = nkU.get(inp('height')) || 200, W = nkU.get(inp('width')) || 100, n = Math.max(1, parseInt(inp('levels').value, 10) || 1);
+    const clear = nkU.get(inp('level_height')) || H / n, base = nkU.get(inp('first_level_cm')) || 0;
+    const hs = String(inp('level_heights').value || '').split(/[;/\s]+/).map(v => num(v)).map(v => v == null || !inp('level_heights').dataset.nkU ? v : nkU.toMetric(v, 'cm')).filter(v => v != null && v > 0);
     const vao = i => hs[i] || clear;  // vão do nível i (0 = de baixo)
     const vs = Array.from({ length: n }, (_, i) => vao(i));
     // bases dos níveis: como no servidor (StructureSpec.z): 1º nível + vãos + longarinas (sobra da altura repartida)
@@ -141,9 +141,9 @@
     const floor = (inp('kind') && inp('kind').value) === 'Palete no chão';
     return { H, W, n, clear, pitch, base, vao, z, floor };
   }
-  function band() { return [num(inp('golden_from').value), num(inp('golden_to').value)]; }
+  function band() { return [nkU.get(inp('golden_from')), nkU.get(inp('golden_to'))]; }
   function setBand(a, b) {
-    inp('golden_from').value = a == null ? '' : fmt(a); inp('golden_to').value = b == null ? '' : fmt(b);
+    nkU.set(inp('golden_from'), a, 1); nkU.set(inp('golden_to'), b, 1);
   }
   function render() {
     const g = geo(), [gf, gt] = band();
@@ -167,7 +167,7 @@
         h.style.cursor = 'ns-resize'; h.dataset.edge = k;
         el('line', { x1: -4, y1: Y(z), x2: g.W + 96, y2: Y(z), stroke: '#b8860b', 'stroke-width': 1.5, 'pointer-events': 'none' }, svg);
         const t = el('text', { x: g.W + 98, y: Y(z) + (k === 'top' ? -3 : 11), 'font-size': 10, fill: '#8a6d1c', 'text-anchor': 'end', 'pointer-events': 'none' }, svg);
-        t.textContent = `${fmt(z)} cm`;
+        t.textContent = nkU.text(`${fmt(z)} cm`);
       });
     }
     // módulo: colunas, níveis (bandeja na base de cada nível) e vão útil
@@ -197,7 +197,7 @@
     el('line', { x1: px, y1: Y(90), x2: px + 12, y2: Y(2), ...P }, svg);
     el('line', { x1: px, y1: Y(140), x2: px - 18, y2: Y(95), ...P }, svg);
     el('line', { x1: px, y1: Y(140), x2: px + 18, y2: Y(95), ...P }, svg);
-    const pt = el('text', { x: px, y: Y(PERSON) - 6, 'font-size': 9, 'text-anchor': 'middle', fill: '#5b6770', 'pointer-events': 'none' }, svg); pt.textContent = '1,75 m';
+    const pt = el('text', { x: px, y: Y(PERSON) - 6, 'font-size': 9, 'text-anchor': 'middle', fill: '#5b6770', 'pointer-events': 'none' }, svg); pt.textContent = nkU.text(nkNum(1.75) + ' m');
     document.getElementById('gzLevels').innerHTML = gf != null && gt != null && gt > gf
       ? (golden.length ? _t('<span class="badge text-bg-warning">Zona de ouro<\/span> nível(is) {golden}', {golden: golden.join(', ')}) : '<span class="text-muted">' + _t('Nenhum nível tem a altura de pega dentro da faixa.') + '<\/span>')
       : '<span class="text-muted">' + _t('Sem zona de ouro.') + '<\/span>';

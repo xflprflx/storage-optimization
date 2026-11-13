@@ -487,6 +487,34 @@ As estruturas cadastradas também descrevem as estantes que já existem (víncul
 
 ---
 
+## Idiomas e unidades de medida
+
+Seletor no menu superior (ícone de tradução): **Português (Brasil)**, **English**, **Español**, **中文（简体）**,
+**Deutsch** e **Français**. Muda tudo: telas, mensagens, ajuda dos campos, gráficos/3D, relatórios em Excel e PDF.
+Na primeira visita vale o idioma do navegador; a escolha fica no cookie `nk_lang`. Datas, números e moeda seguem o
+idioma (1.234,5 / 1,234.5; R$, $, €, ¥ — só o símbolo: os custos são digitados na moeda de cada um, sem câmbio).
+
+**Unidades** (mesmo menu): *Conforme o idioma* (imperial — in, ft, lb, ft², ft/s — em inglês; métrico nos
+demais), *Métrico* ou *Imperial*. O banco guarda sempre o métrico; a conversão é só na tela:
+- campos de medida (marcados com `data-u="cm"`, ou pelo fim do nome: `_m`, `_cm`, `_m2`, `_kg`) aparecem
+  convertidos e voltam ao métrico ao salvar — salvar sem alterar mantém o valor exato (`static/units.js`);
+- textos, títulos e desenhos são convertidos no servidor (`i18n.units_in_html`) e no JavaScript (`_t`);
+- relatórios: colunas com a unidade no título (“Altura (cm)”) têm os números convertidos.
+- **Planilhas de importação são sempre métricas** (cm, m, kg, L), em qualquer idioma — as telas de
+  importação avisam. Os títulos de colunas, abas e palavras-chave (“Não usar”, “Fixa”...) são aceitos em
+  qualquer um dos 6 idiomas: um modelo baixado em inglês ou chinês volta a ser lido igual.
+
+PDF em chinês: embute uma fonte do sistema com chinês (WenQuanYi, Noto CJK, Microsoft YaHei...; ou o arquivo
+indicado em `NEOKIOSKI_CJK_FONT`). Sem nenhuma, usa a fonte STSong-Light do reportlab, que depende do leitor de PDF.
+
+Para desenvolvedores:
+- textos ficam em português no código e são marcados com `_("Texto {x}", x=...)` (Python/telas),
+  `_h(...)` (texto com HTML), `N_(...)` (constantes de módulo) e `_t('Texto {x}', {x})` (JavaScript);
+- `python scripts/i18n_extract.py` atualiza `locales/messages.json`; `--check` lista o que falta traduzir em
+  `locales/<idioma>.json` (formato `{"texto em português": "tradução"}`); `tests/test_i18n.py` exige todos
+  traduzidos, com os mesmos `{marcadores}` e tags;
+- resultados de otimização salvos guardam os textos no idioma em que foram gerados.
+
 ## Ajuda nos campos
 
 Todo campo de toda tela tem um cartão de ajuda: ao passar o mouse (ou focar o campo com o teclado) aparecem o nome, a explicação e um **desenho** com a parte de que o campo trata em destaque — por exemplo, a cota "1º nível" na estante, a coluna da planilha no mapeamento ou o corredor na planta.

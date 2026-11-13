@@ -4,8 +4,8 @@
 <!--nk-metric-->{% if js_i18n().units == 'imperial' %}<div class="alert alert-info small py-2"><i class="bi bi-rulers"></i> {{ _("As planilhas de importação usam sempre o sistema métrico (cm, m, kg, L), em qualquer idioma.") }}</div>{% endif %}
 
 <div class="page-header"><h1><i class="bi bi-upload"></i> {{ _("Importações") }}</h1></div>
-<div class="row g-3">
-  <div class="col-12"><h6 class="text-muted text-uppercase small mb-0">{{ _("Cadastros-base — importe nesta ordem") }}</h6></div>
+<div class="row g-3" data-tour="imp-cards">
+  <div class="col-12" data-tour="imp-order"><h6 class="text-muted text-uppercase small mb-0">{{ _("Cadastros-base — importe nesta ordem") }}</h6></div>
   {% for kind, icon, title, text in [
       ('branches', 'bi-building', _('1. Filiais'), _('Código e nome. Atualiza o nome das existentes.')),
       ('warehouses', 'bi-house-gear', _('2. Armazéns'), _('Código, nome e filiais (lista "01, 02"). Cria filiais inexistentes e as associações.')),

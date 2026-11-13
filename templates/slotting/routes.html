@@ -10,7 +10,7 @@
   <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a></div>
 </div>
 {% if error %}<div class="alert alert-warning">{{ error }}</div>{% else %}
-<div class="row g-2 mb-3">
+<div class="row g-2 mb-3" data-tour="rt-kpis">
   {% macro card(label, a, b, unit, sub='', c=none) %}
   <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
     <div class="small text-muted">{{ label }}</div>

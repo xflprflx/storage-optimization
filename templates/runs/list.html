@@ -26,7 +26,7 @@
   <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">{{ _("Filtrar") }}</button></div>
 </form>
 <form method="get" action="/optimization/runs/compare" id="cmpForm">
-<div class="card">
+<div class="card" data-tour="runs-list">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
     <strong>{{ _h("{total} resultado(s)", total=(page.total)) }}</strong>
     <div class="d-flex gap-2">

@@ -129,8 +129,8 @@ def _pages(client, ids) -> dict[str, str]:
     return out
 
 
-def test_every_field_has_help(client, db):
-    pages = _pages(client, _seed(db))
+def test_every_field_has_help(client, seeded):
+    pages = _pages(client, seeded)
     assert len(pages) > 40
     missing, total = set(), 0
     for url, body in pages.items():

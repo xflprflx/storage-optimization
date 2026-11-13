@@ -60,7 +60,7 @@
 <form method="post" id="batchForm">
 <div class="row g-3">
   <div class="col-xxl-8">
-    <div class="card">
+    <div class="card" data-tour="batch-scope">
       <div class="card-header bg-white"><strong>{{ _("1. Depósito") }}</strong></div>
       <div class="card-body row g-3">
         <div class="col-md-6">
@@ -91,7 +91,7 @@
       </div>
     </div>
 
-    <div class="card mt-3">
+    <div class="card mt-3" data-tour="batch-pattern">
       <div class="card-header bg-white">
         <strong>{{ _("2. Regra padrão por nível") }}</strong>
         <small class="text-muted">{{ _("— somente o Corredor é obrigatório; \"Não utilizar\" encerra o endereço naquele nível") }}</small>
@@ -117,7 +117,7 @@
       </div>
     </div>
 
-    <div class="card mt-3">
+    <div class="card mt-3" data-tour="batch-exc">
       <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
           <strong>{{ _("3. Exceções") }}</strong>
@@ -148,7 +148,7 @@
           {{ _h("Sem esta opção, toda posição conflitante é apenas reportada e não é gravada.<br> Com ela, as posições antigas conflitantes (idênticas, genéricas acima ou sub-endereços abaixo) são removidas e substituídas pelas novas <b>somente se estiverem desocupadas</b> (sem flag de ocupação e sem saldo). Posições ocupadas <b>nunca</b> são sobrescritas. Endereços idênticos e livres são mantidos (mesmo ID), preservando produtos ligados a eles.") }}
         </div>
       </div>
-      <div class="card-footer bg-white d-flex gap-2">
+      <div class="card-footer bg-white d-flex gap-2" data-tour="batch-run">
         <button class="btn btn-outline-primary" name="action" value="preview"><i class="bi bi-eye"></i> {{ _("Pré-visualizar") }}</button>
         <button class="btn btn-accent" name="action" value="execute" onclick="return confirm(_t('Gravar os endereços gerados?'));"><i class="bi bi-lightning-charge"></i> {{ _("Gerar agora") }}</button>
       </div>

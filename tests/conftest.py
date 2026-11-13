@@ -38,3 +38,19 @@ def settings(db):
 
     yield app_settings
     app_settings.save(db, dict(app_settings.DEFAULTS))
+
+
+@pytest.fixture()
+def seeded(db):
+    """Dados de exemplo das telas (filial HB com endereços, planta, histórico e projeto), criados uma vez por sessão."""
+    from models import Branch, BinType, Product, SiteProject, StorageLocation, StructureType, Warehouse
+    from tests.test_field_help import _seed
+
+    br = db.query(Branch).filter_by(code="HB").first()
+    if br is None:
+        return _seed(db)
+    return {"b": br.id, "w": db.query(Warehouse).filter_by(code="HW").one().id,
+            "st": db.query(StructureType).filter_by(code="H-EST").one().id, "bt": db.query(BinType).filter_by(code="H-CX").one().id,
+            "p": db.query(Product).filter_by(sku="H-SKU1").one().id,
+            "loc": db.query(StorageLocation).filter_by(branch_id=br.id).order_by(StorageLocation.id).first().id,
+            "prj": db.query(SiteProject).filter_by(name="Projeto da ajuda").one().id}

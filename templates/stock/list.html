@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h1><i class="bi bi-boxes"></i> {{ _h("Saldos Físicos <small class=\"text-muted fs-6\">por produto × endereço</small>") }}</h1>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2" data-tour="stock-actions">
     <a href="/imports/stock" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Importar saldos") }}</a>
     <a href="/stock/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Lançar saldo") }}</a>
   </div>

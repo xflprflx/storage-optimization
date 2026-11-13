@@ -47,4 +47,11 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .outerjoin(Warehouse, Warehouse.id == StorageLocation.warehouse_id)
         .group_by(Branch.code, Warehouse.code).order_by(Branch.code, Warehouse.code)
     ).all()
-    return render(request, "dashboard.html", stats=stats, by_scope=by_scope)
+    from routers.onboarding import HIDE_COOKIE
+    from services.onboarding import progress
+
+    # convite do guia: enquanto o cadastro básico não está pronto (e o usuário não escondeu)
+    welcome = None if request.cookies.get(HIDE_COOKIE) else progress(db)
+    if welcome is not None and not welcome["empty"] and welcome["pct"] >= 60:
+        welcome = None
+    return render(request, "dashboard.html", stats=stats, by_scope=by_scope, welcome=welcome)

@@ -57,7 +57,7 @@
   </div>
 </div>
 
-<ul class="nav nav-tabs mb-3">
+<ul class="nav nav-tabs mb-3" data-tour="opt-modes">
   <li class="nav-item"><a class="nav-link {{ 'active' if not POOL }}" href="/optimization">{{ _h("Por endereço <small class=\"text-muted\">(troca as bins de cada endereço)</small>") }}</a></li>
   <li class="nav-item"><a class="nav-link {{ 'active' if POOL }}" href="/optimization/pool">{{ _h("Pool de bins <small class=\"text-muted\">(bins fixas, produtos mudam de lugar)</small>") }}</a></li>
   <li class="nav-item"><a class="nav-link" href="/optimization/site"><i class="bi bi-building-add"></i> {{ _h("Projeto de filial nova <small class=\"text-muted\">(imóvel e estruturas do zero)</small>") }}</a></li>
@@ -72,7 +72,7 @@
   <form method="get" id="optForm">
   <input type="hidden" name="run" value="1">
   <div data-stepper id="optStepper" {% if results is not none %}data-start="last"{% endif %}>
-    <div class="card mb-3 nk-step" data-step-title="{{ _("Escopo") }}">
+    <div class="card mb-3 nk-step" data-tour="opt-scope" data-step-title="{{ _("Escopo") }}">
       <div class="card-header bg-white"><strong>{{ _("Escopo") }}</strong></div>
       <div class="card-body" data-step-footer>
         <label class="form-label small mb-0">{{ _("Filial *") }}</label>
@@ -111,7 +111,7 @@
       </div>
     </div>
 
-    <div class="card mb-3 nk-step" data-step-title="{{ _("O que otimizar") }}">
+    <div class="card mb-3 nk-step" data-tour="opt-what" data-step-title="{{ _("O que otimizar") }}">
       <div class="card-header bg-white"><strong>{{ _("O que otimizar") }}</strong></div>
       <div class="card-body" data-step-footer>
         <div class="small fw-semibold mb-1">{{ _("Bins") }}</div>
@@ -184,7 +184,7 @@
     </div>
 
     {# ---------------- posição dos SKUs pela saída (slotting) ---------------- #}
-    <div class="card mb-3 nk-step" data-step-title="{{ _("Posição pela saída") }}">
+    <div class="card mb-3 nk-step" data-tour="opt-slot" data-step-title="{{ _("Posição pela saída") }}">
       <div class="card-header bg-white"><strong>{{ _("Posição dos SKUs pela saída") }}</strong></div>
       <div class="card-body small">
         {{ switch('slot', _('Considerar a saída dos SKUs'), _('(curva ABC, zona de ouro e itens que saem juntos)')) }}
@@ -256,7 +256,7 @@
       </div>
     </div>
 
-    <div class="card mb-3 nk-step" data-step-title="{{ _("Restrições") }}">
+    <div class="card mb-3 nk-step" data-tour="opt-rules" data-step-title="{{ _("Restrições") }}">
       <div class="card-header bg-white"><strong>{{ _("Restrições") }}</strong></div>
       <div class="card-body small">
         <label class="form-label mb-1">{{ _h("Tipos de bin permitidos <span class=\"text-muted\">(nenhum marcado = todos)</span>") }}</label>

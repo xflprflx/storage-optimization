@@ -10,7 +10,25 @@
   </div>
 </div>
 
-<div class="row g-3 mb-4">
+{% if welcome %}
+<div class="card mb-4 border-start border-4" style="border-color: var(--nk-accent) !important" id="nkWelcome">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
+    <i class="bi bi-signpost-split fs-1" style="color: var(--nk-accent)"></i>
+    <div class="flex-fill" style="min-width: 260px">
+      <div class="fw-semibold fs-5">{{ _("Primeira vez por aqui?") if welcome.empty else _("Continue de onde parou") }}</div>
+      <div class="small text-muted">{{ _("O guia passo a passo mostra, tela por tela, o que preencher para usar o sistema. Você pode abri-lo a qualquer momento pelo menu Guia.") }}</div>
+      {% if not welcome.empty %}<div class="progress mt-2" style="height: 6px; max-width: 360px"><div class="progress-bar bg-success" style="width: {{ welcome.pct }}%"></div></div>{% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-accent" href="/onboarding"><i class="bi bi-list-check"></i> {{ _("Abrir o guia") }}</a>
+      <a class="btn btn-outline-secondary" href="/#nk-tour=intro"><i class="bi bi-compass"></i> {{ _("Tour rápido") }}</a>
+      <form method="post" action="/onboarding/welcome"><button class="btn btn-link text-muted">{{ _("Agora não") }}</button></form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4" data-tour="dash-cards">
   {% set cards = [
     (_('Filiais'), stats.branches, 'bi-building', '/branches'),
     (_('Armazéns'), stats.warehouses, 'bi-house-gear', '/warehouses'),

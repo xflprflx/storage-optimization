@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Guia passo a passo") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-signpost-split"></i> {{ _("Guia passo a passo") }}</h1>
+  <a class="btn btn-outline-secondary" href="/#nk-tour=intro"><i class="bi bi-compass"></i> {{ _("Tour geral do sistema") }}</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <p class="mb-2">{{ _("Siga as trilhas na ordem que preferir. Em cada etapa, \"Mostrar como\" abre a tela certa e destaca o que preencher; as etapas ficam marcadas sozinhas conforme o cadastro avança.") }}</p>
+      <p class="small text-muted mb-3">{{ _("Você pode voltar aqui a qualquer momento pelo menu Guia, no canto da barra de navegação. Lá também fica o tour da tela em que você estiver.") }}</p>
+      <div class="d-flex align-items-center gap-2">
+        <div class="progress flex-fill" style="height: 10px" role="progressbar" aria-valuenow="{{ prog.pct }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-success" style="width: {{ prog.pct }}%"></div></div>
+        <span class="small text-muted text-nowrap">{{ _("{done} de {total} etapas obrigatórias", done=prog.done, total=prog.total) }}</span>
+      </div>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100 border-start border-4" style="border-color: var(--nk-accent) !important"><div class="card-body" id="onbNext">
+      {% if prog.next %}{% set tr, st = prog.next %}
+        <div class="small text-muted">{{ _("Próxima etapa") }} · {{ _(tr.t) }}</div>
+        <div class="fw-semibold fs-5">{{ _(st.t) }}</div>
+        <div class="small mb-2">{{ _(st.d) }}</div>
+        <a class="btn btn-accent" href="{{ st.go }}"><i class="bi bi-play-fill"></i> {{ _("Mostrar como") }}</a>
+      {% else %}
+        <div class="fw-semibold fs-5"><i class="bi bi-check-circle text-success"></i> {{ _("Tudo pronto!") }}</div>
+        <div class="small">{{ _("O cadastro básico está completo. Explore as trilhas opcionais ou rode uma otimização.") }}</div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+
+{% if prog.empty %}
+<div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
+  <i class="bi bi-lightbulb"></i>
+  <span>{{ _("Ainda não há nenhuma filial. Para conhecer o sistema sem preparar planilhas, comece pela trilha \"Explorar com dados de exemplo\"; para a sua operação real, siga \"Cadastrar a sua operação\".") }}</span>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for tr in prog.tracks %}
+  <div class="col-xl-6">
+    <div class="card h-100" id="trilha-{{ tr.id }}">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <strong><i class="bi {{ tr.icon }}"></i> {{ _(tr.t) }}</strong>
+        {% if tr.complete %}<span class="badge text-bg-success">{{ _("concluída") }}</span>{% endif %}
+      </div>
+      <div class="card-body">
+        <p class="small text-muted">{{ _(tr.d) }}</p>
+        <ol class="list-unstyled mb-0">
+          {% for st in tr.steps %}
+          {% set is_next = prog.next and prog.next[1] is sameas st %}
+          <li class="nk-onb-step ps-2 py-2 mb-1 d-flex gap-2 align-items-start {{ 'done' if st.state }} {{ 'next' if is_next }}"
+              {% if st.state is none %}data-tour-done="{{ st.tour }}"{% endif %}>
+            <span class="nk-onb-icon fs-5 lh-1">{% if st.state %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-secondary"></i>{% endif %}</span>
+            <div class="flex-fill">
+              <div class="fw-semibold">{{ loop.index }}. {{ _(st.t) }} {% if st.get('optional') %}<span class="badge text-bg-light border fw-normal">{{ _("opcional") }}</span>{% endif %}</div>
+              <div class="small text-muted">{{ _(st.d) }}</div>
+            </div>
+            <div class="text-nowrap">
+              <a class="btn btn-sm {{ 'btn-accent' if is_next else 'btn-outline-primary' }}" href="{{ st.go }}" title="{{ _("Abre a tela e destaca o que preencher") }}"><i class="bi bi-play-fill"></i> {{ _("Mostrar como") }}</a>
+              <a class="btn btn-sm btn-link px-1" href="{{ st.href }}" title="{{ _("Só abrir a tela") }}"><i class="bi bi-box-arrow-up-right"></i></a>
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="d-flex flex-wrap gap-2 mt-3 small">
+  <form method="post" action="/onboarding/welcome?show=1"><button class="btn btn-sm btn-link px-0">{{ _("Mostrar de novo o convite do guia no Painel") }}</button></form>
+  <span class="text-muted">·</span>
+  <button type="button" class="btn btn-sm btn-link px-0" id="onbReset">{{ _("Marcar todos os tours como não vistos") }}</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+/* etapas que só o navegador sabe se foram feitas: basta ter visto o tour da tela */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-tour-done]').forEach(li => {
+    if (!window.nkTour || !nkTour.seen(li.dataset.tourDone)) return;
+    li.classList.add('done');
+    li.querySelector('.nk-onb-icon').innerHTML = '<i class="bi bi-check-circle-fill text-success"><\/i>';
+  });
+  document.getElementById('onbReset').addEventListener('click', () => {
+    try { Object.keys(localStorage).filter(k => k.startsWith('nk-tour-seen:')).forEach(k => localStorage.removeItem(k)); } catch (e) { /* sem armazenamento */ }
+    location.reload();
+  });
+});
+</script>
+{% endblock %}

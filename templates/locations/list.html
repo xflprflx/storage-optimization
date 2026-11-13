@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h1><i class="bi bi-grid-3x3-gap"></i> {{ _("Locais de Armazenamento") }}</h1>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2" data-tour="loc-actions">
     <form method="post" action="/locations/recalculate-occupancy" onsubmit="return confirm(_t('Recalcular a ocupação de todos os endereços a partir dos saldos?'));">
       <button class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> {{ _("Recalcular ocupação") }}</button>
     </form>

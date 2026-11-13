@@ -237,11 +237,11 @@
           {% set gs = slot_info.get('gold') %}
           {% if gs and gs.structure and not gs.field %}
           <input type="hidden" name="slot_golden_levels" value="{{ params.slot_golden_levels|e }}">
-          <div class="col-12 text-muted" id="goldSrc">{{ _("Zona de ouro da pega: os {n} endereços do escopo usam a da estrutura da estante.", n=gs.structure) }}</div>
+          <div class="col-12 text-muted" id="goldSrc">{% if gs.structure == 1 %}{{ _("Zona de ouro da pega: o único endereço do escopo usa a da estrutura da estante.") }}{% else %}{{ _("Zona de ouro da pega: todos os {n} endereços do escopo usam a da estrutura da estante.", n=gs.structure) }}{% endif %}</div>
           {% else %}
           <div class="col-6"><label class="form-label mb-0" title="{{ _("Zona de ouro da pega para estantes sem estrutura com zona de ouro cadastrada") }}">{{ _("Níveis de ouro (pega)") }}</label>
             <input class="form-control form-control-sm" name="slot_golden_levels" value="{{ params.slot_golden_levels|e }}" placeholder="{{ _("ex.: 2,3") }}">
-            {% if gs and (gs.structure or gs.field) %}<div class="form-text" id="goldSrc">{{ _("{s} endereços pela estrutura · {f} dependem deste campo", s=gs.structure, f=gs.field) }}</div>{% endif %}</div>
+            {% if gs and (gs.structure or gs.field) %}<div class="form-text" id="goldSrc">{{ _("Pela estrutura: {s} · dependem deste campo: {f}", s=gs.structure, f=gs.field) }}</div>{% endif %}</div>
           {% endif %}
           <div class="col-12 fw-semibold mt-1">{{ _h("Tempo de separação <span class=\"fw-normal text-muted\">(objetivo \"Menor tempo\" e indicador do resultado)</span>") }}</div>
           <div class="col-6"><label class="form-label mb-0" for="slot_v" title="{{ _("Velocidade de caminhada do separador") }}">{{ _("Caminhada (m/s)") }}</label>

@@ -12860,6 +12860,11 @@
   ],
   "help": true
  },
+ "Pela estrutura: {s} · dependem deste campo: {f}": {
+  "src": [
+   "templates/optimization/page.html:244"
+  ]
+ },
  "Pendências": {
   "src": [
    "services/site_report.py:31"
@@ -17658,7 +17663,12 @@
    "templates/optimization/page.html:242"
   ]
  },
- "Zona de ouro da pega: os {n} endereços do escopo usam a da estrutura da estante.": {
+ "Zona de ouro da pega: o único endereço do escopo usa a da estrutura da estante.": {
+  "src": [
+   "templates/optimization/page.html:240"
+  ]
+ },
+ "Zona de ouro da pega: todos os {n} endereços do escopo usam a da estrutura da estante.": {
   "src": [
    "templates/optimization/page.html:240"
   ]
@@ -21039,11 +21049,6 @@
    "templates/imports/mapping_master.html:76"
   ],
   "html": true
- },
- "{s} endereços pela estrutura · {f} dependem deste campo": {
-  "src": [
-   "templates/optimization/page.html:244"
-  ]
  },
  "{tag} · reservada ({n} un.)": {
   "src": [

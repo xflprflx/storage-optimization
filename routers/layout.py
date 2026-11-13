@@ -228,7 +228,8 @@ def _branch_abc(db: Session, branch_id: int) -> dict:
 
 
 @router.get("/layout/plan/3d")
-def plan_3d_page(request: Request, branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+def plan_3d_page(request: Request, branch_id: str = "", warehouse_id: str = "", cmp: str = "",
+                 db: Session = Depends(get_db)):
     from routers.common import redirect
 
     br, wid, wlabel = _plan_scope(db, branch_id, warehouse_id)
@@ -241,6 +242,12 @@ def plan_3d_page(request: Request, branch_id: str = "", warehouse_id: str = "", 
                      _("Simulador de trajeto"))],
           "data_url": f"/layout/plan/plan3d.json?{qs}", "routes_url": f"/layout/plan/routes3d.json?{qs}",
           "fix_url": f"/layout/plan?{qs}", "fix_label": _("Desenhar a planta")}
+    if cmp:  # caminhada hoje × proposta de uma otimização
+        from urllib.parse import quote
+
+        v3["routes_url"] += f"&cmp={quote(cmp)}"
+        v3["compare"] = True
+        v3["name"] += " · " + _("hoje × proposta")
     return render(request, "site/view3d.html", v3=v3)
 
 
@@ -301,17 +308,51 @@ def branch_route_setup(db: Session, branch_id: int, wid: Optional[int]):
     return sample, nodes, g.ref_node(), g.ref, g, ""
 
 
+def assign_nodes(db: Session, g, branch_id: int, wid: Optional[int], assign: dict) -> dict:
+    """SKU -> pontos da planta dos endereços de uma distribuição (SKU -> [(endereço, unidades)])."""
+    import dataclasses
+
+    from services.branch_layout import address_golden
+
+    lids = sorted({lid for lst in assign.values() for lid, q in lst if q and q > 0})
+    loc = {}
+    for i in range(0, len(lids), 900):
+        loc.update({r[0]: r[1:] for r in db.execute(select(StorageLocation.id, StorageLocation.aisle, StorageLocation.bay,
+                                                           StorageLocation.address)
+                                                    .where(StorageLocation.id.in_(lids[i:i + 900])))})
+    gold = address_golden(db, branch_id, wid)
+    out: dict[str, list] = {}
+    for sku, lst in assign.items():
+        for lid, q in lst:
+            if not q or q <= 0 or lid not in loc:
+                continue
+            a, bay, addr = loc[lid]
+            n = g.node(a, bay, addr)
+            if n is not None and all(x.key != addr for x in out.get(sku, [])):
+                out.setdefault(sku, []).append(dataclasses.replace(n, key=addr, gold=gold.get(lid)))
+    return out
+
+
 @router.get("/layout/plan/routes3d.json")
-def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", day: str = "",
-                     db: Session = Depends(get_db)):
+def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", day: str = "", cmp: str = "",
+                     kind: str = "opt", db: Session = Depends(get_db)):
     from services.route_sim import day_payload, order_payload, orders_payload
 
     br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
     if br is None:
         return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
-    sample, nodes, start, ref, _g, err = branch_route_setup(db, br.id, wid)
+    sample, nodes, start, ref, g, err = branch_route_setup(db, br.id, wid)
     if err:
         return {"error": err}
+    if cmp:  # hoje × proposta de uma otimização (link do resultado)
+        from services import route_compare
+
+        data = route_compare.load(cmp)
+        if data is None:
+            return {"error": _("A comparação expirou (o servidor foi reiniciado ou houve muitas otimizações depois). "
+                               "Rode a otimização de novo e abra o 3D pelo resultado.")}
+        return route_compare.payload_3d(sample, assign_nodes(db, g, br.id, wid, data["before"]),
+                                        assign_nodes(db, g, br.id, wid, data["after"]), start, ref, order, day, kind)
     if day:
         return day_payload(sample, nodes, start, ref, day)
     return orders_payload(sample, nodes, start, ref) if not order else order_payload(sample, nodes, start, ref, order)

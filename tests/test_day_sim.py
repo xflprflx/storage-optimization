@@ -105,3 +105,24 @@ def test_compare_today_vs_proposal_by_day_and_order():
     assert d1["orders"] == 2 and abs(d1["opt_m_cur"] - 120) < 1e-9 and abs(d1["opt_m_new"] - 4) < 1e-9
     o = res["orders"][0]
     assert o["opt_m_cur"] == 60 and o["opt_m_new"] == 2 and o["opt_t_new"] < o["opt_t_cur"]
+
+
+def test_3d_payload_today_vs_proposal():
+    """3D hoje × proposta: dois separadores (cur/new) na rota escolhida, por pedido e por dia."""
+    from services import route_compare
+
+    near, far, start = Node(key="A-01", gx=100, gy=0), Node(key="A-30", gx=3000, gy=0), Node(key="REF", gx=0, gy=0)
+    sample = [["O1", ["X"], [1], "2026-10-01"], ["O2", ["X"], [2], "2026-10-01"]]
+    cur, new = {"X": [far]}, {"X": [near]}
+    ref = {"x": 0, "y": 0, "label": "ref"}
+    lst = route_compare.payload_3d(sample, cur, new, start, ref)
+    assert lst["compare"] and lst["orders"][0]["opt_cur"] > lst["orders"][0]["opt_new"]
+    assert lst["days"][0]["date"] == "2026-10-01" and lst["days"][0]["opt_cur"] > lst["days"][0]["opt_new"]
+    one = route_compare.payload_3d(sample, cur, new, start, ref, order="O1", kind="list")
+    assert set(one["routes"]) == {"cur", "new"} and one["kind"] == "list"
+    assert one["routes"]["cur"]["keys"] == ["A-30"] and one["routes"]["new"]["keys"] == ["A-01"]
+    assert one["routes"]["cur"]["m"] > one["routes"]["new"]["m"]
+    day = route_compare.payload_3d(sample, cur, new, start, ref, day="2026-10-01")
+    assert len(day["orders"]) == 2 and day["routes"]["new"]["ord"] == [0, 1]
+    tok = route_compare.save({"branch_id": 1, "before": {}, "after": {}})
+    assert route_compare.load(tok)["branch_id"] == 1 and route_compare.load("x") is None

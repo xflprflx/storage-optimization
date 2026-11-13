@@ -101,3 +101,67 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     return {"cur": totals(cur), "new": totals(new), "days": days, "orders": orders[:max_orders],
             "n_orders": len(orders), "skipped_cur": cur.get("skipped_lines", 0), "skipped_new": new.get("skipped_lines", 0),
             "params": tp, "has_qty": cur.get("has_qty", False)}
+
+
+# --------------------------------------------------------------------------- #
+# Hoje × proposta em 3D (planta desenhada da filial)
+# --------------------------------------------------------------------------- #
+_STORE: dict[str, dict] = {}  # token -> distribuição hoje/proposta de uma otimização (as últimas, em memória)
+_STORE_MAX = 30
+
+
+def save(data: dict) -> str:
+    """Guarda a distribuição hoje/proposta para a vista 3D e devolve o token do link."""
+    import hashlib
+    import json
+
+    token = hashlib.sha1(json.dumps(data, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    _STORE.pop(token, None)
+    _STORE[token] = data
+    while len(_STORE) > _STORE_MAX:
+        _STORE.pop(next(iter(_STORE)))
+    return token
+
+
+def load(token: str) -> Optional[dict]:
+    return _STORE.get(token or "")
+
+
+def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict, order: str = "", day: str = "",
+               kind: str = "opt") -> dict:
+    """Dados da caminhada 3D comparando hoje × proposta: sem pedido/dia, a lista (com as distâncias das duas
+    situações em cada rota); com pedido ou dia, dois separadores na rota `kind` ("cur" = hoje, "new" = proposta)."""
+    from services.i18n import _
+    from services.route_sim import ROUTE_KINDS, day_payload, order_payload, orders_payload
+
+    kind = kind if kind in KINDS else "opt"
+    if not order and not day:
+        a = orders_payload(sample, nodes_cur, start, ref)
+        b = orders_payload(sample, nodes_new, start, ref)
+        bo = {o["order"]: o for o in b["orders"]}
+        orders = []
+        for o in a["orders"]:
+            q = bo.get(o["order"])
+            if q is None:
+                continue
+            orders.append({"order": o["order"], "lines": o["lines"], "stops": o["stops"], "date": o.get("date", ""),
+                           **{f"{k}_cur": o.get(f"{k}_m") for k in KINDS}, **{f"{k}_new": q.get(f"{k}_m") for k in KINDS}})
+        orders.sort(key=lambda x: -abs((x.get("opt_cur") or 0) - (x.get("opt_new") or 0)))
+        bd = {e["date"]: e for e in b.get("days") or []}
+        days = [{"date": e["date"], "orders": e["orders"], **{f"{k}_cur": e.get(f"{k}_m") for k in KINDS},
+                 **{f"{k}_new": bd[e["date"]].get(f"{k}_m") for k in KINDS}} for e in a.get("days") or [] if e["date"] in bd]
+        return {"compare": True, "ref": ref, "orders": orders, "days": days,
+                "summary": {"orders": len(orders), "has_qty": a["summary"].get("has_qty", False),
+                            **{f"{k}_cur": a["summary"].get(f"{k}_avg") for k in KINDS},
+                            **{f"{k}_new": b["summary"].get(f"{k}_avg") for k in KINDS}}}
+    one = (lambda n: day_payload(sample, n, start, ref, day)) if day else \
+        (lambda n: order_payload(sample, n, start, ref, order))
+    pc, pn = one(nodes_cur), one(nodes_new)
+    if pc.get("error") or pn.get("error"):
+        return {"error": pc.get("error") or pn.get("error")}
+    if kind not in pc["routes"] or kind not in pn["routes"]:
+        return {"error": _("Rota indisponível para este pedido.")}
+    rname = next(str(_(n)) for k, n, _c in ROUTE_KINDS if k == kind)
+    routes = {"cur": {**pc["routes"][kind], "name": _("Hoje — {route}", route=rname), "color": "#d6604d"},
+              "new": {**pn["routes"][kind], "name": _("Proposta — {route}", route=rname), "color": "#1a9850"}}
+    return {**pc, "compare": True, "kind": kind, "routes": routes}

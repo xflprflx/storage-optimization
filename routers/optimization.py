@@ -229,7 +229,8 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
     return out
 
 
-def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, qp: Mapping) -> Optional[dict]:
+def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, qp: Mapping,
+                   filters: Optional[dict] = None) -> Optional[dict]:
     """Simulação dos pedidos da amostra do histórico com os SKUs onde estão hoje × onde ficam na proposta (por dia e
     por pedido). None sem amostra de pedidos."""
     from services.route_compare import compare
@@ -249,7 +250,17 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
         addr.update(dict(db.execute(select(StorageLocation.id, StorageLocation.address)
                                     .where(StorageLocation.id.in_(lids[i:i + 900]))).all()))
     res = compare(sample, before, after, sl["geo"], addr, time_params(tq))
-    return res or {"error": _("Nenhum pedido da amostra tem SKUs nos endereços do escopo.")}
+    if not res:
+        return {"error": _("Nenhum pedido da amostra tem SKUs nos endereços do escopo.")}
+    if any(g.node is not None for g in sl["geo"].values()):  # planta desenhada: a mesma comparação em 3D
+        from routers.layout import _plan_qs, _plan_scope
+        from services import route_compare
+
+        br, wid, _w = _plan_scope(db, h.branch_id, (filters or {}).get("warehouse_id"))
+        if br is not None:
+            token = route_compare.save({"branch_id": br.id, "warehouse_id": wid, "before": before, "after": after})
+            res["view3d"] = f"/layout/plan/3d?{_plan_qs(br, wid)}&walk=1&cmp={token}&"
+    return res
 
 
 def _sku_assign(db: Session, location_ids: list[int]) -> dict[str, list[tuple[int, float]]]:
@@ -386,7 +397,7 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                 if sl.get("on"):
                     ctx["slot"] = {**_address_slotting(db, sl, ids, results), "ref": sl["ref"], "info": sl}
                     ctx["slot"]["routes"] = _route_compare(db, sl, ctx["slot"]["assign_before"],
-                                                           ctx["slot"]["assign_after"], raw, qp)
+                                                           ctx["slot"]["assign_after"], raw, qp, filters)
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:
@@ -815,7 +826,7 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                     ctx["slot"] = {"before": slot_kpis(before, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
                                    "after": slot_kpis(after, sl["pop"], sl["geo"], sl["counts"], sl["aff"]),
                                    "ref": sl["ref"], "info": sl, "applied": bool(prm.slotting),
-                                   "routes": _route_compare(db, sl, before, after, raw, qp)}
+                                   "routes": _route_compare(db, sl, before, after, raw, qp, filters)}
             except ValueError as exc:
                 ctx["errors"] = [str(exc)]
             else:

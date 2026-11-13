@@ -420,6 +420,7 @@
             <strong><i class="bi bi-person-walking"></i> {{ _("Simulação de separação: hoje × proposta") }}</strong>
             <span class="text-muted">{{ _h("{n} pedidos do histórico, com os SKUs onde estão hoje e onde ficam na proposta do solver", n=(rc.n_orders)) }}</span>
             <div class="ms-auto d-flex gap-2 align-items-center">
+              {% if rc.view3d %}<a class="btn btn-sm btn-success" href="{{ rc.view3d }}" title="{{ _("Dois separadores na planta 3D fazendo os mesmos pedidos: com os SKUs onde estão hoje e onde ficam na proposta") }}"><i class="bi bi-badge-3d"></i> {{ _("Ver em 3D") }}</a>{% endif %}
               {% if rc.days %}<div class="btn-group btn-group-sm" role="group">
                 <button type="button" class="btn btn-outline-secondary active" data-rv="day">{{ _("Por dia") }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-rv="order">{{ _("Por pedido") }}</button></div>{% endif %}
@@ -444,34 +445,38 @@
           <div class="table-responsive rv-day" style="max-height:340px"><table class="table table-sm table-hover mb-0" data-no-resize>
             <thead class="sticky-top bg-white"><tr><th>{{ _("Dia") }}</th><th class="text-end">{{ _("Pedidos") }}</th><th class="text-end">{{ _("Linhas") }}</th>
               <th class="text-end">{{ _("Hoje (km)") }}</th><th class="text-end">{{ _("Proposta (km)") }}</th><th class="text-end">{{ _("Diferença") }}</th>
-              <th class="text-end">{{ _("Hoje (h)") }}</th><th class="text-end">{{ _("Proposta (h)") }}</th><th class="text-end">{{ _("Diferença") }}</th></tr></thead>
+              <th class="text-end">{{ _("Hoje (h)") }}</th><th class="text-end">{{ _("Proposta (h)") }}</th><th class="text-end">{{ _("Diferença") }}</th>{% if rc.view3d %}<th></th>{% endif %}</tr></thead>
             <tbody>{% for d in rc.days %}<tr><td>{{ fmt_datetime(d.date|todate, time=False) }}</td><td class="text-end">{{ d.orders }}</td><td class="text-end">{{ d.lines }}</td>
               {% for k in ('list', 's', 'opt') %}
               <td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_cur') or 0) / 1000)|dec(2) }}</td><td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_new') or 0) / 1000)|dec(2) }}</td>
               <td class="text-end rk rk-{{ k }}">{{ rc_delta((d.get(k ~ '_m_cur') or 0) / 1000, (d.get(k ~ '_m_new') or 0) / 1000, 2, ' km') }}</td>
               <td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_new')|dec(1) }}</td>
               <td class="text-end rk rk-{{ k }}">{{ rc_delta(d.get(k ~ '_h_cur'), d.get(k ~ '_h_new'), 1) }}</td>
-              {% endfor %}</tr>{% endfor %}</tbody>
+              {% endfor %}{% if rc.view3d %}<td class="text-end"><a class="btn btn-sm btn-outline-success py-0 rc3d" href="{{ rc.view3d }}day={{ d.date }}" title="{{ _("O dia inteiro em 3D: hoje × proposta") }}"><i class="bi bi-badge-3d"></i></a></td>{% endif %}</tr>{% endfor %}</tbody>
           </table></div>
           {% endif %}
           <div class="table-responsive rv-order" style="max-height:340px"><table class="table table-sm table-hover mb-0" data-no-resize>
             <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th>{% if rc.days %}<th>{{ _("Data") }}</th>{% endif %}<th class="text-end">{{ _("Linhas") }}</th>
               <th class="text-end" title="{{ _("Paradas hoje → na proposta") }}">{{ _("Paradas") }}</th>
               <th class="text-end">{{ _("Hoje (m)") }}</th><th class="text-end">{{ _("Proposta (m)") }}</th><th class="text-end">{{ _("Diferença") }}</th>
-              <th class="text-end">{{ _("Tempo hoje") }}</th><th class="text-end">{{ _("Tempo proposta") }}</th></tr></thead>
+              <th class="text-end">{{ _("Tempo hoje") }}</th><th class="text-end">{{ _("Tempo proposta") }}</th>{% if rc.view3d %}<th></th>{% endif %}</tr></thead>
             <tbody>{% for o in rc.orders %}<tr><td class="mono">{{ o.order }}</td>{% if rc.days %}<td>{{ fmt_datetime(o.date|todate, time=False) if o.date else '—' }}</td>{% endif %}<td class="text-end">{{ o.lines }}</td>
               <td class="text-end">{{ o.stops_cur }} → {{ o.stops_new }}</td>
               {% for k in ('list', 's', 'opt') %}
               <td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_new')|dec(1) }}</td>
               <td class="text-end rk rk-{{ k }}">{{ rc_delta(o.get(k ~ '_m_cur'), o.get(k ~ '_m_new'), 1, ' m') }}</td>
               <td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_cur')) }}</td><td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_new')) }}</td>
-              {% endfor %}</tr>{% endfor %}</tbody>
+              {% endfor %}{% if rc.view3d %}<td class="text-end"><a class="btn btn-sm btn-outline-success py-0 rc3d" href="{{ rc.view3d }}order={{ o.order|urlencode }}" title="{{ _("O pedido em 3D: hoje × proposta") }}"><i class="bi bi-badge-3d"></i></a></td>{% endif %}</tr>{% endfor %}</tbody>
           </table></div>
           <div class="text-muted mt-1" style="font-size:.75rem">{{ _h("Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.", shown=(rc.orders|length), n=(rc.n_orders), v=(rc.params.t_v|dec(1)), stop=(rc.params.t_stop|dec(0)), piece=(rc.params.t_piece|dec(1)), gold=(rc.params.t_gold|dec(1))) }}</div>
           <script>
           (function () {
             const box = document.getElementById('rcBox');
-            document.getElementById('rcKind').addEventListener('change', e => { box.dataset.k = e.target.value; });
+            // os links do 3D levam a rota escolhida
+            const kindLinks = () => box.querySelectorAll('a.rc3d, a[href*="cmp="]').forEach(a => {
+              const u = new URL(a.href); u.searchParams.set('kind', box.dataset.k); a.href = u.toString(); });
+            document.getElementById('rcKind').addEventListener('change', e => { box.dataset.k = e.target.value; kindLinks(); });
+            kindLinks();
             box.querySelectorAll('[data-rv]').forEach(b => b.addEventListener('click', () => {
               box.dataset.v = b.dataset.rv;
               box.querySelectorAll('[data-rv]').forEach(x => x.classList.toggle('active', x === b));

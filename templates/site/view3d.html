@@ -430,10 +430,11 @@ $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3
 
 // ------------------------------------------------------------------ simulação de caminhada (um pedido percorrido em 3D)
 const ROUTES = {{ v3.routes_url|tojson }};  // pedidos da amostra e rotas (routes3d.json)
-const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); return u.toString(); };
+const CMP = {{ (v3.compare or false)|tojson }};  // hoje × proposta de uma otimização: dois separadores na rota escolhida
+const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); if (CMP && (order != null || day)) u.searchParams.set('kind', $('nkRoute').value); return u.toString(); };
 const isDay = () => $('nkScope').value === 'day';
 const fmtDay = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString(NK_I18N.locale); } catch (e) { return d; } };
-const WK = { list: null, data: null, walkers: [], stops: {}, t: 0, T: 0, playing: false, group: new THREE.Group(), rec: null, hudAt: 0 };
+const WK = { seq: 0, stale: false, list: null, data: null, walkers: [], stops: {}, t: 0, T: 0, playing: false, group: new THREE.Group(), rec: null, hudAt: 0 };
 scene.add(WK.group);
 const segGeo = new THREE.BoxGeometry(1, 0.03, 0.16); segGeo.translate(0.5, 0, 0);  // faixa do trajeto no piso
 const pinGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.6, 12); pinGeo.translate(0, 0.3, 0);
@@ -472,36 +473,43 @@ async function loadOrders(order, day) {
     $('nkWalkMsg').textContent = _t('Carregando os pedidos…');
     try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: _t('Falha ao carregar os pedidos.') }; }
     if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
-    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m</option>`).join('');
+    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · ` + (CMP ? _t('hoje {a} m → proposta {b} m', {a: fmt(o[$('nkRoute').value + '_cur']), b: fmt(o[$('nkRoute').value + '_new'])}) : `lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m`) + '</option>').join('');
     const s = WK.list.summary;
     const days = WK.list.days || [];
     $('nkScopeBox').style.display = days.length ? '' : 'none';
-    $('nkDay').innerHTML = days.map(x => `<option value="${esc(x.date)}">${esc(fmtDay(x.date))} · ${_t('{n} pedidos', {n: x.orders})} · ${_t('lista {a} km → otim. {b} km', {a: fmt(x.list_m / 1000, 2), b: fmt(x.opt_m / 1000, 2)})}</option>`).join('');
-    $('nkWalkMsg').innerHTML = _t('{orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista {fmt} m<\/span> · <span style="color:#2f6db5">serpentina {fmt2} m<\/span> · <span style="color:#1a9850">otimizada {fmt3} m<\/span>', {orders: s.orders, fmt: fmt(s.list_avg), fmt2: fmt(s.s_avg), fmt3: fmt(s.opt_avg)});
+    $('nkDay').innerHTML = days.map(x => `<option value="${esc(x.date)}">${esc(fmtDay(x.date))} · ${_t('{n} pedidos', {n: x.orders})} · ${CMP ? _t('hoje {a} km → proposta {b} km', {a: fmt(x[$('nkRoute').value + '_cur'] / 1000, 2), b: fmt(x[$('nkRoute').value + '_new'] / 1000, 2)}) : _t('lista {a} km → otim. {b} km', {a: fmt(x.list_m / 1000, 2), b: fmt(x.opt_m / 1000, 2)})}</option>`).join('');
+    if (CMP) $('nkWalkMsg').innerHTML = _t('<b>Hoje × proposta do solver<\/b> · {orders} pedidos · média por pedido na rota otimizada: <span style="color:#d6604d">hoje {a} m<\/span> → <span style="color:#1a9850">proposta {b} m<\/span>. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam.', {orders: s.orders, a: fmt(s.opt_cur), b: fmt(s.opt_new)});
+    else $('nkWalkMsg').innerHTML = _t('{orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista {fmt} m<\/span> · <span style="color:#2f6db5">serpentina {fmt2} m<\/span> · <span style="color:#1a9850">otimizada {fmt3} m<\/span>', {orders: s.orders, fmt: fmt(s.list_avg), fmt2: fmt(s.s_avg), fmt3: fmt(s.opt_avg)});
   }
   if (!WK.list.orders.length) { $('nkWalkInfo').textContent = _t('Nenhum pedido da amostra tem SKUs no plano.'); return; }
   if (day && (WK.list.days || []).some(x => x.date === day)) { $('nkScope').value = 'day'; $('nkDay').value = day; }
   scopeUI();
   if (isDay()) {
-    if (!WK.data || WK.data.day !== $('nkDay').value) await loadDay($('nkDay').value); else build();
+    if (!WK.data || WK.stale || WK.data.day !== $('nkDay').value) await loadDay($('nkDay').value); else build();
     return;
   }
   if (order && WK.list.orders.some(o => o.order === order)) $('nkOrder').value = order;
-  if (!WK.data || WK.data.day || WK.data.order !== $('nkOrder').value) await loadOrder($('nkOrder').value);
+  if (!WK.data || WK.stale || WK.data.day || WK.data.order !== $('nkOrder').value) await loadOrder($('nkOrder').value);
   else build();
 }
 async function loadOrder(order, autoplay = true) {
   $('nkWalkInfo').textContent = _t('Calculando as rotas…');
+  const seq = ++WK.seq;
   let d;
   try { d = await (await fetch(routesUrl(order))).json(); } catch (e) { d = { error: _t('Falha ao carregar o pedido.') }; }
+  if (seq !== WK.seq) return;
+  WK.stale = false;
   if (d.error) { $('nkWalkInfo').textContent = d.error; return; }
   WK.data = d; build();
   if (autoplay) play(true);
 }
 async function loadDay(day, autoplay = true) {
   $('nkWalkInfo').textContent = _t('Calculando as rotas do dia…');
+  const seq = ++WK.seq;  // só vale a última requisição (o usuário pode trocar de dia/rota antes de terminar)
   let d;
   try { d = await (await fetch(routesUrl(null, day))).json(); } catch (e) { d = { error: _t('Falha ao carregar o dia.') }; }
+  if (seq !== WK.seq) return;
+  WK.stale = false;
   if (d.error) { $('nkWalkInfo').textContent = d.error; return; }
   WK.data = d; build();
   if (autoplay) play(true);
@@ -522,18 +530,19 @@ function pointAt(w, d) {  // posição (m) a `d` metros do início e o segmento 
 function build() {
   clearWalk();
   const d = WK.data, mode = $('nkRoute').value;
-  const kinds = (mode === 'all' ? ['list', 's', 'opt'] : [mode]).filter(k => d.routes[k]);
+  const kinds = (d.compare ? ['cur', 'new'] : mode === 'all' ? ['list', 's', 'opt'] : [mode]).filter(k => d.routes[k]);
   if (!kinds.length) { $('nkWalkInfo').textContent = _t('Rota indisponível para este pedido.'); return; }
   const single = kinds.length === 1;
   // paradas: pino no piso e contorno das bins do endereço; ficam na cor de quem pegou primeiro
   const first = d.routes[kinds[0]];
   const many = !!d.day;  // dia inteiro: o mesmo endereço pode aparecer em vários pedidos (um pino só)
-  first.keys.forEach((key, j) => {
+  // pinos das paradas de todas as rotas (na comparação hoje × proposta, os endereços são diferentes)
+  kinds.map(k => d.routes[k]).forEach(Rr => Rr.keys.forEach((key, j) => {
     if (WK.stops[key]) return;
-    const [x, y] = first.pts[first.stops[j]];
+    const [x, y] = Rr.pts[Rr.stops[j]];
     const pin = new THREE.Mesh(pinGeo, new THREE.MeshLambertMaterial({ color: '#4b5560' }));
     pin.position.set(M(x), 0, M(y)); WK.group.add(pin);
-    const grp = (first.groups && first.groups[j]) || [key];  // endereços do mesmo módulo: uma parada
+    const grp = (Rr.groups && Rr.groups[j]) || [key];  // endereços do mesmo módulo: uma parada
     const bs = data.bins.filter(b => grp.includes(b[9])), edges = [], fills = [];
     let top = 1.8;
     bs.forEach(b => {
@@ -547,7 +556,7 @@ function build() {
     });
     if (single && !many) WK.group.add(label(String(j + 1), M(x), top, M(y), '#1f2d33', Math.min(LBL * 0.6, 0.5)));
     WK.stops[key] = { pin, edges, fills, by: undefined };
-  });
+  }));
   WK.walkers = kinds.map((k, i) => {
     const R = d.routes[k], off = single ? 0 : (i - 1) * 0.3;  // lado a lado, para não se sobreporem
     const P = R.pts.map(([x, y]) => new THREE.Vector3(M(x) + off, 0, M(y) + off));
@@ -592,8 +601,9 @@ function build() {
   });
   WK.T = Math.max(...WK.walkers.map(w => w.T));
   const R0 = d.routes;
-  const gain = R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
-  $('nkWalkInfo').innerHTML = (d.day ? _t('<b>Dia {day}<\/b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)', {day: esc(fmtDay(d.day)), n: d.orders.length}) + '<br>' : '') + _t(d.day ? '{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>' : '<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : ''), mmss: mmss(WK.T / speed())});
+  const gain = d.compare ? null : R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
+  const gainCmp = d.compare && R0.cur.m ? (1 - R0.new.m / R0.cur.m) * 100 : null;
+  $('nkWalkInfo').innerHTML = (d.day ? _t('<b>Dia {day}<\/b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)', {day: esc(fmtDay(d.day)), n: d.orders.length}) + '<br>' : '') + _t(d.day ? '{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>' : '<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : '') + (gainCmp != null ? '<br>' + (gainCmp >= 0 ? _t('A proposta anda <b>{fmt}%<\/b> menos que hoje.', {fmt: fmt(gainCmp, 0)}) : _t('A proposta anda <b>{fmt}%<\/b> mais que hoje.', {fmt: fmt(-gainCmp, 0)})) : ''), mmss: mmss(WK.T / speed())});
   $('nkStops').innerHTML = '<div class="text-muted">' + _t('Paradas — {esc}:', {esc: esc(first.name)}) + '<\/div>' + (first.keys.map((k, j) =>
     (many && (j === 0 || first.ord[j] !== first.ord[j - 1]) ? `<div class="fw-semibold mt-1">${esc(_t('Pedido {k} de {n}: {order} ({lines} linha(s))', {k: first.ord[j] + 1, n: d.orders.length, order: d.orders[first.ord[j]].order, lines: d.orders[first.ord[j]].lines}))}</div>` : '') +
     `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${String(first.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
@@ -662,7 +672,7 @@ function hudLines() {
   return out;
 }
 function hud() {
-  if (!WK.walkers.length) return;
+  if (!WK.walkers.length || !WK.data) return;
   $('nkHud').innerHTML = hudLines().map(l => `<div class="row-w">${l.color ? `<span class="nk3d-sw" style="background:${l.color}"></span>` : ''}` +
     `<span${l.bold ? ' class="fw-semibold"' : ''}>${esc(l.text)}</span></div>`).join('');
   const w0 = WK.walkers[0];
@@ -795,7 +805,15 @@ $('nkScope').addEventListener('change', () => {
   scopeUI();
   if (isDay()) loadDay($('nkDay').value); else loadOrder($('nkOrder').value);
 });
-['nkRoute', 'nkWalkV', 'nkPick', 'nkPiece', 'nkGold', 'nkGoldP'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
+if (CMP) {  // comparação: a rota escolhida vem do servidor (as duas situações nela); sem a opção "as três"
+  $('nkRoute').querySelector('option[value=all]')?.remove();
+  $('nkRoute').value = ['list', 's', 'opt'].includes(new URLSearchParams(location.search).get('kind')) ? new URLSearchParams(location.search).get('kind') : 'opt';
+  $('nkRoute').addEventListener('change', () => {
+    if (WK.rec) stopRec(true);
+    if (WK.list) { const o = $('nkOrder').value, dd = $('nkDay').value; WK.list = null; WK.stale = true; loadOrders(o, isDay() ? dd : ''); }
+  });
+}
+[...(CMP ? [] : ['nkRoute']), 'nkWalkV', 'nkPick', 'nkPiece', 'nkGold', 'nkGoldP'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
 $('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
 $('nkCam').addEventListener('change', () => camMode(true));
 $('nkPlay').addEventListener('click', () => (WK.playing ? pause() : play()));

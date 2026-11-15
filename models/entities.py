@@ -618,3 +618,37 @@ class AppSetting(TimestampMixin, Base):
 
     key: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[dict] = mapped_column(JSON, nullable=True)
+
+
+# --------------------------------------------------------------------------- #
+# Usuários e sessões (autenticação)
+# --------------------------------------------------------------------------- #
+class User(TimestampMixin, Base):
+    """Usuário do sistema. A senha fica só como hash (PBKDF2-SHA256, ver services/auth.py). `tour_seen` guarda os
+    tours do guia já vistos ({id do tour: "done" | "seen"}) e `prefs` as preferências do usuário (ex.: convite do
+    guia escondido)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(60), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False, default="")
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    tour_seen: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    prefs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+
+class UserSession(TimestampMixin, Base):
+    """Sessão de login: o navegador guarda o token no cookie; o banco guarda só o hash dele (SHA-256)."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

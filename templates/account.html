@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Minha conta") }}{% endblock %}
+{% block content %}
+<div class="page-header"><h1><i class="bi bi-key"></i> {{ _("Minha conta") }}</h1></div>
+<div class="card" style="max-width: 560px"><div class="card-body">
+  {% if first %}<div class="alert alert-warning small"><i class="bi bi-shield-lock"></i> {{ _("Sua senha é provisória. Defina uma senha nova para continuar usando o sistema.") }}</div>{% endif %}
+  {% if error %}<div class="alert alert-danger small"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
+  <form method="post" action="/account" autocomplete="off">
+    <div class="mb-2 small text-muted">{{ _("Usuário") }}: <b class="mono">{{ user.username }}</b>{% if user.is_admin %} · {{ _("administrador") }}{% endif %}</div>
+    <label class="form-label small mb-0" for="acc_name">{{ _("Nome") }}</label>
+    <input class="form-control mb-3" name="name" id="acc_name" value="{{ user.name }}" maxlength="150">
+    <div class="fw-semibold mb-1">{{ _("Trocar a senha") }}{% if not first %} <span class="fw-normal text-muted small">{{ _("(deixe em branco para manter)") }}</span>{% endif %}</div>
+    <label class="form-label small mb-0" for="acc_cur">{{ _("Senha atual") }}</label>
+    <input class="form-control mb-2" type="password" name="current_password" id="acc_cur" autocomplete="current-password" {% if first %}required{% endif %}>
+    <label class="form-label small mb-0" for="acc_new">{{ _("Senha nova") }}</label>
+    <input class="form-control mb-2" type="password" name="new_password" id="acc_new" autocomplete="new-password" minlength="8" {% if first %}required{% endif %}>
+    <label class="form-label small mb-0" for="acc_conf">{{ _("Repita a senha nova") }}</label>
+    <input class="form-control mb-1" type="password" name="confirm_password" id="acc_conf" autocomplete="new-password" minlength="8" {% if first %}required{% endif %}>
+    <div class="form-text mb-3">{{ _("Pelo menos 8 caracteres. Ao trocar a senha, as sessões abertas em outros aparelhos são encerradas.") }}</div>
+    <button class="btn btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+  </form>
+</div></div>
+{% endblock %}

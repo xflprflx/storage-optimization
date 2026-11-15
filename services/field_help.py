@@ -33,6 +33,20 @@ LV = {"aisle": ("Corredor", "o corredor (ou rua): a 1ª parte do endereço"),
       "position": ("Posição", "a posição dentro do nível, ao longo da frente da estante"),
       "compartment": ("Compartimento", "a divisão dentro da posição (opcional)")}
 
+# =========================================================================== acesso e usuários
+R(r"/login", "username", "Usuário", "O nome de usuário que o administrador cadastrou para você.", "find:text")
+R(r"/login", "password", "Senha", "A sua senha. Depois de 5 tentativas erradas seguidas, o usuário fica bloqueado por 5 minutos.", "find:text")
+R(r"/account", "name", "Nome", "Como o seu nome aparece no menu do usuário.", "find:text")
+R(r"/account", "current_password", "Senha atual", "A senha com que você entrou, para confirmar que é você.", "find:text")
+R(r"/account", "new_password", "Senha nova", "Pelo menos 8 caracteres e diferente do nome de usuário.", "find:text")
+R(r"/account", "confirm_password", "Repita a senha nova", "Digite a senha nova de novo, para evitar erro de digitação.", "find:text")
+R(r"/users", "username", "Usuário (login)", "O nome usado para entrar, sem espaços. Não pode ser trocado depois.", "find:text")
+R(r"/users", "name", "Nome", "Nome da pessoa, mostrado no menu e na lista de usuários.", "find:text")
+R(r"/users", "password", "Senha", "Senha inicial ou provisória (pelo menos 8 caracteres). Em branco, na edição, mantém a atual.", "find:text")
+R(r"/users", "must_change", "Trocar no primeiro acesso", "Ligado, o usuário define a própria senha assim que entrar.", "find:check")
+R(r"/users", "is_admin", "Administrador", "Administradores gerenciam usuários; os demais usam todas as outras telas.", "find:check")
+R(r"/users", "active", "Ativo", "Desligado, o usuário não consegue entrar e as sessões dele são encerradas.", "find:check")
+
 # =========================================================================== 3D e caminhada
 P3D = r"/layout/plan/3d|/optimization/site/\d+/3d"
 R(P3D, "#nkColor", "Cor das bins", "Escolhe o que a cor de cada bin mostra: tipo de bin, ocupação, estrutura, SKU, zonas de ouro ou curva ABC.", "view3d:color")

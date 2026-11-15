@@ -33,6 +33,26 @@ python -m uvicorn main:app --port 8000
 
 ---
 
+## 🔐 Acesso (login e usuários)
+
+Todas as telas exigem login. No primeiro uso (banco sem usuários) o sistema cria o administrador **`admin`**:
+
+- sem configuração, ele entra com a **senha de instalação** (entregue à parte; no código fica só o hash) e é obrigado
+  a definir uma senha nova no primeiro acesso;
+- para outra senha inicial, defina a variável `NEOKIOSKI_ADMIN_PASSWORD` antes do primeiro início.
+
+Administradores criam usuários em **menu do usuário → Usuários** (senha provisória, perfil, ativar/desativar). Cada
+pessoa troca a própria senha em **Minha conta**. Detalhes:
+
+- senhas guardadas só como hash PBKDF2-SHA256 (600 mil iterações); sessões no banco, cookie `HttpOnly`/`SameSite=Lax`,
+  válidas por 14 dias com uso;
+- 5 tentativas erradas seguidas bloqueiam o usuário por 5 minutos; trocar a senha encerra as sessões nos outros
+  aparelhos; desativar o usuário encerra todas;
+- o onboarding (tours vistos e convite do guia no Painel) é **por usuário**. Para zerar: **Guia → Reiniciar o
+  onboarding** (o próprio usuário) ou **Usuários → zerar** (o administrador, para qualquer usuário).
+- Esqueceu a senha do único administrador? Pare o app e rode
+  `python -c "from database import *; from models import User; from services.auth import hash_password as h; db=SessionLocal(); u=db.query(User).filter_by(username='admin').one(); u.password_hash=h('NovaSenha123'); u.must_change_password=True; db.commit()"`.
+
 ## 1. Fluxo de Importação de Dados
 
 A base do sistema exige a inserção correta de dados para mapear a realidade do armazém. O processo de importação segue uma hierarquia estrita para evitar erros de dependência.

@@ -71,8 +71,7 @@
         <ol class="list-unstyled mb-0">
           {% for st in tr.steps %}
           {% set is_next = prog.next and prog.next[1] is sameas st %}
-          <li class="nk-onb-step ps-2 py-2 mb-1 d-flex gap-2 align-items-start {{ 'done' if st.state }} {{ 'next' if is_next }}"
-              {% if st.state is none %}data-tour-done="{{ st.tour }}"{% endif %}>
+          <li class="nk-onb-step ps-2 py-2 mb-1 d-flex gap-2 align-items-start {{ 'done' if st.state }} {{ 'next' if is_next }}">
             <span class="nk-onb-icon fs-5 lh-1">{% if st.state %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-secondary"></i>{% endif %}</span>
             <div class="flex-fill">
               <div class="fw-semibold">{{ loop.index }}. {{ _(st.t) }} {% if st.get('optional') %}<span class="badge text-bg-light border fw-normal">{{ _("opcional") }}</span>{% endif %}</div>
@@ -94,22 +93,7 @@
 <div class="d-flex flex-wrap gap-2 mt-3 small">
   <form method="post" action="/onboarding/welcome?show=1"><button class="btn btn-sm btn-link px-0">{{ _("Mostrar de novo o convite do guia no Painel") }}</button></form>
   <span class="text-muted">·</span>
-  <button type="button" class="btn btn-sm btn-link px-0" id="onbReset">{{ _("Marcar todos os tours como não vistos") }}</button>
+  <form method="post" action="/onboarding/reset" onsubmit="return confirm(_t('Marcar todos os tours como não vistos?'));"><button class="btn btn-sm btn-link px-0" id="onbReset">{{ _("Marcar todos os tours como não vistos") }}</button></form>
 </div>
 {% endblock %}
-{% block scripts %}
-<script>
-/* etapas que só o navegador sabe se foram feitas: basta ter visto o tour da tela */
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('[data-tour-done]').forEach(li => {
-    if (!window.nkTour || !nkTour.seen(li.dataset.tourDone)) return;
-    li.classList.add('done');
-    li.querySelector('.nk-onb-icon').innerHTML = '<i class="bi bi-check-circle-fill text-success"><\/i>';
-  });
-  document.getElementById('onbReset').addEventListener('click', () => {
-    try { Object.keys(localStorage).filter(k => k.startsWith('nk-tour-seen:')).forEach(k => localStorage.removeItem(k)); } catch (e) { /* sem armazenamento */ }
-    location.reload();
-  });
-});
-</script>
-{% endblock %}
+

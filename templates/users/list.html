@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Usuários") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-people"></i> {{ _("Usuários") }}</h1>
+  <a class="btn btn-accent" href="/users/new"><i class="bi bi-plus-lg"></i> {{ _("Novo usuário") }}</a>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle" data-no-resize>
+      <thead><tr><th>{{ _("Usuário") }}</th><th>{{ _("Nome") }}</th><th>{{ _("Perfil") }}</th><th>{{ _("Situação") }}</th><th>{{ _("Último acesso") }}</th><th>{{ _("Onboarding") }}</th><th></th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr class="{{ 'text-muted' if not u.active }}">
+          <td class="mono">{{ u.username }}{% if u.id == me.id %} <span class="badge text-bg-light border">{{ _("você") }}</span>{% endif %}</td>
+          <td>{{ u.name }}</td>
+          <td>{% if u.is_admin %}<span class="badge text-bg-primary">{{ _("administrador") }}</span>{% else %}{{ _("usuário") }}{% endif %}</td>
+          <td>{% if not u.active %}<span class="badge text-bg-secondary">{{ _("inativo") }}</span>{% elif u.must_change_password %}<span class="badge text-bg-warning">{{ _("senha provisória") }}</span>{% else %}<span class="badge text-bg-success">{{ _("ativo") }}</span>{% endif %}</td>
+          <td class="small">{{ fmt_datetime(u.last_login_at) if u.last_login_at else '—' }}</td>
+          <td class="small">{{ _("{n} tour(s) vistos", n=(u.tour_seen or {})|length) }}
+            <form method="post" action="/users/{{ u.id }}/reset-onboarding" class="d-inline" onsubmit="return confirm(_t('Marcar todos os tours como não vistos para este usuário?'));">
+              <button class="btn btn-sm btn-link py-0" title="{{ _("Marcar todos os tours como não vistos") }}"><i class="bi bi-arrow-counterclockwise"></i> {{ _("zerar") }}</button></form></td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="/users/{{ u.id }}/edit"><i class="bi bi-pencil"></i> {{ _("Editar") }}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="form-text mt-2">{{ _("Desativar um usuário encerra as sessões dele e bloqueia novos acessos; o histórico continua. Uma senha redefinida aqui é provisória: o usuário define a dele no próximo acesso.") }}</div>
+{% endblock %}

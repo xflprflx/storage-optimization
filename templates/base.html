@@ -93,6 +93,7 @@
     .nk-onb-step.next { border-left-color: var(--nk-accent); background: #f0f9f8; }
   </style>
   <script>window.NK_I18N = {{ js_i18n()|tojson }};</script>
+  {% if current_user() %}<script>window.NK_TOURS_SEEN = {{ tours_seen()|tojson }};</script>{% endif %}
   {% if get_lang() != 'pt-BR' %}<script src="/i18n/{{ get_lang() }}.js?v={{ i18n_version() }}"></script>{% endif %}
   <script src="/static/i18n.js?v={{ i18n_version() }}"></script>
   <script src="/static/units.js?v={{ i18n_version() }}"></script>
@@ -162,8 +163,22 @@
           <li><a class="dropdown-item" href="/onboarding"><i class="bi bi-list-check"></i> {{ _("Guia passo a passo") }}</a></li>
           <li><a class="dropdown-item" href="/onboarding#conceitos"><i class="bi bi-mortarboard"></i> {{ _("Conceitos em linguagem simples") }}</a></li>
           <li><a class="dropdown-item" href="/#nk-tour=intro"><i class="bi bi-compass"></i> {{ _("Tour geral do sistema") }}</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><form method="post" action="/onboarding/reset" onsubmit="return confirm(_t('Marcar todos os tours como não vistos?'));"><button class="dropdown-item"><i class="bi bi-arrow-counterclockwise"></i> {{ _("Reiniciar o onboarding (marcar tudo como não visto)") }}</button></form></li>
         </ul>
       </div>
+      {% set me = current_user() %}{% if me %}
+      <div class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkUserMenu" title="{{ me.name }}"><i class="bi bi-person-circle"></i> <span class="d-xl-none d-xxl-inline">{{ me.username }}</span></a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">{{ me.name }}{% if me.is_admin %} · {{ _("administrador") }}{% endif %}</h6></li>
+          <li><a class="dropdown-item" href="/account"><i class="bi bi-key"></i> {{ _("Minha conta e senha") }}</a></li>
+          {% if me.is_admin %}<li><a class="dropdown-item" href="/users"><i class="bi bi-people"></i> {{ _("Usuários") }}</a></li>{% endif %}
+          <li><hr class="dropdown-divider"></li>
+          <li><form method="post" action="/logout"><button class="dropdown-item"><i class="bi bi-box-arrow-right"></i> {{ _("Sair") }}</button></form></li>
+        </ul>
+      </div>
+      {% endif %}
       <a href="#" class="nav-link text-white px-2" id="nkHelpToggle" role="button" title="{{ _("Ajuda nos campos") }}"><i class="bi bi-question-circle"></i><span class="visually-hidden"> {{ _("Ajuda nos campos") }}</span></a>
     </div>
   </div>

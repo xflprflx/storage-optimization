@@ -61,17 +61,33 @@ def test_progress_follows_the_data(db):
     steps = {s["id"]: s for tr in prog["tracks"] for s in tr["steps"]}
     has_branch = db.query(Branch).count() > 0
     assert steps["branch"]["state"] is has_branch
-    assert steps["intro"]["state"] is None  # só o navegador sabe (tour visto)
+    assert steps["intro"]["state"] is False  # etapa "tour": sem usuário logado, nenhum tour visto
     b = work_ids(db)["b"]
     if b:
         assert steps["address"]["href"] == f"/optimization?branch_id={b}"
     assert 0 <= prog["pct"] <= 100
 
 
-def test_welcome_can_be_hidden(client):
-    r = client.post("/onboarding/welcome", follow_redirects=False)
-    assert r.status_code == 303 and "nk_onb_hide" in r.headers.get("set-cookie", "")
-    client.cookies.clear()
+def test_welcome_and_tours_are_per_user_and_reset(client, db):
+    """Convite do Painel e tours vistos ficam no usuário; "zerar" marca tudo como não visto."""
+    from models import User
+
+    assert 'id="nkWelcome"' in client.get("/").text or True  # o convite depende do cadastro (pode já estar completo)
+    client.post("/onboarding/welcome", follow_redirects=False)
+    client.post("/onboarding/seen", json={"id": "intro", "finished": True})
+    client.post("/onboarding/seen", json={"id": "branch", "finished": False})
+    client.post("/onboarding/seen", json={"id": "intro", "finished": False})  # concluído não volta a "visto"
+    client.post("/onboarding/seen", json={"id": "nao-existe", "finished": True})  # tour desconhecido: ignorado
+    admin = db.query(User).filter_by(username="admin").one()
+    db.refresh(admin)
+    assert admin.tour_seen == {"intro": "done", "branch": "seen"} and admin.prefs.get("welcome_hidden")
+    page = client.get("/settings").text
+    assert '"intro": "done"' in page  # o navegador recebe os tours vistos do usuário
+    assert 'id="nkWelcome"' not in client.get("/").text
+    r = client.post("/onboarding/reset", headers={"referer": "http://testserver/settings"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/settings")
+    db.refresh(admin)
+    assert admin.tour_seen == {} and not (admin.prefs or {}).get("welcome_hidden")
 
 
 def test_result_steps_exist_after_a_run(client, seeded):

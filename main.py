@@ -27,6 +27,7 @@ from database import init_db
 from services import i18n
 from routers import (
     api,
+    auth as auth_routes,
     bin_types,
     branches,
     bulk,
@@ -44,6 +45,7 @@ from routers import (
     site,
     stock,
     structures,
+    users,
     warehouses,
 )
 from routers.common import render
@@ -57,6 +59,11 @@ log = logging.getLogger("neokioski")
 async def lifespan(_app: FastAPI):
     init_db()
     cleanup_old_uploads()
+    from database import SessionLocal as _SL
+    from services.auth import ensure_admin
+
+    with _SL() as db:  # primeiro uso: cria o administrador
+        ensure_admin(db)
     try:  # projetos de exemplo antigos: pedidos com a data (simulação de um dia inteiro)
         from database import SessionLocal
         from services.site_examples import refresh_example_orders
@@ -130,8 +137,63 @@ def _imperial_html(send):
     return wrapped
 
 
+class AuthMiddleware:
+    """Exige login em todas as telas, menos as públicas (login, arquivos estáticos, idioma). Sem sessão: telas vão
+    para /login (e voltam depois); JSON e API recebem 401. Senha provisória: só "Minha conta" até trocá-la."""
+
+    PUBLIC = ("/login", "/static/", "/i18n/", "/lang/", "/units/", "/favicon.ico")
+    FIRST_ALLOWED = ("/account", "/logout")
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.inner(scope, receive, send)
+        path = scope.get("path") or "/"
+        if path.startswith(self.PUBLIC):
+            return await self.inner(scope, receive, send)
+        from http.cookies import SimpleCookie
+
+        from anyio import to_thread
+        from starlette.responses import JSONResponse
+
+        from database import SessionLocal
+        from services import auth
+
+        cookies = SimpleCookie()
+        try:
+            cookies.load(dict(scope.get("headers") or []).get(b"cookie", b"").decode("latin-1"))
+        except Exception:  # cookie malformado: sem sessão
+            pass
+        token = cookies[auth.COOKIE].value if auth.COOKIE in cookies else None
+
+        def lookup():
+            with SessionLocal() as db:
+                return auth.user_for_token(db, token)
+
+        user = await to_thread.run_sync(lookup) if token else None
+        if user is None:
+            if path.startswith("/api") or path.endswith(".json"):
+                return await JSONResponse({"detail": "login required"}, status_code=401)(scope, receive, send)
+            from urllib.parse import quote
+
+            qs = scope.get("query_string", b"").decode("latin-1")
+            nxt = path + ("?" + qs if qs else "")
+            target = "/login" + ("" if nxt == "/" else "?next=" + quote(nxt, safe=""))
+            return await RedirectResponse(target, status_code=303)(scope, receive, send)
+        if user["must_change"] and not path.startswith(self.FIRST_ALLOWED):
+            return await RedirectResponse("/account?first=1", status_code=303)(scope, receive, send)
+        t = auth.set_current(user)
+        try:
+            return await self.inner(scope, receive, send)
+        finally:
+            auth.reset_current(t)
+
+
 app.add_middleware(LanguageMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=2048)
+app.add_middleware(AuthMiddleware)
 
 
 @app.get("/lang/{code}", include_in_schema=False)
@@ -178,7 +240,7 @@ def field_help_catalog():
     rules = [{**r, "t": i18n.lookup(r["t"]), "d": i18n.units_in_text(i18n.lookup(r["d"]))} for r in RULES]
     return JSONResponse(rules, headers={"Cache-Control": "public, max-age=3600"})
 
-for r in (dashboard, onboarding, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
+for r in (auth_routes, users, dashboard, onboarding, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
     app.include_router(r.router)
 
 

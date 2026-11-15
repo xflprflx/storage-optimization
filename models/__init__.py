@@ -17,6 +17,8 @@ from models.entities import (  # noqa: F401
     StockPolicy,
     StorageLocation,
     StructureType,
+    User,
+    UserSession,
     Warehouse,
     branch_warehouse,
 )
@@ -35,6 +37,8 @@ __all__ = [
     "ShelfLevel",
     "SiteProject",
     "StructureType",
+    "User",
+    "UserSession",
     "Dimensions",
     "Product",
     "StockItem",

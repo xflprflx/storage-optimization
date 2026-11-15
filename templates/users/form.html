@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Editar usuário") if user else _("Novo usuário") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-person"></i> {{ (_("Editar usuário") ~ ' ' ~ user.username) if user else _("Novo usuário") }}</h1>
+  <a href="/users" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
+</div>
+<div class="card" style="max-width: 560px"><div class="card-body">
+  {% if error %}<div class="alert alert-danger small"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
+  <form method="post" autocomplete="off">
+    {% if not user %}
+    <label class="form-label small mb-0" for="u_username">{{ _("Usuário (login)") }}</label>
+    <input class="form-control mb-2" name="username" id="u_username" value="{{ data.get('username', '') }}" maxlength="60" autocapitalize="none" required>
+    {% endif %}
+    <label class="form-label small mb-0" for="u_name">{{ _("Nome") }}</label>
+    <input class="form-control mb-2" name="name" id="u_name" value="{{ data.get('name', '') }}" maxlength="150">
+    <label class="form-label small mb-0" for="u_password">{{ _("Senha provisória") if user else _("Senha") }}</label>
+    <input class="form-control mb-1" type="password" name="password" id="u_password" autocomplete="new-password" minlength="8" {% if not user %}required{% endif %}>
+    <div class="form-text mb-2">{{ _("Deixe em branco para manter a senha atual. A senha redefinida é provisória: o usuário troca no próximo acesso.") if user else _("Pelo menos 8 caracteres.") }}</div>
+    {% if not user %}
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="must_change" value="1" id="u_must" checked>
+      <label class="form-check-label small" for="u_must">{{ _("Pedir para trocar a senha no primeiro acesso") }}</label></div>
+    {% endif %}
+    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_admin" value="1" id="u_admin" {% if data.get('is_admin') %}checked{% endif %}>
+      <label class="form-check-label small" for="u_admin">{{ _("Administrador (gerencia usuários)") }}</label></div>
+    {% if user %}
+    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="active" value="1" id="u_active" {% if data.get('active') %}checked{% endif %}>
+      <label class="form-check-label small" for="u_active">{{ _("Ativo (pode entrar no sistema)") }}</label></div>
+    {% endif %}
+    <button class="btn btn-accent"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+  </form>
+</div></div>
+{% endblock %}

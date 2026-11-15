@@ -387,24 +387,28 @@ def _href(href: str, ids: dict) -> str:
 
 
 def progress(db) -> dict:
-    """Trilhas com o estado de cada etapa ("done": True/False; None = só o navegador sabe, pelo tour visto)."""
+    """Trilhas com o estado de cada etapa (True/False): pelo cadastro ou, nas etapas "tour", pelo tour já visto pelo
+    usuário logado. Só as etapas do cadastro contam no progresso e na sugestão da próxima etapa."""
+    from services.auth import current_user
+
     checks, ids = _checks(db), work_ids(db)
+    seen = user_seen(db, current_user())
     tracks, nxt = [], None
     total = done_n = 0
     for tr in TRACKS:
         steps = []
         for st in tr["steps"]:
-            done = None if st["done"] == "tour" else checks.get(st["done"], False)
+            done = bool(seen.get(st["tour"])) if st["done"] == "tour" else checks.get(st["done"], False)
             href = _href(st["href"], ids)
             steps.append({**st, "href": href, "go": f"{href}#nk-tour={st['tour']}", "state": done})
-            if not st.get("optional") and done is not None:
+            if not st.get("optional") and st["done"] != "tour":
                 total += 1
                 done_n += bool(done)
         tracks.append({**tr, "steps": steps,
-                       "complete": all(s["state"] is not False for s in steps if not s.get("optional"))})
+                       "complete": all(s["state"] for s in steps if not s.get("optional"))})
     for tr in tracks[1:] + tracks[:1]:  # próxima etapa: o cadastro real vem antes do caminho de exemplo
         for s in tr["steps"]:
-            if s["state"] is False and not s.get("optional"):
+            if s["state"] is False and not s.get("optional") and s["done"] != "tour":
                 nxt = nxt or (tr, s)
     # "Ver onde aparece": abre a tela e começa o tour na etapa do conceito (#nk-tour=<id>@<trecho do seletor>)
     concepts = [{**c, "go": f"{_href(c['href'], ids)}#nk-tour={c['tour']}" + (f"@{c['at']}" if c.get("at") else "")}
@@ -421,3 +425,32 @@ def tours_payload(lang: Optional[str] = None) -> list[dict]:
     return [{"id": k, "p": v["p"], "t": tr(v["t"]),
              "s": [{"s": st["s"], "t": tr(st["t"]), "d": tr(st["d"]), "c": tr(st["c"]) if st["c"] else ""}
                    for st in v["s"]]} for k, v in TOURS.items()]
+
+
+# --------------------------------------------------------------------------- progresso por usuário
+def user_seen(db, me: Optional[dict]) -> dict:
+    """Tours já vistos pelo usuário ({id: "done" | "seen"})."""
+    if not me:
+        return {}
+    from models import User
+
+    user = db.get(User, me["id"])
+    return dict(user.tour_seen or {}) if user else {}
+
+
+def mark_seen(user, tour_id: str, finished: bool) -> None:
+    """Marca o tour como visto pelo usuário ("done" = chegou ao fim; um "done" não volta para "seen")."""
+    if tour_id not in TOURS:
+        return
+    seen = dict(user.tour_seen or {})
+    if seen.get(tour_id) != "done":
+        seen[tour_id] = "done" if finished else "seen"
+    user.tour_seen = seen
+
+
+def reset_progress(user) -> None:
+    """Zera o onboarding do usuário: todos os tours como não vistos e o convite do guia de volta ao Painel."""
+    user.tour_seen = {}
+    prefs = dict(user.prefs or {})
+    prefs.pop("welcome_hidden", None)
+    user.prefs = prefs

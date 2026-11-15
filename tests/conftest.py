@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 _TMP = tempfile.mkdtemp(prefix="neokioski-tests-")
 os.environ["NEOKIOSKI_DB_URL"] = f"sqlite:///{_TMP}/test.db"  # antes de importar a aplicação
+os.environ["NEOKIOSKI_ADMIN_PASSWORD"] = ADMIN_PASSWORD = "senha-de-teste-123"  # administrador criado no 1º uso
 
 import pytest  # noqa: E402
 
@@ -20,6 +21,8 @@ def client():
     from main import app
 
     with TestClient(app) as c:
+        r = c.post("/login", data={"username": "admin", "password": ADMIN_PASSWORD}, follow_redirects=False)
+        assert r.status_code == 303, r.text  # os testes navegam logados como administrador
         yield c
 
 

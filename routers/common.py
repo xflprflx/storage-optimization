@@ -103,6 +103,27 @@ templates.env.globals["material_types"] = _material_types_global
 templates.env.globals["NO_MATERIAL"] = "__none__"
 
 
+def _tours_seen() -> dict:
+    """Tours do guia já vistos pelo usuário logado ({id: "done" | "seen"})."""
+    from services.auth import current_user
+
+    u = current_user()
+    if not u:
+        return {}
+    from database import SessionLocal
+    from models import User
+
+    with SessionLocal() as db:
+        user = db.get(User, u["id"])
+        return dict(user.tour_seen or {}) if user else {}
+
+
+from services.auth import current_user as _current_user  # noqa: E402
+
+templates.env.globals["current_user"] = _current_user
+templates.env.globals["tours_seen"] = _tours_seen
+
+
 def _help_version() -> str:
     """Versão do catálogo de ajuda dos campos: muda quando o catálogo ou os desenhos mudam (invalida o cache do navegador)."""
     import hashlib

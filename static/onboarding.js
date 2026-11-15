@@ -2,10 +2,12 @@
    - Começa pelo menu "Guia" da barra (Tour desta tela) ou por um link com #nk-tour=<id> (o guia passo a passo usa).
    - Cada etapa destaca o 1º elemento visível entre os seletores; etapas sem elemento na tela são puladas. Se o
      elemento estiver numa etapa escondida de um passo a passo (data-stepper), a etapa é aberta.
-   - Teclado: → / Enter avança, ← volta, Esc fecha. O tour visto fica marcado neste navegador (nk-tour-seen:<id>).
+   - Teclado: → / Enter avança, ← volta, Esc fecha. O tour visto fica gravado no usuário (POST /onboarding/seen);
+     a página recebe os já vistos em window.NK_TOURS_SEEN. Zerar: POST /onboarding/reset (menu Guia ou guia).
    window.nkTour = { start(id), here(), seen(id), list() } */
 (function () {
-  const SEEN = 'nk-tour-seen:', RETURN = 'nk-onb-return';
+  const RETURN = 'nk-onb-return';
+  const SEEN = window.NK_TOURS_SEEN || {};  // {id do tour: "done" | "seen"} do usuário logado
   let tours = null, loading = null, cur = null;
   const store = {
     get: (k, s) => { try { return (s ? sessionStorage : localStorage).getItem(k); } catch (e) { return null; } },
@@ -154,7 +156,9 @@
     window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true);
     document.removeEventListener('keydown', key, true);
     cur = null;
-    store.set(SEEN + id, finished ? 'done' : 'seen');
+    if (SEEN[id] !== 'done') SEEN[id] = finished ? 'done' : 'seen';
+    fetch('/onboarding/seen', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, finished: !!finished }) }).catch(() => { /* sem rede: vale só nesta página */ });
     document.dispatchEvent(new CustomEvent('nk-tour-end', { detail: { id, finished } }));
     markDot();
     if (finished && store.get(RETURN, true)) returnBanner();
@@ -193,7 +197,7 @@
     const t = forPath(list, location.pathname);
     return t ? start(t) : false;
   });
-  const seen = id => !!store.get(SEEN + id);
+  const seen = id => !!SEEN[id];
 
   /* ponto no botão Guia quando esta tela tem tour ainda não visto; o item "Tour desta tela" some quando não há */
   function markDot() {

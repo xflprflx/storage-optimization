@@ -57,7 +57,7 @@ def test_imperial_page_converts_texts_but_not_scripts(client):
     try:
         html = client.get("/structures/new").text
     finally:
-        client.cookies.clear()
+        client.cookies.delete("nk_lang")  # mantém a sessão de login
     assert "(in)" in html and "Module dimensions (cm)" not in html
     assert 'data-u="cm"' in html  # campos convertidos no navegador (units.js)
     assert "units.js" in html

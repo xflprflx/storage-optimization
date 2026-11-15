@@ -1914,13 +1914,13 @@
  },
  "Ajuda nos campos: desligada (clique para ligar)": {
   "src": [
-   "static/field_help.js:459"
+   "static/field_help.js:507"
   ],
   "js": true
  },
  "Ajuda nos campos: ligada (clique para desligar)": {
   "src": [
-   "static/field_help.js:459"
+   "static/field_help.js:507"
   ],
   "js": true
  },
@@ -2477,13 +2477,13 @@
  },
  "Armazém CD1": {
   "src": [
-   "static/field_help.js:219"
+   "static/field_help.js:267"
   ],
   "js": true
  },
  "Armazém CD2": {
   "src": [
-   "static/field_help.js:219"
+   "static/field_help.js:267"
   ],
   "js": true
  },
@@ -4241,7 +4241,7 @@
  },
  "Centro de distribuição SP": {
   "src": [
-   "static/field_help.js:352"
+   "static/field_help.js:400"
   ],
   "js": true
  },
@@ -7086,8 +7086,10 @@
  "Entrar": {
   "src": [
    "templates/login.html:6",
-   "templates/login.html:27"
-  ]
+   "templates/login.html:27",
+   "static/field_help.js:226"
+  ],
+  "js": true
  },
  "Entre com o seu usuário para continuar.": {
   "src": [
@@ -12201,7 +12203,8 @@
    "services/master_importer.py:46"
   ],
   "lazy": true,
-  "help": true
+  "help": true,
+  "js": true
  },
  "Nome *": {
   "src": [
@@ -16189,9 +16192,11 @@
  "Repita a senha nova": {
   "src": [
    "services/field_help.py:42",
-   "templates/account.html:17"
+   "templates/account.html:17",
+   "static/field_help.js:223"
   ],
-  "help": true
+  "help": true,
+  "js": true
  },
  "Reservada · {m} m": {
   "src": [
@@ -17252,16 +17257,20 @@
    "services/field_help.py:38",
    "services/field_help.py:45",
    "templates/login.html:25",
-   "templates/users/form.html:17"
+   "templates/users/form.html:17",
+   "static/field_help.js:225"
   ],
-  "help": true
+  "help": true,
+  "js": true
  },
  "Senha atual": {
   "src": [
    "services/field_help.py:40",
-   "templates/account.html:13"
+   "templates/account.html:13",
+   "static/field_help.js:223"
   ],
-  "help": true
+  "help": true,
+  "js": true
  },
  "Senha definida. Bem-vindo!": {
   "src": [
@@ -17277,9 +17286,11 @@
  "Senha nova": {
   "src": [
    "services/field_help.py:41",
-   "templates/account.html:15"
+   "templates/account.html:15",
+   "static/field_help.js:223"
   ],
-  "help": true
+  "help": true,
+  "js": true
  },
  "Senha provisória": {
   "src": [
@@ -18962,9 +18973,11 @@
    "services/field_help.py:37",
    "templates/account.html:9",
    "templates/login.html:23",
-   "templates/users/list.html:11"
+   "templates/users/list.html:11",
+   "static/field_help.js:225"
   ],
-  "help": true
+  "help": true,
+  "js": true
  },
  "Usuário (login)": {
   "src": [
@@ -18999,9 +19012,11 @@
    "routers/users.py:15",
    "templates/base.html:176",
    "templates/users/list.html:2",
-   "templates/users/list.html:5"
+   "templates/users/list.html:5",
+   "static/field_help.js:254"
   ],
-  "lazy": true
+  "lazy": true,
+  "js": true
  },
  "Vale com \"Foco nos SKUs filtrados\" e filtro de SKU / tipo de material. <b>Só bins livres</b>: o item só usa bins sem saldo. <b>Qualquer bin</b>: pode usar bins com saldo de outros itens (ex.: 2 bins G em vez de 14 P livres) — esses itens são <b>realocados</b> (": {
   "src": [
@@ -19870,7 +19885,7 @@
  },
  "a filial nova criada pelo projeto": {
   "src": [
-   "static/field_help.js:222"
+   "static/field_help.js:270"
   ],
   "js": true
  },
@@ -19910,7 +19925,7 @@
  },
  "alfabética": {
   "src": [
-   "static/field_help.js:336"
+   "static/field_help.js:384"
   ],
   "js": true
  },
@@ -19932,7 +19947,7 @@
  },
  "altura máx.": {
   "src": [
-   "static/field_help.js:251"
+   "static/field_help.js:299"
   ],
   "js": true
  },
@@ -19955,7 +19970,7 @@
  "antes": {
   "src": [
    "templates/optimization/plan.html:57",
-   "static/field_help.js:230"
+   "static/field_help.js:278"
   ],
   "js": true
  },
@@ -19984,7 +19999,7 @@
  },
  "armazém ligado à filial": {
   "src": [
-   "static/field_help.js:222"
+   "static/field_help.js:270"
   ],
   "js": true
  },
@@ -20005,6 +20020,12 @@
   ],
   "lazy": true
  },
+ "as duas iguais": {
+  "src": [
+   "static/field_help.js:244"
+  ],
+  "js": true
+ },
  "as seguintes andam": {
   "src": [
    "static/field_help.js:140"
@@ -20013,8 +20034,10 @@
  },
  "ativo": {
   "src": [
-   "templates/users/list.html:18"
-  ]
+   "templates/users/list.html:18",
+   "static/field_help.js:257"
+  ],
+  "js": true
  },
  "atribuições sem saldo": {
   "src": [
@@ -20041,7 +20064,7 @@
  },
  "até provar o ótimo": {
   "src": [
-   "static/field_help.js:259"
+   "static/field_help.js:307"
   ],
   "js": true
  },
@@ -20053,7 +20076,7 @@
  },
  "aumenta o desenho": {
   "src": [
-   "static/field_help.js:330"
+   "static/field_help.js:378"
   ],
   "js": true
  },
@@ -20116,9 +20139,15 @@
    "routers/optimization.py:900"
   ]
  },
+ "bloqueia por 5 min": {
+  "src": [
+   "static/field_help.js:241"
+  ],
+  "js": true
+ },
  "cabe pelas": {
   "src": [
-   "static/field_help.js:248"
+   "static/field_help.js:296"
   ],
   "js": true
  },
@@ -20135,7 +20164,7 @@
  },
  "cabeceiras nas pontas": {
   "src": [
-   "static/field_help.js:305"
+   "static/field_help.js:353"
   ],
   "js": true
  },
@@ -20243,6 +20272,12 @@
    "templates/onboarding.html:67"
   ]
  },
+ "confirma que é você": {
+  "src": [
+   "static/field_help.js:237"
+  ],
+  "js": true
+ },
  "conflito com {address}: {message}": {
   "src": [
    "services/batch_generator.py:451"
@@ -20256,7 +20291,7 @@
  },
  "cor = critério": {
   "src": [
-   "static/field_help.js:329"
+   "static/field_help.js:377"
   ],
   "js": true
  },
@@ -20267,7 +20302,7 @@
  },
  "câmera": {
   "src": [
-   "static/field_help.js:326"
+   "static/field_help.js:374"
   ],
   "js": true
  },
@@ -20295,19 +20330,19 @@
   "src": [
    "templates/optimization/index.html:234",
    "templates/optimization/plan.html:58",
-   "static/field_help.js:230"
+   "static/field_help.js:278"
   ],
   "js": true
  },
  "descrição que aparece nas telas": {
   "src": [
-   "static/field_help.js:355"
+   "static/field_help.js:403"
   ],
   "js": true
  },
  "desempate entre planos iguais": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -20319,7 +20354,7 @@
  },
  "direção das fileiras": {
   "src": [
-   "static/field_help.js:310"
+   "static/field_help.js:358"
   ],
   "js": true
  },
@@ -20345,7 +20380,7 @@
  },
  "dígitos: 1 → 01": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -20407,7 +20442,7 @@
  },
  "enche até %": {
   "src": [
-   "static/field_help.js:245"
+   "static/field_help.js:293"
   ],
   "js": true
  },
@@ -20439,7 +20474,7 @@
    "services/delete_service.py:77",
    "services/delete_service.py:108",
    "static/field_help.js:153",
-   "static/field_help.js:344"
+   "static/field_help.js:392"
   ],
   "lazy": true,
   "js": true
@@ -20464,7 +20499,7 @@
  },
  "endereços do escopo": {
   "src": [
-   "static/field_help.js:222"
+   "static/field_help.js:270"
   ],
   "js": true
  },
@@ -20475,7 +20510,7 @@
  },
  "entre corredores": {
   "src": [
-   "static/field_help.js:269"
+   "static/field_help.js:317"
   ],
   "js": true
  },
@@ -20484,9 +20519,15 @@
    "templates/site/project.html:580"
   ]
  },
+ "erradas": {
+  "src": [
+   "static/field_help.js:240"
+  ],
+  "js": true
+ },
  "esconde acima": {
   "src": [
-   "static/field_help.js:322"
+   "static/field_help.js:370"
   ],
   "js": true
  },
@@ -20563,7 +20604,7 @@
    "services/branch_layout.py:962",
    "templates/layout/plan.html:572",
    "static/field_help.js:166",
-   "static/field_help.js:267"
+   "static/field_help.js:315"
   ],
   "js": true
  },
@@ -20605,7 +20646,7 @@
  },
  "fim da faixa": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -20654,7 +20695,7 @@
  },
  "frente da estante": {
   "src": [
-   "static/field_help.js:270"
+   "static/field_help.js:318"
   ],
   "js": true
  },
@@ -20698,7 +20739,7 @@
  },
  "heurístico": {
   "src": [
-   "static/field_help.js:260"
+   "static/field_help.js:308"
   ],
   "js": true
  },
@@ -20743,7 +20784,7 @@
  },
  "identificador curto e único": {
   "src": [
-   "static/field_help.js:354"
+   "static/field_help.js:402"
   ],
   "js": true
  },
@@ -20767,8 +20808,10 @@
  },
  "inativo": {
   "src": [
-   "templates/users/list.html:18"
-  ]
+   "templates/users/list.html:18",
+   "static/field_help.js:258"
+  ],
+  "js": true
  },
  "indisponível": {
   "src": [
@@ -20796,7 +20839,7 @@
  },
  "início da faixa": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -20808,7 +20851,7 @@
  },
  "kg máx.": {
   "src": [
-   "static/field_help.js:247"
+   "static/field_help.js:295"
   ],
   "js": true
  },
@@ -20826,7 +20869,7 @@
  },
  "largura máx.": {
   "src": [
-   "static/field_help.js:250"
+   "static/field_help.js:298"
   ],
   "js": true
  },
@@ -20837,7 +20880,7 @@
  },
  "letra por corredor ou por rua": {
   "src": [
-   "static/field_help.js:312"
+   "static/field_help.js:360"
   ],
   "js": true
  },
@@ -20848,7 +20891,7 @@
  },
  "limite de bins": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -20920,7 +20963,7 @@
  },
  "maior capacidade: enche o imóvel": {
   "src": [
-   "static/field_help.js:314"
+   "static/field_help.js:362"
   ],
   "js": true
  },
@@ -20942,7 +20985,7 @@
  },
  "mais vendidos perto da expedição": {
   "src": [
-   "static/field_help.js:271"
+   "static/field_help.js:319"
   ],
   "js": true
  },
@@ -20981,7 +21024,7 @@
  },
  "menos trocas": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -21000,6 +21043,12 @@
   "src": [
    "templates/products/list.html:82"
   ]
+ },
+ "mostrado no menu": {
+  "src": [
+   "static/field_help.js:233"
+  ],
+  "js": true
  },
  "movimentações": {
   "src": [
@@ -21039,6 +21088,12 @@
  "mín.": {
   "src": [
    "static/field_help.js:121"
+  ],
+  "js": true
+ },
+ "mín. 8 caracteres": {
+  "src": [
+   "static/field_help.js:244"
   ],
   "js": true
  },
@@ -21085,6 +21140,12 @@
    "services/site_planner.py:827"
   ]
  },
+ "no 1º acesso": {
+  "src": [
+   "static/field_help.js:248"
+  ],
+  "js": true
+ },
  "no plano": {
   "src": [
    "templates/optimization/page.html:520",
@@ -21101,9 +21162,15 @@
    "templates/products/list.html:84"
   ]
  },
+ "nova": {
+  "src": [
+   "static/field_help.js:247"
+  ],
+  "js": true
+ },
  "numérica": {
   "src": [
-   "static/field_help.js:336"
+   "static/field_help.js:384"
   ],
   "js": true
  },
@@ -21133,6 +21200,12 @@
    "templates/settings.html:20"
   ],
   "html": true
+ },
+ "não entra; sessões caem": {
+  "src": [
+   "static/field_help.js:259"
+  ],
+  "js": true
  },
  "não enviada": {
   "src": [
@@ -21175,14 +21248,14 @@
    "services/delete_service.py:108",
    "services/site_planner.py:60",
    "services/site_planner.py:61",
-   "static/field_help.js:344"
+   "static/field_help.js:392"
   ],
   "lazy": true,
   "js": true
  },
  "níveis bons de pegar: 2, 3": {
   "src": [
-   "static/field_help.js:274"
+   "static/field_help.js:322"
   ],
   "js": true
  },
@@ -21214,13 +21287,13 @@
  },
  "nível ruim \"custa\" metros": {
   "src": [
-   "static/field_help.js:273"
+   "static/field_help.js:321"
   ],
   "js": true
  },
  "números, letras, fixo ou nenhum": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -21242,7 +21315,7 @@
  },
  "o mesmo local": {
   "src": [
-   "static/field_help.js:335"
+   "static/field_help.js:383"
   ],
   "js": true
  },
@@ -21254,7 +21327,7 @@
  },
  "o nível vazio também sai": {
   "src": [
-   "static/field_help.js:345"
+   "static/field_help.js:393"
   ],
   "js": true
  },
@@ -21265,13 +21338,13 @@
  },
  "o que fazer com quem perdeu a bin": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
  "o que o plano deve melhorar": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -21309,7 +21382,7 @@
  },
  "onde a exceção vale": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -21339,7 +21412,7 @@
  },
  "os relacionados saem junto": {
   "src": [
-   "static/field_help.js:345"
+   "static/field_help.js:393"
   ],
   "js": true
  },
@@ -21473,7 +21546,7 @@
  "pesquisa operacional": {
   "src": [
    "routers/optimization.py:504",
-   "static/field_help.js:260"
+   "static/field_help.js:308"
   ],
   "js": true
  },
@@ -21497,13 +21570,13 @@
  },
  "pode tirar bins de outros itens": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
  "pode usar bins novas": {
   "src": [
-   "static/field_help.js:232"
+   "static/field_help.js:280"
   ],
   "js": true
  },
@@ -21562,6 +21635,12 @@
   ],
   "lazy": true
  },
+ "provisória": {
+  "src": [
+   "static/field_help.js:246"
+  ],
+  "js": true
+ },
  "próxima ›": {
   "src": [
    "templates/optimization/pool.html:238"
@@ -21569,7 +21648,7 @@
  },
  "pé-direito: altura livre": {
   "src": [
-   "static/field_help.js:313"
+   "static/field_help.js:361"
   ],
   "js": true
  },
@@ -21610,7 +21689,7 @@
  },
  "recria os endereços livres": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -21655,7 +21734,7 @@
  },
  "regra diferente para parte dos endereços": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -21695,7 +21774,7 @@
  },
  "restringe a um armazém da filial": {
   "src": [
-   "static/field_help.js:222"
+   "static/field_help.js:270"
   ],
   "js": true
  },
@@ -21916,7 +21995,7 @@
  },
  "só as bins que já existem": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -21928,7 +22007,7 @@
  },
  "só bins sem saldo": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -21940,7 +22019,7 @@
  },
  "só este item é excluído": {
   "src": [
-   "static/field_help.js:345"
+   "static/field_help.js:393"
   ],
   "js": true
  },
@@ -21950,15 +22029,21 @@
    "templates/packing/view3d.html:8"
   ]
  },
+ "só o admin gerencia usuários": {
+  "src": [
+   "static/field_help.js:255"
+  ],
+  "js": true
+ },
  "só o item é excluído": {
   "src": [
-   "static/field_help.js:345"
+   "static/field_help.js:393"
   ],
   "js": true
  },
  "só os produtos filtrados": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -21993,7 +22078,7 @@
  },
  "tempo de cálculo": {
   "src": [
-   "static/field_help.js:256"
+   "static/field_help.js:304"
   ],
   "js": true
  },
@@ -22005,7 +22090,7 @@
  },
  "tempo limite": {
   "src": [
-   "static/field_help.js:258"
+   "static/field_help.js:306"
   ],
   "js": true
  },
@@ -22023,7 +22108,7 @@
  },
  "texto livre, só para consulta": {
   "src": [
-   "static/field_help.js:353"
+   "static/field_help.js:401"
   ],
   "js": true
  },
@@ -22050,13 +22135,13 @@
  },
  "tipos de bin permitidos": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
  "tira bins de endereço vazio": {
   "src": [
-   "static/field_help.js:234"
+   "static/field_help.js:282"
   ],
   "js": true
  },
@@ -22092,7 +22177,7 @@
  },
  "tudo vale para esta filial": {
   "src": [
-   "static/field_help.js:222"
+   "static/field_help.js:270"
   ],
   "js": true
  },
@@ -22103,7 +22188,7 @@
  },
  "um tipo só": {
   "src": [
-   "static/field_help.js:249"
+   "static/field_help.js:297"
   ],
   "js": true
  },
@@ -22125,7 +22210,7 @@
  },
  "uma letra por rua": {
   "src": [
-   "static/field_help.js:275"
+   "static/field_help.js:323"
   ],
   "js": true
  },
@@ -22155,14 +22240,22 @@
    "templates/packing/case.html:26"
   ]
  },
+ "usado para entrar": {
+  "src": [
+   "static/field_help.js:233"
+  ],
+  "js": true
+ },
  "usuário": {
   "src": [
-   "templates/users/list.html:17"
-  ]
+   "templates/users/list.html:17",
+   "static/field_help.js:250"
+  ],
+  "js": true
  },
  "valor fixo (um só código)": {
   "src": [
-   "static/field_help.js:288"
+   "static/field_help.js:336"
   ],
   "js": true
  },
@@ -22259,7 +22352,7 @@
  },
  "zona de ouro da caminhada": {
   "src": [
-   "static/field_help.js:268"
+   "static/field_help.js:316"
   ],
   "js": true
  },

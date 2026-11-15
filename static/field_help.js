@@ -212,6 +212,54 @@
     if (lab) s += T(150, 126, lab, true, { 'font-size': 9 });
     return s;
   };
+  // ------------------------------------------------------------------ acesso: login, senha, perfil e situação do usuário
+  D.user = h => {
+    const field = (y, lab, val, on) => T(24, y - 4, lab, on, { 'text-anchor': 'start', 'font-size': 8 }) +
+      R(22, y, 118, 17, on, { fill: on ? HIF : '#fff', rx: 3 }) + T(30, y + 12, val, on, { 'text-anchor': 'start', 'font-size': 10 });
+    const dots = '•••••••';
+    // cartão de login (ou de conta) à esquerda
+    let s = R(12, 6, 138, 118, false, { fill: '#fff', rx: 6 });
+    if (h === 'cur' || h === 'new' || h === 'confirm') {
+      s += field(26, _t('Senha atual'), dots, h === 'cur') + field(62, _t('Senha nova'), dots, h === 'new') + field(98, _t('Repita a senha nova'), dots, h === 'confirm');
+    } else {
+      s += field(26, _t('Usuário'), 'ana', h === 'user') + field(62, h === 'name' ? _t('Nome') : _t('Senha'), h === 'name' ? 'Ana Souza' : dots, h === 'name' || h === 'pass' || h === 'must');
+      s += R(22, 96, 118, 18, false, { fill: '#0f766e', stroke: '#0f766e', rx: 3 }) + T(81, 109, _t('Entrar'), false, { fill: '#fff', stroke: 'none', 'font-size': 10 });
+    }
+    // à direita: o que o campo controla
+    const X = 178;
+    if (h === 'user' || h === 'name') {
+      s += C(X + 18, 40, 14, false, { fill: FL, stroke: LN }) + C(X + 18, 35, 5, false) + `<path d="M${X + 9},50 q9,-11 18,0" fill="${LN}"/>`;
+      s += T(X + 70, 36, 'ana', h === 'user', { 'font-size': 12, 'font-weight': 700 }) + T(X + 70, 52, 'Ana Souza', h === 'name', { 'font-size': 10 });
+      s += T(X + 52, 84, h === 'user' ? _t('usado para entrar') : _t('mostrado no menu'), true, { 'font-size': 9 });
+    } else if (h === 'cur') {
+      s += `<path d="M${X + 52},22 l22,8 v16 c0,14 -10,22 -22,26 c-12,-4 -22,-12 -22,-26 v-16 z" fill="${HIF}" stroke="${HI}" stroke-width="2"/>`;
+      s += `<path d="M${X + 43},47 l6,6 l12,-13" fill="none" stroke="${HI}" stroke-width="2.5"/>`;
+      s += T(X + 52, 92, _t('confirma que é você'), true, { 'font-size': 9 });
+    } else if (h === 'pass') {
+      s += R(X + 4, 34, 22, 18, true, { rx: 3 }) + `<path d="M${X + 9},34 v-6 a6,6 0 0 1 12,0 v6" fill="none" stroke="${HI}" stroke-width="2"/>`;
+      s += T(X + 70, 40, '5 ×', true, { 'font-size': 11, 'font-weight': 700 }) + T(X + 70, 54, _t('erradas'), true, { 'font-size': 9 });
+      s += T(X + 52, 84, _t('bloqueia por 5 min'), true, { 'font-size': 9 });
+    } else if (h === 'new' || h === 'confirm') {
+      s += T(X + 52, 30, dots, h === 'new', { 'font-size': 12 }) + T(X + 52, 50, '=', true, { 'font-size': 14, 'font-weight': 700 }) + T(X + 52, 70, dots, h === 'confirm', { 'font-size': 12 });
+      s += T(X + 52, 92, _t('mín. 8 caracteres'), true, { 'font-size': 9 }) + T(X + 52, 106, _t('as duas iguais'), h === 'confirm', { 'font-size': 9 });
+    } else if (h === 'must') {
+      s += R(X - 4, 30, 50, 20, false, { rx: 3 }) + T(X + 21, 44, _t('provisória'), false, { 'font-size': 8 });
+      s += arrow(X + 48, 40, X + 66, 40, true) + R(X + 68, 30, 46, 20, true, { rx: 3 }) + T(X + 91, 44, _t('nova'), true, { 'font-size': 9 });
+      s += T(X + 55, 76, _t('no 1º acesso'), true, { 'font-size': 9 });
+    } else if (h === 'admin') {
+      [[X + 14, 'admin', true], [X + 74, _t('usuário'), false]].forEach(([x, lab, on]) => {
+        s += C(x, 32, 12, on, { fill: on ? HIF : FL, stroke: on ? HI : LN }) + C(x, 28, 4, on, { fill: on ? HI : LN });
+        s += T(x, 58, lab, on, { 'font-size': 9 });
+      });
+      s += R(X - 2, 68, 32, 14, true, { rx: 2 }) + T(X + 14, 78, _t('Usuários'), true, { 'font-size': 7 });
+      s += T(X + 44, 104, _t('só o admin gerencia usuários'), true, { 'font-size': 8 });
+    } else if (h === 'active') {
+      s += R(X + 4, 30, 34, 16, false, { rx: 8, fill: '#d1f0e6', stroke: '#0f766e' }) + C(X + 30, 38, 6, false, { fill: '#0f766e' }) + T(X + 21, 60, _t('ativo'), false, { 'font-size': 8 });
+      s += R(X + 64, 30, 34, 16, true, { rx: 8 }) + C(X + 72, 38, 6, true) + T(X + 81, 60, _t('inativo'), true, { 'font-size': 8 });
+      s += T(X + 52, 88, _t('não entra; sessões caem'), true, { 'font-size': 9 });
+    }
+    return s;
+  };
   // ------------------------------------------------------------------ escopo: filial -> armazém -> endereços
   D.scope = h => {
     let s = R(110, 10, 80, 24, h === 'branch') + T(150, 26, 'Filial 01', h === 'branch');

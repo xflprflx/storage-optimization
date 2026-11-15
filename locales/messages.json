@@ -71,7 +71,7 @@
  },
  " com os registros relacionados.": {
   "src": [
-   "routers/bulk.py:63"
+   "routers/bulk.py:75"
   ]
  },
  " de ": {
@@ -141,6 +141,11 @@
    "templates/optimization/page.html:418"
   ]
  },
+ " {hard} não pode(m) ser excluído(s) (o motivo aparece na prévia).": {
+  "src": [
+   "routers/bulk.py:79"
+  ]
+ },
  " {len} posição(ões) física(s) (nível) excluída(s): {few}.": {
   "src": [
    "routers/locations.py:630"
@@ -148,7 +153,7 @@
  },
  " {skipped} ignorado(s) por terem registros relacionados (marque \"excluir também os relacionados\").": {
   "src": [
-   "routers/bulk.py:65"
+   "routers/bulk.py:77"
   ]
  },
  " {v} endereço(s) foram junto por liberarem as bins recebidas (bins existentes).": {
@@ -270,7 +275,7 @@
  },
  "\"Neste nível cabem X bins do tipo Y\". Tipos diferentes são alternativas: o uso soma as frações (3/6 CX-P + 1/3 CX-M = 83%).": {
   "src": [
-   "templates/levels/index.html:13"
+   "templates/levels/index.html:14"
   ]
  },
  "\"Ótimo comprovado\": não existe solução melhor. \"Melhor no tempo\": a melhor encontrada no tempo limite (aumente o tempo se quiser). \"Heurística\": o solver não melhorou a regra simples a tempo.": {
@@ -441,7 +446,7 @@
  },
  "(primeiros {shown} de {ids})": {
   "src": [
-   "templates/bulk/confirm.html:34"
+   "templates/bulk/confirm.html:38"
   ],
   "html": true
  },
@@ -453,6 +458,7 @@
  },
  "(reservado)": {
   "src": [
+   "services/delete_service.py:275",
    "templates/_macros.html:115"
   ]
  },
@@ -514,13 +520,13 @@
  },
  "({v} emprest.)": {
   "src": [
-   "templates/levels/index.html:138"
+   "templates/levels/index.html:142"
   ],
   "html": true
  },
  "({width} cm larg.)": {
   "src": [
-   "templates/levels/index.html:65"
+   "templates/levels/index.html:66"
   ],
   "html": true
  },
@@ -637,7 +643,7 @@
  },
  "1. Enviar arquivo": {
   "src": [
-   "templates/imports/history.html:12",
+   "templates/imports/history.html:13",
    "templates/imports/upload.html:13"
   ]
  },
@@ -673,7 +679,7 @@
  "1º nível": {
   "src": [
    "services/site_import.py:437",
-   "templates/levels/index.html:88",
+   "templates/levels/index.html:89",
    "static/field_help.js:76"
   ],
   "js": true
@@ -727,7 +733,7 @@
  },
  "2. Conferir aba e colunas": {
   "src": [
-   "templates/imports/history.html:13",
+   "templates/imports/history.html:14",
    "templates/imports/mapping_history.html:12"
   ]
  },
@@ -783,7 +789,7 @@
  },
  "3. Resumo salvo": {
   "src": [
-   "templates/imports/history.html:14",
+   "templates/imports/history.html:15",
    "templates/imports/mapping_history.html:13"
   ]
  },
@@ -1328,7 +1334,7 @@
  },
  "<span class=\"spinner-border spinner-border-sm\"></span> Excluindo...": {
   "src": [
-   "templates/bulk/confirm.html:54"
+   "templates/bulk/confirm.html:58"
   ],
   "js": true
  },
@@ -1533,7 +1539,7 @@
  },
  "A exclusão não pode ser desfeita.": {
   "src": [
-   "templates/bulk/confirm.html:28"
+   "templates/bulk/confirm.html:32"
   ]
  },
  "A faixa de altura confortável para pegar itens, contada do piso. Um bom começo é 75 a 150 cm (botão Sugerir).": {
@@ -1600,7 +1606,7 @@
  },
  "A ou A-C": {
   "src": [
-   "templates/levels/index.html:34"
+   "templates/levels/index.html:35"
   ]
  },
  "A planilha não tem abas com dados.": {
@@ -1824,7 +1830,7 @@
  },
  "Acima da capacidade": {
   "src": [
-   "templates/levels/index.html:41"
+   "templates/levels/index.html:42"
   ]
  },
  "Adicionar bin": {
@@ -2078,7 +2084,7 @@
  },
  "Altura do 1º nível nessas estantes (cm), quando foram montadas diferente da estrutura — vazio = a da estrutura": {
   "src": [
-   "templates/levels/index.html:89"
+   "templates/levels/index.html:90"
   ]
  },
  "Altura do 1º nível não pode ser negativa.": {
@@ -2336,7 +2342,7 @@
  "Aplicar": {
   "src": [
    "services/onboarding.py:190",
-   "templates/levels/index.html:71",
+   "templates/levels/index.html:72",
    "templates/locations/list.html:122",
    "templates/products/list.html:87"
   ],
@@ -2356,13 +2362,13 @@
  },
  "Aplicar a estrutura às estantes que atendem às condições?": {
   "src": [
-   "templates/levels/index.html:96"
+   "templates/levels/index.html:97"
   ],
   "js": true
  },
  "Aplicar a todos os níveis que atendem às condições?": {
   "src": [
-   "templates/levels/index.html:71"
+   "templates/levels/index.html:72"
   ],
   "js": true
  },
@@ -2374,12 +2380,12 @@
  },
  "Aplicar estrutura": {
   "src": [
-   "templates/levels/index.html:96"
+   "templates/levels/index.html:97"
   ]
  },
  "Aplicar estrutura de armazenagem às estantes <span class=\"text-muted fw-normal\">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo (<a href=\"/structures\">cadastro de estruturas</a>)</span>": {
   "src": [
-   "templates/levels/index.html:77"
+   "templates/levels/index.html:78"
   ],
   "html": true
  },
@@ -2664,7 +2670,7 @@
  },
  "Arquivo (XLSX, CSV ou TXT)": {
   "src": [
-   "templates/imports/history.html:23"
+   "templates/imports/history.html:24"
   ]
  },
  "Arquivo <b>{filename}</b> · projeto <b>{name}</b>. Para cada tipo de dado, escolha a aba e a coluna de cada campo. As sugestões vêm dos nomes das colunas e da última importação deste projeto. Use <i>— não importar —</i> para pular um tipo e <i>— não usar —</i> para ignorar um campo. Campos com * são obrigatórios. A primeira linha de cada aba é o cabeçalho.": {
@@ -3421,7 +3427,7 @@
  },
  "Bins no nível": {
   "src": [
-   "templates/levels/index.html:121"
+   "templates/levels/index.html:124"
   ]
  },
  "Bins no pool": {
@@ -3685,13 +3691,13 @@
  },
  "Cabem de {code}": {
   "src": [
-   "templates/levels/index.html:65"
+   "templates/levels/index.html:66"
   ],
   "html": true
  },
  "Cabem<br><span class=\"mono\">{code}</span>": {
   "src": [
-   "templates/levels/index.html:119"
+   "templates/levels/index.html:122"
   ],
   "html": true
  },
@@ -3783,7 +3789,7 @@
  },
  "Cadastrar": {
   "src": [
-   "templates/levels/index.html:107",
+   "templates/levels/index.html:108",
    "templates/site/project.html:252"
   ]
  },
@@ -4264,7 +4270,7 @@
  },
  "Cheios (100%)": {
   "src": [
-   "templates/levels/index.html:42"
+   "templates/levels/index.html:43"
   ]
  },
  "Cima": {
@@ -4431,12 +4437,12 @@
  },
  "Com bins em outro nível": {
   "src": [
-   "templates/levels/index.html:44"
+   "templates/levels/index.html:45"
   ]
  },
  "Com espaço livre": {
   "src": [
-   "templates/levels/index.html:43"
+   "templates/levels/index.html:44"
   ]
  },
  "Com histórico de pedidos, os SKUs mais populares ficam perto da expedição e nos níveis de ouro.": {
@@ -4986,7 +4992,7 @@
  },
  "Converter quantidades negativas para valor absoluto (relatórios que lançam a saída como negativa)": {
   "src": [
-   "templates/imports/history.html:27"
+   "templates/imports/history.html:28"
   ]
  },
  "Converter quantidades para valor absoluto (saída com sinal negativo)": {
@@ -5243,7 +5249,7 @@
  },
  "Cria os níveis 1..N que a estante ainda não tem (como níveis reservados)": {
   "src": [
-   "templates/levels/index.html:94"
+   "templates/levels/index.html:95"
   ]
  },
  "Cria os níveis 1..N que a estante ainda não tem, como níveis reservados.": {
@@ -5791,7 +5797,7 @@
  },
  "Definir em lote <span class=\"text-muted fw-normal\">(condições: vazio = todos · <span class=\"mono\">01-04</span> · <span class=\"mono\">A,C</span>) — capacidade e/ou altura do vão</span>": {
   "src": [
-   "templates/levels/index.html:58"
+   "templates/levels/index.html:59"
   ],
   "html": true
  },
@@ -5900,7 +5906,7 @@
  },
  "Desativar um usuário encerra as sessões dele e bloqueia novos acessos; o histórico continua. Uma senha redefinida aqui é provisória: o usuário define a dele no próximo acesso.": {
   "src": [
-   "templates/users/list.html:30"
+   "templates/users/list.html:33"
   ]
  },
  "Descrição": {
@@ -6184,7 +6190,7 @@
  },
  "Distância até o nível de cima (cm). Nunca fica menor que a bin mais alta do nível: a estrutura acompanha a bin.": {
   "src": [
-   "templates/levels/index.html:134"
+   "templates/levels/index.html:138"
   ]
  },
  "Distância até o nível de cima. Nunca fica menor que a bin mais alta do nível.": {
@@ -6231,12 +6237,12 @@
  },
  "Distância entre este nível e o de cima (cm)": {
   "src": [
-   "templates/levels/index.html:120"
+   "templates/levels/index.html:123"
   ]
  },
  "Distância entre este nível e o de cima (cm). Ex.: porta-paletes: 150": {
   "src": [
-   "templates/levels/index.html:69"
+   "templates/levels/index.html:70"
   ]
  },
  "Distância entre este nível e o de cima.": {
@@ -7123,7 +7129,7 @@
  },
  "Enviar e conferir colunas": {
   "src": [
-   "templates/imports/history.html:28"
+   "templates/imports/history.html:29"
   ]
  },
  "Enviar e mapear": {
@@ -7618,7 +7624,7 @@
  },
  "Estrutura de armazenagem da estante": {
   "src": [
-   "templates/levels/index.html:118"
+   "templates/levels/index.html:121"
   ]
  },
  "Estrutura de armazenagem das estantes <small class=\"text-muted\">(opcional)</small>": {
@@ -7939,7 +7945,7 @@
  "Excluir": {
   "src": [
    "templates/_macros.html:67",
-   "templates/bulk/confirm.html:29",
+   "templates/bulk/confirm.html:33",
    "templates/locations/list.html:97",
    "templates/locations/list.html:158",
    "templates/products/detail.html:10",
@@ -8000,7 +8006,7 @@
  },
  "Excluir nível reservado": {
   "src": [
-   "templates/levels/index.html:154"
+   "templates/levels/index.html:158"
   ]
  },
  "Excluir o armazém ": {
@@ -8016,7 +8022,7 @@
  },
  "Excluir o nível reservado {code}?": {
   "src": [
-   "templates/levels/index.html:172"
+   "templates/levels/index.html:176"
   ]
  },
  "Excluir o produto {sku}? Os saldos dele também serão excluídos.": {
@@ -8043,13 +8049,13 @@
  },
  "Excluir os itens E os registros relacionados? Não dá para desfazer.": {
   "src": [
-   "templates/bulk/confirm.html:52"
+   "templates/bulk/confirm.html:56"
   ],
   "js": true
  },
  "Excluir os itens? Não dá para desfazer.": {
   "src": [
-   "templates/bulk/confirm.html:52"
+   "templates/bulk/confirm.html:56"
   ],
   "js": true
  },
@@ -8064,6 +8070,11 @@
    "templates/locations/list.html:189"
   ],
   "js": true
+ },
+ "Excluir remove o usuário de vez (você e o último administrador ativo não podem ser excluídos).": {
+  "src": [
+   "templates/users/list.html:33"
+  ]
  },
  "Excluir selecionados": {
   "src": [
@@ -8140,7 +8151,7 @@
  },
  "Exclusão não feita: {exc}": {
   "src": [
-   "routers/bulk.py:61"
+   "routers/bulk.py:73"
   ]
  },
  "Exemplo não encontrado.": {
@@ -8934,7 +8945,7 @@
  },
  "Folga acima da bin (cm) para tirá-la do nível": {
   "src": [
-   "templates/levels/index.html:87"
+   "templates/levels/index.html:88"
   ]
  },
  "Folga acima da bin inválida.": {
@@ -9430,14 +9441,14 @@
  "Histórico de pedidos": {
   "src": [
    "services/site_service.py:76",
-   "templates/imports/history.html:2",
+   "templates/imports/history.html:3",
    "templates/layout/plan.html:27"
   ],
   "lazy": true
  },
  "Histórico de pedidos (saídas)": {
   "src": [
-   "templates/imports/history.html:5"
+   "templates/imports/history.html:6"
   ]
  },
  "Histórico de pedidos da planilha, a coluna Saída ou automático (pedidos, se houver).": {
@@ -9491,7 +9502,7 @@
  },
  "Históricos salvos": {
   "src": [
-   "templates/imports/history.html:39"
+   "templates/imports/history.html:40"
   ]
  },
  "Hoje": {
@@ -9619,7 +9630,7 @@
    "templates/bin_types/list.html:7",
    "templates/branches/list.html:7",
    "templates/imports/index.html:19",
-   "templates/levels/index.html:14",
+   "templates/levels/index.html:15",
    "templates/locations/list.html:11",
    "templates/products/list.html:8"
   ]
@@ -9954,13 +9965,13 @@
   "src": [
    "services/site_report.py:316",
    "services/site_report.py:563",
-   "templates/bulk/confirm.html:36",
+   "templates/bulk/confirm.html:40",
    "templates/site/plan.html:67"
   ]
  },
  "Itens": {
   "src": [
-   "templates/bulk/confirm.html:34"
+   "templates/bulk/confirm.html:38"
   ]
  },
  "Itens desalojados": {
@@ -10762,12 +10773,12 @@
  "Marcar todos os tours como não vistos": {
   "src": [
    "templates/onboarding.html:96",
-   "templates/users/list.html:22"
+   "templates/users/list.html:25"
   ]
  },
  "Marcar todos os tours como não vistos para este usuário?": {
   "src": [
-   "templates/users/list.html:21"
+   "templates/users/list.html:24"
   ],
   "js": true
  },
@@ -10863,7 +10874,7 @@
  },
  "Marque os itens a excluir.": {
   "src": [
-   "routers/bulk.py:39"
+   "routers/bulk.py:49"
   ]
  },
  "Marque os passos concluídos (fica salvo neste navegador). As fases seguem a ordem de implantação:": {
@@ -11754,7 +11765,7 @@
  },
  "Nada a excluir.": {
   "src": [
-   "routers/bulk.py:54"
+   "routers/bulk.py:66"
   ]
  },
  "Nada a otimizar neste escopo.": {
@@ -11917,7 +11928,7 @@
  },
  "Nenhum nível encontrado.": {
   "src": [
-   "templates/levels/index.html:158"
+   "templates/levels/index.html:162"
   ]
  },
  "Nenhum nível tem a altura de pega dentro da faixa.": {
@@ -12103,7 +12114,7 @@
  },
  "Nenhuma estrutura cadastrada. <a href=\"/structures/new\">Cadastrar</a>": {
   "src": [
-   "templates/levels/index.html:97"
+   "templates/levels/index.html:98"
   ],
   "html": true
  },
@@ -12122,7 +12133,7 @@
  "Nenhuma filial cadastrada.": {
   "src": [
    "templates/branches/list.html:41",
-   "templates/imports/history.html:49"
+   "templates/imports/history.html:53"
   ]
  },
  "Nenhuma filial cadastrada. <a href=\"/branches/new\">Cadastrar filial</a>": {
@@ -12463,7 +12474,7 @@
   "src": [
    "templates/users/form.html:2",
    "templates/users/form.html:5",
-   "templates/users/list.html:6"
+   "templates/users/list.html:7"
   ]
  },
  "Numérica: 2, 3, 10. Alfabética: 10, 2, 3. A ordem física dos níveis é sempre numérica.": {
@@ -12824,7 +12835,7 @@
  },
  "Nível reservado <span class=\"text-muted fw-normal\">(sem endereço, só recebe bins de outros níveis da estante)</span>": {
   "src": [
-   "templates/levels/index.html:103"
+   "templates/levels/index.html:104"
   ],
   "html": true
  },
@@ -12846,7 +12857,7 @@
  },
  "Nível sem endereços: só recebe bins de outros níveis": {
   "src": [
-   "templates/levels/index.html:128"
+   "templates/levels/index.html:132"
   ]
  },
  "Nível {aisle}-{bay}-{level} cadastrado.": {
@@ -13337,7 +13348,7 @@
    "services/action_plan.py:305",
    "services/site_report.py:350",
    "services/site_report.py:604",
-   "templates/levels/index.html:121",
+   "templates/levels/index.html:124",
    "templates/site/project.html:664"
   ]
  },
@@ -13533,7 +13544,7 @@
  },
  "Onboarding": {
   "src": [
-   "templates/users/list.html:11"
+   "templates/users/list.html:13"
   ]
  },
  "Onboarding de {u} zerado: tudo marcado como não visto.": {
@@ -14321,7 +14332,7 @@
  },
  "Perfil": {
   "src": [
-   "templates/users/list.html:11"
+   "templates/users/list.html:13"
   ]
  },
  "Permite dividir o saldo de um SKU entre endereços.": {
@@ -16063,7 +16074,7 @@
  },
  "Relacionados": {
   "src": [
-   "templates/bulk/confirm.html:36"
+   "templates/bulk/confirm.html:40"
   ]
  },
  "Relatório": {
@@ -16092,7 +16103,7 @@
  "Remover": {
   "src": [
    "templates/_macros.html:119",
-   "templates/imports/history.html:47",
+   "templates/imports/history.html:51",
    "templates/products/form.html:47",
    "templates/site/project.html:154",
    "templates/site/project.html:182",
@@ -16130,7 +16141,7 @@
  },
  "Remover as capacidades do nível {code}?": {
   "src": [
-   "templates/levels/index.html:172"
+   "templates/levels/index.html:176"
   ]
  },
  "Remover bins de endereços vazios": {
@@ -16141,7 +16152,7 @@
  },
  "Remover capacidades": {
   "src": [
-   "templates/levels/index.html:154"
+   "templates/levels/index.html:158"
   ]
  },
  "Remover este tipo dos endereços": {
@@ -16162,7 +16173,7 @@
  },
  "Remover o histórico da filial {code}?": {
   "src": [
-   "templates/imports/history.html:45"
+   "templates/imports/history.html:49"
   ]
  },
  "Remover o histórico de pedidos deste projeto?": {
@@ -16794,7 +16805,7 @@
  },
  "Salvar alterações": {
   "src": [
-   "templates/levels/index.html:167"
+   "templates/levels/index.html:171"
   ]
  },
  "Salvar conteúdo": {
@@ -16938,14 +16949,20 @@
   ],
   "help": true
  },
+ "Selecionar todos": {
+  "src": [
+   "templates/imports/history.html:41",
+   "templates/users/list.html:13"
+  ]
+ },
  "Selecionar todos da página": {
   "src": [
    "templates/bin_types/list.html:22",
    "templates/branches/list.html:22",
+   "templates/levels/index.html:120",
    "templates/products/list.html:30",
    "templates/stock/list.html:42",
-   "templates/structures/list.html:25",
-   "templates/warehouses/list.html:28"
+   "templates/structures/list.html:25"
   ]
  },
  "Selecionar/mover": {
@@ -17033,7 +17050,7 @@
  },
  "Sem altura do vão": {
   "src": [
-   "templates/levels/index.html:46"
+   "templates/levels/index.html:47"
   ]
  },
  "Sem armazém": {
@@ -17070,7 +17087,7 @@
  },
  "Sem capacidade cadastrada": {
   "src": [
-   "templates/levels/index.html:45"
+   "templates/levels/index.html:46"
   ]
  },
  "Sem capacidade cadastrada, o espaço do endereço é o das bins atuais: largura somada lado a lado, altura da maior.": {
@@ -17723,6 +17740,12 @@
    "templates/onboarding.html:82"
   ]
  },
+ "Só administradores podem excluir estes itens.": {
+  "src": [
+   "routers/bulk.py:45",
+   "routers/bulk.py:62"
+  ]
+ },
  "Só administradores podem gerenciar usuários.": {
   "src": [
    "routers/users.py:21"
@@ -17754,7 +17777,7 @@
  },
  "Só o <b>resumo</b> fica no sistema (linhas e unidades por SKU, pares que saem juntos e uma amostra de até 3.000 pedidos com as quantidades, para o simulador de trajeto); o arquivo é descartado.": {
   "src": [
-   "templates/imports/history.html:32"
+   "templates/imports/history.html:33"
   ],
   "html": true
  },
@@ -18258,8 +18281,8 @@
  },
  "Tipo de cadastro desconhecido.": {
   "src": [
-   "routers/bulk.py:35",
-   "routers/bulk.py:50"
+   "routers/bulk.py:43",
+   "routers/bulk.py:60"
   ]
  },
  "Tipo de material": {
@@ -18376,7 +18399,7 @@
  },
  "Tipos que não cabem na estrutura têm a capacidade removida": {
   "src": [
-   "templates/levels/index.html:93"
+   "templates/levels/index.html:94"
   ]
  },
  "Tipos que não cabem na estrutura têm a capacidade removida.": {
@@ -18405,7 +18428,7 @@
  "Todas": {
   "src": [
    "templates/layout/plan.html:74",
-   "templates/levels/index.html:40",
+   "templates/levels/index.html:41",
    "templates/optimization/index.html:77",
    "templates/optimization/page.html:97",
    "templates/optimization/pool.html:57",
@@ -18629,7 +18652,7 @@
  },
  "Um histórico por filial: o envio substitui o anterior.": {
   "src": [
-   "templates/imports/history.html:33"
+   "templates/imports/history.html:34"
   ]
  },
  "Um nível fora da zona de ouro \"fica\" esses metros mais longe. 0 = só a caminhada conta. Vale para estruturas com zona de ouro cadastrada.": {
@@ -18716,7 +18739,7 @@
  },
  "Uma aba de pedidos (pedido, SKU, quantidade e, opcional, data — uma linha por item do pedido) ou uma lista de SKUs com a coluna Saída. Na próxima etapa você confere a aba e as colunas.": {
   "src": [
-   "templates/imports/history.html:25"
+   "templates/imports/history.html:26"
   ]
  },
  "Uma fileira é uma linha de estantes de um lado do corredor. Obstáculos (pilares, docas, escritórios) bloqueiam a passagem e desviam a caminhada.": {
@@ -18928,7 +18951,7 @@
  },
  "Uso": {
   "src": [
-   "templates/levels/index.html:121",
+   "templates/levels/index.html:124",
    "templates/site/plan.html:143"
   ]
  },
@@ -18973,7 +18996,7 @@
    "services/field_help.py:37",
    "templates/account.html:9",
    "templates/login.html:23",
-   "templates/users/list.html:11",
+   "templates/users/list.html:13",
    "static/field_help.js:225"
   ],
   "help": true,
@@ -19011,8 +19034,8 @@
   "src": [
    "routers/users.py:15",
    "templates/base.html:176",
-   "templates/users/list.html:2",
-   "templates/users/list.html:5",
+   "templates/users/list.html:3",
+   "templates/users/list.html:6",
    "static/field_help.js:254"
   ],
   "lazy": true,
@@ -19089,7 +19112,7 @@
  },
  "Vazio ou 0 = remover a capacidade deste tipo": {
   "src": [
-   "templates/levels/index.html:68"
+   "templates/levels/index.html:69"
   ]
  },
  "Velocidade de caminhada": {
@@ -19171,7 +19194,7 @@
  },
  "Ver no mapa": {
   "src": [
-   "templates/levels/index.html:49",
+   "templates/levels/index.html:50",
    "templates/optimization/index.html:176",
    "templates/optimization/page.html:547"
   ]
@@ -19269,7 +19292,7 @@
   "src": [
    "templates/bin_types/form.html:7",
    "templates/branches/form.html:7",
-   "templates/imports/history.html:6",
+   "templates/imports/history.html:7",
    "templates/locations/form.html:7",
    "templates/packing/case.html:14",
    "templates/packing/view3d.html:10"
@@ -19498,7 +19521,7 @@
  },
  "Vão<br>(cm)": {
   "src": [
-   "templates/levels/index.html:120"
+   "templates/levels/index.html:123"
   ],
   "html": true
  },
@@ -19828,7 +19851,7 @@
  },
  "a atribuição da estrutura às estantes": {
   "src": [
-   "services/delete_service.py:259"
+   "services/delete_service.py:321"
   ],
   "lazy": true
  },
@@ -19920,7 +19943,7 @@
   "src": [
    "templates/account.html:9",
    "templates/base.html:174",
-   "templates/users/list.html:17"
+   "templates/users/list.html:20"
   ]
  },
  "alfabética": {
@@ -20010,13 +20033,13 @@
  },
  "armazéns": {
   "src": [
-   "services/delete_service.py:254"
+   "services/delete_service.py:316"
   ],
   "lazy": true
  },
  "as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis": {
   "src": [
-   "services/delete_service.py:257"
+   "services/delete_service.py:319"
   ],
   "lazy": true
  },
@@ -20034,14 +20057,14 @@
  },
  "ativo": {
   "src": [
-   "templates/users/list.html:18",
+   "templates/users/list.html:21",
    "static/field_help.js:257"
   ],
   "js": true
  },
  "atribuições sem saldo": {
   "src": [
-   "services/delete_service.py:190"
+   "services/delete_service.py:195"
   ],
   "lazy": true
  },
@@ -20125,7 +20148,7 @@
  },
  "bin {tallest}": {
   "src": [
-   "templates/levels/index.html:135"
+   "templates/levels/index.html:139"
   ],
   "html": true
  },
@@ -20192,12 +20215,18 @@
  },
  "capacidades": {
   "src": [
-   "templates/levels/index.html:92"
+   "templates/levels/index.html:93"
   ]
+ },
+ "capacidades cadastradas": {
+  "src": [
+   "services/delete_service.py:276"
+  ],
+  "lazy": true
  },
  "capacidades de nível": {
   "src": [
-   "services/delete_service.py:149"
+   "services/delete_service.py:154"
   ],
   "lazy": true
  },
@@ -20297,7 +20326,7 @@
  },
  "criar níveis que faltam": {
   "src": [
-   "templates/levels/index.html:94"
+   "templates/levels/index.html:95"
   ]
  },
  "câmera": {
@@ -20313,7 +20342,7 @@
  },
  "de endereços de outros níveis": {
   "src": [
-   "templates/levels/index.html:138"
+   "templates/levels/index.html:142"
   ]
  },
  "de frente para {get}": {
@@ -20471,8 +20500,8 @@
  },
  "endereços": {
   "src": [
-   "services/delete_service.py:77",
-   "services/delete_service.py:108",
+   "services/delete_service.py:82",
+   "services/delete_service.py:113",
    "static/field_help.js:153",
    "static/field_help.js:392"
   ],
@@ -20481,19 +20510,25 @@
  },
  "endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico de pedidos e resultados de otimização da filial": {
   "src": [
-   "services/delete_service.py:252"
+   "services/delete_service.py:314"
+  ],
+  "lazy": true
+ },
+ "endereços (continuam)": {
+  "src": [
+   "services/delete_service.py:276"
   ],
   "lazy": true
  },
  "endereços com a bin": {
   "src": [
-   "services/delete_service.py:148"
+   "services/delete_service.py:153"
   ],
   "lazy": true
  },
  "endereços do armazém (com saldos e bins), níveis, estruturas das estantes e planta": {
   "src": [
-   "services/delete_service.py:255"
+   "services/delete_service.py:317"
   ],
   "lazy": true
  },
@@ -20550,14 +20585,14 @@
  },
  "estantes com a estrutura": {
   "src": [
-   "services/delete_service.py:172"
+   "services/delete_service.py:177"
   ],
   "lazy": true
  },
  "estantes com estrutura": {
   "src": [
-   "services/delete_service.py:78",
-   "services/delete_service.py:109"
+   "services/delete_service.py:83",
+   "services/delete_service.py:114"
   ],
   "lazy": true
  },
@@ -20574,7 +20609,7 @@
  },
  "está em {v} estante(s)": {
   "src": [
-   "services/delete_service.py:173"
+   "services/delete_service.py:178"
   ]
  },
  "ex.: 2,3": {
@@ -20683,7 +20718,7 @@
  },
  "frações filhas": {
   "src": [
-   "services/delete_service.py:148"
+   "services/delete_service.py:153"
   ],
   "lazy": true
  },
@@ -20732,6 +20767,11 @@
    "services/site_report.py:517"
   ]
  },
+ "guarda bins de outros endereços ({n} linha(s)): mova-as antes": {
+  "src": [
+   "services/delete_service.py:277"
+  ]
+ },
  "heurística (escolhida)": {
   "src": [
    "routers/optimization.py:502"
@@ -20745,7 +20785,7 @@
  },
  "histórico de pedidos": {
   "src": [
-   "services/delete_service.py:79"
+   "services/delete_service.py:84"
   ],
   "lazy": true
  },
@@ -20753,6 +20793,12 @@
   "src": [
    "services/site_service.py:491"
   ]
+ },
+ "históricos de saídas": {
+  "src": [
+   "services/delete_service.py:328"
+  ],
+  "lazy": true
  },
  "hoje há saldo acima da capacidade das bins": {
   "src": [
@@ -20808,7 +20854,7 @@
  },
  "inativo": {
   "src": [
-   "templates/users/list.html:18",
+   "templates/users/list.html:21",
    "static/field_help.js:258"
   ],
   "js": true
@@ -20897,7 +20943,7 @@
  },
  "limpar vão": {
   "src": [
-   "templates/levels/index.html:70"
+   "templates/levels/index.html:71"
   ]
  },
  "linha {i}: estrutura(s) {v} não cadastrada(s)": {
@@ -21244,8 +21290,9 @@
  },
  "níveis": {
   "src": [
-   "services/delete_service.py:77",
-   "services/delete_service.py:108",
+   "services/delete_service.py:330",
+   "services/delete_service.py:82",
+   "services/delete_service.py:113",
    "services/site_planner.py:60",
    "services/site_planner.py:61",
    "static/field_help.js:392"
@@ -21418,13 +21465,13 @@
  },
  "os resultados de otimização guardados dos projetos": {
   "src": [
-   "services/delete_service.py:265"
+   "services/delete_service.py:327"
   ],
   "lazy": true
  },
  "os saldos dos produtos (e as políticas de estoque)": {
   "src": [
-   "services/delete_service.py:261"
+   "services/delete_service.py:323"
   ],
   "lazy": true
  },
@@ -21582,8 +21629,8 @@
  },
  "políticas de estoque": {
   "src": [
-   "services/delete_service.py:78",
-   "services/delete_service.py:191"
+   "services/delete_service.py:83",
+   "services/delete_service.py:196"
   ],
   "lazy": true
  },
@@ -21631,7 +21678,7 @@
  },
  "projetos de filial nova": {
   "src": [
-   "services/delete_service.py:264"
+   "services/delete_service.py:326"
   ],
   "lazy": true
  },
@@ -21654,7 +21701,7 @@
  },
  "qtd": {
   "src": [
-   "templates/levels/index.html:68",
+   "templates/levels/index.html:69",
    "templates/site/project.html:247"
   ]
  },
@@ -21728,7 +21775,7 @@
  },
  "registros de saldo": {
   "src": [
-   "services/delete_service.py:262"
+   "services/delete_service.py:324"
   ],
   "lazy": true
  },
@@ -21758,7 +21805,7 @@
  },
  "reservado": {
   "src": [
-   "templates/levels/index.html:128"
+   "templates/levels/index.html:132"
   ]
  },
  "respeita peso": {
@@ -21780,8 +21827,8 @@
  },
  "resultados de otimização": {
   "src": [
-   "services/delete_service.py:80",
-   "services/delete_service.py:240"
+   "services/delete_service.py:85",
+   "services/delete_service.py:245"
   ],
   "lazy": true
  },
@@ -21860,7 +21907,7 @@
  },
  "sem capacidade": {
   "src": [
-   "templates/levels/index.html:144"
+   "templates/levels/index.html:148"
   ]
  },
  "sem capacidade cadastrada": {
@@ -21886,7 +21933,7 @@
  },
  "sem histórico": {
   "src": [
-   "templates/imports/history.html:44"
+   "templates/imports/history.html:48"
   ]
  },
  "sem montantes: camadas empilhadas": {
@@ -21938,7 +21985,7 @@
  },
  "senha provisória": {
   "src": [
-   "templates/users/list.html:18"
+   "templates/users/list.html:21"
   ]
  },
  "serpentina": {
@@ -21952,6 +21999,12 @@
    "static/field_help.js:167"
   ],
   "js": true
+ },
+ "sessões abertas": {
+  "src": [
+   "services/delete_service.py:303"
+  ],
+  "lazy": true
  },
  "setor {name}": {
   "src": [
@@ -21990,7 +22043,7 @@
  },
  "substituir as existentes": {
   "src": [
-   "templates/levels/index.html:93"
+   "templates/levels/index.html:94"
   ]
  },
  "só as bins que já existem": {
@@ -22067,13 +22120,13 @@
  },
  "tem saldo em {v} endereço(s)": {
   "src": [
-   "services/delete_service.py:192"
+   "services/delete_service.py:197"
   ]
  },
  "tem {v} endereço(s)": {
   "src": [
-   "services/delete_service.py:81",
-   "services/delete_service.py:110"
+   "services/delete_service.py:86",
+   "services/delete_service.py:115"
   ]
  },
  "tempo de cálculo": {
@@ -22119,12 +22172,12 @@
  },
  "tipo sem capacidade": {
   "src": [
-   "templates/levels/index.html:144"
+   "templates/levels/index.html:148"
   ]
  },
  "tipos de bin": {
   "src": [
-   "services/delete_service.py:256"
+   "services/delete_service.py:318"
   ],
   "lazy": true
  },
@@ -22232,7 +22285,7 @@
  },
  "usado em {v} endereço(s)": {
   "src": [
-   "services/delete_service.py:145"
+   "services/delete_service.py:150"
   ]
  },
  "usado na otimização": {
@@ -22248,10 +22301,16 @@
  },
  "usuário": {
   "src": [
-   "templates/users/list.html:17",
+   "templates/users/list.html:20",
    "static/field_help.js:250"
   ],
   "js": true
+ },
+ "usuários": {
+  "src": [
+   "services/delete_service.py:331"
+  ],
+  "lazy": true
  },
  "valor fixo (um só código)": {
   "src": [
@@ -22297,7 +22356,7 @@
  },
  "você": {
   "src": [
-   "templates/users/list.html:15"
+   "templates/users/list.html:18"
   ]
  },
  "volume": {
@@ -22331,17 +22390,17 @@
  },
  "vão (cm)": {
   "src": [
-   "templates/levels/index.html:69"
+   "templates/levels/index.html:70"
   ]
  },
  "vão dos níveis": {
   "src": [
-   "templates/levels/index.html:91"
+   "templates/levels/index.html:92"
   ]
  },
  "zerar": {
   "src": [
-   "templates/users/list.html:22"
+   "templates/users/list.html:25"
   ]
  },
  "zona de ouro": {
@@ -22423,7 +22482,7 @@
  },
  "{blocked} item(ns) têm registros relacionados que impedem a exclusão simples. Sem a opção acima, eles ficam de fora; com ela, saem junto com os relacionados.": {
   "src": [
-   "templates/bulk/confirm.html:26"
+   "templates/bulk/confirm.html:27"
   ],
   "html": true
  },
@@ -22465,7 +22524,7 @@
  },
  "{code} — {levels} níveis × {level_height} cm, frente {width} × prof. {depth}": {
   "src": [
-   "templates/levels/index.html:83"
+   "templates/levels/index.html:84"
   ],
   "html": true
  },
@@ -22525,7 +22584,7 @@
  },
  "{done} {label} excluído(s)": {
   "src": [
-   "routers/bulk.py:63"
+   "routers/bulk.py:75"
   ]
  },
  "{esc} · {placed} bins · ocupação {fmt}%": {
@@ -22756,7 +22815,7 @@
  },
  "{lent} bin(s) deste nível estão em outro nível": {
   "src": [
-   "templates/levels/index.html:140"
+   "templates/levels/index.html:144"
   ],
   "html": true
  },
@@ -22920,7 +22979,7 @@
  },
  "{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm": {
   "src": [
-   "templates/levels/index.html:129"
+   "templates/levels/index.html:133"
   ]
  },
  "{name}: comprimento": {
@@ -23020,6 +23079,11 @@
   ],
   "js": true
  },
+ "{n} item(ns) não podem ser excluídos e ficam de fora (o motivo aparece na lista ao lado).": {
+  "src": [
+   "templates/bulk/confirm.html:30"
+  ]
+ },
  "{n} linhas por pedido": {
   "src": [
    "templates/slotting/skus.html:20"
@@ -23044,7 +23108,7 @@
  },
  "{n} tour(s) vistos": {
   "src": [
-   "templates/users/list.html:20"
+   "templates/users/list.html:23"
   ]
  },
  "{occupied} ocupados": {
@@ -23256,7 +23320,7 @@
  },
  "{total} nível(is)": {
   "src": [
-   "templates/levels/index.html:165"
+   "templates/levels/index.html:169"
   ],
   "html": true
  },
@@ -23519,7 +23583,7 @@
  },
  "· página {page_no}/{pages}": {
   "src": [
-   "templates/levels/index.html:165",
+   "templates/levels/index.html:169",
    "templates/optimization/index.html:198",
    "templates/optimization/page.html:570"
   ],
@@ -23668,7 +23732,7 @@
  },
  "É usado na posição pela saída (Por endereço e Pool), no relatório de SKUs, na curva ABC do 3D e no simulador de trajeto.": {
   "src": [
-   "templates/imports/history.html:34"
+   "templates/imports/history.html:35"
   ]
  },
  "Ímpares": {
@@ -23693,7 +23757,7 @@
  },
  "Último acesso": {
   "src": [
-   "templates/users/list.html:11"
+   "templates/users/list.html:13"
   ]
  },
  "Último código da faixa dentro da exceção.": {
@@ -23709,7 +23773,17 @@
  },
  "é bin pai de {v} fração(ões)": {
   "src": [
-   "services/delete_service.py:146"
+   "services/delete_service.py:151"
+  ]
+ },
+ "é preciso manter pelo menos um administrador ativo": {
+  "src": [
+   "services/delete_service.py:301"
+  ]
+ },
+ "é você: não dá para excluir o próprio usuário": {
+  "src": [
+   "services/delete_service.py:299"
   ]
  },
  "ímp.": {
@@ -23771,7 +23845,7 @@
    "templates/_macros.html:71",
    "templates/layout/index.html:48",
    "templates/layout/plan.html:38",
-   "templates/levels/index.html:30",
+   "templates/levels/index.html:31",
    "templates/locations/list.html:29",
    "templates/optimization/index.html:66"
   ]
@@ -23789,7 +23863,7 @@
  },
  "— capacidade: não alterar —": {
   "src": [
-   "templates/levels/index.html:64"
+   "templates/levels/index.html:65"
   ]
  },
  "— códigos que o Excel costuma converter em número (ex.: <span class=\"mono\">01</span> → <span class=\"mono\">1</span>) foram ligados aos cadastros existentes:": {
@@ -23805,12 +23879,12 @@
  },
  "— escolha —": {
   "src": [
-   "templates/imports/history.html:20"
+   "templates/imports/history.html:21"
   ]
  },
  "— estrutura —": {
   "src": [
-   "templates/levels/index.html:82"
+   "templates/levels/index.html:83"
   ]
  },
  "— estruturas nos trechos mais perto da expedição": {
@@ -23871,7 +23945,7 @@
  },
  "— remover a estrutura das estantes —": {
   "src": [
-   "templates/levels/index.html:84"
+   "templates/levels/index.html:85"
   ]
  },
  "— sem armazém": {

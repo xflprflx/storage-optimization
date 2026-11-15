@@ -111,7 +111,7 @@ def history_form(request: Request, branch_id: str = "", back: str = ""):
         from services.slotting import summary_text
 
         branches = list(db.scalars(select(Branch).order_by(Branch.code)))
-        saved = {h.branch_id: (h.filename, summary_text(h.data), h.updated_at) for h in db.scalars(select(PickHistory))}
+        saved = {h.branch_id: (h.filename, summary_text(h.data), h.updated_at, h.id) for h in db.scalars(select(PickHistory))}
     finally:
         db.close()
     return render(request, "imports/history.html", branches=branches, branch_id=to_int(branch_id), saved=saved,

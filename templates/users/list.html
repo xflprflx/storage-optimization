@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar %}
 {% block title %}{{ _("Usuários") }}{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -6,12 +7,14 @@
   <a class="btn btn-accent" href="/users/new"><i class="bi bi-plus-lg"></i> {{ _("Novo usuário") }}</a>
 </div>
 <div class="card">
+  <div class="px-3">{{ bulk_delete_bar(request, "users", ".bulk-users") }}</div>
   <div class="table-responsive">
     <table class="table table-sm table-hover mb-0 align-middle" data-no-resize>
-      <thead><tr><th>{{ _("Usuário") }}</th><th>{{ _("Nome") }}</th><th>{{ _("Perfil") }}</th><th>{{ _("Situação") }}</th><th>{{ _("Último acesso") }}</th><th>{{ _("Onboarding") }}</th><th></th></tr></thead>
+      <thead><tr><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-users" title="{{ _("Selecionar todos") }}"></th><th>{{ _("Usuário") }}</th><th>{{ _("Nome") }}</th><th>{{ _("Perfil") }}</th><th>{{ _("Situação") }}</th><th>{{ _("Último acesso") }}</th><th>{{ _("Onboarding") }}</th><th></th></tr></thead>
       <tbody>
       {% for u in users %}
         <tr class="{{ 'text-muted' if not u.active }}">
+          <td>{% if u.id != me.id %}<input type="checkbox" class="form-check-input bulk-users" value="{{ u.id }}">{% endif %}</td>
           <td class="mono">{{ u.username }}{% if u.id == me.id %} <span class="badge text-bg-light border">{{ _("você") }}</span>{% endif %}</td>
           <td>{{ u.name }}</td>
           <td>{% if u.is_admin %}<span class="badge text-bg-primary">{{ _("administrador") }}</span>{% else %}{{ _("usuário") }}{% endif %}</td>
@@ -27,5 +30,5 @@
     </table>
   </div>
 </div>
-<div class="form-text mt-2">{{ _("Desativar um usuário encerra as sessões dele e bloqueia novos acessos; o histórico continua. Uma senha redefinida aqui é provisória: o usuário define a dele no próximo acesso.") }}</div>
+<div class="form-text mt-2">{{ _("Excluir remove o usuário de vez (você e o último administrador ativo não podem ser excluídos).") }} {{ _("Desativar um usuário encerra as sessões dele e bloqueia novos acessos; o histórico continua. Uma senha redefinida aqui é provisória: o usuário define a dele no próximo acesso.") }}</div>
 {% endblock %}

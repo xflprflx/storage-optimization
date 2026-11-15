@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar %}
 {% block title %}{{ _("Capacidade dos níveis") }}{% endblock %}
 {% macro hidden_filters() -%}
 <input type="hidden" name="f_branch_id" value="{{ branch_id or '' }}">
@@ -110,11 +111,13 @@
     </div>
   </div>
 
+  {% if rows %}<div class="px-3">{{ bulk_delete_bar(request, "levels", ".bulk-levels") }}</div>{% endif %}
   <form method="post" action="/levels/save">
     {{ hidden_filters() }}
     <div class="table-responsive" style="max-height: 68vh">
       <table class="table table-sm table-hover mb-0 small align-middle">
         <thead class="sticky-top"><tr>
+          <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-levels" title="{{ _("Selecionar todos da página") }}"></th>
           <th>{{ _("Nível") }}</th><th title="{{ _("Estrutura de armazenagem da estante") }}">{{ _("Estrutura") }}</th><th class="text-end">{{ _("Endereços") }}</th>
           {% for bt in bin_types %}<th class="text-center" title="{{ bt.name }}">{{ _h("Cabem<br><span class=\"mono\">{code}</span>", code=(bt.code)) }}</th>{% endfor %}
           <th class="text-center" title="{{ _("Distância entre este nível e o de cima (cm)") }}">{{ _h("Vão<br>(cm)") }}</th>
@@ -124,6 +127,7 @@
         {% for r in rows %}
           {% set u = r.usage %}{% set f = u.fraction %}
           <tr class="{% if u.over %}table-danger{% endif %}">
+            <td><input type="checkbox" class="form-check-input bulk-levels" value="{{ r.level.id }}"></td>
             <td class="mono fw-semibold text-nowrap">{{ r.code }}
               {% if not r.locations %}<span class="badge text-bg-secondary ms-1" title="{{ _("Nível sem endereços: só recebe bins de outros níveis") }}">{{ _("reservado") }}</span>{% endif %}</td>
             <td>{% if r.struct %}<span class="badge bg-primary-subtle text-primary-emphasis border mono" title="{{ _("{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm", name=(r.struct.name), width=(r.struct.width|dec), depth=(r.struct.depth|dec), levels=(r.struct.levels), level_height=(r.struct.level_height|dec)) }}">{{ r.struct.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
@@ -155,7 +159,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="{{ bin_types|length + 8 }}" class="text-center text-muted py-4">{{ _("Nenhum nível encontrado.") }}</td></tr>
+          <tr><td colspan="{{ bin_types|length + 9 }}" class="text-center text-muted py-4">{{ _("Nenhum nível encontrado.") }}</td></tr>
         {% endfor %}
         </tbody>
       </table>

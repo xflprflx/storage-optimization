@@ -8,8 +8,13 @@ Para cada tipo: o impacto (quantos registros relacionados cada item tem), o moti
   - tipo de bin: as bins desse tipo nos endereços, as frações filhas (e as bins delas) e as capacidades dos níveis;
   - estrutura: a atribuição às estantes;
   - produto: saldos (e as políticas, que já saem com o produto);
-  - projeto de filial nova: os resultados de otimização guardados do projeto.
-Sem `cascade`, os itens com relacionados que impedem a exclusão ficam de fora (e aparecem na prévia).
+  - projeto de filial nova: os resultados de otimização guardados do projeto;
+  - histórico de saídas: só o histórico (popularidade, pares e amostra de pedidos) da filial;
+  - nível (Capacidade dos níveis): o nível cadastrado e as capacidades; os endereços continuam (o nível volta sem
+    capacidade); níveis reservados (sem endereços) somem;
+  - usuário (só administradores): o usuário e as sessões dele.
+Sem `cascade`, os itens com relacionados que impedem a exclusão ficam de fora (e aparecem na prévia). Itens com
+bloqueio rígido (`hard`: o próprio usuário, o último administrador, nível com bins de outros endereços) nunca saem.
 """
 from __future__ import annotations
 
@@ -20,7 +25,7 @@ from sqlalchemy.orm import Session
 
 from models import (BayStructure, BinContent, BinType, Branch, BranchLayout, LevelCapacity, LocationBin,
                     OptimizationRun, PickHistory, Product, ShelfLevel, SiteProject, StockItem, StockPolicy,
-                    StorageLocation, StructureType, Warehouse)
+                    StorageLocation, StructureType, User, UserSession, Warehouse)
 from services.i18n import N_, _
 
 CHUNK = 800
@@ -247,6 +252,63 @@ def _run_projects(db, ids, cascade):
     db.execute(delete(SiteProject).where(SiteProject.id.in_(ids)))
 
 
+def _impact_histories(db, ids):
+    return {h.id: {"name": f"{code} — {h.filename or ''}".strip(" —"), "rel": {}, "block": None}
+            for h, code in db.execute(select(PickHistory, Branch.code).join(Branch, Branch.id == PickHistory.branch_id)
+                                      .where(PickHistory.id.in_(ids)))}
+
+
+def _run_histories(db, ids, cascade):
+    db.execute(delete(PickHistory).where(PickHistory.id.in_(ids)))
+
+
+def _impact_levels(db, ids):
+    out = {}
+    borrowed = _count_by(db, LocationBin.shelf_level_id, ids)
+    caps = _count_by(db, LevelCapacity.shelf_level_id, ids)
+    for sl in db.scalars(select(ShelfLevel).where(ShelfLevel.id.in_(ids))):
+        n_locs = db.scalar(select(func.count()).select_from(StorageLocation).where(
+            StorageLocation.branch_id == sl.branch_id, StorageLocation.aisle == sl.aisle, StorageLocation.bay == sl.bay,
+            StorageLocation.level == sl.level,
+            StorageLocation.warehouse_id.is_(None) if sl.warehouse_id is None else StorageLocation.warehouse_id == sl.warehouse_id)) or 0
+        b = borrowed.get(sl.id, 0)
+        out[sl.id] = {"name": sl.code + ("" if n_locs else " " + _("(reservado)")),
+                      "rel": {N_("capacidades cadastradas"): caps.get(sl.id, 0), N_("endereços (continuam)"): n_locs},
+                      "block": _("guarda bins de outros endereços ({n} linha(s)): mova-as antes", n=b) if b else None,
+                      "hard": bool(b)}
+    return out
+
+
+def _run_levels(db, ids, cascade):
+    db.execute(delete(LevelCapacity).where(LevelCapacity.shelf_level_id.in_(ids)))
+    db.execute(delete(ShelfLevel).where(ShelfLevel.id.in_(ids)))
+
+
+def _impact_users(db, ids):
+    from services.auth import current_user
+
+    me = (current_user() or {}).get("id")
+    sessions = _count_by(db, UserSession.user_id, ids)
+    users = list(db.scalars(select(User).where(User.id.in_(ids))))
+    keep_admins = db.scalar(select(func.count()).select_from(User).where(
+        User.is_admin.is_(True), User.active.is_(True), User.id.not_in(ids))) or 0
+    out = {}
+    for u in users:
+        block = None
+        if u.id == me:
+            block = _("é você: não dá para excluir o próprio usuário")
+        elif u.is_admin and u.active and not keep_admins:
+            block = _("é preciso manter pelo menos um administrador ativo")
+        out[u.id] = {"name": f"{u.username}" + (f" — {u.name}" if u.name else ""),
+                     "rel": {N_("sessões abertas"): sessions.get(u.id, 0)}, "block": block, "hard": bool(block)}
+    return out
+
+
+def _run_users(db, ids, cascade):
+    db.execute(delete(UserSession).where(UserSession.user_id.in_(ids)))
+    db.execute(delete(User).where(User.id.in_(ids)))
+
+
 KINDS: dict[str, dict] = {
     "branches": {"label": "filiais", "back": "/branches", "impact": _impact_branches, "run": _run_branches,
                  "cascade": N_("endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico "
@@ -263,6 +325,11 @@ KINDS: dict[str, dict] = {
               "cascade": ""},
     "projects": {"label": N_("projetos de filial nova"), "back": "/optimization/site", "impact": _impact_projects,
                  "run": _run_projects, "cascade": N_("os resultados de otimização guardados dos projetos")},
+    "histories": {"label": N_("históricos de saídas"), "back": "/imports/history", "impact": _impact_histories,
+                  "run": _run_histories, "cascade": ""},
+    "levels": {"label": N_("níveis"), "back": "/levels", "impact": _impact_levels, "run": _run_levels, "cascade": ""},
+    "users": {"label": N_("usuários"), "back": "/users", "impact": _impact_users, "run": _run_users, "cascade": "",
+              "admin": True},
 }
 
 
@@ -277,16 +344,19 @@ def impact(db: Session, kind: str, ids: list[int]) -> dict:
         for k, n in it["rel"].items():
             totals[k] = totals.get(k, 0) + n
     blocked = {i: it for i, it in items.items() if it["block"]}
-    return {"items": items, "totals": {k: n for k, n in totals.items() if n}, "blocked": blocked}
+    hard = {i for i, it in items.items() if it.get("hard")}
+    return {"items": items, "totals": {k: n for k, n in totals.items() if n}, "blocked": blocked, "hard": hard}
 
 
-def run(db: Session, kind: str, ids: list[int], cascade: bool) -> tuple[int, int]:
-    """Exclui. Retorna (excluídos, ignorados por terem relacionados que impedem a exclusão simples)."""
+def run(db: Session, kind: str, ids: list[int], cascade: bool) -> tuple[int, int, int]:
+    """Exclui. Retorna (excluídos, ignorados por terem relacionados que impedem a exclusão simples, ignorados por
+    bloqueio rígido)."""
     imp = impact(db, kind, ids)
-    todo = [i for i in imp["items"] if cascade or i not in imp["blocked"]]
+    todo = [i for i in imp["items"] if i not in imp["hard"] and (cascade or i not in imp["blocked"])]
     if todo:
         KINDS[kind]["run"](db, todo, cascade)
-    return len(todo), len(imp["items"]) - len(todo)
+    hard = len(imp["hard"])
+    return len(todo), len(imp["items"]) - len(todo) - hard, hard
 
 
 def filter_ids(db: Session, kind: str, params) -> Optional[list[int]]:

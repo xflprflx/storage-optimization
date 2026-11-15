@@ -15,6 +15,14 @@ from services.i18n import N_, _
 router = APIRouter(prefix="/bulk-delete", tags=[N_("Exclusão em massa")])
 
 
+def _allowed(kind: str) -> bool:
+    """Tipos marcados como "admin" (usuários) só para administradores."""
+    from services.auth import current_user
+
+    u = current_user()
+    return not KINDS[kind].get("admin") or bool(u and u["is_admin"])
+
+
 def _back(kind: str, raw) -> str:
     base = KINDS[kind]["back"]
     back = str(raw or "")
@@ -33,6 +41,8 @@ def _ids(db: Session, kind: str, form: FormData) -> list[int]:
 def bulk_preview(kind: str, request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     if kind not in KINDS:
         return redirect("/", _("Tipo de cadastro desconhecido."), "danger")
+    if not _allowed(kind):
+        return redirect("/", _("Só administradores podem excluir estes itens."), "danger")
     back = _back(kind, form.get("back"))
     ids = _ids(db, kind, form)
     if not ids:
@@ -48,13 +58,15 @@ def bulk_preview(kind: str, request: Request, form: FormData = Depends(form_data
 def bulk_run(kind: str, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     if kind not in KINDS:
         return redirect("/", _("Tipo de cadastro desconhecido."), "danger")
+    if not _allowed(kind):
+        return redirect("/", _("Só administradores podem excluir estes itens."), "danger")
     back = _back(kind, form.get("back"))
     ids = _ids(db, kind, form)
     if not ids:
         return redirect(back, _("Nada a excluir."), "warning")
     cascade = f_bool(form, "cascade")
     try:
-        done, skipped = run(db, kind, ids, cascade)
+        done, skipped, hard = run(db, kind, ids, cascade)
         db.commit()
     except Exception as exc:  # noqa: BLE001  (restrição do banco não prevista: nada é gravado)
         db.rollback()
@@ -63,4 +75,6 @@ def bulk_run(kind: str, form: FormData = Depends(form_data), db: Session = Depen
     msg = _("{done} {label} excluído(s)", done=done, label=label) + (_(" com os registros relacionados.") if cascade and done else ".")
     if skipped:
         msg += _(" {skipped} ignorado(s) por terem registros relacionados (marque \"excluir também os relacionados\").", skipped=skipped)
-    return redirect(back, msg, "warning" if skipped else "success")
+    if hard:
+        msg += _(" {hard} não pode(m) ser excluído(s) (o motivo aparece na prévia).", hard=hard)
+    return redirect(back, msg, "warning" if skipped or hard else "success")

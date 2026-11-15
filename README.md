@@ -499,6 +499,13 @@ O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída 
   Sem a opção, os itens com relacionados que impedem a exclusão ficam de fora e a mensagem diz quantos.
 - **Endereços:** *Excluir selecionados* ou *Excluir todos os filtrados*, com a opção de excluir também os **ocupados** (com os saldos; o endereço padrão dos produtos é recalculado).
 - **Resultados de otimização** (`/optimization/runs`): *Excluir selecionados* ou *Excluir todos do filtro* (modo, filial e busca).
+- **Históricos de saídas** (Importações → Histórico): marque as filiais e *Excluir selecionados* (só o histórico sai).
+- **Capacidade dos níveis**: marque os níveis da página e *Excluir selecionados*. Nível reservado (sem endereços)
+  some; nível com endereços perde só as capacidades cadastradas (os endereços continuam). Nível que guarda bins de
+  outros endereços não é excluído: mova as bins antes.
+- **Usuários** (só administradores): *Excluir selecionados* remove os usuários e as sessões deles. Você mesmo e o
+  último administrador ativo nunca são excluídos (aparecem em vermelho na prévia, com o motivo). Para manter o
+  histórico de acesso, prefira desativar.
 
 ## 7. Estruturas de armazenagem nos depósitos existentes
 

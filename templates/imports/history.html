@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar %}
 {% block title %}{{ _("Histórico de pedidos") }}{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -36,11 +37,14 @@
     </div></div>
   </div>
   <div class="col-lg-5">
-    <div class="card"><div class="card-header bg-white"><strong>{{ _("Históricos salvos") }}</strong></div>
+    <div class="card"><div class="card-header bg-white d-flex justify-content-between align-items-center gap-2"><strong>{{ _("Históricos salvos") }}</strong>
+      {% if saved %}<input type="checkbox" class="form-check-input" data-check-all=".bulk-histories" title="{{ _("Selecionar todos") }}">{% endif %}</div>
+      {% if saved %}<div class="px-3">{{ bulk_delete_bar(request, "histories", ".bulk-histories") }}</div>{% endif %}
       <ul class="list-group list-group-flush small">
         {% for b in branches %}{% set h = saved.get(b.id) %}
         <li class="list-group-item d-flex justify-content-between gap-2">
-          <span><b>{{ b.code }}</b> - {{ b.name }}<br>
+          {% if h %}<input type="checkbox" class="form-check-input bulk-histories mt-1" value="{{ h[3] }}">{% endif %}
+          <span class="flex-fill"><b>{{ b.code }}</b> - {{ b.name }}<br>
             {% if h %}<span class="text-muted">{{ h[1] }} · {{ h[0] }}</span>{% else %}<span class="text-muted">{{ _("sem histórico") }}</span>{% endif %}</span>
           {% if h %}<form method="post" action="/optimization/slotting/history/delete" onsubmit="return confirm({{ _('Remover o histórico da filial {code}?', code=b.code)|tojson|forceescape }})">
             <input type="hidden" name="branch_id" value="{{ b.id }}"><input type="hidden" name="back" value="/imports/history">

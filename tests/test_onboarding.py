@@ -72,3 +72,12 @@ def test_welcome_can_be_hidden(client):
     r = client.post("/onboarding/welcome", follow_redirects=False)
     assert r.status_code == 303 and "nk_onb_hide" in r.headers.get("set-cookie", "")
     client.cookies.clear()
+
+
+def test_result_steps_exist_after_a_run(client, seeded):
+    """As etapas do resultado da otimização (qualidade da solução, indicadores, tabela, aplicar) só aparecem depois de
+    Analisar: com um resultado, todas têm o elemento na tela."""
+    body = client.get(f"/optimization?branch_id={seeded['b']}&warehouse_id={seeded['w']}&run=1").text
+    for st in TOURS["optimization"]["s"]:
+        if st["cond"]:
+            assert any(_present(body, s) for s in st["s"]), st["s"]

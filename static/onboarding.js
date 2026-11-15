@@ -59,6 +59,7 @@
     card.innerHTML = '<div class="d-flex justify-content-between align-items-start gap-2">' +
       '<div class="nk-tour-t"></div><button type="button" class="btn-close btn-sm nk-tour-x"></button></div>' +
       '<div class="nk-tour-d"></div>' +
+      '<details class="nk-tour-c"><summary></summary><div></div></details>' +
       '<div class="d-flex justify-content-between align-items-center gap-2 mt-2">' +
       '<span class="nk-tour-n small text-muted"></span><div class="d-flex gap-1">' +
       '<button type="button" class="btn btn-sm btn-outline-secondary nk-tour-prev"></button>' +
@@ -66,6 +67,11 @@
     card.querySelector('.nk-tour-x').setAttribute('aria-label', _t('Fechar'));
     card.querySelector('.nk-tour-prev').innerHTML = '<i class="bi bi-arrow-left"><\/i> ' + _t('Anterior');
     card.querySelector('.nk-tour-x').addEventListener('click', () => stop(false));
+    // "Entenda o conceito": aberto por padrão; a escolha do usuário fica lembrada
+    const det = card.querySelector('.nk-tour-c');
+    det.querySelector('summary').innerHTML = '<i class="bi bi-lightbulb"><\/i> ' + _t('Entenda o conceito');
+    det.open = store.get('nk-tour-concepts') !== 'closed';
+    det.addEventListener('toggle', () => { store.set('nk-tour-concepts', det.open ? 'open' : 'closed'); place(); });
     card.querySelector('.nk-tour-prev').addEventListener('click', () => go(cur.i - 1, -1));
     card.querySelector('.nk-tour-next').addEventListener('click', () => go(cur.i + 1, 1));
     document.body.append(hole, card);
@@ -109,6 +115,9 @@
     const { card, hole } = cur.ui;
     card.querySelector('.nk-tour-t').textContent = st.t;
     card.querySelector('.nk-tour-d').textContent = st.d;
+    const det = card.querySelector('.nk-tour-c');
+    det.hidden = !st.c;
+    det.querySelector('div').textContent = st.c || '';
     const shown = steps.filter(x => !x.s.length || pick(x.s));
     card.querySelector('.nk-tour-n').textContent = _t('{i} de {n}', { i: shown.indexOf(st) + 1, n: shown.length });
     const prev = card.querySelector('.nk-tour-prev'), next = card.querySelector('.nk-tour-next');
@@ -165,7 +174,7 @@
     document.body.appendChild(b);
   }
 
-  function start(id) {
+  function start(id, at) {
     return load().then(list => {
       const tour = typeof id === 'string' ? list.find(t => t.id === id) : id;
       if (!tour) return false;
@@ -174,7 +183,9 @@
       cur = { tour, i: 0, el: null, ui: build() };
       window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
       document.addEventListener('keydown', key, true);
-      go(0, 1);
+      // começa na etapa pedida (trecho do seletor, ex.: "opt-engine"), se ela estiver na tela
+      const k = at ? tour.s.findIndex(st => st.s.some(x => x.includes(at)) && pick(st.s)) : -1;
+      go(Math.max(0, k), 1);
       return true;
     });
   }
@@ -210,12 +221,12 @@
   window.addEventListener('hashchange', () => fromHash(0));
 
   function fromHash(delay) {
-    const m = /(?:^#|&)nk-tour=([\w-]+)/.exec(location.hash);
+    const m = /(?:^#|&)nk-tour=([\w-]+)(?:@([\w-]+))?/.exec(location.hash);
     if (!m) return false;
     history.replaceState(null, '', location.pathname + location.search);
     if (document.referrer.includes('/onboarding')) store.set(RETURN, '1', true);
     // espera o layout assentar (passo a passo, tabelas e desenhos montados pelo JavaScript)
-    setTimeout(() => start(m[1]).then(ok => { if (!ok) here(); }), delay);
+    setTimeout(() => start(m[1], m[2]).then(ok => { if (!ok) here(); }), delay);
     return true;
   }
 })();

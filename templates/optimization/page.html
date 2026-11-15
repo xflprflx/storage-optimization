@@ -114,6 +114,7 @@
     <div class="card mb-3 nk-step" data-tour="opt-what" data-step-title="{{ _("O que otimizar") }}">
       <div class="card-header bg-white"><strong>{{ _("O que otimizar") }}</strong></div>
       <div class="card-body" data-step-footer>
+        <div data-tour="opt-bins">
         <div class="small fw-semibold mb-1">{{ _("Bins") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           {% for key, label in bins_modes.items() %}
@@ -123,6 +124,7 @@
         </div>
         <div class="form-text mb-2">
           {{ _h("<b>Existentes:</b> o plano só usa as bins que já existem nos endereços do escopo") }}{% if not POOL %} {{ _("(elas trocam de endereço; o total de cada tipo não aumenta; bins de endereços vazios só entram com \"remover bins de endereços sem saldo\")") }}{% endif %}{{ _h(". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje") }}{% if POOL %} {{ _("(só simulação: bins novas não têm endereço, não se aplica)") }}{% else %} {{ _("(a capacidade dos níveis continua valendo)") }}{% endif %}.
+        </div>
         </div>
         <div id="srcBox">
           <div class="small fw-semibold mb-1">{{ _h("Bins que podem ser usadas <span class=\"fw-normal text-muted\">(com bins existentes)</span>") }}</div>
@@ -139,6 +141,7 @@
           </div>
           <div class="form-text mb-2">{{ _h("Vale com \"Foco nos SKUs filtrados\" e filtro de SKU / tipo de material. <b>Só bins livres</b>: o item só usa bins sem saldo. <b>Qualquer bin</b>: pode usar bins com saldo de outros itens (ex.: 2 bins G em vez de 14 P livres) — esses itens são <b>realocados</b> (") }}{% if POOL %}{{ _("nas bins que sobraram deles ou em bins livres") }}{% else %}{{ _("rearranjados nas bins que ficam no endereço deles, ou em bins que sobraram") }}{% endif %}{{ _h(", com o mínimo de movimentação) ou ficam <b>fora de bin</b> no mesmo endereço (órfãos, para tratar à mão).") }}</div>
         </div>
+        <div data-tour="opt-basis">
         <div class="small fw-semibold mb-1">{{ _("Quantidade considerada por SKU") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           {% for key, label in bases.items() %}
@@ -147,6 +150,8 @@
           {% endfor %}
         </div>
         <div class="form-text mb-2">{{ _("Min/max valem no endereço padrão do produto; vazio ou 0 usa o saldo; nunca abaixo do saldo físico.") }}</div>
+        </div>
+        <div data-tour="opt-objective">
         <div class="small fw-semibold mb-1">{{ _("Objetivo") }}</div>
         {% for key, label in objectives.items() %}
         <div class="form-check mb-1">
@@ -155,6 +160,8 @@
         </div>
         {% endfor %}
         {% if not POOL %}<div class="form-text mb-2"><i class="bi bi-signpost-split"></i> {{ _h("Trajeto e pega: neste modo os produtos ficam nos endereços — use as <b>trocas sugeridas</b> da posição pela saída (no resultado) ou o modo <a href=\"/optimization/pool\">Pool</a>, que tem os objetivos de menor caminhada e de zona de ouro da pega.") }}</div>{% endif %}
+        </div>
+        <div data-tour="opt-prio">
         <div class="small fw-semibold mt-2 mb-1">{{ _h("Depois, desempatar por <span class=\"fw-normal text-muted\">(ordem de prioridade)</span>") }}</div>
         <div class="d-flex gap-1 mb-1">
           {% for i in (2, 3, 4) %}{% set cur = params['prio' ~ i] %}
@@ -164,6 +171,8 @@
           </select>{% endfor %}
         </div>
         <div class="form-text mb-2">{{ _h("Padrão: o objetivo escolhido, depois mínimo de {v} e os demais (bins, volume, largura).", v=(_('movimentações') if POOL else _('mudanças'))) }} {% if POOL %}{{ _("Na heurística do pool, cada desempate entra logo depois do objetivo na escolha do endereço e da bin. Caminhada, zona de ouro e tempo usam o histórico de saídas (etapa Posição pela saída) e levam ao motor heurístico.") }}{% else %}{{ _("Com \"padrão\", a heurística mantém o desempate atual.") }}{% endif %}</div>
+        </div>
+        <div data-tour="opt-engine">
         <div class="small fw-semibold mb-1">{{ _("Motor") }}</div>
         <div class="btn-group btn-group-sm w-100 mb-1" role="group">
           <input type="radio" class="btn-check" name="engine" id="eng_or" value="or" {% if params.engine == 'or' %}checked{% endif %}>
@@ -180,6 +189,7 @@
         </div>
         <div class="alert alert-warning py-1 px-2 small mb-1" id="tlWarn"><i class="bi bi-exclamation-triangle"></i> {{ _h("Com tempo limite, o resultado pode vir da <b>heurística</b> (se o solver não achar solução melhor a tempo) ou ser só a melhor solução encontrada, sem prova de que é a ótima. Para a solução do solver a qualquer custo, marque <b>Sem limite de tempo</b> (escopos grandes podem levar muitos minutos).") }}</div>
         <div class="form-text">{{ _("Pesquisa operacional: modelo de otimização inteira resolvido para o escopo todo, critério a critério na ordem acima, partindo da solução da heurística (nunca fica pior). O resultado mostra de onde veio: ótimo comprovado, melhor no tempo ou heurística.") }}</div>
+        </div>
       </div>
     </div>
 
@@ -268,13 +278,13 @@
           </div>
           {% else %}<span class="text-muted">{{ _h("Nenhum tipo cadastrado. <a href=\"/bin-types/new\">Cadastrar</a>") }}</span>{% endfor %}
         </div>
-        <div class="row g-2 mb-2">
+        <div class="row g-2 mb-2" data-tour="opt-fill">
           <div class="col-6"><label class="form-label mb-0">{{ _("Enchimento máx. (%)") }}</label><input class="form-control form-control-sm text-end" name="fill_limit" value="{{ params.fill_limit }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0">{{ _("Margem s/ quantidade (%)") }}</label><input class="form-control form-control-sm text-end" name="growth" value="{{ params.growth }}" inputmode="decimal"></div>
         </div>
         <label class="form-label mb-0">{{ _("Área de espera (para trocas)") }}</label>
         <input class="form-control form-control-sm mb-2" name="staging" value="{{ params.staging }}" maxlength="60" placeholder="{{ _("ÁREA DE ESPERA") }}" title="{{ _("Onde deixar itens temporariamente quando o destino ainda está ocupado (ex.: DOCA 1, PULMÃO)") }}">
-        <div class="fw-semibold mt-1 mb-1">{{ _("Unidades na bin") }}</div>
+        <div class="fw-semibold mt-1 mb-1" data-tour="opt-units">{{ _("Unidades na bin") }}</div>
         {{ switch('geometry', _('Considerar encaixe geométrico')) }}
         <select class="form-select form-select-sm my-1" name="rotation">
           <option value="upright" {% if params.rotation != 'any' %}selected{% endif %}>{{ _("Rotação: só girar no plano (altura sempre para cima)") }}</option>
@@ -305,7 +315,7 @@
         {% endif %}
       </div>
       <div class="card-footer bg-white" data-step-footer>
-        <button class="btn btn-accent w-100"><i class="bi bi-cpu"></i> {{ _("Analisar") }}</button>
+        <button class="btn btn-accent w-100" data-tour="opt-run"><i class="bi bi-cpu"></i> {{ _("Analisar") }}</button>
       </div>
     </div>
   </div>
@@ -343,7 +353,7 @@
     {# ---- pesquisa operacional: como o solver se saiu ---- #}
     {% for sv in solvers or [] %}{% if sv %}
     {% set ok_cls = {'optimal': 'success', 'feasible': 'primary', 'heuristic': 'warning', 'fallback': 'secondary'}[sv.status] %}
-    <div class="card mb-3 border-{{ ok_cls }}">
+    <div class="card mb-3 border-{{ ok_cls }}" data-tour="opt-solver">
       <div class="card-body py-2 small">
         <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
           <i class="bi bi-diagram-3 text-{{ ok_cls }}"></i><b>{{ _("Pesquisa operacional") }}</b>
@@ -372,7 +382,7 @@
     {% if run_id %}<div class="small text-muted mb-2"><i class="bi bi-clock-history"></i> {{ _("Resultado salvo como") }} <a href="/optimization/runs/{{ run_id }}">nº {{ run_id }}</a> ·
       <a href="/optimization/runs?kind={{ mode }}">{{ _("comparar com outros") }}</a></div>{% endif %}
     {# ---- indicadores (mesmos cartões nos dois modos) ---- #}
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-3" data-tour="opt-kpis">
       {% for k in kpis %}
       <div class="col-6 col-md-4 col-xxl-2"><div class="card stat-card h-100"><div class="card-body py-2 small">
         <div class="label">{{ k.label }}</div>
@@ -553,7 +563,7 @@
     {# ---- tabela ---- #}
     <form method="post" action="{{ base_url }}/apply" id="applyForm">
       {{ param_hidden() }}
-      <div class="card mb-3">
+      <div class="card mb-3" data-tour="opt-table">
         <div class="card-header bg-white">
           <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
             <div><strong>{{ _('Plano por SKU') if POOL else _('Sugestões por endereço') }}</strong>

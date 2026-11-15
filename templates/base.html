@@ -76,10 +76,13 @@
     .nk-tour-hole { position: fixed; z-index: 3100; border-radius: .5rem; pointer-events: none;
       box-shadow: 0 0 0 3px #f59e0b, 0 0 0 9999px rgba(10,25,30,.55); transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease; }
     .nk-tour-hole.nk-tour-center { box-shadow: 0 0 0 3px transparent, 0 0 0 9999px rgba(10,25,30,.55); }
-    .nk-tour-card { position: fixed; z-index: 3101; width: min(360px, calc(100vw - 16px)); background: #fff; color: #1f2d33;
+    .nk-tour-card { position: fixed; z-index: 3101; width: min(400px, calc(100vw - 16px)); background: #fff; color: #1f2d33;
       border-radius: .6rem; box-shadow: 0 10px 34px rgba(0,0,0,.28); padding: .75rem .85rem .65rem; font-size: .9rem; }
     .nk-tour-card .nk-tour-t { font-weight: 700; font-size: 1rem; }
     .nk-tour-card .nk-tour-d { line-height: 1.4; margin-top: .25rem; }
+    .nk-tour-card .nk-tour-c { margin-top: .5rem; background: #f0f9f8; border-radius: .4rem; padding: .35rem .55rem; font-size: .84rem; }
+    .nk-tour-card .nk-tour-c summary { cursor: pointer; color: #0f766e; font-weight: 600; }
+    .nk-tour-card .nk-tour-c > div { line-height: 1.4; margin-top: .25rem; color: #24323a; }
     .nk-tour-return { position: fixed; z-index: 3050; right: 16px; bottom: 16px; max-width: calc(100vw - 32px); font-size: .88rem; }
     #nkGuideMenu { position: relative; }
     #nkGuideDot { position: absolute; top: .35rem; right: .2rem; width: .5rem; height: .5rem; border-radius: 50%; background: #f59e0b;
@@ -157,6 +160,7 @@
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="#" id="nkTourHere"><i class="bi bi-cursor"></i> {{ _("Tour desta tela") }} <span class="small text-muted nk-tour-name"></span></a></li>
           <li><a class="dropdown-item" href="/onboarding"><i class="bi bi-list-check"></i> {{ _("Guia passo a passo") }}</a></li>
+          <li><a class="dropdown-item" href="/onboarding#conceitos"><i class="bi bi-mortarboard"></i> {{ _("Conceitos em linguagem simples") }}</a></li>
           <li><a class="dropdown-item" href="/#nk-tour=intro"><i class="bi bi-compass"></i> {{ _("Tour geral do sistema") }}</a></li>
         </ul>
       </div>

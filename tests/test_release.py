@@ -109,3 +109,17 @@ def test_examples_have_release_and_old_example_projects_get_it(db):
     assert a.config["orders"]["has_release"] and all(len(e) > 4 for e in a.config["orders"]["sample"])
     assert b.config["orders"] == user
     assert site_examples.refresh_example_orders(db) == []
+
+
+def test_3d_clock_and_compare_flag():
+    from services.route_compare import payload_3d
+
+    nodes, start = _aisle()
+    ref = {"x": 0.0, "y": 0.0, "label": "ref"}
+    sample = [["A", ["S1"], [1], "2026-11-01", 8 * 3600 + 15 * 60], ["B", ["S3"], [1], "2026-11-01", None]]
+    d = day_payload(sample, nodes, start, ref, "2026-11-01")  # opção desligada: o relógio usa o 1º horário mesmo assim
+    assert d["clock_s"] == 8 * 3600 + 15 * 60 and not d["clock_guess"]
+    plain = day_payload([e[:4] for e in sample], nodes, start, ref, "2026-11-01")
+    assert plain["clock_s"] == 8 * 3600 and plain["clock_guess"]  # sem horário: 08:00 presumido
+    lst = payload_3d(sample, nodes, nodes, start, ref)
+    assert lst["summary"]["has_release"]  # o 3D do hoje × proposta habilita a opção

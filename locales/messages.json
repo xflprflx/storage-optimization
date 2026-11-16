@@ -409,6 +409,12 @@
   ],
   "html": true
  },
+ "(início presumido às 08:00)": {
+  "src": [
+   "templates/site/view3d.html:695"
+  ],
+  "js": true
+ },
  "(já definido pelas etapas anteriores)": {
   "src": [
    "templates/site/project.html:649"
@@ -442,7 +448,7 @@
  "(o histórico não tem a coluna Liberação)": {
   "src": [
    "templates/optimization/page.html:266",
-   "templates/site/view3d.html:485"
+   "templates/site/view3d.html:491"
   ],
   "js": true
  },
@@ -514,7 +520,7 @@
  },
  "(volume dos produtos ÷ volume da bin)": {
   "src": [
-   "templates/site/view3d.html:350"
+   "templates/site/view3d.html:356"
   ],
   "js": true
  },
@@ -859,7 +865,7 @@
  },
  "80% das saídas": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:361"
   ],
   "js": true
  },
@@ -954,7 +960,7 @@
  },
  "<b>Busca:</b> {findSet} bin(s) encontradas <span class=\"nk3d-sw\" style=\"background:#e11d48\"></span>": {
   "src": [
-   "templates/site/view3d.html:348"
+   "templates/site/view3d.html:354"
   ],
   "js": true
  },
@@ -996,13 +1002,13 @@
  },
  "<b>Curva ABC</b> <span class=\"text-muted\">(pela saída)</span>{v}{some}": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:361"
   ],
   "js": true
  },
  "<b>Dia {day}</b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)": {
   "src": [
-   "templates/site/view3d.html:616"
+   "templates/site/view3d.html:632"
   ],
   "js": true
  },
@@ -1014,7 +1020,7 @@
  },
  "<b>Estruturas</b>{structs}": {
   "src": [
-   "templates/site/view3d.html:352"
+   "templates/site/view3d.html:358"
   ],
   "js": true
  },
@@ -1074,7 +1080,7 @@
  },
  "<b>Hoje × proposta do solver</b> · {orders} pedidos · média por pedido na rota otimizada: <span style=\"color:#d6604d\">hoje {a} m</span> → <span style=\"color:#1a9850\">proposta {b} m</span>. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam.": {
   "src": [
-   "templates/site/view3d.html:489"
+   "templates/site/view3d.html:495"
   ],
   "js": true
  },
@@ -1170,7 +1176,7 @@
  },
  "<b>Tipos de bin</b>{types}": {
   "src": [
-   "templates/site/view3d.html:365"
+   "templates/site/view3d.html:371"
   ],
   "js": true
  },
@@ -1340,7 +1346,7 @@
  },
  "<span class=\"nk3d-sw\" style=\"background:#b8c0c6\"></span>sem dimensões · média {fmt}%": {
   "src": [
-   "templates/site/view3d.html:350"
+   "templates/site/view3d.html:356"
   ],
   "js": true
  },
@@ -1660,13 +1666,13 @@
  },
  "A proposta anda <b>{fmt}%</b> mais que hoje.": {
   "src": [
-   "templates/site/view3d.html:616"
+   "templates/site/view3d.html:632"
   ],
   "js": true
  },
  "A proposta anda <b>{fmt}%</b> menos que hoje.": {
   "src": [
-   "templates/site/view3d.html:616"
+   "templates/site/view3d.html:632"
   ],
   "js": true
  },
@@ -1683,7 +1689,7 @@
  },
  "A rota otimizada anda <b>{fmt}%</b> menos que a lista.": {
   "src": [
-   "templates/site/view3d.html:616"
+   "templates/site/view3d.html:632"
   ],
   "js": true
  },
@@ -2062,7 +2068,7 @@
  "Altura até": {
   "src": [
    "services/field_help.py:53",
-   "templates/site/view3d.html:57"
+   "templates/site/view3d.html:61"
   ],
   "help": true
  },
@@ -2229,7 +2235,7 @@
  },
  "Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).": {
   "src": [
-   "templates/site/view3d.html:629"
+   "templates/site/view3d.html:645"
   ],
   "js": true
  },
@@ -2759,7 +2765,7 @@
  },
  "Arranjo 3D — {name}": {
   "src": [
-   "templates/site/view3d.html:31"
+   "templates/site/view3d.html:35"
   ],
   "html": true
  },
@@ -2805,7 +2811,7 @@
  },
  "Arraste para avançar ou voltar": {
   "src": [
-   "templates/site/view3d.html:103"
+   "templates/site/view3d.html:112"
   ]
  },
  "Arraste para avançar ou voltar a caminhada.": {
@@ -2822,7 +2828,7 @@
  },
  "Arraste para girar · botão direito para mover · roda para aproximar (em direção ao mouse) · duplo clique centraliza no ponto · clique numa bin para ver o endereço": {
   "src": [
-   "templates/site/view3d.html:72"
+   "templates/site/view3d.html:76"
   ]
  },
  "Arraste para girar · roda do mouse para zoom · botão direito para mover": {
@@ -3211,7 +3217,7 @@
  },
  "Bin <span class=\"mono\">{esc}</span> · {same} bin(s) no endereço": {
   "src": [
-   "templates/site/view3d.html:404"
+   "templates/site/view3d.html:410"
   ],
   "js": true
  },
@@ -3613,7 +3619,7 @@
  "Buscar SKU ou endereço": {
   "src": [
    "services/field_help.py:54",
-   "templates/site/view3d.html:59"
+   "templates/site/view3d.html:63"
   ],
   "help": true
  },
@@ -3926,13 +3932,13 @@
  },
  "Calculando as rotas do dia…": {
   "src": [
-   "templates/site/view3d.html:515"
+   "templates/site/view3d.html:521"
   ],
   "js": true
  },
  "Calculando as rotas…": {
   "src": [
-   "templates/site/view3d.html:504"
+   "templates/site/view3d.html:510"
   ],
   "js": true
  },
@@ -3970,7 +3976,7 @@
    "services/field_help.py:69",
    "services/field_help.py:77",
    "templates/optimization/page.html:257",
-   "templates/site/view3d.html:110",
+   "templates/site/view3d.html:119",
    "templates/slotting/routes.html:47"
   ],
   "help": true
@@ -4224,19 +4230,19 @@
  },
  "Carregando o plano…": {
   "src": [
-   "templates/site/view3d.html:32"
+   "templates/site/view3d.html:36"
   ]
  },
  "Carregando os pedidos…": {
   "src": [
-   "templates/site/view3d.html:479"
+   "templates/site/view3d.html:485"
   ],
   "js": true
  },
  "Carregando…": {
   "src": [
    "templates/layout/plan.html:40",
-   "templates/site/view3d.html:133"
+   "templates/site/view3d.html:139"
   ]
  },
  "Cede bins e é rearranjado": {
@@ -4512,7 +4518,7 @@
  },
  "Com o horário de liberação: o dia começa às {h} (1º pedido liberado); o separador espera na referência quando não há pedido liberado.": {
   "src": [
-   "templates/site/view3d.html:619"
+   "templates/site/view3d.html:635"
   ],
   "js": true
  },
@@ -4666,7 +4672,7 @@
  },
  "Comparar as 4 ao mesmo tempo": {
   "src": [
-   "templates/site/view3d.html:94"
+   "templates/site/view3d.html:103"
   ]
  },
  "Comparar resultados": {
@@ -4971,7 +4977,7 @@
    "services/field_help.py:56",
    "services/field_help.py:79",
    "services/field_help.py:249",
-   "templates/site/view3d.html:124",
+   "templates/site/view3d.html:96",
    "templates/slotting/routes.html:61"
   ],
   "help": true
@@ -5068,7 +5074,7 @@
  },
  "Cor das bins:": {
   "src": [
-   "templates/site/view3d.html:38"
+   "templates/site/view3d.html:42"
   ]
  },
  "Corredor": {
@@ -5204,7 +5210,7 @@
  },
  "Corredor:": {
   "src": [
-   "templates/site/view3d.html:47"
+   "templates/site/view3d.html:51"
   ]
  },
  "Corredores": {
@@ -5422,7 +5428,7 @@
  },
  "Curva ABC (saída)": {
   "src": [
-   "templates/site/view3d.html:45"
+   "templates/site/view3d.html:49"
   ]
  },
  "Custo": {
@@ -5507,7 +5513,7 @@
  "Câmera": {
   "src": [
    "services/field_help.py:68",
-   "templates/site/view3d.html:108"
+   "templates/site/view3d.html:117"
   ],
   "help": true
  },
@@ -5787,7 +5793,7 @@
  "De cima (rota toda)": {
   "src": [
    "templates/settings.html:52",
-   "templates/site/view3d.html:109"
+   "templates/site/view3d.html:118"
   ]
  },
  "De onde a caminhada é vista: seguindo o separador, em primeira pessoa, de cima ou livre com o mouse.": {
@@ -6114,19 +6120,19 @@
   "src": [
    "services/field_help.py:64",
    "templates/optimization/page.html:493",
-   "templates/site/view3d.html:90",
+   "templates/site/view3d.html:99",
    "templates/slotting/routes.html:77"
   ],
   "help": true
  },
- "Dia inteiro: os pedidos na ordem em que foram liberados; sem pedido liberado, o separador espera na referência. Pedido sem horário = início do dia.": {
+ "Dia inteiro: os pedidos na ordem em que foram liberados; sem pedido liberado, o separador espera na referência. Pedido sem horário = início do dia. No lote, só junta pedidos já liberados.": {
   "src": [
-   "templates/site/view3d.html:122"
+   "templates/site/view3d.html:94"
   ]
  },
  "Dia {day} · {n} pedidos · {lines} linha(s){pcs} · {mmss}": {
   "src": [
-   "templates/site/view3d.html:681"
+   "templates/site/view3d.html:701"
   ],
   "js": true
  },
@@ -6397,7 +6403,7 @@
  },
  "Do início": {
   "src": [
-   "templates/site/view3d.html:102"
+   "templates/site/view3d.html:111"
   ]
  },
  "Do piso ao topo. Precisa caber no pé-direito útil do imóvel.": {
@@ -7377,7 +7383,7 @@
  },
  "Esconde o que fica acima desta altura, para ver os níveis de dentro": {
   "src": [
-   "templates/site/view3d.html:56"
+   "templates/site/view3d.html:60"
   ]
  },
  "Esconde os registros com quantidade zero (atribuições sem saldo).": {
@@ -7559,7 +7565,7 @@
  },
  "Estante {esc} · {esc2}{cap} · altura {fmt} m": {
   "src": [
-   "templates/site/view3d.html:404"
+   "templates/site/view3d.html:410"
   ],
   "js": true
  },
@@ -7631,7 +7637,7 @@
  },
  "Este navegador não grava vídeo (use Chrome, Edge ou Firefox).": {
   "src": [
-   "templates/site/view3d.html:753"
+   "templates/site/view3d.html:780"
   ],
   "js": true
  },
@@ -8302,7 +8308,7 @@
  },
  "Faixa de altura da zona de ouro de cada estrutura": {
   "src": [
-   "templates/site/view3d.html:62"
+   "templates/site/view3d.html:66"
   ]
  },
  "Faixa de altura mais fácil de pegar (entre a cintura e o ombro, tipicamente 75–150 cm a partir do piso). Arraste no desenho para marcar, puxe as bordas para ajustar ou arraste a faixa para mover (de 5 em 5 cm). Os níveis cuja altura de pega (meio do vão) cai na faixa ficam marcados como zona de ouro no plano e no 3D.": {
@@ -8366,25 +8372,25 @@
  },
  "Falha ao carregar o dia.": {
   "src": [
-   "templates/site/view3d.html:518"
+   "templates/site/view3d.html:524"
   ],
   "js": true
  },
  "Falha ao carregar o pedido.": {
   "src": [
-   "templates/site/view3d.html:507"
+   "templates/site/view3d.html:513"
   ],
   "js": true
  },
  "Falha ao carregar o plano.": {
   "src": [
-   "templates/site/view3d.html:155"
+   "templates/site/view3d.html:161"
   ],
   "js": true
  },
  "Falha ao carregar os pedidos.": {
   "src": [
-   "templates/site/view3d.html:480"
+   "templates/site/view3d.html:486"
   ],
   "js": true
  },
@@ -8468,8 +8474,8 @@
  "Fechar": {
   "src": [
    "templates/layout/plan.html:70",
-   "templates/site/view3d.html:82",
-   "templates/site/view3d.html:404",
+   "templates/site/view3d.html:88",
+   "templates/site/view3d.html:410",
    "static/onboarding.js:69",
    "static/onboarding.js:176"
   ],
@@ -9108,13 +9114,13 @@
  "Fora do ouro (s/item)": {
   "src": [
    "templates/optimization/page.html:259",
-   "templates/site/view3d.html:116",
+   "templates/site/view3d.html:125",
    "templates/slotting/routes.html:53"
   ]
  },
  "Fora do ouro (s/peça)": {
   "src": [
-   "templates/site/view3d.html:118",
+   "templates/site/view3d.html:127",
    "templates/slotting/routes.html:55"
   ]
  },
@@ -9165,7 +9171,7 @@
   "src": [
    "templates/packing/case.html:62",
    "templates/packing/view3d.html:23",
-   "templates/site/view3d.html:67",
+   "templates/site/view3d.html:71",
    "templates/structures/list.html:27"
   ]
  },
@@ -9366,7 +9372,7 @@
  },
  "Grava a simulação do início ao fim e baixa o vídeo (.webm)": {
   "src": [
-   "templates/site/view3d.html:127"
+   "templates/site/view3d.html:133"
   ]
  },
  "Gravar o vão dos níveis": {
@@ -9383,8 +9389,8 @@
  },
  "Gravar vídeo": {
   "src": [
-   "templates/site/view3d.html:127",
-   "templates/site/view3d.html:782"
+   "templates/site/view3d.html:133",
+   "templates/site/view3d.html:809"
   ],
   "js": true
  },
@@ -9605,8 +9611,19 @@
  },
  "Hoje — {route}": {
   "src": [
-   "services/route_compare.py:175"
+   "services/route_compare.py:176"
   ]
+ },
+ "Hora do dia na simulação": {
+  "src": [
+   "templates/site/view3d.html:84"
+  ]
+ },
+ "Hora: {h}": {
+  "src": [
+   "templates/site/view3d.html:695"
+  ],
+  "js": true
  },
  "Horas de separação": {
   "src": [
@@ -9986,7 +10003,7 @@
  },
  "Iniciar / pausar (barra de espaço)": {
   "src": [
-   "templates/site/view3d.html:101"
+   "templates/site/view3d.html:110"
   ]
  },
  "Instruções": {
@@ -9996,7 +10013,7 @@
  },
  "Inverter": {
   "src": [
-   "templates/site/view3d.html:52"
+   "templates/site/view3d.html:56"
   ]
  },
  "Inverter numeração": {
@@ -10678,7 +10695,7 @@
  },
  "Lista de separação (ordem dos endereços)": {
   "src": [
-   "templates/site/view3d.html:95"
+   "templates/site/view3d.html:104"
   ]
  },
  "Livre": {
@@ -10692,7 +10709,7 @@
  "Livre (mouse)": {
   "src": [
    "templates/settings.html:52",
-   "templates/site/view3d.html:109"
+   "templates/site/view3d.html:118"
   ]
  },
  "Livres": {
@@ -10723,12 +10740,12 @@
  },
  "Lote (vários pedidos por trajeto)": {
   "src": [
-   "templates/site/view3d.html:98"
+   "templates/site/view3d.html:107"
   ]
  },
  "Lote ({n} pedidos por trajeto)": {
   "src": [
-   "services/route_compare.py:173"
+   "services/route_compare.py:174"
   ]
  },
  "Lote ({n} pedidos/trajeto):": {
@@ -10782,7 +10799,7 @@
  },
  "Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).": {
   "src": [
-   "templates/site/view3d.html:623"
+   "templates/site/view3d.html:639"
   ],
   "js": true
  },
@@ -10799,7 +10816,7 @@
  },
  "Lote: {n} trajetos no dia, um depois do outro (saída e volta na referência a cada trajeto).": {
   "src": [
-   "templates/site/view3d.html:624"
+   "templates/site/view3d.html:640"
   ],
   "js": true
  },
@@ -11137,7 +11154,7 @@
  },
  "Maximiza a vista 3D (Esc volta)": {
   "src": [
-   "templates/site/view3d.html:77"
+   "templates/site/view3d.html:81"
   ]
  },
  "Medida": {
@@ -11563,7 +11580,7 @@
  },
  "Mostra só os corredores marcados (um ou vários)": {
   "src": [
-   "templates/site/view3d.html:50"
+   "templates/site/view3d.html:54"
   ]
  },
  "Mostra só os níveis com este código (o andar da estante, contado de baixo para cima).": {
@@ -12154,7 +12171,7 @@
  },
  "Nenhum pedido da amostra tem SKUs no plano.": {
   "src": [
-   "templates/site/view3d.html:492"
+   "templates/site/view3d.html:498"
   ],
   "js": true
  },
@@ -12787,7 +12804,7 @@
  },
  "Não foi possível iniciar a gravação.": {
   "src": [
-   "templates/site/view3d.html:760"
+   "templates/site/view3d.html:787"
   ],
   "js": true
  },
@@ -13722,13 +13739,13 @@
    "routers/site.py:192",
    "services/site_report.py:343",
    "services/site_report.py:349",
-   "templates/site/view3d.html:41"
+   "templates/site/view3d.html:45"
   ],
   "lazy": true
  },
  "Ocupação das bins: <b>{fmt}%</b>": {
   "src": [
-   "templates/site/view3d.html:404"
+   "templates/site/view3d.html:410"
   ],
   "js": true
  },
@@ -14041,7 +14058,7 @@
  "Otimizada": {
   "src": [
    "services/route_sim.py:573",
-   "templates/site/view3d.html:97"
+   "templates/site/view3d.html:106"
   ],
   "lazy": true
  },
@@ -14287,7 +14304,7 @@
  },
  "Paradas — {esc}:": {
   "src": [
-   "templates/site/view3d.html:625"
+   "templates/site/view3d.html:641"
   ],
   "js": true
  },
@@ -14305,13 +14322,13 @@
  },
  "Parar e salvar": {
   "src": [
-   "templates/site/view3d.html:775"
+   "templates/site/view3d.html:802"
   ],
   "js": true
  },
  "Paredes": {
   "src": [
-   "templates/site/view3d.html:63"
+   "templates/site/view3d.html:67"
   ]
  },
  "Pares": {
@@ -14407,14 +14424,14 @@
  },
  "Pedido <span class=\"text-muted\">(maiores caminhadas primeiro)</span>": {
   "src": [
-   "templates/site/view3d.html:88"
+   "templates/site/view3d.html:97"
   ],
   "html": true
  },
  "Pedido {k} de {n}: {order} ({lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:626",
-   "templates/site/view3d.html:682"
+   "templates/site/view3d.html:642",
+   "templates/site/view3d.html:702"
   ],
   "js": true
  },
@@ -14425,7 +14442,7 @@
  },
  "Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}": {
   "src": [
-   "templates/site/view3d.html:676"
+   "templates/site/view3d.html:692"
   ],
   "js": true
  },
@@ -14496,7 +14513,7 @@
    "services/field_help.py:392",
    "templates/optimization/page.html:261",
    "templates/settings.html:35",
-   "templates/site/view3d.html:120"
+   "templates/site/view3d.html:129"
   ],
   "help": true
  },
@@ -15278,7 +15295,7 @@
  "Primeira pessoa": {
   "src": [
    "templates/settings.html:52",
-   "templates/site/view3d.html:109"
+   "templates/site/view3d.html:118"
   ]
  },
  "Primeira vez por aqui?": {
@@ -15647,7 +15664,7 @@
  },
  "Proposta — {route}": {
   "src": [
-   "services/route_compare.py:176"
+   "services/route_compare.py:177"
   ]
  },
  "Providenciar": {
@@ -16240,6 +16257,11 @@
    "templates/site/project.html:193"
   ]
  },
+ "Recolher / expandir as opções": {
+  "src": [
+   "templates/site/view3d.html:87"
+  ]
+ },
  "Recurso infinito": {
   "src": [
    "templates/optimization/page.html:122",
@@ -16286,7 +16308,7 @@
  "Referência: {label}": {
   "src": [
    "services/branch_layout.py:583",
-   "templates/site/view3d.html:244"
+   "templates/site/view3d.html:250"
   ],
   "js": true
  },
@@ -16639,7 +16661,7 @@
  "Rota": {
   "src": [
    "services/field_help.py:65",
-   "templates/site/view3d.html:92"
+   "templates/site/view3d.html:101"
   ],
   "help": true
  },
@@ -16657,8 +16679,8 @@
  },
  "Rota indisponível para este pedido.": {
   "src": [
-   "services/route_compare.py:172",
-   "templates/site/view3d.html:542"
+   "services/route_compare.py:173",
+   "templates/site/view3d.html:548"
   ],
   "js": true
  },
@@ -17166,7 +17188,7 @@
  "Seguir o separador": {
   "src": [
    "templates/settings.html:52",
-   "templates/site/view3d.html:109"
+   "templates/site/view3d.html:118"
   ]
  },
  "Selecionar e mover o que já existe ou desenhar com o mouse uma zona, um obstáculo ou um setor.": {
@@ -17359,7 +17381,7 @@
  },
  "Sem dados de saída no projeto.": {
   "src": [
-   "templates/site/view3d.html:356"
+   "templates/site/view3d.html:362"
   ],
   "js": true
  },
@@ -17595,7 +17617,7 @@
  },
  "Separação em lote (4º separador): quantos pedidos do mesmo dia vão no mesmo trajeto": {
   "src": [
-   "templates/site/view3d.html:120"
+   "templates/site/view3d.html:129"
   ]
  },
  "Separação em lote na simulação hoje × proposta: quantos pedidos por trajeto": {
@@ -17638,7 +17660,7 @@
   "src": [
    "services/route_sim.py:572",
    "templates/optimization/page.html:462",
-   "templates/site/view3d.html:96"
+   "templates/site/view3d.html:105"
   ],
   "lazy": true
  },
@@ -17712,7 +17734,7 @@
  },
  "Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)": {
   "src": [
-   "templates/site/view3d.html:76"
+   "templates/site/view3d.html:80"
   ]
  },
  "Simula o separador montando um pedido ou um dia inteiro, com a rota e o tempo de cada parada. Dá para gravar em vídeo.": {
@@ -17746,13 +17768,13 @@
  "Simular": {
   "src": [
    "services/field_help.py:63",
-   "templates/site/view3d.html:85"
+   "templates/site/view3d.html:91"
   ],
   "help": true
  },
  "Simular caminhada": {
   "src": [
-   "templates/site/view3d.html:76"
+   "templates/site/view3d.html:80"
   ]
  },
  "Simular o dia em 3D": {
@@ -17768,7 +17790,7 @@
  },
  "Simulação de caminhada": {
   "src": [
-   "templates/site/view3d.html:81"
+   "templates/site/view3d.html:86"
   ]
  },
  "Simulação de separação": {
@@ -18218,7 +18240,7 @@
  },
  "Tempo a mais por item (linha) num nível fora da zona de ouro da pega": {
   "src": [
-   "templates/site/view3d.html:116"
+   "templates/site/view3d.html:125"
   ]
  },
  "Tempo a mais por item pego num nível fora da zona de ouro da pega": {
@@ -18240,7 +18262,7 @@
  },
  "Tempo a mais por peça num nível fora da zona de ouro da pega": {
   "src": [
-   "templates/site/view3d.html:118"
+   "templates/site/view3d.html:127"
   ]
  },
  "Tempo a mais por peça pega fora da zona de ouro da pega.": {
@@ -18312,7 +18334,7 @@
  },
  "Tempo fixo parado em cada endereço (chegar, localizar, conferir)": {
   "src": [
-   "templates/site/view3d.html:112"
+   "templates/site/view3d.html:121"
   ]
  },
  "Tempo hoje": {
@@ -18403,7 +18425,7 @@
  },
  "Tempo para pegar cada peça: a parada dura o tempo fixo + peças × este tempo": {
   "src": [
-   "templates/site/view3d.html:114"
+   "templates/site/view3d.html:123"
   ]
  },
  "Tempo para pegar cada peça: a parada dura o tempo fixo mais as peças vezes este tempo.": {
@@ -18418,7 +18440,7 @@
    "services/field_help.py:80",
    "services/field_help.py:393",
    "templates/settings.html:31",
-   "templates/site/view3d.html:112"
+   "templates/site/view3d.html:121"
   ],
   "help": true
  },
@@ -18428,7 +18450,7 @@
    "services/field_help.py:81",
    "services/field_help.py:394",
    "templates/settings.html:32",
-   "templates/site/view3d.html:114"
+   "templates/site/view3d.html:123"
   ],
   "help": true
  },
@@ -18808,7 +18830,7 @@
  },
  "Topo": {
   "src": [
-   "templates/site/view3d.html:66"
+   "templates/site/view3d.html:70"
   ]
  },
  "Total": {
@@ -18940,7 +18962,7 @@
  },
  "Um dia inteiro (todos os pedidos do dia, em sequência)": {
   "src": [
-   "templates/site/view3d.html:86"
+   "templates/site/view3d.html:92"
   ]
  },
  "Um endereço pode ter várias bins, inclusive de tipos diferentes (ex.: 2× Caixa P + 1× Caixa G).": {
@@ -18965,7 +18987,7 @@
  },
  "Um pedido": {
   "src": [
-   "templates/site/view3d.html:86"
+   "templates/site/view3d.html:92"
   ]
  },
  "Um pedido por vez ou um dia inteiro: todos os pedidos do dia, um depois do outro, saindo e voltando à referência a cada pedido. Aparece quando o histórico de pedidos tem a coluna Data.": {
@@ -19442,7 +19464,7 @@
  "Velocidade de caminhada do separador": {
   "src": [
    "templates/optimization/page.html:257",
-   "templates/site/view3d.html:110"
+   "templates/site/view3d.html:119"
   ]
  },
  "Velocidade de caminhada do separador, usada para transformar metros em tempo.": {
@@ -19460,7 +19482,7 @@
  "Velocidade do vídeo": {
   "src": [
    "services/field_help.py:67",
-   "templates/site/view3d.html:106"
+   "templates/site/view3d.html:115"
   ],
   "help": true
  },
@@ -19552,7 +19574,7 @@
  "Vista de cima": {
   "src": [
    "templates/bin_types/form.html:48",
-   "templates/site/view3d.html:66"
+   "templates/site/view3d.html:70"
   ]
  },
  "Vista de cima e de frente": {
@@ -19562,12 +19584,12 @@
  },
  "Vista de frente (pelas docas)": {
   "src": [
-   "templates/site/view3d.html:67"
+   "templates/site/view3d.html:71"
   ]
  },
  "Vista em perspectiva": {
   "src": [
-   "templates/site/view3d.html:65"
+   "templates/site/view3d.html:69"
   ]
  },
  "Visual por endereço (antes × depois)": {
@@ -19853,7 +19875,7 @@
  },
  "Vídeo salvo ({fmt} MB).": {
   "src": [
-   "templates/site/view3d.html:771"
+   "templates/site/view3d.html:798"
   ],
   "js": true
  },
@@ -19953,7 +19975,7 @@
    "services/site_report.py:338",
    "services/site_report.py:344",
    "templates/site/plan.html:144",
-   "templates/site/view3d.html:62"
+   "templates/site/view3d.html:66"
   ],
   "help": true,
   "lazy": true,
@@ -20104,14 +20126,14 @@
  "Zonas de ouro": {
   "src": [
    "services/onboarding.py:265",
-   "templates/site/view3d.html:358"
+   "templates/site/view3d.html:364"
   ],
   "lazy": true,
   "js": true
  },
  "Zonas de ouro (pega e caminhada)": {
   "src": [
-   "templates/site/view3d.html:44"
+   "templates/site/view3d.html:48"
   ]
  },
  "Zonas e circulação": {
@@ -20257,7 +20279,7 @@
  },
  "aguardando liberação": {
   "src": [
-   "templates/site/view3d.html:689"
+   "templates/site/view3d.html:709"
   ],
   "js": true
  },
@@ -20390,7 +20412,7 @@
  },
  "até 95%": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:361"
   ],
   "js": true
  },
@@ -21023,7 +21045,7 @@
  },
  "fora das duas": {
   "src": [
-   "templates/site/view3d.html:360"
+   "templates/site/view3d.html:366"
   ],
   "js": true
  },
@@ -21137,13 +21159,13 @@
  },
  "hoje {a} km → proposta {b} km": {
   "src": [
-   "templates/site/view3d.html:488"
+   "templates/site/view3d.html:494"
   ],
   "js": true
  },
  "hoje {a} m → proposta {b} m": {
   "src": [
-   "templates/site/view3d.html:482"
+   "templates/site/view3d.html:488"
   ],
   "js": true
  },
@@ -21222,6 +21244,12 @@
  "início da faixa": {
   "src": [
    "static/field_help.js:340"
+  ],
+  "js": true
+ },
+ "início presumido às 08:00": {
+  "src": [
+   "templates/site/view3d.html:720"
   ],
   "js": true
  },
@@ -21317,7 +21345,7 @@
  },
  "lista {a} km → otim. {b} km": {
   "src": [
-   "templates/site/view3d.html:488"
+   "templates/site/view3d.html:494"
   ],
   "js": true
  },
@@ -21511,7 +21539,7 @@
  },
  "nas duas (pega e caminhada)": {
   "src": [
-   "templates/site/view3d.html:359"
+   "templates/site/view3d.html:365"
   ],
   "js": true
  },
@@ -21752,7 +21780,7 @@
  },
  "o resto": {
   "src": [
-   "templates/site/view3d.html:355"
+   "templates/site/view3d.html:361"
   ],
   "js": true
  },
@@ -21907,7 +21935,7 @@
  },
  "pega = altura por estrutura · caminhada = perto da referência": {
   "src": [
-   "templates/site/view3d.html:358"
+   "templates/site/view3d.html:364"
   ],
   "js": true
  },
@@ -21925,7 +21953,7 @@
  },
  "pegando {grpOf} ({fmt} pç)": {
   "src": [
-   "templates/site/view3d.html:689"
+   "templates/site/view3d.html:709"
   ],
   "js": true
  },
@@ -22432,7 +22460,7 @@
  },
  "só caminhada (perto da referência)": {
   "src": [
-   "templates/site/view3d.html:360"
+   "templates/site/view3d.html:366"
   ],
   "js": true
  },
@@ -22468,7 +22496,7 @@
  },
  "só pega (altura)": {
   "src": [
-   "templates/site/view3d.html:359"
+   "templates/site/view3d.html:365"
   ],
   "js": true
  },
@@ -22516,7 +22544,7 @@
  "tempo real": {
   "src": [
    "templates/settings.html:45",
-   "templates/site/view3d.html:107"
+   "templates/site/view3d.html:116"
   ]
  },
  "termina com": {
@@ -22613,7 +22641,7 @@
  },
  "uma cor por SKU · {keys} SKUs": {
   "src": [
-   "templates/site/view3d.html:363"
+   "templates/site/view3d.html:369"
   ],
   "js": true
  },
@@ -22927,7 +22955,7 @@
  },
  "{c} · {t} · {n} bins": {
   "src": [
-   "templates/site/view3d.html:356"
+   "templates/site/view3d.html:362"
   ],
   "js": true
  },
@@ -22955,7 +22983,7 @@
  },
  "{esc} · {placed} bins · ocupação {fmt}%": {
   "src": [
-   "templates/site/view3d.html:365"
+   "templates/site/view3d.html:371"
   ],
   "js": true
  },
@@ -22967,7 +22995,7 @@
  },
  "{esc}: {fmt}–{fmt2} m · níveis {golden_levels}": {
   "src": [
-   "templates/site/view3d.html:359"
+   "templates/site/view3d.html:365"
   ],
   "js": true
  },
@@ -23004,7 +23032,7 @@
  },
  "{fmt} × {fmt2} m · pé-direito {fmt3} m · {modules} estantes · {bins} bins · ocupação das bins {fmt4}%{level_fill}{note}": {
   "src": [
-   "templates/site/view3d.html:163"
+   "templates/site/view3d.html:169"
   ],
   "js": true
  },
@@ -23315,7 +23343,7 @@
  },
  "{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×": {
   "src": [
-   "templates/site/view3d.html:798"
+   "templates/site/view3d.html:825"
   ],
   "js": true
  },
@@ -23457,7 +23485,7 @@
  },
  "{n} pedidos": {
   "src": [
-   "templates/site/view3d.html:488"
+   "templates/site/view3d.html:494"
   ],
   "js": true
  },
@@ -23497,7 +23525,7 @@
  },
  "{orders} pedidos na amostra · média por pedido: <span style=\"color:#d62728\">lista {fmt} m</span> · <span style=\"color:#2f6db5\">serpentina {fmt2} m</span> · <span style=\"color:#1a9850\">otimizada {fmt3} m</span>": {
   "src": [
-   "templates/site/view3d.html:490"
+   "templates/site/view3d.html:496"
   ],
   "js": true
  },
@@ -23610,7 +23638,7 @@
  },
  "{split}: {fmt} de {fmt2} m · paradas {picked}/{keys} · peças {fmt3}/{fmt4} · {done}": {
   "src": [
-   "templates/site/view3d.html:689"
+   "templates/site/view3d.html:709"
   ],
   "js": true
  },
@@ -23716,7 +23744,7 @@
  },
  "{t} · {bins} bins": {
   "src": [
-   "templates/site/view3d.html:361"
+   "templates/site/view3d.html:367"
   ],
   "js": true
  },
@@ -23860,7 +23888,7 @@
  },
  "· <b>{fmt} pç</b>": {
   "src": [
-   "templates/site/view3d.html:628"
+   "templates/site/view3d.html:644"
   ],
   "js": true
  },
@@ -23884,7 +23912,7 @@
  },
  "· <span class=\"text-warning-emphasis\">{out} fora do ouro</span>": {
   "src": [
-   "templates/site/view3d.html:628"
+   "templates/site/view3d.html:644"
   ],
   "js": true
  },
@@ -23931,7 +23959,7 @@
  },
  "· ocupação dos níveis {fmt}%": {
   "src": [
-   "templates/site/view3d.html:163"
+   "templates/site/view3d.html:169"
   ],
   "js": true
  },
@@ -23985,8 +24013,8 @@
  },
  "· {fmt} peça(s)": {
   "src": [
-   "templates/site/view3d.html:616",
-   "templates/site/view3d.html:675"
+   "templates/site/view3d.html:632",
+   "templates/site/view3d.html:691"
   ],
   "js": true
  },

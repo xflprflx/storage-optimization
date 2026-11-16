@@ -160,6 +160,7 @@ def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict,
                  **{f"{k}_new": bd[e["date"]].get(f"{k}_m") for k in KINDS}} for e in a.get("days") or [] if e["date"] in bd]
         return {"compare": True, "ref": ref, "orders": orders, "days": days,
                 "summary": {"orders": len(orders), "has_qty": a["summary"].get("has_qty", False),
+                            "has_release": a["summary"].get("has_release", False),
                             **{f"{k}_cur": a["summary"].get(f"{k}_avg") for k in KINDS},
                             **{f"{k}_new": b["summary"].get(f"{k}_avg") for k in KINDS}}}
     bt = batch if kind == "batch" else 0

@@ -10,6 +10,10 @@
   .nk3d-info { right: .6rem; top: 3rem; width: 280px; display: none; }
   .nk3d-tools { position: absolute; right: .6rem; top: .6rem; display: flex; gap: .35rem; }
   .nk3d-walk { right: .6rem; bottom: .6rem; width: 340px; max-height: calc(100% - 4rem); overflow: auto; display: none; }
+  .nk3d-clock { left: .6rem; top: .6rem; display: none; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .nk3d-clock small { display: block; font-size: .72rem; font-weight: 400; color: #5b6770; }
+  #nkWalk.nk-collapsed > :not(.nk-keep) { display: none !important; }
+  #nkWalk.nk-collapsed { width: 260px; top: 3rem; bottom: auto; }  /* recolhido: no alto, logo abaixo dos botões */
   .nk3d-hud { left: 50%; top: .6rem; transform: translateX(-50%); display: none; min-width: 300px; font-size: .82rem; }
   .nk3d-hud .row-w { display: flex; gap: .5rem; align-items: center; white-space: nowrap; }
   .nk3d-stops { max-height: 160px; overflow: auto; font-size: .76rem; }
@@ -77,14 +81,19 @@
     <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="{{ _("Maximiza a vista 3D (Esc volta)") }}"><i class="bi bi-arrows-fullscreen"></i></button>
   </div>
   <div class="nk3d-panel nk3d-hud" id="nkHud"></div>
+  <div class="nk3d-panel nk3d-clock" id="nkClock" title="{{ _("Hora do dia na simulação") }}"></div>
   <div class="nk3d-panel nk3d-walk" id="nkWalk">
-    <div class="d-flex justify-content-between align-items-center mb-1"><b><i class="bi bi-person-walking"></i> {{ _("Simulação de caminhada") }}</b>
+    <div class="d-flex justify-content-between align-items-center mb-1 nk-keep gap-1"><b class="me-auto"><i class="bi bi-person-walking"></i> {{ _("Simulação de caminhada") }}</b>
+      <button type="button" class="btn btn-sm btn-link p-0 text-secondary" id="nkWalkToggle" title="{{ _("Recolher / expandir as opções") }}"><i class="bi bi-chevron-down"></i></button>
       <button type="button" class="btn-close btn-sm" id="nkWalkClose" aria-label="{{ _("Fechar") }}"></button></div>
     <div class="text-muted mb-1" id="nkWalkMsg"></div>
     <div id="nkScopeBox" style="display:none">
       <label class="form-label small mb-0" for="nkScope">{{ _("Simular") }}</label>
       <select class="form-select form-select-sm mb-1" id="nkScope"><option value="order">{{ _("Um pedido") }}</option><option value="day">{{ _("Um dia inteiro (todos os pedidos do dia, em sequência)") }}</option></select>
     </div>
+    <div class="form-check mb-1" id="nkRelBox" title="{{ _("Dia inteiro: os pedidos na ordem em que foram liberados; sem pedido liberado, o separador espera na referência. Pedido sem horário = início do dia. No lote, só junta pedidos já liberados.") }}">
+      <input class="form-check-input" type="checkbox" id="nkRelease" disabled>
+      <label class="form-check-label small" for="nkRelease"><i class="bi bi-clock-history"></i> {{ _("Considerar o horário de liberação") }} <span class="text-muted" id="nkRelNote"></span></label></div>
     <div id="nkOrderBox"><label class="form-label small mb-0" for="nkOrder">{{ _h("Pedido <span class=\"text-muted\">(maiores caminhadas primeiro)</span>") }}</label>
     <select class="form-select form-select-sm mb-1" id="nkOrder"></select></div>
     <div id="nkDayBox" style="display:none"><label class="form-label small mb-0" for="nkDay">{{ _("Dia") }}</label>
@@ -97,7 +106,7 @@
       <option value="opt">{{ _("Otimizada") }}</option>
       <option value="batch">{{ _("Lote (vários pedidos por trajeto)") }}</option>
     </select>
-    <div class="d-flex gap-1 align-items-center mb-1">
+    <div class="d-flex gap-1 align-items-center mb-1 nk-keep">
       <button type="button" class="btn btn-sm btn-primary" id="nkPlay" title="{{ _("Iniciar / pausar (barra de espaço)") }}"><i class="bi bi-play-fill"></i></button>
       <button type="button" class="btn btn-sm btn-outline-secondary" id="nkRestart" title="{{ _("Do início") }}"><i class="bi bi-skip-start-fill"></i></button>
       <input type="range" class="form-range flex-grow-1" id="nkProg" min="0" max="1000" value="0" title="{{ _("Arraste para avançar ou voltar") }}">
@@ -119,9 +128,6 @@
         <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold_piece) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkBatch" title="{{ _("Separação em lote (4º separador): quantos pedidos do mesmo dia vão no mesmo trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkBatch" min="2" max="20" step="1" value="{{ st.t_batch }}"></div>
-      <div class="col-12"><div class="form-check mb-0" id="nkRelBox" title="{{ _("Dia inteiro: os pedidos na ordem em que foram liberados; sem pedido liberado, o separador espera na referência. Pedido sem horário = início do dia.") }}">
-        <input class="form-check-input" type="checkbox" id="nkRelease" disabled>
-        <label class="form-check-label small" for="nkRelease">{{ _("Considerar o horário de liberação") }} <span class="text-muted" id="nkRelNote"></span></label></div></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="{{ _("Grava a simulação do início ao fim e baixa o vídeo (.webm)") }}"><i class="bi bi-record-circle"></i> {{ _("Gravar vídeo") }}</button>
@@ -466,7 +472,7 @@ function openWalk(show = true, order = '', day = '') {
   if (refLabel) refLabel.visible = !show;
   if (!show) {
     if (WK.rec) stopRec(true);
-    WK.playing = false; setPlayIcon(); clearWalk(); controls.enabled = true; $('nkHud').style.display = 'none'; return;
+    WK.playing = false; setPlayIcon(); clearWalk(); controls.enabled = true; $('nkHud').style.display = 'none'; $('nkClock').style.display = 'none'; return;
   }
   loadOrders(order, day);
 }
@@ -589,8 +595,18 @@ function build() {
     let t = 0, dPrev = 0;
     R.stops.forEach((pi, s) => {
       const dd = cum[pi];
-      // horário de liberação (dia inteiro): ao sair para um novo pedido/trajeto, espera na referência até ele ser liberado
-      if (R.rel && (s === 0 || R.ord[s] !== R.ord[s - 1]) && R.rel[s] > t) ev.push({ t0: t, t1: (t = R.rel[s]), d0: dPrev, d1: dPrev, wait: true });
+      // horário de liberação (dia inteiro): ao começar um novo pedido/trajeto, o separador volta à referência (início
+      // do trecho) e espera LÁ até o pedido ser liberado
+      if (R.rel && (s === 0 || R.ord[s] !== R.ord[s - 1])) {
+        let k0 = 0;
+        (R.starts || []).forEach(p => { if (p <= pi) k0 = p; });
+        const dStart = Math.max(dPrev, cum[k0] || 0), tRet = t + (dStart - dPrev) * k2m / walkV();
+        if (R.rel[s] > tRet) {
+          if (dStart > dPrev) ev.push({ t0: t, t1: (t = tRet), d0: dPrev, d1: dStart });
+          ev.push({ t0: t, t1: (t = R.rel[s]), d0: dStart, d1: dStart, wait: true });
+          dPrev = dStart;
+        }
+      }
       ev.push({ t0: t, t1: (t += (dd - dPrev) * k2m / walkV()), d0: dPrev, d1: dd });
       arrS[s] = t;
       if (arrive[R.keys[s]] == null) arrive[R.keys[s]] = t;
@@ -674,6 +690,10 @@ function hudLines() {
   const d = WK.data;
   const pcs = d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '';
   const out = [{ text: _t('Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}', {order: d.order, lines: d.lines, stops: d.stops, pcs, mmss: mmss(Math.min(WK.t, WK.T))}), bold: true }];
+  if (d.day && d.clock_s != null) {  // relógio: hora do dia na simulação (também no vídeo)
+    const c = clockText(d.clock_s + Math.min(WK.t, WK.T));
+    out.splice(1, 0, { text: _t('Hora: {h}', {h: c}) + (d.clock_guess ? ' ' + _t('(início presumido às 08:00)') : ''), bold: true });
+  }
   if (d.day) {  // dia inteiro: em que pedido o 1º separador está
     const w0 = WK.walkers[0], R = w0.R;
     let s = R.keys.findIndex((k, i) => w0.arrS[i] + stopT(R, i) > WK.t + 1e-9);
@@ -690,8 +710,15 @@ function hudLines() {
   });
   return out;
 }
+const clockText = sec => { sec = Math.max(0, Math.floor(sec)) % 86400;
+  return `${String(Math.floor(sec / 3600)).padStart(2, '0')}:${String(Math.floor(sec % 3600 / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`; };
 function hud() {
   if (!WK.walkers.length || !WK.data) return;
+  const d = WK.data, ck = $('nkClock');
+  if (d.day && d.clock_s != null) {
+    ck.style.display = 'block';
+    ck.innerHTML = `<i class="bi bi-clock"></i> ${clockText(d.clock_s + Math.min(WK.t, WK.T))}<small>${esc(fmtDay(d.day))}${d.clock_guess ? ' · ' + esc(_t('início presumido às 08:00')) : ''}</small>`;
+  } else ck.style.display = 'none';
   $('nkHud').innerHTML = hudLines().map(l => `<div class="row-w">${l.color ? `<span class="nk3d-sw" style="background:${l.color}"></span>` : ''}` +
     `<span${l.bold ? ' class="fw-semibold"' : ''}>${esc(l.text)}</span></div>`).join('');
   const w0 = WK.walkers[0];
@@ -834,6 +861,14 @@ if (CMP) {  // comparação: a rota escolhida vem do servidor (as duas situaçõ
 }
 [...(CMP ? [] : ['nkRoute']), 'nkWalkV', 'nkPick', 'nkPiece', 'nkGoldItem', 'nkGoldP'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
 $('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
+// painel da simulação recolhível (fica só o título e os controles de tocar): a escolha fica lembrada
+const walkCollapse = on => {
+  $('nkWalk').classList.toggle('nk-collapsed', on);
+  $('nkWalkToggle').innerHTML = on ? '<i class="bi bi-chevron-up"><\/i>' : '<i class="bi bi-chevron-down"><\/i>';
+  try { localStorage.setItem('nk-walk-collapsed', on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+};
+$('nkWalkToggle').addEventListener('click', () => walkCollapse(!$('nkWalk').classList.contains('nk-collapsed')));
+try { if (localStorage.getItem('nk-walk-collapsed') === '1') walkCollapse(true); } catch (e) { /* idem */ }
 $('nkRelease').addEventListener('change', () => {  // a ordem e os trajetos do dia mudam (vêm do servidor)
   if (WK.rec) stopRec(true);
   if (WK.data) { WK.stale = true; if (isDay()) loadDay($('nkDay').value); else loadOrder($('nkOrder').value); }

@@ -746,6 +746,9 @@ def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, 
         if m is not None:
             m["name"] = _("Lote — {n} trajetos", n=len(m["trips"]))
             routes["batch"] = m
-    return {"day": day, "order": day, "orders": done, "release": release, "start_s": day0 if release else None, "lines": tot["lines"], "stops": tot["stops"],
+    # relógio do vídeo: começa no 1º horário de liberação do dia (com a coluna, mesmo com a opção desligada) ou, sem
+    # horário nenhum, às 8h (presumido)
+    return {"day": day, "order": day, "orders": done, "release": release, "start_s": day0 if release else None,
+            "clock_s": day0 if rels else 8 * 3600, "clock_guess": not rels, "lines": tot["lines"], "stops": tot["stops"],
             "units": round(tot["units"], 3), "out_gold": tot["out_gold"], "has_qty": has_qty, "has_gold": has_gold,
             "ref": ref, "routes": routes}

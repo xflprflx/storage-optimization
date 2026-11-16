@@ -123,3 +123,27 @@ def test_3d_clock_and_compare_flag():
     assert plain["clock_s"] == 8 * 3600 and plain["clock_guess"]  # sem horário: 08:00 presumido
     lst = payload_3d(sample, nodes, nodes, start, ref)
     assert lst["summary"]["has_release"]  # o 3D do hoje × proposta habilita a opção
+
+
+def test_idle_insights_find_idle_hours_queue_and_pickers():
+    from services.route_sim import idle_insights
+
+    nodes, start = _aisle()
+    # 8h: 25 pedidos liberados juntos (fila); depois nada até as 10h (ocioso); 10h: mais 2 pedidos
+    sample = [[f"P{j:02d}", [f"S{j % 29 + 1}"], [3], "2026-11-01", 8 * 3600] for j in range(25)] + \
+             [[f"Q{j}", ["S2"], [1], "2026-11-01", 10 * 3600] for j in range(2)]
+    tp = time_params({"t_batch": "3"})
+    sim = add_times(simulate(sample, nodes, start, batch=3, release=True, tp=tp), tp)
+    ins = sim["insights"]["opt"]
+    hours = {r["h"]: r for r in ins["per_hour"]}
+    assert hours[8]["released"] == 25 and hours[8]["wait_m"] > 5  # a fila das 8h
+    assert ins["worst_wait"]["h"] == 8
+    assert hours[9]["idle_m"] > 30  # entre 9h e 10h o separador fica parado
+    assert ins["longest_gap"]["to"] == 10 * 3600  # a maior pausa termina quando saem os pedidos das 10h
+    kinds = {t["kind"] for t in ins["tips"]}
+    assert {"idle", "queue"} <= kinds
+    idle_tip = next(t for t in ins["tips"] if t["kind"] == "idle")
+    assert idle_tip["windows"] == sorted(idle_tip["windows"])  # janelas em ordem
+    assert "bopt" in sim["insights"]  # também em lote
+    # sem a opção: sem insights
+    assert "insights" not in add_times(simulate(sample, nodes, start, tp=tp), tp)

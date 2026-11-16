@@ -691,7 +691,7 @@
  },
  "1º horário de liberação do dia → término do último pedido (rota otimizada · lote)": {
   "src": [
-   "templates/slotting/routes.html:81"
+   "templates/slotting/routes.html:160"
   ]
  },
  "1º nível": {
@@ -874,6 +874,11 @@
    "templates/slotting/routes.html:26"
   ]
  },
+ "90% dos pedidos começam em até {m} min após liberados": {
+  "src": [
+   "templates/slotting/routes.html:87"
+  ]
+ },
  ": ele ocupa os níveis da estante, não o próprio nível. Escolha na coluna \"Nível\" em qual nível fica cada linha de bins; sem nível escolhido, o 3D preenche a estante de baixo para cima e a zona de ouro da pega considera os níveis onde as bins ficam.": {
   "src": [
    "templates/locations/form.html:56"
@@ -1012,6 +1017,12 @@
   ],
   "js": true
  },
+ "<b>Em lote</b>: {a} h ociosas por dia (contra {b} h pedido a pedido) e espera média de {wa} min (contra {wb} min).": {
+  "src": [
+   "templates/slotting/routes.html:124"
+  ],
+  "html": true
+ },
  "<b>Endereço genérico</b>: não usa o próprio nível — as bins ficam no nível escolhido em cada linha (coluna \"Nível\") ou ocupam os níveis da estante de baixo para cima": {
   "src": [
    "templates/locations/form.html:41"
@@ -1086,7 +1097,7 @@
  },
  "<b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). <b>Lote</b>: o separador leva vários pedidos do mesmo dia no mesmo trajeto; o sistema junta os pedidos que menos aumentam o caminho e faz a melhor rota pelas paradas de todos (a caminhada e as paradas do trajeto são divididas entre os pedidos). Cada SKU é buscado na posição dele mais perto da referência. {dist_note}": {
   "src": [
-   "templates/slotting/routes.html:101"
+   "templates/slotting/routes.html:180"
   ],
   "html": true
  },
@@ -1389,7 +1400,7 @@
  },
  "<span style=\"color:#d62728\">━</span> lista {list_m} m · <span style=\"color:#2f6db5\">━</span> serpentina {s_m} m · <span style=\"color:#1a9850\">━</span> otimizada {opt_m} m · {stops} parada(s)": {
   "src": [
-   "templates/slotting/routes.html:108"
+   "templates/slotting/routes.html:187"
   ],
   "html": true
  },
@@ -1471,7 +1482,7 @@
  },
  "A caixa, gaveta ou palete dentro do endereço. Quantas unidades cabem nela é o menor de três limites: encaixe em grade, volume × enchimento máximo e peso máximo.": {
   "src": [
-   "services/onboarding.py:252"
+   "services/onboarding.py:255"
   ],
   "lazy": true
  },
@@ -1571,6 +1582,12 @@
    "services/onboarding.py:78"
   ],
   "lazy": true
+ },
+ "A fila cresce entre <b>{h}</b>: os pedidos esperam em média {m} min para começar. Liberar parte desses pedidos antes ou reforçar a separação nesse horário encurta a espera.": {
+  "src": [
+   "templates/slotting/routes.html:118"
+  ],
+  "html": true
  },
  "A fileira do outro lado do corredor: as duas formam um corredor de caminhada. Automático usa a mais perto que olha para esta.": {
   "src": [
@@ -1811,7 +1828,7 @@
  },
  "Abra o projeto, clique em Salvar e otimizar e depois em Gerar cadastro da filial: endereços, produtos e histórico são criados.": {
   "src": [
-   "services/onboarding.py:287"
+   "services/onboarding.py:290"
   ],
   "lazy": true
  },
@@ -1915,7 +1932,7 @@
  },
  "Afinidade": {
   "src": [
-   "services/onboarding.py:269"
+   "services/onboarding.py:272"
   ],
   "lazy": true
  },
@@ -2630,7 +2647,7 @@
   "src": [
    "routers/warehouses.py:25",
    "services/onboarding.py:53",
-   "services/onboarding.py:295",
+   "services/onboarding.py:298",
    "templates/base.html:115",
    "templates/base.html:136",
    "templates/branches/list.html:24"
@@ -2854,6 +2871,11 @@
   ],
   "js": true
  },
+ "As barras escuras são os 3 horários mais ociosos. Passe o mouse numa barra para ver o detalhe da hora.": {
+  "src": [
+   "templates/slotting/routes.html:109"
+  ]
+ },
  "As bins de hoje são o \"antes\". Sem elas o sistema não sabe o que trocar e todo endereço aparece como \"Bins atuais não comportam o saldo\".": {
   "src": [
    "services/onboarding.py:96"
@@ -2873,7 +2895,7 @@
  },
  "As bins ficam e os produtos mudam de endereço, agrupando-se em menos bins. Libera mais espaço, mas exige movimentar produtos.": {
   "src": [
-   "services/onboarding.py:320"
+   "services/onboarding.py:323"
   ],
   "lazy": true
  },
@@ -2885,7 +2907,7 @@
  },
  "As caixas, gavetas ou paletes com as medidas INTERNAS. Inclua os tipos que você poderia comprar: o sistema só propõe tipos cadastrados.": {
   "src": [
-   "services/onboarding.py:297"
+   "services/onboarding.py:300"
   ],
   "lazy": true
  },
@@ -3228,7 +3250,7 @@
  },
  "Bin e capacidade": {
   "src": [
-   "services/onboarding.py:251"
+   "services/onboarding.py:254"
   ],
   "lazy": true
  },
@@ -3461,7 +3483,7 @@
  },
  "Bins nos endereços": {
   "src": [
-   "services/onboarding.py:304"
+   "services/onboarding.py:307"
   ],
   "lazy": true
  },
@@ -3612,7 +3634,7 @@
   "src": [
    "services/onboarding.py:93",
    "services/onboarding.py:149",
-   "services/onboarding.py:232"
+   "services/onboarding.py:235"
   ],
   "lazy": true
  },
@@ -3819,7 +3841,7 @@
  },
  "Cadastrar a sua operação": {
   "src": [
-   "services/onboarding.py:290"
+   "services/onboarding.py:293"
   ],
   "lazy": true
  },
@@ -3830,7 +3852,7 @@
  },
  "Cadastrar ou importar": {
   "src": [
-   "services/onboarding.py:229"
+   "services/onboarding.py:232"
   ],
   "lazy": true
  },
@@ -3950,7 +3972,7 @@
  },
  "Calibre os tempos (velocidade, parada, peça) com a sua operação e simule pedidos e dias inteiros para estimar horas de separação.": {
   "src": [
-   "services/onboarding.py:333"
+   "services/onboarding.py:336"
   ],
   "lazy": true
  },
@@ -4024,7 +4046,7 @@
  },
  "Caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro × tempo extra. Endereços do mesmo módulo contam como uma parada.": {
   "src": [
-   "services/onboarding.py:272"
+   "services/onboarding.py:275"
   ],
   "lazy": true
  },
@@ -4145,7 +4167,7 @@
    "routers/levels.py:22",
    "routers/optimization.py:1020",
    "services/onboarding.py:120",
-   "services/onboarding.py:306",
+   "services/onboarding.py:309",
    "templates/base.html:119",
    "templates/base.html:139"
   ],
@@ -4305,7 +4327,7 @@
  },
  "Classificação por popularidade no histórico: A são os SKUs que somam 80% das saídas (poucos itens, muito movimento), B os que levam até 95% e C o resto.": {
   "src": [
-   "services/onboarding.py:264"
+   "services/onboarding.py:267"
   ],
   "lazy": true
  },
@@ -4506,13 +4528,19 @@
  },
  "Com o cadastro pronto, veja quantas bins e quanto espaço você economiza.": {
   "src": [
-   "services/onboarding.py:315"
+   "services/onboarding.py:318"
   ],
   "lazy": true
  },
  "Com o histórico o sistema calcula a popularidade de cada SKU (curva ABC: A = os que somam 80% das saídas, B até 95%, C o resto) e quais saem juntos no mesmo pedido (afinidade).": {
   "src": [
    "services/onboarding.py:116"
+  ],
+  "lazy": true
+ },
+ "Com o horário de liberação ligado: em que horas o separador fica parado, onde a fila cresce, quantos separadores dariam conta em cada hora e o efeito do lote.": {
+  "src": [
+   "services/onboarding.py:228"
   ],
   "lazy": true
  },
@@ -4694,7 +4722,7 @@
  },
  "Compare cenários (ex.: enchimento 85% × 90%) e exporte o plano de implantação para a equipe executar.": {
   "src": [
-   "services/onboarding.py:322"
+   "services/onboarding.py:325"
   ],
   "lazy": true
  },
@@ -4900,7 +4928,7 @@
  "Configurações": {
   "src": [
    "routers/settings.py:13",
-   "services/onboarding.py:241",
+   "services/onboarding.py:244",
    "templates/base.html:124",
    "templates/settings.html:2",
    "templates/settings.html:4"
@@ -4946,7 +4974,7 @@
  },
  "Conheça as telas": {
   "src": [
-   "services/onboarding.py:281"
+   "services/onboarding.py:284"
   ],
   "lazy": true
  },
@@ -5060,7 +5088,7 @@
  },
  "Copie as medidas de um produto para vários de uma vez, útil para variações de cor ou tamanho com a mesma embalagem.": {
   "src": [
-   "services/onboarding.py:233"
+   "services/onboarding.py:236"
   ],
   "lazy": true
  },
@@ -5204,7 +5232,7 @@
  },
  "Corredor-Estante-Nível-Posição (ex.: A-01-2-1). Gere em lote a partir das faixas (ex.: corredores A a D, estantes 01 a 20) ou importe.": {
   "src": [
-   "services/onboarding.py:302"
+   "services/onboarding.py:305"
   ],
   "lazy": true
  },
@@ -5385,7 +5413,7 @@
  },
  "Crie um projeto a partir de um exemplo": {
   "src": [
-   "services/onboarding.py:283"
+   "services/onboarding.py:286"
   ],
   "lazy": true
  },
@@ -5409,7 +5437,7 @@
  },
  "Curva ABC": {
   "src": [
-   "services/onboarding.py:263",
+   "services/onboarding.py:266",
    "services/site_report.py:349",
    "services/slotting.py:560",
    "templates/slotting/skus.html:21"
@@ -5753,7 +5781,7 @@
  },
  "Da pega: a faixa de altura confortável (ex.: 75–150 cm). Da caminhada: os endereços mais perto da expedição (padrão: os 20% mais perto). Os produtos A devem estar nas duas.": {
   "src": [
-   "services/onboarding.py:266"
+   "services/onboarding.py:269"
   ],
   "lazy": true
  },
@@ -5772,7 +5800,7 @@
    "services/site_import.py:211",
    "services/site_import.py:866",
    "templates/optimization/page.html:507",
-   "templates/slotting/routes.html:119",
+   "templates/slotting/routes.html:198",
    "static/field_help.js:193"
   ],
   "lazy": true,
@@ -5837,7 +5865,7 @@
  },
  "Decidir o endereço de cada produto pela popularidade: os mais procurados nos melhores lugares, para reduzir caminhada e esforço na separação.": {
   "src": [
-   "services/onboarding.py:268"
+   "services/onboarding.py:271"
   ],
   "lazy": true
  },
@@ -6002,7 +6030,7 @@
  },
  "Desempate (prioridade)": {
   "src": [
-   "services/onboarding.py:257"
+   "services/onboarding.py:260"
   ],
   "lazy": true
  },
@@ -6036,7 +6064,7 @@
  },
  "Desenhe a planta para medir a caminhada pelos corredores e ver o estoque em 3D.": {
   "src": [
-   "services/onboarding.py:337"
+   "services/onboarding.py:340"
   ],
   "lazy": true
  },
@@ -6121,7 +6149,7 @@
    "services/field_help.py:64",
    "templates/optimization/page.html:493",
    "templates/site/view3d.html:99",
-   "templates/slotting/routes.html:77"
+   "templates/slotting/routes.html:156"
   ],
   "help": true
  },
@@ -6135,6 +6163,16 @@
    "templates/site/view3d.html:701"
   ],
   "js": true
+ },
+ "Dias mais ociosos:": {
+  "src": [
+   "templates/slotting/routes.html:127"
+  ]
+ },
+ "Dias menos ociosos:": {
+  "src": [
+   "templates/slotting/routes.html:128"
+  ]
  },
  "Diferença": {
   "src": [
@@ -6551,7 +6589,7 @@
  },
  "Em Projeto de filial nova, escolha um dos exemplos prontos e clique em Criar projeto.": {
   "src": [
-   "services/onboarding.py:284"
+   "services/onboarding.py:287"
   ],
   "lazy": true
  },
@@ -6723,7 +6761,7 @@
    "routers/optimization.py:737",
    "routers/optimization.py:1016",
    "routers/optimization.py:1032",
-   "services/onboarding.py:253"
+   "services/onboarding.py:256"
   ],
   "lazy": true
  },
@@ -6766,7 +6804,7 @@
  },
  "Encontre por SKU, descrição ou material.": {
   "src": [
-   "services/onboarding.py:232"
+   "services/onboarding.py:235"
   ],
   "lazy": true
  },
@@ -6997,8 +7035,8 @@
   "src": [
    "routers/locations.py:73",
    "services/onboarding.py:92",
-   "services/onboarding.py:242",
-   "services/onboarding.py:302",
+   "services/onboarding.py:245",
+   "services/onboarding.py:305",
    "services/site_report.py:223",
    "services/site_report.py:341"
   ],
@@ -7158,6 +7196,12 @@
    "static/field_help.js:230"
   ],
   "js": true
+ },
+ "Entre <b>{h}</b> são liberados {w} min de trabalho por hora: seriam precisos <b>{p} separadores</b> para não formar fila nesse horário.": {
+  "src": [
+   "templates/slotting/routes.html:119"
+  ],
+  "html": true
  },
  "Entre com o seu usuário para continuar.": {
   "src": [
@@ -7344,7 +7388,7 @@
  },
  "Escolha o objetivo \"Menor tempo de separação\": os SKUs da curva A vão para perto da expedição e para a zona de ouro. O resultado compara hoje × proposta em caminhada e horas.": {
   "src": [
-   "services/onboarding.py:331"
+   "services/onboarding.py:334"
   ],
   "lazy": true
  },
@@ -7479,12 +7523,22 @@
  },
  "Espera do pedido": {
   "src": [
-   "templates/slotting/routes.html:82"
+   "templates/slotting/routes.html:161"
   ]
  },
  "Espera do pedido (liberação → pronto)": {
   "src": [
    "templates/optimization/page.html:485"
+  ]
+ },
+ "Espera média (min)": {
+  "src": [
+   "templates/slotting/routes.html:136"
+  ]
+ },
+ "Espera na fila": {
+  "src": [
+   "templates/slotting/routes.html:85"
   ]
  },
  "Esta filial ainda não tem planta desenhada.": {
@@ -7782,7 +7836,7 @@
  "Estruturas de armazenagem": {
   "src": [
    "routers/structures.py:15",
-   "services/onboarding.py:299",
+   "services/onboarding.py:302",
    "templates/base.html:120",
    "templates/site/project.html:230",
    "templates/structures/list.html:3",
@@ -8277,7 +8331,7 @@
  },
  "Explorar com dados de exemplo": {
   "src": [
-   "services/onboarding.py:278"
+   "services/onboarding.py:281"
   ],
   "lazy": true
  },
@@ -8898,7 +8952,7 @@
    "templates/_macros.html:23",
    "templates/runs/detail.html:50",
    "templates/runs/list.html:26",
-   "templates/slotting/routes.html:117"
+   "templates/slotting/routes.html:196"
   ]
  },
  "Filtrar SKU, produto ou ABC": {
@@ -8944,7 +8998,7 @@
  },
  "Filtre por SKU, endereço, filial e armazém.": {
   "src": [
-   "services/onboarding.py:239"
+   "services/onboarding.py:242"
   ],
   "lazy": true
  },
@@ -8956,7 +9010,7 @@
  },
  "Filtros": {
   "src": [
-   "services/onboarding.py:239"
+   "services/onboarding.py:242"
   ],
   "lazy": true
  },
@@ -9260,7 +9314,7 @@
  },
  "Ganho": {
   "src": [
-   "templates/slotting/routes.html:83"
+   "templates/slotting/routes.html:162"
   ]
  },
  "Genérico (sim/não)": {
@@ -9350,7 +9404,7 @@
  },
  "Gere automaticamente, ajuste fileiras e obstáculos e marque a expedição: a caminhada passa a ser medida pelos corredores reais.": {
   "src": [
-   "services/onboarding.py:341"
+   "services/onboarding.py:344"
   ],
   "lazy": true
  },
@@ -9490,7 +9544,7 @@
  },
  "Heurística: regra rápida que decide um item por vez; boa, mas sem garantia. Pesquisa operacional: modelo matemático do escopo inteiro resolvido por um solver (OR-Tools); diz se a solução é ótima comprovada ou a melhor achada no tempo limite.": {
   "src": [
-   "services/onboarding.py:260"
+   "services/onboarding.py:263"
   ],
   "lazy": true
  },
@@ -9548,7 +9602,7 @@
  "Histórico de saídas": {
   "src": [
    "services/onboarding.py:112",
-   "services/onboarding.py:328"
+   "services/onboarding.py:331"
   ],
   "lazy": true
  },
@@ -9614,6 +9668,11 @@
    "services/route_compare.py:176"
   ]
  },
+ "Hora": {
+  "src": [
+   "templates/slotting/routes.html:134"
+  ]
+ },
  "Hora do dia na simulação": {
   "src": [
    "templates/site/view3d.html:84"
@@ -9632,12 +9691,12 @@
  },
  "Horas de separação no dia (caminhada + paradas + pega), em cada rota": {
   "src": [
-   "templates/slotting/routes.html:80"
+   "templates/slotting/routes.html:159"
   ]
  },
  "Horas: lista · serp. · otim.": {
   "src": [
-   "templates/slotting/routes.html:80"
+   "templates/slotting/routes.html:159"
   ]
  },
  "Horário de liberação para separação (opcional: simular com o horário)": {
@@ -9651,6 +9710,12 @@
    "templates/layout/index.html:317"
   ],
   "js": true
+ },
+ "Há em média <b>{n}</b> pausas de 15 min ou mais por dia esperando pedidos — tempo que pode ir para outra atividade.": {
+  "src": [
+   "templates/slotting/routes.html:121"
+  ],
+  "html": true
  },
  "Há unidades que não cabem pela geometria": {
   "src": [
@@ -9808,25 +9873,25 @@
  },
  "Importe endereço, SKU e quantidade. É a quantidade que precisa caber nas bins propostas.": {
   "src": [
-   "services/onboarding.py:311"
+   "services/onboarding.py:314"
   ],
   "lazy": true
  },
  "Importe o saldo por endereço do seu ERP/WMS: endereço, SKU e quantidade.": {
   "src": [
-   "services/onboarding.py:237"
+   "services/onboarding.py:240"
   ],
   "lazy": true
  },
  "Importe os SKUs com as medidas da unidade que fica na bin (cm e kg). Sem medidas, o produto aparece como \"Faltam dimensões\".": {
   "src": [
-   "services/onboarding.py:309"
+   "services/onboarding.py:312"
   ],
   "lazy": true
  },
  "Importe os produtos com as medidas da UNIDADE que fica na bin (a peça ou a caixa de venda, não o fardo).": {
   "src": [
-   "services/onboarding.py:230"
+   "services/onboarding.py:233"
   ],
   "lazy": true
  },
@@ -10006,6 +10071,13 @@
    "templates/site/view3d.html:110"
   ]
  },
+ "Insights de ociosidade": {
+  "src": [
+   "services/onboarding.py:227",
+   "templates/slotting/routes.html:74"
+  ],
+  "lazy": true
+ },
  "Instruções": {
   "src": [
    "services/site_import.py:784"
@@ -10040,7 +10112,7 @@
  },
  "Início → término": {
   "src": [
-   "templates/slotting/routes.html:81"
+   "templates/slotting/routes.html:160"
   ]
  },
  "Isso se chama otimização lexicográfica: o 2º critério nunca piora o 1º, só escolhe entre empates. Por isso a ordem importa.": {
@@ -10209,7 +10281,7 @@
  },
  "Lançar ou importar": {
   "src": [
-   "services/onboarding.py:236"
+   "services/onboarding.py:239"
   ],
   "lazy": true
  },
@@ -10609,8 +10681,8 @@
   "src": [
    "templates/optimization/page.html:493",
    "templates/optimization/page.html:507",
-   "templates/slotting/routes.html:77",
-   "templates/slotting/routes.html:119",
+   "templates/slotting/routes.html:156",
+   "templates/slotting/routes.html:198",
    "templates/slotting/skus.html:37"
   ]
  },
@@ -10664,12 +10736,12 @@
  },
  "Lista (km)": {
   "src": [
-   "templates/slotting/routes.html:78"
+   "templates/slotting/routes.html:157"
   ]
  },
  "Lista (m)": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Lista de SKUs com a coluna Saída": {
@@ -10687,7 +10759,7 @@
  },
  "Lista de separação": {
   "src": [
-   "services/route_sim.py:572",
+   "services/route_sim.py:670",
    "templates/optimization/page.html:462",
    "templates/slotting/routes.html:42"
   ],
@@ -10730,12 +10802,12 @@
  },
  "Lote (km)": {
   "src": [
-   "templates/slotting/routes.html:79"
+   "templates/slotting/routes.html:158"
   ]
  },
  "Lote (m)": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Lote (vários pedidos por trajeto)": {
@@ -10779,7 +10851,7 @@
  },
  "Lote otimizado: trajetos no dia e quilômetros": {
   "src": [
-   "templates/slotting/routes.html:79"
+   "templates/slotting/routes.html:158"
   ]
  },
  "Lote otimizado: vários pedidos por trajeto (por pedido)": {
@@ -10789,12 +10861,12 @@
  },
  "Lote — {n} pedidos no trajeto": {
   "src": [
-   "services/route_sim.py:622"
+   "services/route_sim.py:720"
   ]
  },
  "Lote — {n} trajetos": {
   "src": [
-   "services/route_sim.py:747"
+   "services/route_sim.py:845"
   ]
  },
  "Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).": {
@@ -10829,6 +10901,11 @@
  "Maior fator de demanda que cabe sem falta de espaço (busca com o próprio otimizador):": {
   "src": [
    "templates/site/suggest.html:28"
+  ]
+ },
+ "Maior intervalo ocioso": {
+  "src": [
+   "templates/slotting/routes.html:82"
   ]
  },
  "Maior ocupação das bins (volume das unidades ÷ volume das bins)": {
@@ -10868,7 +10945,7 @@
    "routers/layout.py:240",
    "services/onboarding.py:128",
    "services/onboarding.py:36",
-   "services/onboarding.py:339",
+   "services/onboarding.py:342",
    "templates/base.html:127"
   ],
   "lazy": true
@@ -11200,7 +11277,7 @@
  },
  "Medidas em massa": {
   "src": [
-   "services/onboarding.py:233"
+   "services/onboarding.py:236"
   ],
   "lazy": true
  },
@@ -11508,7 +11585,7 @@
  },
  "Monte o cadastro da sua filial real. Cada etapa pode ser digitada ou importada de planilha.": {
   "src": [
-   "services/onboarding.py:291"
+   "services/onboarding.py:294"
   ],
   "lazy": true
  },
@@ -11532,7 +11609,7 @@
  },
  "Mostra o separador andando pelas três rotas no arranjo 3D e grava em vídeo": {
   "src": [
-   "templates/slotting/routes.html:107"
+   "templates/slotting/routes.html:186"
   ]
  },
  "Mostra os endereços com produtos deste tipo de material.": {
@@ -11639,7 +11716,7 @@
  },
  "Mostrando só os pedidos de <b>{day}</b>.": {
   "src": [
-   "templates/slotting/routes.html:96"
+   "templates/slotting/routes.html:175"
   ],
   "html": true
  },
@@ -12182,7 +12259,7 @@
  },
  "Nenhum pedido do dia {day} na amostra.": {
   "src": [
-   "services/route_sim.py:691"
+   "services/route_sim.py:789"
   ]
  },
  "Nenhum produto cadastrado.": {
@@ -13182,7 +13259,7 @@
  },
  "O caminho mais rápido para ver o sistema funcionando: cria uma filial completa a partir de um exemplo, sem preparar planilhas.": {
   "src": [
-   "services/onboarding.py:279"
+   "services/onboarding.py:282"
   ],
   "lazy": true
  },
@@ -13248,6 +13325,12 @@
   ],
   "lazy": true
  },
+ "O horário mais carregado é <b>{h}</b>: o separador trabalha {pct}% do tempo nessa hora.": {
+  "src": [
+   "templates/slotting/routes.html:117"
+  ],
+  "html": true
+ },
  "O imóvel não comporta nenhuma fileira com corredor nessa orientação.": {
   "src": [
    "services/site_planner.py:589",
@@ -13261,7 +13344,7 @@
  },
  "O local da operação, com um código curto (ex.: CD01) igual ao do seu ERP/WMS. Tudo o mais pertence a uma filial.": {
   "src": [
-   "services/onboarding.py:293"
+   "services/onboarding.py:296"
   ],
   "lazy": true
  },
@@ -13419,6 +13502,11 @@
   ],
   "help": true
  },
+ "O que os números dizem": {
+  "src": [
+   "templates/slotting/routes.html:112"
+  ]
+ },
  "O que otimizar": {
   "src": [
    "templates/optimization/page.html:114",
@@ -13456,14 +13544,20 @@
  },
  "O saldo é o \"antes\": a otimização compara as bins de hoje com a proposta para essas quantidades.": {
   "src": [
-   "services/onboarding.py:238"
+   "services/onboarding.py:241"
   ],
   "lazy": true
  },
  "O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)": {
   "src": [
-   "templates/slotting/routes.html:93"
+   "templates/slotting/routes.html:172"
   ]
+ },
+ "O separador fica parado <b>{pct}%</b> do turno: a demanda cabe com folga. Dá para concentrar a liberação em ondas ou dividir o tempo com outras tarefas.": {
+  "src": [
+   "templates/slotting/routes.html:120"
+  ],
+  "html": true
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).": {
   "src": [
@@ -13562,7 +13656,7 @@
  },
  "Objetivo e restrições": {
   "src": [
-   "services/onboarding.py:255"
+   "services/onboarding.py:258"
   ],
   "lazy": true
  },
@@ -13579,7 +13673,7 @@
  },
  "Objetivo é o que se quer minimizar ou maximizar (ex.: volume de bins). Restrições são regras que nunca podem ser quebradas (o saldo cabe, a bin cabe no nível). Otimizar é achar a melhor solução que respeita todas as regras.": {
   "src": [
-   "services/onboarding.py:256"
+   "services/onboarding.py:259"
   ],
   "lazy": true
  },
@@ -13661,6 +13755,27 @@
    "services/site_import.py:522"
   ]
  },
+ "Ociosidade alta num horário fixo é tempo para reposição ou inventário; fila num horário é sinal para liberar pedidos antes ou reforçar a equipe só naquela hora.": {
+  "src": [
+   "services/onboarding.py:229"
+  ],
+  "lazy": true
+ },
+ "Ociosidade por hora do dia": {
+  "src": [
+   "templates/slotting/routes.html:96"
+  ]
+ },
+ "Ociosidade por hora do dia (minutos por dia, em média)": {
+  "src": [
+   "templates/slotting/routes.html:94"
+  ]
+ },
+ "Ocioso (min)": {
+  "src": [
+   "templates/slotting/routes.html:135"
+  ]
+ },
  "Ocorreu um erro ao processar a solicitação.": {
   "src": [
    "templates/error.html:7"
@@ -13714,7 +13829,8 @@
    "templates/dashboard.html:82",
    "templates/layout/index.html:63",
    "templates/locations/form.html:100",
-   "templates/locations/list.html:65"
+   "templates/locations/list.html:65",
+   "templates/slotting/routes.html:135"
   ]
  },
  "Ocupação (tem saldo ou não), % enchimento (volume do saldo ÷ volume das bins) ou tipo de bin. Enchimento baixo indica bins grandes demais para o saldo.": {
@@ -13768,7 +13884,7 @@
  },
  "Ocupação e preenchimento de cada corredor, estante e nível: mostra onde há bins grandes demais para o saldo.": {
   "src": [
-   "services/onboarding.py:339"
+   "services/onboarding.py:342"
   ],
   "lazy": true
  },
@@ -13899,7 +14015,7 @@
  },
  "Ordem natural (2 antes de 10) ou alfabética, e se 07 e 7 são o mesmo código. Afeta a ordem das listas de separação.": {
   "src": [
-   "services/onboarding.py:242"
+   "services/onboarding.py:245"
   ],
   "lazy": true
  },
@@ -13911,7 +14027,7 @@
  },
  "Ordenados pela caminhada na lista (maiores primeiro)": {
   "src": [
-   "templates/slotting/routes.html:124"
+   "templates/slotting/routes.html:203"
   ]
  },
  "Ordenar por {label}": {
@@ -13951,12 +14067,12 @@
  },
  "Os SKUs do pedido {order} não estão na planta.": {
   "src": [
-   "services/route_sim.py:641"
+   "services/route_sim.py:739"
   ]
  },
  "Os SKUs dos pedidos do dia {day} não estão na planta.": {
   "src": [
-   "services/route_sim.py:723"
+   "services/route_sim.py:821"
   ]
  },
  "Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem juntos ficam perto. Usa o motor heurístico.": {
@@ -13988,9 +14104,15 @@
   ],
   "help": true
  },
+ "Os horários mais ociosos são <b>{hours}</b> ({m} min parados por dia, somados). Bom momento para reposição, inventário ou para antecipar a liberação dos pedidos seguintes.": {
+  "src": [
+   "templates/slotting/routes.html:116"
+  ],
+  "html": true
+ },
  "Os módulos (estantes, porta-paletes) com frente, níveis e zona de ouro. Com eles, a zona de ouro e a caminhada usam medidas reais em vez de estimativas.": {
   "src": [
-   "services/onboarding.py:300"
+   "services/onboarding.py:303"
   ],
   "lazy": true
  },
@@ -14023,7 +14145,7 @@
  },
  "Os produtos ficam onde estão e o sistema troca as bins. Comece com o objetivo \"Menos volume de bins\" e o motor de pesquisa operacional.": {
   "src": [
-   "services/onboarding.py:318"
+   "services/onboarding.py:321"
   ],
   "lazy": true
  },
@@ -14035,7 +14157,7 @@
  },
  "Os tempos padrão da separação (velocidade, parada, peça, fora do ouro) e as opções da caminhada 3D. Valem para todas as telas de simulação.": {
   "src": [
-   "services/onboarding.py:243"
+   "services/onboarding.py:246"
   ],
   "lazy": true
  },
@@ -14047,17 +14169,17 @@
  },
  "Otim. (km)": {
   "src": [
-   "templates/slotting/routes.html:78"
+   "templates/slotting/routes.html:157"
   ]
  },
  "Otim. (m)": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Otimizada": {
   "src": [
-   "services/route_sim.py:573",
+   "services/route_sim.py:671",
    "templates/site/view3d.html:106"
   ],
   "lazy": true
@@ -14075,7 +14197,7 @@
  },
  "Otimizar as bins": {
   "src": [
-   "services/onboarding.py:314"
+   "services/onboarding.py:317"
   ],
   "lazy": true
  },
@@ -14115,13 +14237,13 @@
  },
  "Otimização por endereço": {
   "src": [
-   "services/onboarding.py:317"
+   "services/onboarding.py:320"
   ],
   "lazy": true
  },
  "Otimize o projeto e gere a filial": {
   "src": [
-   "services/onboarding.py:286"
+   "services/onboarding.py:289"
   ],
   "lazy": true
  },
@@ -14271,7 +14393,7 @@
  },
  "Para simular um <b>dia inteiro</b>, reenvie o histórico de pedidos com a coluna <b>Data</b> (data de cada pedido).": {
   "src": [
-   "templates/slotting/routes.html:99"
+   "templates/slotting/routes.html:178"
   ],
   "html": true
  },
@@ -14356,7 +14478,7 @@
  },
  "Parte do pedido na caminhada do trajeto em lote (e o nº do trajeto)": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Participação": {
@@ -14409,7 +14531,7 @@
    "services/site_import.py:866",
    "templates/optimization/page.html:507",
    "templates/site/suggest.html:48",
-   "templates/slotting/routes.html:119",
+   "templates/slotting/routes.html:198",
    "static/field_help.js:193"
   ],
   "help": true,
@@ -14437,7 +14559,7 @@
  },
  "Pedido {order} não está na amostra.": {
   "src": [
-   "services/route_sim.py:637"
+   "services/route_sim.py:735"
   ]
  },
  "Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}": {
@@ -14448,13 +14570,13 @@
  },
  "Pedido {v}": {
   "src": [
-   "templates/slotting/routes.html:106"
+   "templates/slotting/routes.html:185"
   ],
   "html": true
  },
  "Pedido, SKU, quantidade e data dos últimos 3 a 6 meses. Dá a curva ABC e os pares que saem juntos.": {
   "src": [
-   "services/onboarding.py:328"
+   "services/onboarding.py:331"
   ],
   "lazy": true
  },
@@ -14463,8 +14585,8 @@
    "services/site_import.py:866",
    "services/slotting.py:575",
    "templates/optimization/page.html:493",
-   "templates/slotting/routes.html:77",
-   "templates/slotting/routes.html:116",
+   "templates/slotting/routes.html:156",
+   "templates/slotting/routes.html:195",
    "templates/slotting/skus.html:20"
   ],
   "js": true
@@ -14497,6 +14619,11 @@
    "services/slotting.py:571",
    "templates/optimization/page.html:553",
    "templates/site/project.html:588"
+  ]
+ },
+ "Pedidos liberados/dia": {
+  "src": [
+   "templates/slotting/routes.html:134"
   ]
  },
  "Pedidos por trajeto": {
@@ -14738,7 +14865,7 @@
  },
  "Pesquisa operacional × heurística": {
   "src": [
-   "services/onboarding.py:259"
+   "services/onboarding.py:262"
   ],
   "lazy": true
  },
@@ -14755,7 +14882,7 @@
  },
  "Peças": {
   "src": [
-   "templates/slotting/routes.html:77"
+   "templates/slotting/routes.html:156"
   ]
  },
  "Pilar": {
@@ -14766,7 +14893,7 @@
  },
  "Pinte por curva ABC ou zona de ouro para ver onde estão os produtos mais procurados e simule a separação andando pelos corredores.": {
   "src": [
-   "services/onboarding.py:343"
+   "services/onboarding.py:346"
   ],
   "lazy": true
  },
@@ -14775,6 +14902,11 @@
    "services/onboarding.py:148"
   ],
   "lazy": true
+ },
+ "Pior horário de fila": {
+  "src": [
+   "templates/slotting/routes.html:88"
+  ]
  },
  "Planilha": {
   "src": [
@@ -14892,7 +15024,7 @@
  "Planta da filial": {
   "src": [
    "services/onboarding.py:135",
-   "services/onboarding.py:341",
+   "services/onboarding.py:344",
    "templates/layout/index.html:31",
    "templates/layout/plan.html:20",
    "templates/optimization/page.html:222",
@@ -14918,7 +15050,7 @@
  },
  "Planta e 3D": {
   "src": [
-   "services/onboarding.py:336",
+   "services/onboarding.py:339",
    "services/onboarding.py:132"
   ],
   "lazy": true
@@ -14992,13 +15124,13 @@
  },
  "Pool com posição pela saída": {
   "src": [
-   "services/onboarding.py:330"
+   "services/onboarding.py:333"
   ],
   "lazy": true
  },
  "Pool de bins": {
   "src": [
-   "services/onboarding.py:320",
+   "services/onboarding.py:323",
    "services/run_history.py:22",
    "templates/runs/list.html:13"
   ],
@@ -15076,7 +15208,7 @@
  },
  "Por endereço × Pool": {
   "src": [
-   "services/onboarding.py:261"
+   "services/onboarding.py:264"
   ],
   "lazy": true
  },
@@ -15088,7 +15220,7 @@
  },
  "Por endereço: produtos ficam, bins trocam. Pool: bins ficam, produtos mudam de endereço. O primeiro é mais simples de executar; o segundo costuma liberar mais espaço.": {
   "src": [
-   "services/onboarding.py:262"
+   "services/onboarding.py:265"
   ],
   "lazy": true
  },
@@ -15255,13 +15387,13 @@
  },
  "Posição pela saída (slotting)": {
   "src": [
-   "services/onboarding.py:267"
+   "services/onboarding.py:270"
   ],
   "lazy": true
  },
  "Posição pela saída e trajeto": {
   "src": [
-   "services/onboarding.py:325"
+   "services/onboarding.py:328"
   ],
   "lazy": true
  },
@@ -15454,8 +15586,8 @@
  "Produtos": {
   "src": [
    "routers/products.py:32",
-   "services/onboarding.py:228",
-   "services/onboarding.py:309",
+   "services/onboarding.py:231",
+   "services/onboarding.py:312",
    "templates/base.html:122",
    "templates/dashboard.html:37",
    "templates/products/detail.html:8"
@@ -15495,7 +15627,7 @@
  },
  "Produtos que saem juntos no mesmo pedido. Deixá-los perto um do outro encurta a rota. O sistema considera um par quando ele aparece em pelo menos 20% dos pedidos do menos vendido dos dois.": {
   "src": [
-   "services/onboarding.py:270"
+   "services/onboarding.py:273"
   ],
   "lazy": true
  },
@@ -15793,7 +15925,7 @@
  },
  "Quais bins (tipo e quantidade) cada endereço tem hoje, ex.: 4 × CX-P. É o \"antes\" que a otimização compara com a proposta.": {
   "src": [
-   "services/onboarding.py:304"
+   "services/onboarding.py:307"
   ],
   "lazy": true
  },
@@ -15889,13 +16021,13 @@
  },
  "Quando várias soluções empatam no objetivo, o 2º critério escolhe entre elas, depois o 3º. O critério de baixo nunca piora o de cima.": {
   "src": [
-   "services/onboarding.py:258"
+   "services/onboarding.py:261"
   ],
   "lazy": true
  },
  "Quantas bins de cada tipo cabem em cada nível (ex.: 6 × CX-P). É o limite que a otimização por endereço respeita.": {
   "src": [
-   "services/onboarding.py:307"
+   "services/onboarding.py:310"
   ],
   "lazy": true
  },
@@ -16131,7 +16263,7 @@
  },
  "Quanto do volume da bin pode ser ocupado, ex.: 85%. A folga existe porque as unidades não se encaixam perfeitamente e é preciso espaço para a mão.": {
   "src": [
-   "services/onboarding.py:254"
+   "services/onboarding.py:257"
   ],
   "lazy": true
  },
@@ -16593,7 +16725,7 @@
  "Resultados salvos": {
   "src": [
    "services/onboarding.py:215",
-   "services/onboarding.py:322",
+   "services/onboarding.py:325",
    "templates/optimization/page.html:64",
    "templates/runs/list.html:3",
    "templates/runs/list.html:15",
@@ -17031,9 +17163,9 @@
  },
  "Saldos": {
   "src": [
-   "services/onboarding.py:235",
+   "services/onboarding.py:238",
    "services/onboarding.py:40",
-   "services/onboarding.py:311",
+   "services/onboarding.py:314",
    "templates/base.html:129",
    "templates/stock/list.html:3"
   ],
@@ -17604,6 +17736,16 @@
   ],
   "help": true
  },
+ "Separadores": {
+  "src": [
+   "templates/slotting/routes.html:136"
+  ]
+ },
+ "Separadores para fazer, dentro da própria hora, o trabalho liberado nela": {
+  "src": [
+   "templates/slotting/routes.html:136"
+  ]
+ },
  "Separar em nova fileira": {
   "src": [
    "templates/layout/plan.html:91"
@@ -17648,17 +17790,17 @@
  },
  "Serp. (km)": {
   "src": [
-   "templates/slotting/routes.html:78"
+   "templates/slotting/routes.html:157"
   ]
  },
  "Serp. (m)": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Serpentina (rota em S)": {
   "src": [
-   "services/route_sim.py:572",
+   "services/route_sim.py:670",
    "templates/optimization/page.html:462",
    "templates/site/view3d.html:105"
   ],
@@ -17748,7 +17890,7 @@
    "routers/layout.py:242",
    "routers/site.py:489",
    "services/onboarding.py:221",
-   "services/onboarding.py:333",
+   "services/onboarding.py:336",
    "templates/layout/plan.html:26",
    "templates/site/project.html:553"
   ],
@@ -17779,12 +17921,12 @@
  },
  "Simular o dia em 3D": {
   "src": [
-   "templates/slotting/routes.html:93"
+   "templates/slotting/routes.html:172"
   ]
  },
  "Simulação": {
   "src": [
-   "services/onboarding.py:243"
+   "services/onboarding.py:246"
   ],
   "lazy": true
  },
@@ -17810,7 +17952,7 @@
  },
  "Simulação por dia": {
   "src": [
-   "templates/slotting/routes.html:73"
+   "templates/slotting/routes.html:152"
   ]
  },
  "Simule um dia inteiro de pedidos e veja o total de horas, para dimensionar a equipe.": {
@@ -18140,7 +18282,7 @@
  },
  "Só se a filial tem depósitos fisicamente separados (ex.: seco e refrigerado): a otimização nunca mistura armazéns.": {
   "src": [
-   "services/onboarding.py:295"
+   "services/onboarding.py:298"
   ],
   "lazy": true
  },
@@ -18202,7 +18344,7 @@
  },
  "Tempo": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
   ]
  },
  "Tempo a mais para pegar um item (linha do pedido) num nível fora da zona de ouro da pega (agachar, escada…)": {
@@ -18278,7 +18420,7 @@
  },
  "Tempo de separação": {
   "src": [
-   "services/onboarding.py:271"
+   "services/onboarding.py:274"
   ],
   "lazy": true
  },
@@ -18394,7 +18536,7 @@
  },
  "Tempo médio da liberação até o pedido ficar pronto (otimizada · lote)": {
   "src": [
-   "templates/slotting/routes.html:82"
+   "templates/slotting/routes.html:161"
   ]
  },
  "Tempo médio por pedido": {
@@ -18404,7 +18546,12 @@
  },
  "Tempo na rota otimizada": {
   "src": [
-   "templates/slotting/routes.html:119"
+   "templates/slotting/routes.html:198"
+  ]
+ },
+ "Tempo ocioso": {
+  "src": [
+   "templates/slotting/routes.html:79"
   ]
  },
  "Tempo para pegar cada peça": {
@@ -18678,7 +18825,7 @@
  },
  "Tipos de bin": {
   "src": [
-   "services/onboarding.py:297",
+   "services/onboarding.py:300",
    "templates/base.html:137"
   ],
   "lazy": true
@@ -18808,7 +18955,7 @@
  },
  "Todos os pedidos do dia, um depois do outro, com um separador (saída e volta na referência a cada pedido). Clique num dia para ver os pedidos dele.": {
   "src": [
-   "templates/slotting/routes.html:74"
+   "templates/slotting/routes.html:153"
   ]
  },
  "Todos {addresses}": {
@@ -18872,6 +19019,16 @@
  "Tour rápido": {
   "src": [
    "templates/dashboard.html:24"
+  ]
+ },
+ "Trabalhando (min)": {
+  "src": [
+   "templates/slotting/routes.html:135"
+  ]
+ },
+ "Trabalho liberado (min/dia)": {
+  "src": [
+   "templates/slotting/routes.html:134"
   ]
  },
  "Trajeto e pega: neste modo os produtos ficam nos endereços — use as <b>trocas sugeridas</b> da posição pela saída (no resultado) ou o modo <a href=\"/optimization/pool\">Pool</a>, que tem os objetivos de menor caminhada e de zona de ouro da pega.": {
@@ -19007,6 +19164,11 @@
    "templates/optimization/page.html:482"
   ]
  },
+ "Um separador, rota otimizada, pedidos na ordem em que foram liberados · média de {n} dia(s)": {
+  "src": [
+   "templates/slotting/routes.html:75"
+  ]
+ },
  "Um tipo de bin por SKU": {
   "src": [
    "services/field_help.py:184"
@@ -19031,7 +19193,7 @@
  },
  "Um tour rápido pela barra de navegação e pelo painel.": {
   "src": [
-   "services/onboarding.py:281"
+   "services/onboarding.py:284"
   ],
   "lazy": true
  },
@@ -19126,7 +19288,7 @@
  },
  "Uma posição do armazém identificada por Corredor-Estante-Nível-Posição, ex.: A-01-2-1. O nível conta de baixo para cima. Cada endereço tem bins, e cada bin guarda um SKU.": {
   "src": [
-   "services/onboarding.py:250"
+   "services/onboarding.py:253"
   ],
   "lazy": true
  },
@@ -19276,7 +19438,7 @@
  },
  "Use o histórico de pedidos para pôr os produtos que mais saem nos melhores lugares e medir a caminhada.": {
   "src": [
-   "services/onboarding.py:326"
+   "services/onboarding.py:329"
   ],
   "lazy": true
  },
@@ -19511,7 +19673,7 @@
  },
  "Ver caminhada em 3D / gravar vídeo": {
   "src": [
-   "templates/slotting/routes.html:107"
+   "templates/slotting/routes.html:186"
   ]
  },
  "Ver em 3D": {
@@ -19535,6 +19697,11 @@
    "templates/onboarding.html:54"
   ]
  },
+ "Ver por hora (tabela)": {
+  "src": [
+   "templates/slotting/routes.html:132"
+  ]
+ },
  "Ver saldos por endereço →": {
   "src": [
    "templates/dashboard.html:64"
@@ -19542,7 +19709,7 @@
  },
  "Ver todos os pedidos": {
   "src": [
-   "templates/slotting/routes.html:96"
+   "templates/slotting/routes.html:175"
   ]
  },
  "Ver {v}": {
@@ -19567,7 +19734,7 @@
  },
  "Vista 3D e caminhada": {
   "src": [
-   "services/onboarding.py:343"
+   "services/onboarding.py:346"
   ],
   "lazy": true
  },
@@ -20125,7 +20292,7 @@
  },
  "Zonas de ouro": {
   "src": [
-   "services/onboarding.py:265",
+   "services/onboarding.py:268",
    "templates/site/view3d.html:364"
   ],
   "lazy": true,
@@ -20677,6 +20844,11 @@
   ],
   "js": true
  },
+ "das {a} às {b}": {
+  "src": [
+   "templates/slotting/routes.html:84"
+  ]
+ },
  "de ": {
   "src": [
    "templates/site/project.html:539"
@@ -20792,6 +20964,11 @@
  "em lote": {
   "src": [
    "templates/slotting/routes.html:64"
+  ]
+ },
+ "em média": {
+  "src": [
+   "templates/slotting/routes.html:86"
   ]
  },
  "em que fração dos pedidos do menos vendido do par os dois saem juntos": {
@@ -20912,6 +21089,11 @@
    "static/field_help.js:374"
   ],
   "js": true
+ },
+ "espera média de {m} min · {n} pedidos liberados por dia": {
+  "src": [
+   "templates/slotting/routes.html:90"
+  ]
  },
  "esta tela não tem tour": {
   "src": [
@@ -21370,7 +21552,7 @@
   "src": [
    "templates/slotting/routes.html:20",
    "templates/slotting/routes.html:45",
-   "templates/slotting/routes.html:80"
+   "templates/slotting/routes.html:159"
   ]
  },
  "lote: pedidos A e B na mesma rota": {
@@ -21381,7 +21563,7 @@
  },
  "lote: trajeto nº {id} com {n} pedido(s) ({orders}) · {m} m no trajeto · {stops} parada(s)": {
   "src": [
-   "templates/slotting/routes.html:109"
+   "templates/slotting/routes.html:188"
   ],
   "html": true
  },
@@ -21804,6 +21986,11 @@
   "lazy": true,
   "js": true
  },
+ "ocioso {i} min · trabalhando {b} min · {n} pedidos liberados/dia · espera média {w} min": {
+  "src": [
+   "templates/slotting/routes.html:102"
+  ]
+ },
  "ocupa os níveis": {
   "src": [
    "static/field_help.js:50"
@@ -22035,6 +22222,11 @@
  "popularidade pela coluna Saída (sem pedidos, sem afinidade)": {
   "src": [
    "templates/slotting/skus.html:7"
+  ]
+ },
+ "por dia": {
+  "src": [
+   "templates/slotting/routes.html:80"
   ]
  },
  "por endereço": {
@@ -23483,6 +23675,11 @@
    "templates/slotting/skus.html:20"
   ]
  },
+ "{n} pausa(s) de 15 min ou mais por dia": {
+  "src": [
+   "templates/slotting/routes.html:84"
+  ]
+ },
  "{n} pedidos": {
   "src": [
    "templates/site/view3d.html:494"
@@ -23507,7 +23704,7 @@
  },
  "{n} trajeto(s)": {
   "src": [
-   "templates/slotting/routes.html:88"
+   "templates/slotting/routes.html:167"
   ],
   "html": true
  },
@@ -23563,6 +23760,11 @@
    "templates/site/project.html:371"
   ],
   "html": true
+ },
+ "{pct}% do turno · {total} h no período": {
+  "src": [
+   "templates/slotting/routes.html:81"
+  ]
  },
  "{placed} estante(s) na planta · {corridors} corredor(es) de caminhada": {
   "src": [
@@ -24038,7 +24240,7 @@
  },
  "· {rows} de {orders}": {
   "src": [
-   "templates/slotting/routes.html:124"
+   "templates/slotting/routes.html:203"
   ],
   "html": true
  },
@@ -24132,7 +24334,7 @@
  },
  "É com essas medidas que o sistema calcula quantas unidades cabem em cada tipo de bin. Produto sem medida aparece como \"Faltam dimensões\" e não é otimizado.": {
   "src": [
-   "services/onboarding.py:231"
+   "services/onboarding.py:234"
   ],
   "lazy": true
  },

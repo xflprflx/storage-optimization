@@ -65,6 +65,85 @@
   <div class="text-muted small mt-1">{{ _h("Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.") }}</div>
 </div></div>
 {% endif %}
+{% set ins = (sim.get('insights') or {}).get('opt') %}
+{% if ins %}{% set insb = sim.insights.get('bopt') %}
+{% macro hh(v) %}{{ '%02d'|format(((v // 3600) % 24)|int) }}:{{ '%02d'|format(((v % 3600) // 60)|int) }}{% endmacro %}
+{% macro hr(h) %}{{ '%02d'|format(h) }}h–{{ '%02d'|format((h + 1) % 24) }}h{% endmacro %}
+<div class="card mb-3" id="ociosidade">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong><i class="bi bi-lightbulb"></i> {{ _("Insights de ociosidade") }}</strong>
+    <span class="small text-muted">{{ _("Um separador, rota otimizada, pedidos na ordem em que foram liberados · média de {n} dia(s)", n=ins.days) }}</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-2 mb-3">
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">{{ _("Tempo ocioso") }}</div>
+        <div class="fs-5 fw-semibold">{{ ins.idle_day_h|dec(1) }} h <span class="fs-6 fw-normal text-muted">{{ _("por dia") }}</span></div>
+        <div class="small text-muted">{{ _("{pct}% do turno · {total} h no período", pct=(ins.idle_pct|dec(0)), total=(ins.idle_h|dec(1))) }}</div></div></div>
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">{{ _("Maior intervalo ocioso") }}</div>
+        <div class="fs-5 fw-semibold">{{ ins.longest_gap.m|dec(0) if ins.longest_gap else 0 }} min</div>
+        <div class="small text-muted">{% if ins.longest_gap %}{{ _("das {a} às {b}", a=hh(ins.longest_gap['from']), b=hh(ins.longest_gap['to'])) }} · {% endif %}{{ _("{n} pausa(s) de 15 min ou mais por dia", n=(ins.gaps_over_15|dec(1))) }}</div></div></div>
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">{{ _("Espera na fila") }}</div>
+        <div class="fs-5 fw-semibold">{{ ins.wait_avg_m|dec(1) }} min <span class="fs-6 fw-normal text-muted">{{ _("em média") }}</span></div>
+        <div class="small text-muted">{{ _("90% dos pedidos começam em até {m} min após liberados", m=(ins.wait_p90_m|dec(0))) }}</div></div></div>
+      <div class="col-md-3 col-6"><div class="border rounded p-2 h-100"><div class="small text-muted">{{ _("Pior horário de fila") }}</div>
+        {% if ins.worst_wait %}<div class="fs-5 fw-semibold">{{ hr(ins.worst_wait.h) }}</div>
+        <div class="small text-muted">{{ _("espera média de {m} min · {n} pedidos liberados por dia", m=(ins.worst_wait.wait_m|dec(1)), n=(ins.worst_wait.released|dec(1))) }}</div>{% else %}<div class="fs-5">—</div>{% endif %}</div></div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="small fw-semibold mb-1">{{ _("Ociosidade por hora do dia (minutos por dia, em média)") }}</div>
+        {% set ph = ins.per_hour %}{% set W = 40 * ph|length + 40 %}{% set top = ins.top_idle|map(attribute='h')|list %}
+        <svg viewBox="0 0 {{ W }} 190" class="w-100" style="max-height:220px" role="img" aria-label="{{ _("Ociosidade por hora do dia") }}">
+          <line x1="30" y1="160" x2="{{ W - 6 }}" y2="160" stroke="#c9d3da"/>
+          <line x1="30" y1="{{ 160 - 140 * 60 / [ins.max_idle, 60]|max }}" x2="{{ W - 6 }}" y2="{{ 160 - 140 * 60 / [ins.max_idle, 60]|max }}" stroke="#e1e6ea" stroke-dasharray="3 3"/>
+          <text x="26" y="{{ 163 - 140 * 60 / [ins.max_idle, 60]|max }}" font-size="9" fill="#5b6770" text-anchor="end">60</text>
+          <text x="26" y="163" font-size="9" fill="#5b6770" text-anchor="end">0</text>
+          {% for r in ph %}{% set x = 36 + loop.index0 * 40 %}{% set bh = 140 * r.idle_m / [ins.max_idle, 60]|max %}
+          <g><title>{{ hr(r.h) }} · {{ _("ocioso {i} min · trabalhando {b} min · {n} pedidos liberados/dia · espera média {w} min", i=(r.idle_m|dec(0)), b=(r.busy_m|dec(0)), n=(r.released|dec(1)), w=(r.wait_m|dec(1) if r.wait_m is not none else '—')) }}</title>
+            <rect x="{{ x - 2 }}" y="10" width="36" height="155" fill="transparent"/>
+            {% if bh > 0.5 %}<path d="M{{ x }},160 v-{{ [bh - 4, 0]|max }} q0,-4 4,-4 h24 q4,0 4,4 v{{ [bh - 4, 0]|max }} z" fill="{{ '#0f766e' if r.h in top else '#9fd3cc' }}"/>{% endif %}
+            {% if r.h in top %}<text x="{{ x + 16 }}" y="{{ 155 - bh }}" font-size="10" fill="#1f2d33" text-anchor="middle" font-weight="600">{{ r.idle_m|dec(0) }}</text>{% endif %}
+            <text x="{{ x + 16 }}" y="176" font-size="10" fill="#5b6770" text-anchor="middle">{{ '%02d'|format(r.h) }}h</text></g>
+          {% endfor %}
+        </svg>
+        <div class="small text-muted">{{ _("As barras escuras são os 3 horários mais ociosos. Passe o mouse numa barra para ver o detalhe da hora.") }}</div>
+      </div>
+      <div class="col-lg-5">
+        <div class="small fw-semibold mb-1">{{ _("O que os números dizem") }}</div>
+        <ul class="small ps-3 mb-2">
+          {% for t in ins.tips %}
+          {% if t.kind == 'idle' %}{% set wl = [] %}{% for w in t.windows %}{% set _ = wl.append('%02dh–%02dh'|format(w[0], w[1] % 24)) %}{% endfor %}
+          <li>{{ _h("Os horários mais ociosos são <b>{hours}</b> ({m} min parados por dia, somados). Bom momento para reposição, inventário ou para antecipar a liberação dos pedidos seguintes.", hours=(wl|join(', ')), m=(t.m|dec(0))) }}</li>
+          {% elif t.kind == 'busy' %}<li>{{ _h("O horário mais carregado é <b>{h}</b>: o separador trabalha {pct}% do tempo nessa hora.", h=hr(t.h), pct=(t.pct|dec(0))) }}</li>
+          {% elif t.kind == 'queue' %}<li>{{ _h("A fila cresce entre <b>{h}</b>: os pedidos esperam em média {m} min para começar. Liberar parte desses pedidos antes ou reforçar a separação nesse horário encurta a espera.", h=hr(t.h), m=(t.m|dec(1))) }}</li>
+          {% elif t.kind == 'pickers' %}<li>{{ _h("Entre <b>{h}</b> são liberados {w} min de trabalho por hora: seriam precisos <b>{p} separadores</b> para não formar fila nesse horário.", h=hr(t.h), w=(t.work_m|dec(0)), p=t.pickers) }}</li>
+          {% elif t.kind == 'oversized' %}<li>{{ _h("O separador fica parado <b>{pct}%</b> do turno: a demanda cabe com folga. Dá para concentrar a liberação em ondas ou dividir o tempo com outras tarefas.", pct=(t.pct|dec(0))) }}</li>
+          {% elif t.kind == 'gaps' %}<li>{{ _h("Há em média <b>{n}</b> pausas de 15 min ou mais por dia esperando pedidos — tempo que pode ir para outra atividade.", n=(t.n|dec(1))) }}</li>
+          {% endif %}
+          {% endfor %}
+          {% if insb %}<li>{{ _h("<b>Em lote</b>: {a} h ociosas por dia (contra {b} h pedido a pedido) e espera média de {wa} min (contra {wb} min).", a=(insb.idle_day_h|dec(1)), b=(ins.idle_day_h|dec(1)), wa=(insb.wait_avg_m|dec(1)), wb=(ins.wait_avg_m|dec(1))) }}</li>{% endif %}
+        </ul>
+        <div class="small">
+          <div><span class="text-muted">{{ _("Dias mais ociosos:") }}</span> {% for d in ins.most_idle_days %}{{ fmt_datetime(d.date|todate, time=False) if d.date else '—' }} ({{ d.idle_h|dec(1) }} h){% if not loop.last %}, {% endif %}{% endfor %}</div>
+          <div><span class="text-muted">{{ _("Dias menos ociosos:") }}</span> {% for d in ins.least_idle_days %}{{ fmt_datetime(d.date|todate, time=False) if d.date else '—' }} ({{ d.idle_h|dec(1) }} h){% if not loop.last %}, {% endif %}{% endfor %}</div>
+        </div>
+      </div>
+    </div>
+    <details class="mt-2"><summary class="small">{{ _("Ver por hora (tabela)") }}</summary>
+      <div class="table-responsive"><table class="table table-sm small mb-0" data-no-resize>
+        <thead><tr><th>{{ _("Hora") }}</th><th class="text-end">{{ _("Pedidos liberados/dia") }}</th><th class="text-end">{{ _("Trabalho liberado (min/dia)") }}</th>
+          <th class="text-end">{{ _("Trabalhando (min)") }}</th><th class="text-end">{{ _("Ocioso (min)") }}</th><th class="text-end">{{ _("Ocupação") }}</th>
+          <th class="text-end">{{ _("Espera média (min)") }}</th><th class="text-end" title="{{ _("Separadores para fazer, dentro da própria hora, o trabalho liberado nela") }}">{{ _("Separadores") }}</th></tr></thead>
+        <tbody>{% for r in ins.per_hour %}<tr class="{{ 'table-warning' if ins.worst_wait and r.h == ins.worst_wait.h }}">
+          <td>{{ hr(r.h) }}</td><td class="text-end">{{ r.released|dec(1) }}</td><td class="text-end">{{ r.work_m|dec(0) }}</td>
+          <td class="text-end">{{ r.busy_m|dec(0) }}</td><td class="text-end">{{ r.idle_m|dec(0) }}</td>
+          <td class="text-end">{{ ((r.util * 100)|dec(0) ~ '%') if r.util is not none else '—' }}</td>
+          <td class="text-end">{{ r.wait_m|dec(1) if r.wait_m is not none else '—' }}</td><td class="text-end">{{ r.pickers or '—' }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </details>
+  </div>
+</div>
+{% endif %}
 {% set days = sim.get('days') or [] %}
 {% set dsel = request.query_params.get('day', '') %}
 {% if days %}

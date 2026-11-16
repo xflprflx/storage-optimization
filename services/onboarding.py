@@ -224,6 +224,9 @@ TOURS: dict[str, dict] = {
           N_("Ajuste para a sua operação. Padrões: 1 m/s de caminhada, 10 s por parada, 2 s por peça e 5 s a mais por item fora da zona de ouro."),
           N_("Meça alguns pedidos reais com um cronômetro e calibre estes valores: com eles certos, o tempo simulado vira uma previsão confiável de horas de separação.")),
         S("#dias", N_("Por dia"), N_("Simule um dia inteiro de pedidos e veja o total de horas, para dimensionar a equipe."), cond=True),
+        S("#ociosidade", N_("Insights de ociosidade"),
+          N_("Com o horário de liberação ligado: em que horas o separador fica parado, onde a fila cresce, quantos separadores dariam conta em cada hora e o efeito do lote."),
+          N_("Ociosidade alta num horário fixo é tempo para reposição ou inventário; fila num horário é sinal para liberar pedidos antes ou reforçar a equipe só naquela hora."), cond=True),
     ]},
     "products": {"p": r"^/products$", "u": "/products", "t": N_("Produtos"), "s": [
         S('[data-tour="prod-actions"]', N_("Cadastrar ou importar"),

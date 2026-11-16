@@ -478,6 +478,7 @@ def add_times(sim: dict, tp: dict) -> dict:
     sim["days"] = by_day(sim)
     if sim.get("release_on"):
         _timeline(sim)
+        sim["insights"] = {k: v for k in ("opt", "bopt") if (v := idle_insights(sim, k))}
     return sim
 
 
@@ -502,6 +503,9 @@ def _timeline(sim: dict) -> None:
     leads: dict[str, list] = {k: [] for k in TIMELINE_KEYS}
     ends: dict[str, list] = {k: [] for k in TIMELINE_KEYS}
     idles: dict[str, float] = {k: 0.0 for k in TIMELINE_KEYS}
+    # para os insights de ociosidade (rota otimizada e lote): intervalos ociosos e trabalho, em s desde 0h, e a
+    # liberação/início/fim de cada pedido
+    log: dict[str, dict] = {k: {"idle": [], "busy": [], "orders": [], "days": []} for k in ("opt", "bopt")}
     for day, oids in groups.items():
         rel = _rel0(by_row, oids)
         rels = [by_row[o]["rel"] for o in oids if by_row[o].get("rel") is not None]
@@ -517,25 +521,119 @@ def _timeline(sim: dict) -> None:
                 units = [([o], by_row[o][f"{k}_t"]) for o in sorted(oids, key=lambda o: (rel[o], o))]
             clock = idle = 0.0
             lead = []
+            lg = log.get(k)
+            d0 = tl["start_s"] or 0
             for os_, dur in units:
                 st = max(clock, max(rel[o] for o in os_))
+                if lg is not None and st > clock + 1e-9:
+                    lg["idle"].append((d0 + clock, d0 + st))
                 idle += st - clock
+                if lg is not None:
+                    lg["busy"].append((d0 + st, d0 + st + dur))
+                for o in os_:
+                    if lg is not None:
+                        lg["orders"].append((d0 + rel[o], d0 + st, d0 + st + dur, day, dur / len(os_)))
                 clock = st + dur
                 for o in os_:
                     lead.append(clock - rel[o])
                     by_row[o][f"{k}_lead"] = clock - rel[o]
+            if lg is not None:
+                lg["days"].append((day, d0, d0 + clock, idle))
             tl.update({f"{k}_end": clock, f"{k}_idle": idle, f"{k}_lead": sum(lead) / len(lead)})
             leads[k] += lead
             ends[k].append(clock)
             idles[k] += idle
         if day in days:
             days[day].update(tl)
+    sim["_tl_log"] = log  # só em memória (insights); não vai para JSON
     t = sim.setdefault("times", {})
     for k in TIMELINE_KEYS:
         if leads[k]:
             t[f"{k}_lead_avg"] = sum(leads[k]) / len(leads[k])
             t[f"{k}_end_avg"] = sum(ends[k]) / len(ends[k])
             t[f"{k}_idle_h"] = idles[k] / 3600
+
+
+def _spread(intervals, buckets: dict) -> None:
+    """Soma em cada hora do dia (0–23) os segundos de cada intervalo (a, b) em s desde 0h."""
+    for a, b in intervals:
+        h = int(a // 3600)
+        while a < b - 1e-9:
+            end = min(b, (h + 1) * 3600)
+            buckets[h % 24] = buckets.get(h % 24, 0.0) + end - a
+            a, h = end, h + 1
+
+
+def idle_insights(sim: dict, k: str = "opt") -> Optional[dict]:
+    """Insights de ociosidade com o horário de liberação (um separador), pela rota `k` ("opt" ou "bopt" = lote):
+    horas ociosas (total, por dia e % do turno), por hora do dia (ocioso, trabalho, pedidos liberados, espera média e
+    separadores que dariam conta do trabalho liberado), os horários mais ociosos, o pior horário de fila, o maior
+    intervalo ocioso, os dias mais e menos ociosos e recomendações em texto. None sem a opção ligada."""
+    import math
+
+    log = (sim.get("_tl_log") or {}).get(k)
+    if not sim.get("release_on") or not log or not log["days"]:
+        return None
+    n = len(log["days"])
+    idle_h, busy_h, rel_n, rel_work, wait_s = {}, {}, {}, {}, {}
+    _spread(log["idle"], idle_h)
+    _spread(log["busy"], busy_h)
+    waits = []
+    for rel, st, _end, _day, work in log["orders"]:
+        h = int(rel // 3600) % 24
+        rel_n[h] = rel_n.get(h, 0) + 1
+        rel_work[h] = rel_work.get(h, 0.0) + work
+        wait_s.setdefault(h, []).append(st - rel)
+        waits.append(st - rel)
+    hours = sorted(set(idle_h) | set(busy_h) | set(rel_n))
+    per_hour = []
+    for h in range(hours[0], hours[-1] + 1):
+        idle_m, busy_m = idle_h.get(h, 0.0) / n / 60, busy_h.get(h, 0.0) / n / 60
+        work_h = rel_work.get(h, 0.0) / n / 3600  # horas de trabalho liberadas nessa hora, por dia
+        per_hour.append({"h": h, "idle_m": idle_m, "busy_m": busy_m, "util": busy_m / (busy_m + idle_m) if busy_m + idle_m else None,
+                         "released": rel_n.get(h, 0) / n, "work_m": work_h * 60,
+                         "wait_m": (sum(wait_s[h]) / len(wait_s[h]) / 60) if wait_s.get(h) else None,
+                         "pickers": max(1, math.ceil(work_h - 1e-9)) if rel_n.get(h) else 0})
+    total_idle = sum(b - a for a, b in log["idle"])
+    shift = sum(e - s for _d, s, e, _i in log["days"])
+    gaps = sorted(((b - a, a, b) for a, b in log["idle"]), reverse=True)
+    by_idle = sorted(log["days"], key=lambda x: -x[3])
+    top_idle = sorted((r for r in per_hour if r["idle_m"] > 0.5), key=lambda r: -r["idle_m"])[:3]
+    worst_wait = max((r for r in per_hour if r["wait_m"] is not None), key=lambda r: r["wait_m"], default=None)
+    peak_work = max(per_hour, key=lambda r: r["work_m"])
+    out = {"days": n, "idle_h": total_idle / 3600, "idle_day_h": total_idle / n / 3600,
+           "idle_pct": total_idle / shift * 100 if shift else None, "shift_h": shift / n / 3600,
+           "wait_avg_m": sum(waits) / len(waits) / 60 if waits else 0.0,
+           "wait_p90_m": sorted(waits)[int(0.9 * (len(waits) - 1))] / 60 if waits else 0.0,
+           "longest_gap": {"m": gaps[0][0] / 60, "from": gaps[0][1], "to": gaps[0][2]} if gaps else None,
+           "gaps_over_15": sum(1 for g in gaps if g[0] >= 900) / n,
+           "per_hour": per_hour, "top_idle": top_idle, "worst_wait": worst_wait, "peak_work": peak_work,
+           "max_idle": max([r["idle_m"] for r in per_hour] + [1.0]),
+           "most_idle_days": [{"date": d, "idle_h": i / 3600} for d, _s, _e, i in by_idle[:3]],
+           "least_idle_days": [{"date": d, "idle_h": i / 3600} for d, _s, _e, i in by_idle[-3:][::-1]]}
+    # recomendações (texto montado na tela, com os números daqui)
+    tips = []
+    if top_idle:  # horários mais ociosos, juntos em janelas contínuas (08h–10h, 13h–14h)
+        wins: list[list[int]] = []
+        for h in sorted(r["h"] for r in top_idle):
+            if wins and wins[-1][1] == h:
+                wins[-1][1] = h + 1
+            else:
+                wins.append([h, h + 1])
+        tips.append({"kind": "idle", "windows": wins, "m": sum(r["idle_m"] for r in top_idle)})
+    busiest = max((r for r in per_hour if r["util"] is not None), key=lambda r: r["util"], default=None)
+    if busiest and busiest["util"] >= 0.5:
+        tips.append({"kind": "busy", "h": busiest["h"], "pct": busiest["util"] * 100})
+    if worst_wait and worst_wait["wait_m"] >= 5:
+        tips.append({"kind": "queue", "h": worst_wait["h"], "m": worst_wait["wait_m"], "pickers": worst_wait["pickers"]})
+    if peak_work["pickers"] >= 2:
+        tips.append({"kind": "pickers", "h": peak_work["h"], "pickers": peak_work["pickers"], "work_m": peak_work["work_m"]})
+    if out["idle_pct"] is not None and out["idle_pct"] >= 40:
+        tips.append({"kind": "oversized", "pct": out["idle_pct"]})
+    if out["gaps_over_15"] >= 1:
+        tips.append({"kind": "gaps", "n": out["gaps_over_15"]})
+    out["tips"] = tips
+    return out
 
 
 def day_rows(rows: list, day: Optional[str]) -> list:

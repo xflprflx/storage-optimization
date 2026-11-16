@@ -415,6 +415,12 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
   espera (ocioso). O lote só junta pedidos já liberados quando o trajeto sai. A tela mostra o início e o término de
   cada dia, a espera média do pedido (da liberação até ficar pronto) e o tempo ocioso; no 3D, os separadores esperam
   na referência ("aguardando liberação").
+- **Insights de ociosidade** (simulador de trajeto, com a opção ligada): tempo ocioso por dia e % do turno, maior
+  intervalo ocioso e quantas pausas de 15 min ou mais por dia, espera média na fila (e o percentil 90), o pior
+  horário de fila, um gráfico da ociosidade por hora do dia (os 3 horários mais ociosos em destaque), a tabela por
+  hora (pedidos e trabalho liberados, trabalhando, ocioso, ocupação, espera e quantos separadores dariam conta do
+  trabalho liberado na hora), os dias mais e menos ociosos e recomendações em texto (janelas ociosas, fila, horário
+  mais carregado, folga da equipe e o efeito do lote).
 
 ## 6.0.3 Planta desenhada das filiais existentes
 

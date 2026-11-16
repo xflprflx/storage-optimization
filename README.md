@@ -407,6 +407,8 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
   em que o pedido foi liberado para separação — hora (`08:30`), data e hora ou a hora do Excel. O pedido usa o menor
   horário entre as linhas dele; **pedido sem horário em nenhuma linha = disponível desde o início do dia**. Sem a coluna
   Data, a data que vier junto com a liberação vale como data do pedido.
+- **Exemplos**: a aba Pedidos das planilhas de exemplo traz a Liberação (ondas das 7h às 17h, mais pedidos de manhã;
+  ~8% sem horário). Projetos e históricos criados de um exemplo antes disso recebem os horários ao iniciar o app.
 - **Opção "Considerar o horário de liberação"** (simulador de trajeto, hoje × proposta e dia inteiro em 3D): só pode
   ser ligada quando o histórico tem a coluna mapeada (sem ela, aparece desativada com o motivo). Ligada, um separador
   faz os pedidos de cada dia na ordem em que foram liberados, a partir do 1º horário do dia; sem pedido liberado, ele

@@ -180,10 +180,23 @@ def path_of(slug: str) -> Path:
 # --------------------------------------------------------------------------- #
 # Planilha
 # --------------------------------------------------------------------------- #
-def _orders(rng: random.Random, skus: list[str], n_orders: int) -> list[tuple]:
+def _release(rng: random.Random):
+    """Horário de liberação fictício para separação: ondas ao longo do turno (7h–17h), mais pedidos de manhã e logo
+    depois do almoço; ~8% dos pedidos sem horário (o simulador considera esses disponíveis desde o início do dia)."""
+    import datetime as dt
+
+    if rng.random() < 0.08:
+        return None
+    wave = rng.choices([(7, 9), (9, 11), (11, 12), (13, 15), (15, 17)], weights=[30, 25, 10, 25, 10])[0]
+    minute = rng.randrange(wave[0] * 60, wave[1] * 60)
+    return dt.time(minute // 60, minute % 60)
+
+
+def _orders(rng: random.Random, skus: list[str], n_orders: int, rel_rng: Optional[random.Random] = None) -> list[tuple]:
     """Histórico de pedidos fictício de um mês, no formato de relatório de movimentação (saída com sinal negativo):
     popularidade bem desigual (poucos SKUs saem muito) e grupos de itens que costumam sair juntos (ex.: parafuso,
-    porca e arruela da mesma medida = SKUs vizinhos no código)."""
+    porca e arruela da mesma medida = SKUs vizinhos no código). Com `rel_rng`, cada linha leva também o horário de
+    liberação do pedido (sorteio à parte: os pedidos, datas e SKUs são os mesmos com ou sem ele)."""
     import datetime as dt
 
     order = skus[:]
@@ -194,15 +207,23 @@ def _orders(rng: random.Random, skus: list[str], n_orders: int) -> list[tuple]:
     start = dt.date(2026, 10, 1)
     for n in range(1, n_orders + 1):
         lines = set(rng.choices(order, weights=weights, k=rng.choice((1, 1, 2, 2, 3, 4, 6))))
-        for s in list(lines):  # itens "irmãos" (código vizinho) entram junto com boa chance
+        for s in sorted(lines):  # itens "irmãos" (código vizinho) entram junto com boa chance (em ordem fixa: o
+            # sorteio não pode depender da ordem de um set, que muda a cada execução do Python)
             i = idx[s]
             for j in (i + 1, i + 2):
                 if j < len(skus) and rng.random() < 0.45:
                     lines.add(skus[j])
         day = start + dt.timedelta(days=rng.randrange(31))
+        rel = _release(rel_rng) if rel_rng is not None else None
         for s in sorted(lines):
-            rows.append((f"P{n:05d}", day, s, -rng.choice((1, 1, 2, 3, 5, 10, 12))))
+            row = (f"P{n:05d}", day, s, -rng.choice((1, 1, 2, 3, 5, 10, 12)))
+            rows.append(row + (rel,) if rel_rng is not None else row)
     return rows
+
+
+def example_skus(ex: dict) -> set[str]:
+    """Códigos dos SKUs do exemplo (o mesmo sorteio da planilha), sem abrir a planilha."""
+    return {r[0] for r in ex["skus"](random.Random(f"neokioski-{ex['slug']}"))}
 
 
 def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
@@ -242,9 +263,11 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
         "em R$. SKUs: dimensões em cm, peso em kg por unidade, saldo/min/max em unidades.",
         "Ao importar, as estruturas e bins são cadastradas (códigos existentes de bins mantêm as medidas; o custo é "
         "atualizado). Os SKUs ficam só no projeto.",
-        "Pedidos: um mês de histórico (pedido, data, SKU, quantidade), no formato de relatório de movimentação — a "
-        "saída vem com sinal negativo: marque \"Converter quantidades para valor absoluto\" no mapeamento. Serve para "
-        "a posição dos SKUs pela saída (curva ABC e itens que saem juntos), no projeto e nos modos Por endereço e Pool.",
+        "Pedidos: um mês de histórico (pedido, data, SKU, quantidade e horário de liberação para separação), no formato "
+        "de relatório de movimentação — a saída vem com sinal negativo: marque \"Converter quantidades para valor "
+        "absoluto\" no mapeamento. Serve para a posição dos SKUs pela saída (curva ABC e itens que saem juntos), no "
+        "projeto e nos modos Por endereço e Pool. A Liberação (opcional) permite simular o dia com o horário em que cada "
+        "pedido foi liberado; os pedidos sem horário ficam disponíveis desde o início do dia.",
     ]:
         ws.append([line])
     ws["A1"].font = Font(bold=True, size=13)
@@ -277,8 +300,11 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
            "Min level", "Max level"], skus, {2: 36})
     if ex.get("orders"):
-        sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade"],
-              _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"]), {1: 14, 2: 12})
+        sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade", "Liberação"],
+              _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"],
+                      random.Random(f"liberacao-{ex['slug']}")), {1: 14, 2: 12, 5: 12})
+        for c in wb["Pedidos"]["E"][1:]:
+            c.number_format = "hh:mm"
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
     return path
@@ -328,8 +354,9 @@ def write_all() -> list[Path]:
 
 
 def refresh_example_orders(db) -> list[str]:
-    """Projetos (e históricos de filiais criadas a partir deles) feitos de um exemplo antes da data por pedido: reimporta a aba Pedidos do exemplo (com a
-    data de cada pedido, para a simulação de um dia inteiro). O exemplo de cada projeto é reconhecido pelos pedidos
+    """Projetos (e históricos de filiais criadas a partir deles) feitos de um exemplo antes da data ou do horário de
+    liberação por pedido: reimporta a aba Pedidos do exemplo (com a data e a liberação de cada pedido, para a
+    simulação de um dia inteiro e com o horário). O exemplo de cada projeto é reconhecido pelos pedidos
     da amostra guardada (mesmo pedido com os mesmos SKUs). Só mexe no histórico de pedidos; o resto do projeto fica
     como está. Roda ao iniciar e não faz nada nos projetos já atualizados. Retorna os nomes dos projetos atualizados."""
     import copy
@@ -348,9 +375,14 @@ def refresh_example_orders(db) -> list[str]:
     # projetos e históricos de filiais (a filial criada a partir de um projeto de exemplo copia os pedidos dele)
     for pr in [*db.scalars(select(SiteProject)), *db.scalars(select(PickHistory))]:
         sample = orders_of(pr).get("sample") or []
-        if sample and not any(len(e) > 3 and e[3] for e in sample):
+        if sample and (not any(len(e) > 3 and e[3] for e in sample) or not any(len(e) > 4 for e in sample)):
             todo.append((pr, {(e[0], tuple(sorted(e[1]))) for e in sample}))
     skus_mine = {id(pr): {x for e in orders_of(pr).get("sample") or [] for x in e[1]} for pr, _m in todo}
+    # filtro barato antes de abrir as planilhas: só históricos com os SKUs de algum exemplo (os do usuário, que não
+    # têm a coluna, não custam nada a cada início)
+    codes = [example_skus(ex) for ex in EXAMPLES if ex.get("orders")]
+    todo = [(pr, m) for pr, m in todo
+            if any(len(skus_mine[id(pr)] & c) >= 0.95 * max(1, len(skus_mine[id(pr)])) for c in codes)]
     if not todo:
         return []
     done = []

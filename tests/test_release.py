@@ -80,3 +80,32 @@ def test_3d_day_start_is_the_first_release():
     ref = {"x": 0.0, "y": 0.0, "label": "ref"}
     sample = [["Z", ["S3"], [1], "2026-11-01", 9 * 3600], ["A", ["S1"], [1], "2026-11-01", 8 * 3600]]
     assert day_payload(sample, nodes, start, ref, "2026-11-01", batch=2, release=True)["start_s"] == 8 * 3600
+
+
+def test_examples_have_release_and_old_example_projects_get_it(db):
+    """As planilhas de exemplo têm a coluna Liberação; projeto criado de um exemplo antes dela (com data, sem horário)
+    recebe os horários ao iniciar; projeto do usuário não muda."""
+    import copy
+
+    from models import SiteProject
+    from services import site_examples
+    from services.site_import import read_sheets
+
+    ex = site_examples.BY_SLUG["imovel-estreito"]
+    rows = read_sheets(site_examples.path_of(ex["slug"]))["Pedidos"]
+    res = _orders(rows, _map(rows[0], ORDER_COLS), True)
+    assert res["has_release"] and 0 < res["release_missing"] < res["orders"] * 0.2
+    old = copy.deepcopy(res)
+    old["sample"] = [e[:4] for e in old["sample"]]  # formato anterior: com data, sem liberação
+    old["has_release"] = False
+    user = {"orders": 1, "lines": 1, "sample": [["X1", ["ABC"], [1], "2026-10-01"]], "skus": {"ABC": [1, 1]}, "pairs": []}
+    a = SiteProject(name="ex sem liberação", config={"orders": old})
+    b = SiteProject(name="usuário sem liberação", config={"orders": user})
+    db.add_all([a, b])
+    db.commit()
+    assert "ex sem liberação" in site_examples.refresh_example_orders(db)
+    db.refresh(a)
+    db.refresh(b)
+    assert a.config["orders"]["has_release"] and all(len(e) > 4 for e in a.config["orders"]["sample"])
+    assert b.config["orders"] == user
+    assert site_examples.refresh_example_orders(db) == []

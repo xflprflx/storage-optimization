@@ -627,13 +627,14 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
 
 
 @router.get("/{pid}/routes3d.json")
-def routes_3d_json(pid: int, order: str = "", day: str = "", db: Session = Depends(get_db)):
+def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", db: Session = Depends(get_db)):
     """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias) e
     os totais por dia. Com `day`: o dia inteiro (pedidos em sequência). Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
     from fastapi.responses import JSONResponse
 
-    from services.route_sim import day_payload, order_payload, orders_payload
+    from services.route_sim import day_payload, order_payload, orders_payload, time_params
 
+    batch = time_params({"t_batch": t_batch})["t_batch"]  # lote (4º separador): pedidos por trajeto
     pr = _get(db, pid)
     if not pr:
         return JSONResponse({"error": _("Projeto não encontrado.")}, status_code=404)
@@ -641,10 +642,10 @@ def routes_3d_json(pid: int, order: str = "", day: str = "", db: Session = Depen
     if error:
         return JSONResponse({"error": error})
     if day:  # o dia inteiro: os pedidos do dia um depois do outro
-        return JSONResponse(day_payload(sample, nodes, start, ref, day))
+        return JSONResponse(day_payload(sample, nodes, start, ref, day, batch=batch))
     if not order:
         return JSONResponse(orders_payload(sample, nodes, start, ref))
-    return JSONResponse(order_payload(sample, nodes, start, ref, order))
+    return JSONResponse(order_payload(sample, nodes, start, ref, order, batch=batch))
 
 
 @router.get("/{pid}/skus.xlsx")

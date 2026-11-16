@@ -396,6 +396,10 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Hoje × proposta** (resultado do Por endereço e do Pool): interruptores **Lote hoje** e **Lote na proposta**
   (com *Pedidos por trajeto (lote)* na etapa Posição pela saída). Dá para comparar sem lote nos dois, com lote nos
   dois ou só de um lado; os números trocam na hora (as quatro combinações já vêm calculadas).
+- **Caminhada em 3D**: o 4º separador, **Lote** (roxo), em "Comparar as 4" ou sozinho. Num pedido, ele faz o trajeto
+  inteiro em que o pedido caiu (com os outros pedidos do mesmo dia, listados no painel); no dia inteiro, todos os
+  trajetos do dia em sequência. *Pedidos por trajeto (lote)* no painel muda o agrupamento. No 3D do hoje × proposta,
+  a rota "Lote" põe os dois separadores em lote.
 
 ## 6.0.3 Planta desenhada das filiais existentes
 

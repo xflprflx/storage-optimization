@@ -335,9 +335,10 @@ def assign_nodes(db: Session, g, branch_id: int, wid: Optional[int], assign: dic
 
 @router.get("/layout/plan/routes3d.json")
 def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", day: str = "", cmp: str = "",
-                     kind: str = "opt", db: Session = Depends(get_db)):
-    from services.route_sim import day_payload, order_payload, orders_payload
+                     kind: str = "opt", t_batch: str = "", db: Session = Depends(get_db)):
+    from services.route_sim import day_payload, order_payload, orders_payload, time_params
 
+    batch = time_params({"t_batch": t_batch})["t_batch"]  # lote (4º separador): pedidos por trajeto
     br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
     if br is None:
         return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
@@ -352,7 +353,9 @@ def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "
             return {"error": _("A comparação expirou (o servidor foi reiniciado ou houve muitas otimizações depois). "
                                "Rode a otimização de novo e abra o 3D pelo resultado.")}
         return route_compare.payload_3d(sample, assign_nodes(db, g, br.id, wid, data["before"]),
-                                        assign_nodes(db, g, br.id, wid, data["after"]), start, ref, order, day, kind)
+                                        assign_nodes(db, g, br.id, wid, data["after"]), start, ref, order, day, kind,
+                                        batch=batch)
     if day:
-        return day_payload(sample, nodes, start, ref, day)
-    return orders_payload(sample, nodes, start, ref) if not order else order_payload(sample, nodes, start, ref, order)
+        return day_payload(sample, nodes, start, ref, day, batch=batch)
+    return orders_payload(sample, nodes, start, ref) if not order else \
+        order_payload(sample, nodes, start, ref, order, batch=batch)

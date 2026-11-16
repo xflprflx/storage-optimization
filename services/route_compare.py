@@ -132,13 +132,13 @@ def load(token: str) -> Optional[dict]:
 
 
 def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict, order: str = "", day: str = "",
-               kind: str = "opt") -> dict:
+               kind: str = "opt", batch: int = 0) -> dict:
     """Dados da caminhada 3D comparando hoje × proposta: sem pedido/dia, a lista (com as distâncias das duas
     situações em cada rota); com pedido ou dia, dois separadores na rota `kind` ("cur" = hoje, "new" = proposta)."""
     from services.i18n import _
     from services.route_sim import ROUTE_KINDS, day_payload, order_payload, orders_payload
 
-    kind = kind if kind in KINDS else "opt"
+    kind = kind if kind in KINDS + ("batch",) else "opt"  # "batch": os dois separadores em lote
     if not order and not day:
         a = orders_payload(sample, nodes_cur, start, ref)
         b = orders_payload(sample, nodes_new, start, ref)
@@ -158,14 +158,16 @@ def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict,
                 "summary": {"orders": len(orders), "has_qty": a["summary"].get("has_qty", False),
                             **{f"{k}_cur": a["summary"].get(f"{k}_avg") for k in KINDS},
                             **{f"{k}_new": b["summary"].get(f"{k}_avg") for k in KINDS}}}
-    one = (lambda n: day_payload(sample, n, start, ref, day)) if day else \
-        (lambda n: order_payload(sample, n, start, ref, order))
+    bt = batch if kind == "batch" else 0
+    one = (lambda n: day_payload(sample, n, start, ref, day, batch=bt)) if day else \
+        (lambda n: order_payload(sample, n, start, ref, order, batch=bt))
     pc, pn = one(nodes_cur), one(nodes_new)
     if pc.get("error") or pn.get("error"):
         return {"error": pc.get("error") or pn.get("error")}
     if kind not in pc["routes"] or kind not in pn["routes"]:
         return {"error": _("Rota indisponível para este pedido.")}
-    rname = next(str(_(n)) for k, n, _c in ROUTE_KINDS if k == kind)
+    rname = _("Lote ({n} pedidos por trajeto)", n=batch) if kind == "batch" else \
+        next(str(_(n)) for k, n, _c in ROUTE_KINDS if k == kind)
     routes = {"cur": {**pc["routes"][kind], "name": _("Hoje — {route}", route=rname), "color": "#d6604d"},
               "new": {**pn["routes"][kind], "name": _("Proposta — {route}", route=rname), "color": "#1a9850"}}
     return {**pc, "compare": True, "kind": kind, "routes": routes}

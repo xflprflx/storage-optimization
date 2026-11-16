@@ -63,3 +63,32 @@ def test_routes_page_and_compare_card_show_batch(client, seeded):
     opt = client.get(f"/optimization/pool?branch_id={seeded['b']}&warehouse_id={seeded['w']}&run=1&slot=1").text
     if 'id="rcBox"' in opt:  # com amostra de pedidos no escopo
         assert 'id="rcBc"' in opt and 'id="rcBn"' in opt
+
+
+def test_3d_payloads_have_the_batch_walker():
+    from services.route_sim import day_payload, order_payload
+
+    nodes, start = _aisle()
+    ref = {"x": 0.0, "y": 0.0, "label": "ref"}
+    sample = [[f"P{j}", [f"S{j * 2 + 1}", f"S{j * 2 + 2}"], [1, 2], "2026-11-01"] for j in range(6)] + \
+             [["Q0", ["S29"], [1], "2026-11-02"]]
+    one = order_payload(sample, nodes, start, ref, "P0", batch=3)
+    b = one["routes"]["batch"]
+    assert set(b["orders"]) == {"P0", "P1", "P2"} and "Q0" not in b["orders"]  # só pedidos do mesmo dia
+    assert len(b["keys"]) == len(b["stops"]) == 6 and sum(b["qty"]) == 9  # paradas e peças dos 3 pedidos
+    assert "batch" not in order_payload(sample, nodes, start, ref, "P0")["routes"]  # sem lote: 3 separadores
+    day = day_payload(sample, nodes, start, ref, "2026-11-01", batch=3)
+    bd = day["routes"]["batch"]
+    assert len(bd["trips"]) == 2 and len(bd["starts"]) == 2 and len(bd["ord"]) == len(bd["keys"]) == 12
+    assert bd["m"] < day["routes"]["opt"]["m"]
+
+
+def test_stops_without_floor_plan_are_per_bay_not_one():
+    """Sem planta (sem coordenadas), cada estante é uma parada; níveis da mesma estante são uma parada só."""
+    nodes, start = _aisle()
+    lvl2 = Node(key="A-03-2", gx=0, gy=0, zone=0, aisle=0, along=300.0, cross=0.0, ends=(0.0, 3000.0),
+                to_global=lambda e, c, a, b: (e, c, 0, 0))
+    nodes["S99"] = [lvl2]  # outro nível da estante A-03
+    sim = simulate([["P", ["S1", "S5", "S9", "S3", "S99"], [1] * 5]], nodes, start)
+    assert sim["rows"][0]["stops"] == 4  # A-01, A-05, A-09 e A-03 (dois níveis) — antes, tudo virava 1 parada
+    assert abs(sim["rows"][0]["opt_m"] - 18.0) < 1e-6  # vai até A-09 (9 m) e volta

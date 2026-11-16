@@ -52,6 +52,7 @@ P3D = r"/layout/plan/3d|/optimization/site/\d+/3d"
 R(P3D, "#nkColor", "Cor das bins", "Escolhe o que a cor de cada bin mostra: tipo de bin, ocupação, estrutura, SKU, zonas de ouro ou curva ABC.", "view3d:color")
 R(P3D, "#nkCut", "Altura até", "Esconde tudo o que fica acima desta altura, para ver os níveis de baixo por dentro.", "view3d:cut")
 R(P3D, "#nkFind", "Buscar SKU ou endereço", "Digite um SKU ou endereço: as bins encontradas ficam em destaque e a câmera vai até elas.", "view3d:find")
+R(P3D, "#nkBatch", "Pedidos por trajeto (lote)", "O 4º separador, de lote, leva até este número de pedidos do mesmo dia no mesmo trajeto. Mude para ver outro agrupamento.", "route:batch")
 R(P3D, "#nkBins", "Mostrar bins", "Liga ou desliga o desenho das bins (as caixas dentro das estruturas).", "view3d:bins")
 R(P3D, "#nkStructs", "Mostrar estruturas", "Liga ou desliga os montantes e as bandejas das estruturas.", "view3d:structs")
 R(P3D, "#nkWalls", "Mostrar paredes", "Liga ou desliga as paredes do imóvel em volta do arranjo.", "view3d:walls")

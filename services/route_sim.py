@@ -184,8 +184,11 @@ def _s_shape(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
 
 
 def _stop_key(n: Node) -> tuple:
-    """Ponto de parada: endereços do mesmo módulo (estante) param no mesmo lugar — uma parada só."""
-    return (round(n.gx), round(n.gy))
+    """Ponto de parada: endereços do mesmo módulo (estante) param no mesmo lugar — uma parada só. Com planta, pelo
+    ponto na planta; sem planta (sem coordenadas), pela posição no corredor (corredor, eixo e posição da estante)."""
+    if n.gx or n.gy or n.net is not None:
+        return (round(n.gx), round(n.gy))
+    return ("addr", n.zone, n.aisle, round(n.cross), round(n.along))
 
 
 def stop_groups(nodes: list[Node]) -> dict[str, list[Node]]:
@@ -478,8 +481,51 @@ def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Call
             "days": [{k: (r2(v) if isinstance(v, float) else v) for k, v in e.items()} for e in by_day(sim)]}
 
 
-def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: str, d: Callable = dist) -> dict:
-    """As três rotas de um pedido: pontos (cm, planta), índice de cada parada em pts, endereços, SKUs e a distância."""
+def _same_day(sample: list, order: str) -> list:
+    """Pedidos que podem ir no mesmo trajeto em lote: os do mesmo dia (sem data: a amostra toda)."""
+    e = next((o for o in sample if o[0] == order), None)
+    day = e[3] if e is not None and len(e) > 3 else None
+    return [o for o in sample if (o[3] if len(o) > 3 else None) == day] if day else list(sample)
+
+
+def _trip_route(trip: dict, entries: dict, nodes_of: dict, start: Node, d: Callable, near: dict) -> dict:
+    """Rota de um trajeto em lote no formato das rotas do 3D: a rota do trajeto (melhor entre otimizada, serpentina e
+    lista) com as peças, os SKUs e os itens fora da zona de ouro de TODOS os pedidos em cada parada."""
+    units_at: dict[str, float] = {}
+    out_at: dict[str, int] = {}
+    outq_at: dict[str, float] = {}
+    skus_at: dict[str, list] = {}
+    for oid in trip["orders"]:
+        e = entries.get(oid)
+        if e is None:
+            continue
+        qty_of = dict(zip(e[1], e[2])) if len(e) > 2 and e[2] else {}
+        for s_ in e[1]:
+            if s_ in near:
+                k = near[s_].key
+                q = float(qty_of.get(s_, 1.0))
+                units_at[k] = units_at.get(k, 0.0) + q
+                out_at[k] = out_at.get(k, 0) + int(near[s_].gold is False)
+                if near[s_].gold is False:
+                    outq_at[k] = outq_at.get(k, 0.0) + q
+                skus_at.setdefault(k, []).append(s_)
+    route, groups = trip["route"], trip["groups"]
+    idx: list = []
+    pts = path_points(route, start, idx)
+    grp = [groups.get(n.key, [n.key]) for n in route]
+    return {"name": _("Lote — {n} pedidos no trajeto", n=len(trip["orders"])), "color": BATCH_COLOR,
+            "pts": [[round(x, 1), round(y, 1)] for x, y in pts], "stops": idx[:-1], "keys": [n.key for n in route],
+            "groups": grp, "skus": [", ".join(x for k in g for x in skus_at.get(k, [])) for g in grp],
+            "qty": [round(sum(units_at.get(k, 0.0) for k in g), 3) for g in grp],
+            "out": [sum(out_at.get(k, 0) for k in g) for g in grp],
+            "outq": [round(sum(outq_at.get(k, 0.0) for k in g), 3) for g in grp],
+            "m": round(trip["bopt_m"], 2), "orders": list(trip["orders"])}
+
+
+def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: str, d: Callable = dist,
+                  batch: int = 0) -> dict:
+    """As rotas de um pedido: pontos (cm, planta), índice de cada parada em pts, endereços, SKUs e a distância. Com
+    `batch` >= 2, também "batch": o trajeto em lote em que o pedido caiu (com os outros pedidos do mesmo dia)."""
     lines = [o for o in sample if o[0] == order]
     if not lines:
         return {"error": _("Pedido {order} não está na amostra.", order=order)}
@@ -519,12 +565,18 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
                         "out": [sum(out_at.get(k, 0) for k in g) for g in grp],
                         "outq": [round(sum(outq_at.get(k, 0.0) for k in g), 3) for g in grp],
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
+    if batch and batch >= 2:
+        pool = _same_day(sample, order)
+        trip = trip_of(simulate(pool, nodes_of, start, d, batch=batch), order)
+        if trip:
+            routes["batch"] = _trip_route(trip, {e[0]: e for e in pool}, nodes_of, start, d, near)
     return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
             "out_gold": row["out_gold"], "has_gold": any(n.gold is not None for ns in nodes_of.values() for n in ns),
             "ref": ref, "routes": routes}
 
 
-def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, d: Callable = dist) -> dict:
+def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, d: Callable = dist,
+                batch: int = 0) -> dict:
     """Um dia inteiro para a caminhada em 3D: os pedidos do dia, um depois do outro (cada um sai da referência e
     volta a ela), no mesmo formato de order_payload. Cada rota traz também `ord` (índice do pedido de cada parada) e
     `starts` (índice em pts onde começa cada pedido); `orders` lista os pedidos na ordem feita."""
@@ -556,6 +608,29 @@ def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, 
             m["m"] = round(m["m"] + r["m"], 2)
     if not done:
         return {"error": _("Os SKUs dos pedidos do dia {day} não estão na planta.", day=day)}
+    if batch and batch >= 2:  # lote: os trajetos do dia, um depois do outro
+        sim_b = simulate(entries, nodes_of, start, d, batch=batch)
+        near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
+        by_id = {e[0]: e for e in entries}
+        pos = {o["order"]: i for i, o in enumerate(done)}
+        m = None
+        for t in sim_b.get("trips") or []:
+            r = _trip_route(t, by_id, nodes_of, start, d, near)
+            if m is None:
+                m = {**{k: r[k] for k in ("name", "color")}, "pts": [], "stops": [], "keys": [], "groups": [], "skus": [],
+                     "qty": [], "out": [], "outq": [], "m": 0.0, "ord": [], "starts": [], "trips": []}
+            base = len(m["pts"])
+            m["starts"].append(base)
+            m["pts"] += r["pts"]
+            m["stops"] += [base + i for i in r["stops"]]
+            for f in ("keys", "groups", "skus", "qty", "out", "outq"):
+                m[f] += r[f]
+            m["ord"] += [min(pos.get(o, 0) for o in t["orders"])] * len(r["keys"])
+            m["m"] = round(m["m"] + r["m"], 2)
+            m["trips"].append(t["orders"])
+        if m is not None:
+            m["name"] = _("Lote — {n} trajetos", n=len(m["trips"]))
+            routes["batch"] = m
     return {"day": day, "order": day, "orders": done, "lines": tot["lines"], "stops": tot["stops"],
             "units": round(tot["units"], 3), "out_gold": tot["out_gold"], "has_qty": has_qty, "has_gold": has_gold,
             "ref": ref, "routes": routes}

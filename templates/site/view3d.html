@@ -91,10 +91,11 @@
     <select class="form-select form-select-sm mb-1" id="nkDay"></select></div>
     <label class="form-label small mb-0" for="nkRoute">{{ _("Rota") }}</label>
     <select class="form-select form-select-sm mb-1" id="nkRoute">
-      <option value="all">{{ _("Comparar as 3 ao mesmo tempo") }}</option>
+      <option value="all">{{ _("Comparar as 4 ao mesmo tempo") }}</option>
       <option value="list">{{ _("Lista de separação (ordem dos endereços)") }}</option>
       <option value="s">{{ _("Serpentina (rota em S)") }}</option>
       <option value="opt">{{ _("Otimizada") }}</option>
+      <option value="batch">{{ _("Lote (vários pedidos por trajeto)") }}</option>
     </select>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-primary" id="nkPlay" title="{{ _("Iniciar / pausar (barra de espaço)") }}"><i class="bi bi-play-fill"></i></button>
@@ -116,6 +117,8 @@
         <input class="form-control form-control-sm" type="number" id="nkGoldItem" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkGoldP" title="{{ _("Tempo a mais por peça num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/peça)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold_piece) }}"></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkBatch" title="{{ _("Separação em lote (4º separador): quantos pedidos do mesmo dia vão no mesmo trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
+        <input class="form-control form-control-sm" type="number" id="nkBatch" min="2" max="20" step="1" value="{{ st.t_batch }}"></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="{{ _("Grava a simulação do início ao fim e baixa o vídeo (.webm)") }}"><i class="bi bi-record-circle"></i> {{ _("Gravar vídeo") }}</button>
@@ -430,8 +433,9 @@ $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3
 // ------------------------------------------------------------------ simulação de caminhada (um pedido percorrido em 3D)
 const ROUTES = {{ v3.routes_url|tojson }};  // pedidos da amostra e rotas (routes3d.json)
 const CMP = {{ (v3.compare or false)|tojson }};  // hoje × proposta de uma otimização: dois separadores na rota escolhida
-const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); if (CMP && (order != null || day)) u.searchParams.set('kind', $('nkRoute').value); return u.toString(); };
+const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); if (order != null || day) u.searchParams.set('t_batch', $('nkBatch').value || ''); if (CMP && (order != null || day)) u.searchParams.set('kind', $('nkRoute').value); return u.toString(); };
 const isDay = () => $('nkScope').value === 'day';
+const rk = () => ($('nkRoute').value === 'batch' || $('nkRoute').value === 'all' ? 'opt' : $('nkRoute').value);  // distâncias da lista
 const fmtDay = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString(NK_I18N.locale); } catch (e) { return d; } };
 const WK = { seq: 0, stale: false, list: null, data: null, walkers: [], stops: {}, t: 0, T: 0, playing: false, group: new THREE.Group(), rec: null, hudAt: 0 };
 scene.add(WK.group);
@@ -472,11 +476,11 @@ async function loadOrders(order, day) {
     $('nkWalkMsg').textContent = _t('Carregando os pedidos…');
     try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: _t('Falha ao carregar os pedidos.') }; }
     if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
-    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · ` + (CMP ? _t('hoje {a} m → proposta {b} m', {a: fmt(o[$('nkRoute').value + '_cur']), b: fmt(o[$('nkRoute').value + '_new'])}) : `lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m`) + '</option>').join('');
+    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · ` + (CMP ? _t('hoje {a} m → proposta {b} m', {a: fmt(o[rk() + '_cur']), b: fmt(o[rk() + '_new'])}) : `lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m`) + '</option>').join('');
     const s = WK.list.summary;
     const days = WK.list.days || [];
     $('nkScopeBox').style.display = days.length ? '' : 'none';
-    $('nkDay').innerHTML = days.map(x => `<option value="${esc(x.date)}">${esc(fmtDay(x.date))} · ${_t('{n} pedidos', {n: x.orders})} · ${CMP ? _t('hoje {a} km → proposta {b} km', {a: fmt(x[$('nkRoute').value + '_cur'] / 1000, 2), b: fmt(x[$('nkRoute').value + '_new'] / 1000, 2)}) : _t('lista {a} km → otim. {b} km', {a: fmt(x.list_m / 1000, 2), b: fmt(x.opt_m / 1000, 2)})}</option>`).join('');
+    $('nkDay').innerHTML = days.map(x => `<option value="${esc(x.date)}">${esc(fmtDay(x.date))} · ${_t('{n} pedidos', {n: x.orders})} · ${CMP ? _t('hoje {a} km → proposta {b} km', {a: fmt(x[rk() + '_cur'] / 1000, 2), b: fmt(x[rk() + '_new'] / 1000, 2)}) : _t('lista {a} km → otim. {b} km', {a: fmt(x.list_m / 1000, 2), b: fmt(x.opt_m / 1000, 2)})}</option>`).join('');
     if (CMP) $('nkWalkMsg').innerHTML = _t('<b>Hoje × proposta do solver<\/b> · {orders} pedidos · média por pedido na rota otimizada: <span style="color:#d6604d">hoje {a} m<\/span> → <span style="color:#1a9850">proposta {b} m<\/span>. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam.', {orders: s.orders, a: fmt(s.opt_cur), b: fmt(s.opt_new)});
     else $('nkWalkMsg').innerHTML = _t('{orders} pedidos na amostra · média por pedido: <span style="color:#d62728">lista {fmt} m<\/span> · <span style="color:#2f6db5">serpentina {fmt2} m<\/span> · <span style="color:#1a9850">otimizada {fmt3} m<\/span>', {orders: s.orders, fmt: fmt(s.list_avg), fmt2: fmt(s.s_avg), fmt3: fmt(s.opt_avg)});
   }
@@ -529,7 +533,7 @@ function pointAt(w, d) {  // posição (m) a `d` metros do início e o segmento 
 function build() {
   clearWalk();
   const d = WK.data, mode = $('nkRoute').value;
-  const kinds = (d.compare ? ['cur', 'new'] : mode === 'all' ? ['list', 's', 'opt'] : [mode]).filter(k => d.routes[k]);
+  const kinds = (d.compare ? ['cur', 'new'] : mode === 'all' ? ['list', 's', 'opt', 'batch'] : [mode]).filter(k => d.routes[k]);
   if (!kinds.length) { $('nkWalkInfo').textContent = _t('Rota indisponível para este pedido.'); return; }
   const single = kinds.length === 1;
   // paradas: pino no piso e contorno das bins do endereço; ficam na cor de quem pegou primeiro
@@ -557,7 +561,7 @@ function build() {
     WK.stops[key] = { pin, edges, fills, by: undefined };
   }));
   WK.walkers = kinds.map((k, i) => {
-    const R = d.routes[k], off = single ? 0 : (i - 1) * 0.3;  // lado a lado, para não se sobreporem
+    const R = d.routes[k], off = single ? 0 : (i - (kinds.length - 1) / 2) * 0.3;  // lado a lado, para não se sobreporem
     const P = R.pts.map(([x, y]) => new THREE.Vector3(M(x) + off, 0, M(y) + off));
     const cum = [0];
     for (let j = 1; j < P.length; j++) cum.push(cum[j - 1] + P[j].distanceTo(P[j - 1]));
@@ -603,6 +607,10 @@ function build() {
   const gain = d.compare ? null : R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
   const gainCmp = d.compare && R0.cur.m ? (1 - R0.new.m / R0.cur.m) * 100 : null;
   $('nkWalkInfo').innerHTML = (d.day ? _t('<b>Dia {day}<\/b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)', {day: esc(fmtDay(d.day)), n: d.orders.length}) + '<br>' : '') + _t(d.day ? '{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>' : '<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : '') + (gainCmp != null ? '<br>' + (gainCmp >= 0 ? _t('A proposta anda <b>{fmt}%<\/b> menos que hoje.', {fmt: fmt(gainCmp, 0)}) : _t('A proposta anda <b>{fmt}%<\/b> mais que hoje.', {fmt: fmt(-gainCmp, 0)})) : ''), mmss: mmss(WK.T / speed())});
+  const RB = !d.compare && kinds.includes('batch') ? R0.batch : null;  // lote: quem vai no mesmo trajeto
+  if (RB) $('nkWalkInfo').insertAdjacentHTML('beforeend', `<div style="color:${RB.color}">` + (RB.orders
+    ? _t('Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).', {orders: esc(RB.orders.join(', '))})
+    : _t('Lote: {n} trajetos no dia, um depois do outro (saída e volta na referência a cada trajeto).', {n: (RB.trips || []).length})) + '<\/div>');
   $('nkStops').innerHTML = '<div class="text-muted">' + _t('Paradas — {esc}:', {esc: esc(first.name)}) + '<\/div>' + (first.keys.map((k, j) =>
     (many && (j === 0 || first.ord[j] !== first.ord[j - 1]) ? `<div class="fw-semibold mt-1">${esc(_t('Pedido {k} de {n}: {order} ({lines} linha(s))', {k: first.ord[j] + 1, n: d.orders.length, order: d.orders[first.ord[j]].order, lines: d.orders[first.ord[j]].lines}))}</div>` : '') +
     `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${String(first.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
@@ -806,7 +814,7 @@ $('nkScope').addEventListener('change', () => {
 });
 if (CMP) {  // comparação: a rota escolhida vem do servidor (as duas situações nela); sem a opção "as três"
   $('nkRoute').querySelector('option[value=all]')?.remove();
-  $('nkRoute').value = ['list', 's', 'opt'].includes(new URLSearchParams(location.search).get('kind')) ? new URLSearchParams(location.search).get('kind') : 'opt';
+  $('nkRoute').value = ['list', 's', 'opt', 'batch'].includes(new URLSearchParams(location.search).get('kind')) ? new URLSearchParams(location.search).get('kind') : 'opt';
   $('nkRoute').addEventListener('change', () => {
     if (WK.rec) stopRec(true);
     if (WK.list) { const o = $('nkOrder').value, dd = $('nkDay').value; WK.list = null; WK.stale = true; loadOrders(o, isDay() ? dd : ''); }
@@ -814,6 +822,10 @@ if (CMP) {  // comparação: a rota escolhida vem do servidor (as duas situaçõ
 }
 [...(CMP ? [] : ['nkRoute']), 'nkWalkV', 'nkPick', 'nkPiece', 'nkGoldItem', 'nkGoldP'].forEach(id => $(id).addEventListener('change', () => { if (WK.rec) stopRec(true); if (WK.data) { build(); play(true); } }));
 $('nkSpeed').addEventListener('change', () => { if (WK.data) build(); });
+$('nkBatch').addEventListener('change', () => {  // outro tamanho de lote: os trajetos mudam (vem do servidor)
+  if (WK.rec) stopRec(true);
+  if (WK.data) { WK.stale = true; if (isDay()) loadDay($('nkDay').value); else loadOrder($('nkOrder').value); }
+});
 $('nkCam').addEventListener('change', () => camMode(true));
 $('nkPlay').addEventListener('click', () => (WK.playing ? pause() : play()));
 $('nkRestart').addEventListener('click', () => { WK.t = 0; WK.walkers.forEach(w => { w.rot = null; }); update(); hud(); camMode(true); });

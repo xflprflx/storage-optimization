@@ -264,6 +264,8 @@
           <div class="col-12"><div class="form-check form-switch" title="{{ _("Na simulação hoje × proposta, os pedidos só ficam disponíveis a partir do horário de liberação (pedido sem horário = início do dia).") if has_rel else _("O histórico não tem a coluna Liberação (horário de liberação do pedido). Reenvie o histórico com ela para usar esta opção.") }}">
             <input class="form-check-input" type="checkbox" name="slot_release" value="1" id="slot_release" {% if params.slot_release and has_rel %}checked{% endif %} {% if not has_rel %}disabled{% endif %}>
             <label class="form-check-label" for="slot_release">{{ _("Considerar o horário de liberação dos pedidos") }}{% if not has_rel %} <span class="text-muted">{{ _("(o histórico não tem a coluna Liberação)") }}</span>{% endif %}</label></div></div>
+          <div class="col-6"><label class="form-label mb-0" for="slot_bwait" title="{{ _("Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = sai com os que já estão liberados).") }}">{{ _("Espera p/ agrupar (min)") }}</label>
+            <input class="form-control form-control-sm text-end" name="slot_bwait" id="slot_bwait" type="number" min="0" max="240" step="1" value="{{ params.slot_bwait }}" {% if not has_rel %}disabled{% endif %}></div>
         </div>
         {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
         {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}

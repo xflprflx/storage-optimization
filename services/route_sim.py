@@ -228,6 +228,7 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
     Endereços repetidos e do mesmo módulo = uma parada. A caminhada e as paradas do trajeto são divididas igualmente
     entre os pedidos; peças e pega continuam do pedido. Grava em cada linha blist_m/bs_m/bopt_m, batch_stops e trip."""
     tp = {**TIME_DEFAULTS, **(tp or {})}
+    wait_s = float(tp.get("t_bwait") or 0) * 60 if release else 0.0  # espera máxima para completar o lote (s)
     by_row = {r["order"]: r for r in rows}
     pools: dict[str, list] = {}
     for oid in stops_of:
@@ -280,6 +281,15 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
             if release:
                 clock = max(clock, rel[left[0]])  # sem pedido liberado: espera o próximo
                 avail = [o for o in left if rel[o] <= clock + 1e-9]
+                if wait_s > 0 and len(avail) < size:
+                    # lote incompleto: espera até `wait_s` pelos próximos pedidos liberados — só o necessário: sai quando
+                    # o lote completa ou quando chega o último pedido que cabe na janela (nenhum na janela: sai já)
+                    need = size - len(avail)
+                    coming = sorted(rel[o] for o in left if rel[o] > clock + 1e-9)[:need]
+                    inside = [r for r in coming if r <= clock + wait_s + 1e-9]
+                    if inside:
+                        clock = inside[-1]
+                        avail = [o for o in left if rel[o] <= clock + 1e-9]
             else:
                 avail = left
             seed = avail[0]
@@ -428,7 +438,8 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
 
 # m/s, s/parada, s/peça, s por item fora da zona de ouro da pega, s por peça fora da zona de ouro
 TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0, "t_gold_piece": 0.0,
-                 "t_batch": 4}  # separação em lote: pedidos por trajeto (2 a 20)
+                 "t_batch": 4,  # separação em lote: pedidos por trajeto (2 a 20)
+                 "t_bwait": 0}  # lote com horário de liberação: espera máxima para completar o lote (min)
 
 
 def time_params(qp) -> dict:
@@ -438,7 +449,7 @@ def time_params(qp) -> dict:
     dflt = {**TIME_DEFAULTS, **sim_times()}  # padrão das Configurações (a tela pode mudar)
     out = {}
     for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0)),
-                        ("t_gold_piece", (0.0, 600.0)), ("t_batch", (2, 20))):
+                        ("t_gold_piece", (0.0, 600.0)), ("t_batch", (2, 20)), ("t_bwait", (0.0, 240.0))):
         try:
             v = float(str(qp.get(k) if qp.get(k) not in (None, "") else dflt[k]).replace(",", "."))
         except ValueError:
@@ -503,6 +514,7 @@ def _timeline(sim: dict) -> None:
     leads: dict[str, list] = {k: [] for k in TIMELINE_KEYS}
     ends: dict[str, list] = {k: [] for k in TIMELINE_KEYS}
     idles: dict[str, float] = {k: 0.0 for k in TIMELINE_KEYS}
+    bwaits: dict[str, float] = {}  # espera para completar o lote (parte do ocioso)
     # para os insights de ociosidade (rota otimizada e lote): intervalos ociosos e trabalho, em s desde 0h, e a
     # liberação/início/fim de cada pedido
     log: dict[str, dict] = {k: {"idle": [], "busy": [], "orders": [], "days": []} for k in ("opt", "bopt")}
@@ -511,20 +523,24 @@ def _timeline(sim: dict) -> None:
         rels = [by_row[o]["rel"] for o in oids if by_row[o].get("rel") is not None]
         tl = {"start_s": min(rels) if rels else None}
         for k in TIMELINE_KEYS:
-            if k in BATCH_KEYS:  # lote: os trajetos, na ordem em que foram montados
-                units = [(t["orders"], sum(by_row[o].get(f"{k}_t", 0.0) for o in t["orders"])) for t in trips_of.get(day, [])]
+            if k in BATCH_KEYS:  # lote: os trajetos, na ordem em que foram montados (saída = a do agrupamento)
+                units = [(t["orders"], sum(by_row[o].get(f"{k}_t", 0.0) for o in t["orders"]), t.get("start_s", 0.0))
+                         for t in trips_of.get(day, [])]
                 if not units or not all(f"{k}_t" in by_row[o] for o in oids):
                     continue
             else:
                 if not all(f"{k}_t" in by_row[o] for o in oids):
                     continue
-                units = [([o], by_row[o][f"{k}_t"]) for o in sorted(oids, key=lambda o: (rel[o], o))]
-            clock = idle = 0.0
+                units = [([o], by_row[o][f"{k}_t"], 0.0) for o in sorted(oids, key=lambda o: (rel[o], o))]
+            clock = idle = bwait = 0.0
             lead = []
             lg = log.get(k)
             d0 = tl["start_s"] or 0
-            for os_, dur in units:
-                st = max(clock, max(rel[o] for o in os_))
+            for os_, dur, depart in units:
+                natural = max(clock, max(rel[o] for o in os_))
+                st = max(natural, depart if k == "bopt" else natural)  # lote: esperou para completar o trajeto
+                # espera para agrupar: desde quando podia sair (livre e com o 1º pedido do trajeto liberado) até a saída
+                bwait += st - max(clock, min(rel[o] for o in os_)) if k == "bopt" else 0.0
                 if lg is not None and st > clock + 1e-9:
                     lg["idle"].append((d0 + clock, d0 + st))
                 idle += st - clock
@@ -539,7 +555,8 @@ def _timeline(sim: dict) -> None:
                     by_row[o][f"{k}_lead"] = clock - rel[o]
             if lg is not None:
                 lg["days"].append((day, d0, d0 + clock, idle))
-            tl.update({f"{k}_end": clock, f"{k}_idle": idle, f"{k}_lead": sum(lead) / len(lead)})
+            tl.update({f"{k}_end": clock, f"{k}_idle": idle, f"{k}_lead": sum(lead) / len(lead), f"{k}_bwait": bwait})
+            bwaits[k] = bwaits.get(k, 0.0) + bwait
             leads[k] += lead
             ends[k].append(clock)
             idles[k] += idle
@@ -552,6 +569,7 @@ def _timeline(sim: dict) -> None:
             t[f"{k}_lead_avg"] = sum(leads[k]) / len(leads[k])
             t[f"{k}_end_avg"] = sum(ends[k]) / len(ends[k])
             t[f"{k}_idle_h"] = idles[k] / 3600
+            t[f"{k}_bwait_h"] = bwaits.get(k, 0.0) / 3600
 
 
 def _spread(intervals, buckets: dict) -> None:
@@ -602,6 +620,7 @@ def idle_insights(sim: dict, k: str = "opt") -> Optional[dict]:
     worst_wait = max((r for r in per_hour if r["wait_m"] is not None), key=lambda r: r["wait_m"], default=None)
     peak_work = max(per_hour, key=lambda r: r["work_m"])
     out = {"days": n, "idle_h": total_idle / 3600, "idle_day_h": total_idle / n / 3600,
+           "bwait_day_m": (sim.get("times") or {}).get(f"{k}_bwait_h", 0.0) * 60 / n,
            "idle_pct": total_idle / shift * 100 if shift else None, "shift_h": shift / n / 3600,
            "wait_avg_m": sum(waits) / len(waits) / 60 if waits else 0.0,
            "wait_p90_m": sorted(waits)[int(0.9 * (len(waits) - 1))] / 60 if waits else 0.0,
@@ -727,7 +746,7 @@ def _trip_route(trip: dict, entries: dict, nodes_of: dict, start: Node, d: Calla
 
 
 def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: str, d: Callable = dist,
-                  batch: int = 0, release: bool = False) -> dict:
+                  batch: int = 0, release: bool = False, tp: Optional[dict] = None) -> dict:
     """As rotas de um pedido: pontos (cm, planta), índice de cada parada em pts, endereços, SKUs e a distância. Com
     `batch` >= 2, também "batch": o trajeto em lote em que o pedido caiu (com os outros pedidos do mesmo dia)."""
     lines = [o for o in sample if o[0] == order]
@@ -771,7 +790,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
                         "m": round(row[f"{kind}_m"], 2)}  # a distância da simulação (pelos corredores)
     if batch and batch >= 2:
         pool = _same_day(sample, order)
-        trip = trip_of(simulate(pool, nodes_of, start, d, batch=batch, release=release, tp=time_params({})), order)
+        trip = trip_of(simulate(pool, nodes_of, start, d, batch=batch, release=release, tp=tp or time_params({})), order)
         if trip:
             routes["batch"] = _trip_route(trip, {e[0]: e for e in pool}, nodes_of, start, d, near)
     return {"order": order, "lines": row["lines"], "stops": row["stops"], "units": row["units"], "has_qty": bool(qty_of),
@@ -780,7 +799,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
 
 
 def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, d: Callable = dist,
-                batch: int = 0, release: bool = False) -> dict:
+                batch: int = 0, release: bool = False, tp: Optional[dict] = None) -> dict:
     """Um dia inteiro para a caminhada em 3D: os pedidos do dia, um depois do outro (cada um sai da referência e
     volta a ela), no mesmo formato de order_payload. Cada rota traz também `ord` (índice do pedido de cada parada) e
     `starts` (índice em pts onde começa cada pedido); `orders` lista os pedidos na ordem feita."""
@@ -820,7 +839,7 @@ def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, 
     if not done:
         return {"error": _("Os SKUs dos pedidos do dia {day} não estão na planta.", day=day)}
     if batch and batch >= 2:  # lote: os trajetos do dia, um depois do outro
-        sim_b = simulate(entries, nodes_of, start, d, batch=batch, release=release, tp=time_params({}))
+        sim_b = simulate(entries, nodes_of, start, d, batch=batch, release=release, tp=tp or time_params({}))
         near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
         by_id = {e[0]: e for e in entries}
         pos = {o["order"]: i for i, o in enumerate(done)}
@@ -837,8 +856,9 @@ def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, 
             for f in ("keys", "groups", "skus", "qty", "out", "outq"):
                 m[f] += r[f]
             m["ord"] += [min(pos.get(o, 0) for o in t["orders"])] * len(r["keys"])
-            if release:  # o trajeto só sai com todos os pedidos dele liberados
-                m.setdefault("rel", []).extend([max(rel0.get(o, 0) for o in t["orders"])] * len(r["keys"]))
+            if release:  # o trajeto só sai com todos os pedidos dele liberados (e depois da espera para completar o lote)
+                m.setdefault("rel", []).extend([max([rel0.get(o, 0) for o in t["orders"]] + [t.get("start_s") or 0])]
+                                               * len(r["keys"]))
             m["m"] = round(m["m"] + r["m"], 2)
             m["trips"].append(t["orders"])
         if m is not None:

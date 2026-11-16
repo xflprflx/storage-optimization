@@ -56,6 +56,8 @@
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ '%g'|format(tm.params.t_gold_piece) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_batch" title="{{ _("Separação em lote: quantos pedidos o separador leva no mesmo trajeto") }}">{{ _("Pedidos por trajeto") }}</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="2" max="20" name="t_batch" id="t_batch" value="{{ tm.params.t_batch }}"></div>
+    <div class="col-auto"><label class="form-label mb-0" for="t_bwait" title="{{ _("Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = sai com os que já estão liberados).") if sim.release_on else _("Só com o horário de liberação ligado (coluna Liberação no histórico).") }}">{{ _("Espera p/ agrupar (min)") }}</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="0" max="240" name="t_bwait" id="t_bwait" value="{{ '%g'|format(tm.params.t_bwait) }}" {% if not sim.release_on %}disabled{% endif %}></div>
     <div class="col-auto"><div class="form-check mb-1" title="{{ _("Os pedidos só ficam disponíveis a partir do horário de liberação (coluna Liberação do histórico); sem pedido liberado, o separador espera. Pedido sem horário = disponível desde o início do dia.") if sim.has_release else _("O histórico não tem a coluna Liberação (horário de liberação do pedido). Reenvie o histórico com ela para usar esta opção.") }}">
       <input class="form-check-input" type="checkbox" name="t_release" value="1" id="t_release" {% if sim.release_on %}checked{% endif %} {% if not sim.has_release %}disabled{% endif %}>
       <label class="form-check-label" for="t_release">{{ _("Considerar o horário de liberação") }}</label></div></div>
@@ -121,7 +123,8 @@
           {% elif t.kind == 'gaps' %}<li>{{ _h("Há em média <b>{n}</b> pausas de 15 min ou mais por dia esperando pedidos — tempo que pode ir para outra atividade.", n=(t.n|dec(1))) }}</li>
           {% endif %}
           {% endfor %}
-          {% if insb %}<li>{{ _h("<b>Em lote</b>: {a} h ociosas por dia (contra {b} h pedido a pedido) e espera média de {wa} min (contra {wb} min).", a=(insb.idle_day_h|dec(1)), b=(ins.idle_day_h|dec(1)), wa=(insb.wait_avg_m|dec(1)), wb=(ins.wait_avg_m|dec(1))) }}</li>{% endif %}
+          {% if insb %}<li>{{ _h("<b>Em lote</b>: {a} h ociosas por dia (contra {b} h pedido a pedido) e espera média de {wa} min (contra {wb} min).", a=(insb.idle_day_h|dec(1)), b=(ins.idle_day_h|dec(1)), wa=(insb.wait_avg_m|dec(1)), wb=(ins.wait_avg_m|dec(1))) }}
+            {% if tm.params.t_bwait > 0 %}{{ _h("Esperando até {w} min para completar o lote: {m} min por dia parados à espera de pedidos, {trips} trajetos.", w=('%g'|format(tm.params.t_bwait)), m=(insb.bwait_day_m|dec(0)), trips=sim.trips_n) }}{% endif %}</li>{% endif %}
         </ul>
         <div class="small">
           <div><span class="text-muted">{{ _("Dias mais ociosos:") }}</span> {% for d in ins.most_idle_days %}{{ fmt_datetime(d.date|todate, time=False) if d.date else '—' }} ({{ d.idle_h|dec(1) }} h){% if not loop.last %}, {% endif %}{% endfor %}</div>

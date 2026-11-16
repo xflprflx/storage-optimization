@@ -147,3 +147,31 @@ def test_idle_insights_find_idle_hours_queue_and_pickers():
     assert "bopt" in sim["insights"]  # também em lote
     # sem a opção: sem insights
     assert "insights" not in add_times(simulate(sample, nodes, start, tp=tp), tp)
+
+
+def test_batch_waits_to_fill_the_trip_only_within_the_window():
+    nodes, start = _aisle()
+    h8 = 8 * 3600
+    # 8h00: 2 pedidos; 8h05: mais 2; 8h30: mais 2 (lote de 4)
+    sample = [[f"A{j}", [f"S{j + 1}"], [1], "2026-11-01", h8] for j in range(2)] + \
+             [[f"B{j}", [f"S{j + 5}"], [1], "2026-11-01", h8 + 300] for j in range(2)] + \
+             [[f"C{j}", [f"S{j + 9}"], [1], "2026-11-01", h8 + 1800] for j in range(2)]
+
+    def trips(wait):
+        tp = time_params({"t_batch": "4", "t_bwait": str(wait)})
+        sim = add_times(simulate(sample, nodes, start, batch=4, release=True, tp=tp), tp)
+        return sim, [sorted(t["orders"]) for t in sim["trips"]]
+
+    sim0, t0 = trips(0)
+    assert t0[0] == ["A0", "A1"]  # sem espera: sai com os 2 já liberados
+    sim10, t10 = trips(10)
+    assert t10[0] == ["A0", "A1", "B0", "B1"]  # espera 5 min e completa o lote
+    assert sim10["trips"][0]["start_s"] == 300  # sai na hora em que o lote completou (não aguarda os 10 min)
+    assert abs(sim10["days"][0]["bopt_bwait"] - 300) < 1e-6  # os 5 min contam como espera para agrupar
+    assert sim10["insights"]["bopt"]["bwait_day_m"] == 5.0
+    _s, t3 = trips(3)
+    assert t3[0] == ["A0", "A1"]  # os pedidos das 8h05 não cabem numa janela de 3 min
+    # sem o horário de liberação, a espera não vale (o agrupamento é o de sempre)
+    plain = [e[:4] for e in sample]
+    tp = time_params({"t_batch": "4", "t_bwait": "30"})
+    assert not simulate(plain, nodes, start, batch=4, release=True, tp=tp)["release_on"]

@@ -32,7 +32,8 @@
         ('sim_piece', _('Tempo por peça (s)'), _('Tempo para pegar cada peça.'), '0.5', ''),
         ('sim_gold', _('Fora da zona de ouro (s por item)'), _('Tempo a mais por item (linha do pedido) pego fora da zona de ouro da pega.'), '0.5', ''),
         ('sim_gold_piece', _('Fora da zona de ouro (s por peça)'), _('Tempo a mais por peça pega fora da zona de ouro da pega.'), '0.5', ''),
-        ('sim_batch', _('Pedidos por trajeto (lote)'), _('Separação em lote: quantos pedidos o separador leva no mesmo trajeto (2 a 20).'), '1', '')] %}
+        ('sim_batch', _('Pedidos por trajeto (lote)'), _('Separação em lote: quantos pedidos o separador leva no mesmo trajeto (2 a 20).'), '1', ''),
+        ('sim_bwait', _('Espera máx. para completar o lote (min)'), _('Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = não espera).'), '1', '')] %}
     <div class="col-md-4 col-sm-6">
       <label class="form-label small mb-0" for="{{ key }}">{{ label }}</label>
       <input class="form-control form-control-sm" type="number" step="{{ step }}" min="0" name="{{ key }}" id="{{ key }}" {% if unit %}data-u="{{ unit }}"{% endif %} value="{{ '%g'|format(s[key]) }}">

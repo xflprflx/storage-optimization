@@ -335,10 +335,12 @@ def assign_nodes(db: Session, g, branch_id: int, wid: Optional[int], assign: dic
 
 @router.get("/layout/plan/routes3d.json")
 def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "", day: str = "", cmp: str = "",
-                     kind: str = "opt", t_batch: str = "", release: str = "", db: Session = Depends(get_db)):
+                     kind: str = "opt", t_batch: str = "", t_bwait: str = "", release: str = "",
+                     db: Session = Depends(get_db)):
     from services.route_sim import day_payload, order_payload, orders_payload, time_params
 
-    batch = time_params({"t_batch": t_batch})["t_batch"]  # lote (4º separador): pedidos por trajeto
+    tp = time_params({"t_batch": t_batch, "t_bwait": t_bwait})
+    batch = tp["t_batch"]  # lote (4º separador): pedidos por trajeto; t_bwait: espera máx. para completar o lote
     rel = release == "1"  # horário de liberação dos pedidos (se o histórico tiver a coluna)
     br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
     if br is None:
@@ -355,8 +357,8 @@ def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "
                                "Rode a otimização de novo e abra o 3D pelo resultado.")}
         return route_compare.payload_3d(sample, assign_nodes(db, g, br.id, wid, data["before"]),
                                         assign_nodes(db, g, br.id, wid, data["after"]), start, ref, order, day, kind,
-                                        batch=batch, release=rel)
+                                        batch=batch, release=rel, tp=tp)
     if day:
-        return day_payload(sample, nodes, start, ref, day, batch=batch, release=rel)
+        return day_payload(sample, nodes, start, ref, day, batch=batch, release=rel, tp=tp)
     return orders_payload(sample, nodes, start, ref) if not order else \
-        order_payload(sample, nodes, start, ref, order, batch=batch, release=rel)
+        order_payload(sample, nodes, start, ref, order, batch=batch, release=rel, tp=tp)

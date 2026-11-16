@@ -128,6 +128,8 @@
         <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold_piece) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkBatch" title="{{ _("Separação em lote (4º separador): quantos pedidos do mesmo dia vão no mesmo trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkBatch" min="2" max="20" step="1" value="{{ st.t_batch }}"></div>
+      <div class="col-6"><label class="form-label small mb-0" for="nkBWait" title="{{ _("Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = sai com os que já estão liberados).") }}">{{ _("Espera p/ agrupar (min)") }}</label>
+        <input class="form-control form-control-sm" type="number" id="nkBWait" min="0" max="240" step="1" value="{{ '%g'|format(st.t_bwait) }}" disabled></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">
       <button type="button" class="btn btn-sm btn-danger" id="nkRec" title="{{ _("Grava a simulação do início ao fim e baixa o vídeo (.webm)") }}"><i class="bi bi-record-circle"></i> {{ _("Gravar vídeo") }}</button>
@@ -442,7 +444,7 @@ $('nkColor').addEventListener('change', () => { try { localStorage.setItem('nk-3
 // ------------------------------------------------------------------ simulação de caminhada (um pedido percorrido em 3D)
 const ROUTES = {{ v3.routes_url|tojson }};  // pedidos da amostra e rotas (routes3d.json)
 const CMP = {{ (v3.compare or false)|tojson }};  // hoje × proposta de uma otimização: dois separadores na rota escolhida
-const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); if (order != null || day) { u.searchParams.set('t_batch', $('nkBatch').value || ''); if ($('nkRelease').checked) u.searchParams.set('release', '1'); } if (CMP && (order != null || day)) u.searchParams.set('kind', $('nkRoute').value); return u.toString(); };
+const routesUrl = (order, day) => { const u = new URL(ROUTES, location.origin); if (order != null) u.searchParams.set('order', order); if (day) u.searchParams.set('day', day); if (order != null || day) { u.searchParams.set('t_batch', $('nkBatch').value || ''); if ($('nkRelease').checked) { u.searchParams.set('release', '1'); u.searchParams.set('t_bwait', $('nkBWait').value || '0'); } } if (CMP && (order != null || day)) u.searchParams.set('kind', $('nkRoute').value); return u.toString(); };
 const isDay = () => $('nkScope').value === 'day';
 const rk = () => ($('nkRoute').value === 'batch' || $('nkRoute').value === 'all' ? 'opt' : $('nkRoute').value);  // distâncias da lista
 const fmtDay = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString(NK_I18N.locale); } catch (e) { return d; } };
@@ -870,6 +872,11 @@ const walkCollapse = on => {
 $('nkWalkToggle').addEventListener('click', () => walkCollapse(!$('nkWalk').classList.contains('nk-collapsed')));
 try { if (localStorage.getItem('nk-walk-collapsed') === '1') walkCollapse(true); } catch (e) { /* idem */ }
 $('nkRelease').addEventListener('change', () => {  // a ordem e os trajetos do dia mudam (vêm do servidor)
+  if (WK.rec) stopRec(true);
+  $('nkBWait').disabled = !$('nkRelease').checked;  // a espera para agrupar só existe com o horário de liberação
+  if (WK.data) { WK.stale = true; if (isDay()) loadDay($('nkDay').value); else loadOrder($('nkOrder').value); }
+});
+$('nkBWait').addEventListener('change', () => {  // outra espera: os trajetos do lote mudam (vêm do servidor)
   if (WK.rec) stopRec(true);
   if (WK.data) { WK.stale = true; if (isDay()) loadDay($('nkDay').value); else loadOrder($('nkOrder').value); }
 });

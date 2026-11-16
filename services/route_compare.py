@@ -136,7 +136,7 @@ def load(token: str) -> Optional[dict]:
 
 
 def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict, order: str = "", day: str = "",
-               kind: str = "opt", batch: int = 0, release: bool = False) -> dict:
+               kind: str = "opt", batch: int = 0, release: bool = False, tp: Optional[dict] = None) -> dict:
     """Dados da caminhada 3D comparando hoje × proposta: sem pedido/dia, a lista (com as distâncias das duas
     situações em cada rota); com pedido ou dia, dois separadores na rota `kind` ("cur" = hoje, "new" = proposta)."""
     from services.i18n import _
@@ -164,8 +164,8 @@ def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict,
                             **{f"{k}_cur": a["summary"].get(f"{k}_avg") for k in KINDS},
                             **{f"{k}_new": b["summary"].get(f"{k}_avg") for k in KINDS}}}
     bt = batch if kind == "batch" else 0
-    one = (lambda n: day_payload(sample, n, start, ref, day, batch=bt, release=release)) if day else \
-        (lambda n: order_payload(sample, n, start, ref, order, batch=bt, release=release))
+    one = (lambda n: day_payload(sample, n, start, ref, day, batch=bt, release=release, tp=tp)) if day else \
+        (lambda n: order_payload(sample, n, start, ref, order, batch=bt, release=release, tp=tp))
     pc, pn = one(nodes_cur), one(nodes_new)
     if pc.get("error") or pn.get("error"):
         return {"error": pc.get("error") or pn.get("error")}

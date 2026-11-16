@@ -630,7 +630,7 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
 
 
 @router.get("/{pid}/routes3d.json")
-def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", release: str = "",
+def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", t_bwait: str = "", release: str = "",
                    db: Session = Depends(get_db)):
     """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias) e
     os totais por dia. Com `day`: o dia inteiro (pedidos em sequência). Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
@@ -638,7 +638,8 @@ def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", 
 
     from services.route_sim import day_payload, order_payload, orders_payload, time_params
 
-    batch = time_params({"t_batch": t_batch})["t_batch"]  # lote (4º separador): pedidos por trajeto
+    tp = time_params({"t_batch": t_batch, "t_bwait": t_bwait})
+    batch = tp["t_batch"]  # lote (4º separador): pedidos por trajeto; t_bwait: espera máx. para completar o lote
     pr = _get(db, pid)
     if not pr:
         return JSONResponse({"error": _("Projeto não encontrado.")}, status_code=404)
@@ -646,10 +647,10 @@ def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", 
     if error:
         return JSONResponse({"error": error})
     if day:  # o dia inteiro: os pedidos do dia um depois do outro
-        return JSONResponse(day_payload(sample, nodes, start, ref, day, batch=batch, release=release == "1"))
+        return JSONResponse(day_payload(sample, nodes, start, ref, day, batch=batch, release=release == "1", tp=tp))
     if not order:
         return JSONResponse(orders_payload(sample, nodes, start, ref))
-    return JSONResponse(order_payload(sample, nodes, start, ref, order, batch=batch, release=release == "1"))
+    return JSONResponse(order_payload(sample, nodes, start, ref, order, batch=batch, release=release == "1", tp=tp))
 
 
 @router.get("/{pid}/skus.xlsx")

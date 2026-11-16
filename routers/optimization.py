@@ -196,7 +196,7 @@ def _slot_raw(src: Mapping, raw: dict) -> dict:
 
     submitted = "objective" in src
     dflt = {**SLOT_DEFAULTS, "slot_v": f"{setting('sim_v'):g}", "slot_gold_s": f"{setting('sim_gold'):g}",
-            "slot_batch": f"{float(setting('sim_batch') or 4):g}"}  # Configurações
+            "slot_batch": f"{float(setting('sim_batch') or 4):g}", "slot_bwait": f"{float(setting('sim_bwait') or 0):g}"}  # Configurações
     raw.update({k: (src.get(k, "") if submitted else d) for k, d in dflt.items()})
     return raw
 
@@ -249,8 +249,9 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
         return None
     if not any(before.values()):
         return {"error": _("Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.")}
-    tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or "", "t_batch": raw.get("slot_batch") or ""}
-    tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece", "t_batch") if qp.get(k)})
+    tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or "", "t_batch": raw.get("slot_batch") or "",
+          "t_bwait": raw.get("slot_bwait") or ""}
+    tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece", "t_batch", "t_bwait") if qp.get(k)})
     lids = sorted({lid for d in (before, after) for lst in d.values() for lid, _q in lst})
     addr = {}
     for i in range(0, len(lids), 900):

@@ -112,7 +112,7 @@ TOURS: dict[str, dict] = {
     "history": {"p": r"^/imports/history$", "u": "/imports/history", "t": N_("Histórico de saídas"), "s": [
         S('[name="branch_id"]', N_("Filial"), N_("O histórico é de uma filial: os pedidos (ou saídas) dela, de preferência dos últimos 3 a 6 meses.")),
         S('[name="file"]', N_("Planilha de pedidos"),
-          N_("Uma linha por item de pedido: nº do pedido, SKU, quantidade e, se tiver, a data. Também serve uma lista de SKUs com o total de saída, mas sem pedidos não há afinidade nem simulação de trajeto."),
+          N_("Uma linha por item de pedido: nº do pedido, SKU, quantidade e, se tiver, a data e o horário de liberação para separação (para simular o dia com o horário). Também serve uma lista de SKUs com o total de saída, mas sem pedidos não há afinidade nem simulação de trajeto."),
           N_("Com o histórico o sistema calcula a popularidade de cada SKU (curva ABC: A = os que somam 80% das saídas, B até 95%, C o resto) e quais saem juntos no mesmo pedido (afinidade).")),
         S("#abs", N_("Quantidades negativas"), N_("Deixe marcado se o relatório lança a saída com sinal negativo (ex.: -3): o sistema usa o valor absoluto.")),
         S('[data-tour="hist-send"]', N_("Enviar e conferir"), N_("Na próxima etapa você confere a aba e as colunas. Só o resumo (popularidade, pares e uma amostra de pedidos) fica salvo.")),

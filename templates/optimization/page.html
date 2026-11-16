@@ -260,6 +260,10 @@
             <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" for="slot_batch" title="{{ _("Separação em lote na simulação hoje × proposta: quantos pedidos por trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_batch" id="slot_batch" type="number" min="2" max="20" step="1" value="{{ params.slot_batch }}"></div>
+          {% set has_rel = slot_info.get('history') and (slot_info.history.data or {}).get('has_release') %}
+          <div class="col-12"><div class="form-check form-switch" title="{{ _("Na simulação hoje × proposta, os pedidos só ficam disponíveis a partir do horário de liberação (pedido sem horário = início do dia).") if has_rel else _("O histórico não tem a coluna Liberação (horário de liberação do pedido). Reenvie o histórico com ela para usar esta opção.") }}">
+            <input class="form-check-input" type="checkbox" name="slot_release" value="1" id="slot_release" {% if params.slot_release and has_rel %}checked{% endif %} {% if not has_rel %}disabled{% endif %}>
+            <label class="form-check-label" for="slot_release">{{ _("Considerar o horário de liberação dos pedidos") }}{% if not has_rel %} <span class="text-muted">{{ _("(o histórico não tem a coluna Liberação)") }}</span>{% endif %}</label></div></div>
         </div>
         {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
         {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}
@@ -472,6 +476,18 @@
               <div>{{ sd(rc.cur.get(k ~ '_avg'), rc.cur.get('b' ~ k ~ '_avg'), rc.new.get(k ~ '_avg'), rc.new.get('b' ~ k ~ '_avg'), 1, ' m') }}</div></div></div>
             {% endfor %}
           </div>
+          {% if rc.release_on %}
+          <div class="row g-2 mb-2">
+            {% for k in ('list', 's', 'opt') %}
+            <div class="col-md-6 col-12 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted" title="{{ _("Um separador, pedidos na ordem em que foram liberados: tempo do 1º horário de liberação do dia até o último pedido pronto (média dos dias)") }}"><i class="bi bi-clock-history"></i> {{ _("Término do dia (após o 1º pedido liberado)") }}</div>
+              <div class="fs-6 fw-semibold">{{ swh('bc', rc.cur.get(k ~ '_end'), rc.cur.get('b' ~ k ~ '_end')) }} → {{ swh('bn', rc.new.get(k ~ '_end'), rc.new.get('b' ~ k ~ '_end')) }}</div>
+              <div>{{ sd((rc.cur.get(k ~ '_end') or 0) / 60, (rc.cur.get('b' ~ k ~ '_end') or 0) / 60, (rc.new.get(k ~ '_end') or 0) / 60, (rc.new.get('b' ~ k ~ '_end') or 0) / 60, 0, ' min') }}</div></div></div>
+            <div class="col-md-6 col-12 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted" title="{{ _("Da liberação até o pedido ficar pronto (média)") }}"><i class="bi bi-hourglass-split"></i> {{ _("Espera do pedido (liberação → pronto)") }}</div>
+              <div class="fs-6 fw-semibold">{{ swh('bc', rc.cur.get(k ~ '_lead'), rc.cur.get('b' ~ k ~ '_lead')) }} → {{ swh('bn', rc.new.get(k ~ '_lead'), rc.new.get('b' ~ k ~ '_lead')) }}</div>
+              <div>{{ sd((rc.cur.get(k ~ '_lead') or 0) / 60, (rc.cur.get('b' ~ k ~ '_lead') or 0) / 60, (rc.new.get(k ~ '_lead') or 0) / 60, (rc.new.get('b' ~ k ~ '_lead') or 0) / 60, 1, ' min') }}</div></div></div>
+            {% endfor %}
+          </div>
+          {% endif %}
           {% if rc.days %}
           <div class="table-responsive rv-day" style="max-height:340px"><table class="table table-sm table-hover mb-0" data-no-resize>
             <thead class="sticky-top bg-white"><tr><th>{{ _("Dia") }}</th><th class="text-end">{{ _("Pedidos") }}</th><th class="text-end">{{ _("Linhas") }}</th>

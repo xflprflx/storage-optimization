@@ -584,7 +584,8 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
     from services.route_sim import BATCH_COLOR, add_times, day_rows, time_params, trip_of
 
     tp = time_params(request.query_params)
-    rows_first = add_times(simulate(sample, nodes, start, batch=tp["t_batch"]), tp)
+    rows_first = add_times(simulate(sample, nodes, start, batch=tp["t_batch"],
+                                    release=request.query_params.get("t_release") == "1", tp=tp), tp)
     day = request.query_params.get("day", "")
     rows = day_rows(sorted(rows_first["rows"], key=lambda r: -r["list_m"]), day)
     chosen = order or (rows[0]["order"] if rows else "")
@@ -618,6 +619,8 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
         if plan.building.address_mode == "row" else _("uma letra por corredor (ímpares/pares)")
     keep = [(k, v) for k, v in request.query_params.multi_items() if not k.startswith("t_")]
     tq = "&".join(f"{k}={v}" for k, v in rows_first.get("times", {}).get("params", {}).items())
+    if rows_first.get("release_on"):
+        tq += "&t_release=1"
     ctx["link"] = f"/optimization/site/{pid}/routes?{tq}&" + (f"day={day}&" if day else "")
     ctx["day_link"] = f"/optimization/site/{pid}/routes?{tq}&"
     return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
@@ -627,7 +630,8 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
 
 
 @router.get("/{pid}/routes3d.json")
-def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", db: Session = Depends(get_db)):
+def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", release: str = "",
+                   db: Session = Depends(get_db)):
     """Dados da simulação de caminhada em 3D. Sem `order`: a lista de pedidos da amostra (com as três distâncias) e
     os totais por dia. Com `day`: o dia inteiro (pedidos em sequência). Com `order`: as três rotas daquele pedido (pontos em cm na planta, índice de cada parada, endereços e SKUs)."""
     from fastapi.responses import JSONResponse
@@ -642,10 +646,10 @@ def routes_3d_json(pid: int, order: str = "", day: str = "", t_batch: str = "", 
     if error:
         return JSONResponse({"error": error})
     if day:  # o dia inteiro: os pedidos do dia um depois do outro
-        return JSONResponse(day_payload(sample, nodes, start, ref, day, batch=batch))
+        return JSONResponse(day_payload(sample, nodes, start, ref, day, batch=batch, release=release == "1"))
     if not order:
         return JSONResponse(orders_payload(sample, nodes, start, ref))
-    return JSONResponse(order_payload(sample, nodes, start, ref, order, batch=batch))
+    return JSONResponse(order_payload(sample, nodes, start, ref, order, batch=batch, release=release == "1"))
 
 
 @router.get("/{pid}/skus.xlsx")

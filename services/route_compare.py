@@ -33,7 +33,7 @@ def _nodes(assign: dict[str, list[tuple[int, float]]], geo: dict, addr: dict[int
 
 
 def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, str], tp: Optional[dict] = None,
-            max_orders: int = 400) -> Optional[dict]:
+            max_orders: int = 400, release: bool = False) -> Optional[dict]:
     """Simula a amostra nas duas situações. `before`/`after` = SKU -> [(endereço, unidades)]; `geo` = facilidade de
     cada endereço (slotting.address_geo). Retorna totais, dias e pedidos (os com maior diferença primeiro)."""
     from services.slotting import geo_dist
@@ -62,7 +62,8 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     tp = tp or time_params({})
     sims = {}
     for side, assign in (("cur", before), ("new", after)):
-        sims[side] = add_times(simulate(sample, _nodes(assign, geo, addr), start, d, batch=tp.get("t_batch", 0)), tp)
+        sims[side] = add_times(simulate(sample, _nodes(assign, geo, addr), start, d, batch=tp.get("t_batch", 0),
+                                        release=release, tp=tp), tp)
     cur, new = sims["cur"], sims["new"]
     if not cur.get("orders") or not new.get("orders"):
         return None
@@ -73,7 +74,9 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
                 "trips": sim.get("trips_n", 0),
                 **{f"{k}_km": sim[f"{k}_total"] / 1000 for k in ALL_KINDS if f"{k}_total" in sim},
                 **{f"{k}_h": t[f"{k}_h"] for k in ALL_KINDS if f"{k}_h" in t},
-                **{f"{k}_avg": sim[f"{k}_avg"] for k in ALL_KINDS if f"{k}_avg" in sim}}
+                **{f"{k}_avg": sim[f"{k}_avg"] for k in ALL_KINDS if f"{k}_avg" in sim},
+                # com o horário de liberação: término médio do dia e espera média do pedido (s)
+                **{f"{k}_{x}": t[f"{k}_{x}_avg"] for k in ALL_KINDS for x in ("end", "lead") if f"{k}_{x}_avg" in t}}
 
     days = []
     nd = {e["date"]: e for e in new.get("days") or []}
@@ -104,7 +107,8 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     orders.sort(key=lambda x: -abs(x.get("opt_m_cur", 0) - x.get("opt_m_new", 0)))
     return {"cur": totals(cur), "new": totals(new), "days": days, "orders": orders[:max_orders],
             "n_orders": len(orders), "skipped_cur": cur.get("skipped_lines", 0), "skipped_new": new.get("skipped_lines", 0),
-            "params": tp, "has_qty": cur.get("has_qty", False), "batch": cur.get("batch") or 0}
+            "params": tp, "has_qty": cur.get("has_qty", False), "batch": cur.get("batch") or 0,
+            "has_release": cur.get("has_release", False), "release_on": cur.get("release_on", False)}
 
 
 # --------------------------------------------------------------------------- #
@@ -132,7 +136,7 @@ def load(token: str) -> Optional[dict]:
 
 
 def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict, order: str = "", day: str = "",
-               kind: str = "opt", batch: int = 0) -> dict:
+               kind: str = "opt", batch: int = 0, release: bool = False) -> dict:
     """Dados da caminhada 3D comparando hoje × proposta: sem pedido/dia, a lista (com as distâncias das duas
     situações em cada rota); com pedido ou dia, dois separadores na rota `kind` ("cur" = hoje, "new" = proposta)."""
     from services.i18n import _
@@ -159,8 +163,8 @@ def payload_3d(sample: list, nodes_cur: dict, nodes_new: dict, start, ref: dict,
                             **{f"{k}_cur": a["summary"].get(f"{k}_avg") for k in KINDS},
                             **{f"{k}_new": b["summary"].get(f"{k}_avg") for k in KINDS}}}
     bt = batch if kind == "batch" else 0
-    one = (lambda n: day_payload(sample, n, start, ref, day, batch=bt)) if day else \
-        (lambda n: order_payload(sample, n, start, ref, order, batch=bt))
+    one = (lambda n: day_payload(sample, n, start, ref, day, batch=bt, release=release)) if day else \
+        (lambda n: order_payload(sample, n, start, ref, order, batch=bt, release=release))
     pc, pn = one(nodes_cur), one(nodes_new)
     if pc.get("error") or pn.get("error"):
         return {"error": pc.get("error") or pn.get("error")}

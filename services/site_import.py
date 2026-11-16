@@ -47,6 +47,10 @@ ORDER_COLS = {
     "sku": ["sku", "codigo", "codigosku", "codproduto", "codigodoproduto", "codigoproduto", "item", "produto"],
     "qty": ["quantidade", "qtd", "qtde", "quantity", "saida", "unidades"],
     "date": ["data", "datapedido", "emissao", "dataemissao", "date"],
+    # opcional: horário em que o pedido foi liberado para separação (hora ou data e hora)
+    "release": ["liberacao", "horaliberacao", "horariodeliberacao", "horarioliberacao", "datahoraliberacao",
+                "dataliberacao", "liberadoem", "liberacaoseparacao", "liberacaoparaseparacao", "release", "releasetime",
+                "released", "releasedat"],
 }
 MAX_PAIR_LINES = 40  # pedidos com mais SKUs que isso não entram na contagem de pares (combinações demais)
 MAX_PAIRS = 5000  # pares guardados (os que mais saem juntos)
@@ -204,7 +208,8 @@ FIELD_LABELS = {
     "sectors": {"name": N_("Nome"), "area": N_("Área necessária (m²)"), "min_side": N_("Lado mínimo (m)"),
                 "place": N_("Onde (automático, docas, fundo, lateral, fixa)"), "x": "X (m)", "y": "Y (m)",
                 "length": N_("Comprimento em X (m)"), "width": N_("Largura em Y (m)")},
-    "orders": {"order": N_("Pedido (identificador)"), "sku": "SKU", "qty": N_("Quantidade"), "date": N_("Data")},
+    "orders": {"order": N_("Pedido (identificador)"), "sku": "SKU", "qty": N_("Quantidade"), "date": N_("Data"),
+               "release": N_("Liberação (horário, opcional)")},
 }
 REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"],
             "zones": ["orientation"], "obstacles": ["x", "y", "length", "width"],
@@ -622,6 +627,26 @@ def _iso_date(raw: str) -> str:
     return ""
 
 
+def _time_of_day(raw: str) -> Optional[int]:
+    """Horário (segundos desde 0h) de "08:30", "8:30:15", "2026-10-05 08:30", "2026-10-05T08:30:00",
+    "05/10/2026 08:30" ou da fração de dia do Excel (0,354 = 08:30). None se não reconhecer."""
+    import re
+
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    m = re.search(r"(?:^|[\sT])(\d{1,2}):(\d{2})(?::(\d{2}))?", raw)
+    if m:
+        h, mi, s = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
+        return h * 3600 + mi * 60 + s if h < 24 and mi < 60 and s < 60 else None
+    try:
+        v = float(raw.replace(",", "."))
+    except ValueError:
+        return None
+    frac = v % 1 if v >= 1 else v  # número de série do Excel com hora: só a fração do dia
+    return int(round(frac * 86400)) % 86400 if 0 <= v and (frac > 0 or v == 0) else None
+
+
 def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
     """Resumo do histórico de pedidos (o arquivo bruto não fica no projeto): por SKU, linhas de pedido (em quantos
     pedidos aparece) e unidades; pares de SKUs que aparecem no mesmo pedido (os MAX_PAIRS mais frequentes).
@@ -636,6 +661,7 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
     neg = ignored = bad = 0
     dates = []
     day_of: dict[str, str] = {}
+    rel_of: dict[str, int] = {}  # pedido -> horário de liberação (segundos desde 0h)
     for i, row in enumerate(rows, start=2):
         order, sku = _cell(row, cm["order"]), _cell(row, cm["sku"])
         if not order or not sku:
@@ -661,6 +687,15 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
             if d:
                 dates.append(d)
                 day_of.setdefault(order[:60], d)  # data do pedido (a da 1ª linha)
+        if cm.get("release") is not None:  # liberação do pedido: o menor horário entre as linhas dele
+            raw = _cell(row, cm["release"])
+            t = _time_of_day(raw)
+            if t is not None:
+                rel_of[order[:60]] = min(t, rel_of.get(order[:60], t))
+            d = _iso_date(raw)
+            if d and not day_of.get(order[:60]):  # sem a coluna Data: a data que vier junto com a liberação
+                dates.append(d)
+                day_of[order[:60]] = d
     if not lines:
         return {"error": _("Pedidos: nenhuma linha válida (pedido, SKU e quantidade)")
                          + (_("; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto.", neg=neg)
@@ -703,16 +738,22 @@ def _orders(rows_all: list[list[str]], cm: dict, to_abs: bool) -> dict:
         pick = [o for o in ids if day_of.get(o) in keep_days]
     if not per_day or not pick:
         pick = random.Random(1).sample(ids, min(MAX_SAMPLE, len(ids)))
-    # [pedido, SKUs, unidades de cada SKU, data] — as unidades entram no tempo de pega (tempo por peça) do simulador;
-    # a data permite simular um dia inteiro
+    # [pedido, SKUs, unidades de cada SKU, data(, liberação)] — as unidades entram no tempo de pega (tempo por peça) do
+    # simulador; a data permite simular um dia inteiro; a liberação (segundos desde 0h; None = pedido sem horário, fica
+    # disponível desde o início) só existe quando a coluna foi mapeada
+    has_rel = cm.get("release") is not None
     sample = []
     for o in sorted(pick):
         ss = sorted(set(orders[o]))
-        sample.append([o, ss, [round(lines[(o, x)], 3) for x in ss], day_of.get(o, "")])
+        e = [o, ss, [round(lines[(o, x)], 3) for x in ss], day_of.get(o, "")]
+        if has_rel:
+            e.append(rel_of.get(o))
+        sample.append(e)
     return {"orders": len(orders), "lines": len(lines), "units": round(sum(lines.values()), 3), "sample": sample,
             "skus": {s: [n, round(u, 3)] for s, (n, u) in skus.items()}, "pairs": top, "neg": neg, "abs": to_abs,
             "ignored": ignored, "bad": bad, "big_orders": big,
-            "dates": [min(dates), max(dates)] if dates else None,
+            "dates": [min(dates), max(dates)] if dates else None, "has_release": has_rel,
+            "release_missing": sum(1 for o in orders if o not in rel_of) if has_rel else 0,
             "days": {d: n for d, n in sorted(per_day.items())}}
 
 
@@ -822,7 +863,8 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
           [(it["sku"], it.get("name"), it.get("material"), it.get("h"), it.get("w"), it.get("l"), it.get("wt"),
             it.get("stock"), it.get("min"), it.get("max"), it.get("out")) for it in cfg.get("items") or []], {2: 36, 11: 18})
     # o projeto guarda só o resumo dos pedidos: a aba vem vazia, no formato esperado
-    sheet(wb.create_sheet(_("Pedidos")), [_("Pedido"), _("Data"), "SKU", N_("Quantidade")], [], {1: 14, 2: 12})
+    sheet(wb.create_sheet(_("Pedidos")), [_("Pedido"), _("Data"), "SKU", N_("Quantidade"), _("Liberação")], [],
+          {1: 14, 2: 12, 5: 16})
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()

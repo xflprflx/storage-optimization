@@ -256,7 +256,8 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
     for i in range(0, len(lids), 900):
         addr.update(dict(db.execute(select(StorageLocation.id, StorageLocation.address)
                                     .where(StorageLocation.id.in_(lids[i:i + 900]))).all()))
-    res = compare(sample, before, after, sl["geo"], addr, time_params(tq))
+    res = compare(sample, before, after, sl["geo"], addr, time_params(tq),
+                  release=str(raw.get("slot_release") or qp.get("t_release") or "") in ("1", "on", "true"))
     if not res:
         return {"error": _("Nenhum pedido da amostra tem SKUs nos endereços do escopo.")}
     if any(g.node is not None for g in sl["geo"].values()):  # planta desenhada: a mesma comparação em 3D
@@ -1223,7 +1224,7 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
     from services.route_sim import add_times, day_rows, time_params
 
     tp = time_params(qp)
-    sim = add_times(simulate(sample, nodes, start, d, batch=tp["t_batch"]), tp)
+    sim = add_times(simulate(sample, nodes, start, d, batch=tp["t_batch"], release=qp.get("t_release") == "1", tp=tp), tp)
     ctx.update(keep=[(k, v) for k, v in qp.multi_items() if not k.startswith("t_")], rows=day_rows(sorted(sim["rows"], key=lambda r: -r["list_m"]), qp.get("day"))[:500],
                day_link="?" + urlencode([(k, v) for k, v in qp.multi_items() if k not in ("day", "order")]) + "&", ref_label=_("ponta do corredor {ref}", ref=ref),
                how=_("letras por rua") + (_(" em serpentina") if spec.get("serpentine") else "") if spec.get("rows")
@@ -1249,7 +1250,7 @@ def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp
     from services.route_sim import BATCH_COLOR, add_times, day_rows, time_params, trip_of
 
     tp = time_params(qp)
-    sim = add_times(simulate(sample, nodes, start, batch=tp["t_batch"]), tp)
+    sim = add_times(simulate(sample, nodes, start, batch=tp["t_batch"], release=qp.get("t_release") == "1", tp=tp), tp)
     ctx["keep"] = [(k, v) for k, v in qp.multi_items() if not k.startswith("t_")]
     if not sim["orders"]:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=_("Nenhum pedido da amostra tem SKUs com saldo "

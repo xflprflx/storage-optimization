@@ -30,7 +30,7 @@ from services.i18n import N_, _, translate_workbook
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
                  "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1", "slot_rows": "", "slot_serp": "", "slot_walk_m": "",
-                 "slot_v": "1", "slot_gold_s": "5", "slot_batch": "4"}
+                 "slot_v": "1", "slot_gold_s": "5", "slot_batch": "4", "slot_release": ""}
 AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" (fração dos pedidos do menos vendido)
 
 
@@ -40,7 +40,8 @@ AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" 
 HISTORY_KINDS = {"orders": N_("Pedidos (pedido, SKU, quantidade[, data])"), "column": N_("Lista de SKUs com a coluna Saída")}
 HISTORY_FIELDS = {
     "orders": {"order": (N_("Pedido (identificador)"), True), "sku": ("SKU", True), "qty": (N_("Quantidade"), True),
-               "date": (N_("Data do pedido (para simular um dia inteiro)"), False)},
+               "date": (N_("Data do pedido (para simular um dia inteiro)"), False),
+               "release": (N_("Horário de liberação para separação (opcional: simular com o horário)"), False)},
     "column": {"sku": ("SKU", True), "out": (N_("Saída (linhas ou unidades no período)"), True)},
 }
 
@@ -485,6 +486,8 @@ def summary_text(data: Optional[dict]) -> str:
     txt = f"{data.get('orders', 0)} pedidos, {data.get('lines', 0)} linhas, {len(data.get('skus') or {})} SKUs"
     if data.get("dates"):
         txt += f", {data['dates'][0]} a {data['dates'][1]}"
+    if data.get("has_release"):
+        txt += ", " + _("com horário de liberação")
     return txt
 
 

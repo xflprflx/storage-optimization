@@ -401,6 +401,19 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
   trajetos do dia em sequência. *Pedidos por trajeto (lote)* no painel muda o agrupamento. No 3D do hoje × proposta,
   a rota "Lote" põe os dois separadores em lote.
 
+### Horário de liberação dos pedidos
+
+- **Coluna opcional *Liberação*** no histórico de pedidos (Importações → Histórico e aba Pedidos do projeto): o horário
+  em que o pedido foi liberado para separação — hora (`08:30`), data e hora ou a hora do Excel. O pedido usa o menor
+  horário entre as linhas dele; **pedido sem horário em nenhuma linha = disponível desde o início do dia**. Sem a coluna
+  Data, a data que vier junto com a liberação vale como data do pedido.
+- **Opção "Considerar o horário de liberação"** (simulador de trajeto, hoje × proposta e dia inteiro em 3D): só pode
+  ser ligada quando o histórico tem a coluna mapeada (sem ela, aparece desativada com o motivo). Ligada, um separador
+  faz os pedidos de cada dia na ordem em que foram liberados, a partir do 1º horário do dia; sem pedido liberado, ele
+  espera (ocioso). O lote só junta pedidos já liberados quando o trajeto sai. A tela mostra o início e o término de
+  cada dia, a espera média do pedido (da liberação até ficar pronto) e o tempo ocioso; no 3D, os separadores esperam
+  na referência ("aguardando liberação").
+
 ## 6.0.3 Planta desenhada das filiais existentes
 
 O cadastro de uma filial tem só os endereços. A **Planta da filial** (`/layout/plan`, botão no *Mapa do estoque* e na etapa *Posição pela saída*) diz onde cada estante fica, vista de cima. Fica salva por filial + armazém (tabela `branch_layouts`).

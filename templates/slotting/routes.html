@@ -33,6 +33,8 @@
 {% set tm = sim.get('times') %}
 {% if tm %}
 {% macro mmss(v) %}{{ (v // 60)|int }}:{{ '%02d'|format((v % 60)|int) }}{% endmacro %}
+{% macro clk(v) %}{% if v is none %}—{% else %}{{ '%02d'|format(((v // 3600) % 24)|int) }}:{{ '%02d'|format(((v % 3600) // 60)|int) }}{% endif %}{% endmacro %}
+{% macro hmin(v) %}{% if v is none %}—{% else %}{{ (v // 3600)|int }}h{{ '%02d'|format(((v % 3600) // 60)|int) }}{% endif %}{% endmacro %}
 <div class="card mb-3"><div class="card-body py-2">
   <form method="get" class="row g-2 align-items-end small">
     {% for k, v in keep %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
@@ -54,8 +56,12 @@
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ '%g'|format(tm.params.t_gold_piece) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_batch" title="{{ _("Separação em lote: quantos pedidos o separador leva no mesmo trajeto") }}">{{ _("Pedidos por trajeto") }}</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="2" max="20" name="t_batch" id="t_batch" value="{{ tm.params.t_batch }}"></div>
+    <div class="col-auto"><div class="form-check mb-1" title="{{ _("Os pedidos só ficam disponíveis a partir do horário de liberação (coluna Liberação do histórico); sem pedido liberado, o separador espera. Pedido sem horário = disponível desde o início do dia.") if sim.has_release else _("O histórico não tem a coluna Liberação (horário de liberação do pedido). Reenvie o histórico com ela para usar esta opção.") }}">
+      <input class="form-check-input" type="checkbox" name="t_release" value="1" id="t_release" {% if sim.release_on %}checked{% endif %} {% if not sim.has_release %}disabled{% endif %}>
+      <label class="form-check-label" for="t_release">{{ _("Considerar o horário de liberação") }}</label></div></div>
     <div class="col-auto"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-stopwatch"></i> {{ _("Recalcular") }}</button></div>
   </form>
+  {% if sim.release_on %}<div class="small mt-1"><i class="bi bi-clock-history"></i> {{ _h("<b>Com o horário de liberação</b> (um separador, pedidos na ordem em que foram liberados): da liberação até o pedido ficar pronto, em média <b>{a}</b> na otimizada{b}; término médio do dia {c} após o 1º pedido liberado; ocioso esperando pedidos: {d} h.", a=mmss(tm.opt_lead_avg), b=((' · ' ~ mmss(tm.bopt_lead_avg) ~ ' ' ~ _('em lote')) if tm.bopt_lead_avg is defined else ''), c=hmin(tm.opt_end_avg), d=(tm.opt_idle_h|dec(1))) }}</div>{% endif %}
   <div class="text-muted small mt-1">{{ _h("Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.") }}</div>
 </div></div>
 {% endif %}
@@ -72,6 +78,8 @@
       <th class="text-end">{{ _("Lista (km)") }}</th><th class="text-end">{{ _("Serp. (km)") }}</th><th class="text-end">{{ _("Otim. (km)") }}</th>
       {% if sim.get('trips') %}<th class="text-end" style="color:#7b3fb5" title="{{ _("Lote otimizado: trajetos no dia e quilômetros") }}">{{ _("Lote (km)") }}</th>{% endif %}
       {% if tm %}<th class="text-end" title="{{ _("Horas de separação no dia (caminhada + paradas + pega), em cada rota") }}">{{ _("Horas: lista · serp. · otim.") }}{% if sim.get('trips') %} · {{ _("lote") }}{% endif %}</th>{% endif %}
+      {% if sim.release_on %}<th class="text-end" title="{{ _("1º horário de liberação do dia → término do último pedido (rota otimizada · lote)") }}">{{ _("Início → término") }}</th>
+      <th class="text-end" title="{{ _("Tempo médio da liberação até o pedido ficar pronto (otimizada · lote)") }}">{{ _("Espera do pedido") }}</th>{% endif %}
       <th class="text-end">{{ _("Ganho") }}</th><th></th></tr></thead>
     <tbody>{% for d in days %}<tr class="{{ 'table-active' if d.date == dsel }}">
       <td><a href="{{ day_link if day_link is defined else '?' }}day={{ d.date }}#dias">{{ fmt_datetime(d.date|todate, time=False) }}</a></td>
@@ -79,6 +87,8 @@
       <td class="text-end">{{ (d.list_m / 1000)|dec(2) }}</td><td class="text-end text-primary">{{ ((d.s_m / 1000)|dec(2)) if d.s_m is defined else '—' }}</td><td class="text-end text-success">{{ (d.opt_m / 1000)|dec(2) }}</td>
       {% if sim.get('trips') %}<td class="text-end" style="color:#7b3fb5" title="{{ _h("{n} trajeto(s)", n=d.trips) }}">{{ ((d.bopt_m / 1000)|dec(2)) if d.bopt_m is defined else '—' }} <span class="text-muted">({{ d.trips }})</span></td>{% endif %}
       {% if tm %}<td class="text-end">{{ d.list_h|dec(1) }} · <span class="text-primary">{{ d.s_h|dec(1) if d.s_h is defined else '—' }}</span> · <span class="text-success">{{ d.opt_h|dec(1) }}</span>{% if d.bopt_h is defined %} · <span style="color:#7b3fb5">{{ d.bopt_h|dec(1) }}</span>{% endif %}</td>{% endif %}
+      {% if sim.release_on %}<td class="text-end text-nowrap">{{ clk(d.start_s) }} → <span class="text-success">{{ clk((d.start_s or 0) + d.opt_end) if d.opt_end is defined else '—' }}</span>{% if d.bopt_end is defined %} · <span style="color:#7b3fb5">{{ clk((d.start_s or 0) + d.bopt_end) }}</span>{% endif %}</td>
+      <td class="text-end text-nowrap"><span class="text-success">{{ mmss(d.opt_lead) if d.opt_lead is defined else '—' }}</span>{% if d.bopt_lead is defined %} · <span style="color:#7b3fb5">{{ mmss(d.bopt_lead) }}</span>{% endif %}</td>{% endif %}
       <td class="text-end">{{ (d.gain_pct|dec(0) ~ '%') if d.gain_pct is not none else '—' }}</td>
       <td class="text-end">{% if walk3d is defined %}<a class="btn btn-sm btn-outline-success py-0" href="{{ walk3d }}day={{ d.date }}" title="{{ _("O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular o dia em 3D") }}</a>{% endif %}</td>
     </tr>{% endfor %}</tbody>

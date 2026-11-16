@@ -270,6 +270,10 @@
         {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
         {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}
         {{ switch('slot_aff', _('Deixar perto os itens que saem juntos')) }}
+        {% set has_plan = slot_info.get('layouts') %}
+        <div class="form-check form-switch" title="{{ _("Depois de otimizar, testa obras na planta desenhada (passagens transversais e troca de corredores de lugar) com os SKUs onde a proposta os põe, e compara o trajeto dos pedidos do histórico.") if has_plan else _("Desenhe a planta da filial (Mapa do estoque → Planta) para usar esta opção.") }}">
+          <input class="form-check-input" type="checkbox" name="slot_rearr" value="1" id="sw_slot_rearr" {% if params.slot_rearr and has_plan %}checked{% endif %} {% if not has_plan %}disabled{% endif %}>
+          <label class="form-check-label" for="sw_slot_rearr">{{ _("Propor rearranjo das estantes") }} <span class="text-muted">{% if has_plan %}{{ _("(passagens e troca de corredores na planta desenhada)") }}{% else %}{{ _("(precisa da planta desenhada)") }}{% endif %}</span></label></div>
         <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.") }}</div>
       </div>
     </div>
@@ -431,6 +435,21 @@
             <div class="fs-6 fw-semibold">{{ _h("{n_pairs} troca(s)", n_pairs=(slot.n_pairs)) }}</div><div class="text-muted" style="font-size:.72rem">{{ _h("{swaps} SKUs mudam · entre {mono} endereços com 1 SKU e as mesmas bins de outros ({groups} grupos) · só quando o mais procurado ganha {v} m ou mais", swaps=(slot.swaps|length), mono=(slot.mono), groups=(slot.groups), v=([2, 2 * (slot.info.spec.bay_m)]|max|dec(1))) }}</div></div></div>{% endif %}
         </div>
         {% set rc = slot.get('routes') %}
+        {% if params.slot_rearr %}
+        <div class="border rounded p-2 mt-2 d-flex flex-wrap gap-2 align-items-center" id="rearrBox">
+          <strong><i class="bi bi-arrows-move"></i> {{ _("Proposta de rearranjo das estantes") }}</strong>
+          {% if rc and rc.cmp %}
+          <span class="text-muted">{{ _("Passagens transversais e troca de corredores na planta desenhada, com os SKUs onde a proposta os põe, medidas pelos pedidos do histórico.") }}</span>
+          <form method="post" action="/layout/plan/rearrange" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+            <input type="hidden" name="branch_id" value="{{ rc.branch_id }}"><input type="hidden" name="warehouse_id" value="{{ rc.warehouse_id }}">
+            <input type="hidden" name="cmp" value="{{ rc.cmp }}">
+            <button class="btn btn-sm btn-primary"><i class="bi bi-lightbulb"></i> {{ _("Gerar proposta de rearranjo") }}</button>
+          </form>
+          {% elif rc and rc.error %}<span class="text-muted">{{ rc.error }}</span>
+          {% elif not slot.info.get('layouts') %}<span class="text-muted">{{ _("A filial não tem planta desenhada.") }}</span>
+          {% else %}<span class="text-muted">{{ _("Precisa da amostra de pedidos do histórico (aba Pedidos): reenvie o histórico com ela.") }}</span>{% endif %}
+        </div>
+        {% endif %}
         {% if rc and rc.error %}
         <div class="text-muted mt-2"><i class="bi bi-person-walking"></i> {{ _("Simulação de separação (hoje × proposta):") }} {{ rc.error }}</div>
         {% elif rc %}

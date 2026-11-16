@@ -30,7 +30,8 @@ from services.i18n import N_, _, translate_workbook
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
                  "slot_golden_m": "5", "slot_golden_levels": "", "slot_aff": "1", "slot_rows": "", "slot_serp": "", "slot_walk_m": "",
-                 "slot_v": "1", "slot_gold_s": "5", "slot_batch": "4", "slot_release": "", "slot_bwait": "0"}
+                 "slot_v": "1", "slot_gold_s": "5", "slot_batch": "4", "slot_release": "", "slot_bwait": "0",
+                 "slot_rearr": ""}
 AFFINITY_GROUP = 0.3  # força mínima para tratar dois SKUs como "saem juntos" (fração dos pedidos do menos vendido)
 
 

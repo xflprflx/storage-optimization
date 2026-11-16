@@ -292,7 +292,8 @@ def layout_json(pid: int, form: FormData = Depends(form_data), db: Session = Dep
 # --------------------------------------------------------------------------- #
 _JOBS: dict[str, dict] = {}  # token -> {pid, kind, step, total, label, done, error, res, cancel, t0}
 _JOB_KINDS = {"reduction": (N_("Sugestão de redução da demanda"), "bi-funnel", "site/suggest.html"),
-              "growth": (N_("Quanto posso crescer?"), "bi-graph-up-arrow", "site/growth.html")}
+              "growth": (N_("Quanto posso crescer?"), "bi-graph-up-arrow", "site/growth.html"),
+              "layout": (N_("Proposta de disposição"), "bi-grid-1x2", "site/layout_proposal.html")}
 
 
 def _start_job(pid: int, kind: str, cfg: dict) -> str:
@@ -301,6 +302,7 @@ def _start_job(pid: int, kind: str, cfg: dict) -> str:
     import uuid
 
     from database import SessionLocal
+    from services.rearrange import propose_site
     from services.site_service import Cancelled, suggest_growth, suggest_reduction
 
     for k in [k for k, j in _JOBS.items() if time.time() - j["t0"] > 3600]:  # limpa o que ficou parado há mais de 1 h
@@ -316,7 +318,7 @@ def _start_job(pid: int, kind: str, cfg: dict) -> str:
     def work():
         try:
             with SessionLocal() as db:
-                fn = suggest_growth if kind == "growth" else suggest_reduction
+                fn = {"growth": suggest_growth, "layout": propose_site}.get(kind, suggest_reduction)
                 job["res"] = fn(db, cfg, progress=progress, cancelled=lambda: job["cancel"])
         except Cancelled:
             job["error"] = _("Busca cancelada.")
@@ -339,7 +341,10 @@ def _job(pid: int, token: str):
 
 def _wait_page(request: Request, pid: int, kind: str, token: str, pr):
     title, icon, _tpl = _JOB_KINDS[kind]
-    return render(request, "site/running.html", project=pr, token=token, kind=kind, title=title, icon=icon)
+    intro = _("O otimizador roda o projeto inteiro em cada variação da planta (orientação das fileiras e corredores "
+              "transversais) e percorre os pedidos em cada uma. Isso <b>pode levar de 1 a 3 minutos</b>. Você pode sair desta "
+              "tela: a busca continua no servidor, mas o resultado só aparece se você ficar aqui.") if kind == "layout" else None
+    return render(request, "site/running.html", project=pr, token=token, kind=kind, title=title, icon=icon, intro=intro)
 
 
 @router.post("/{pid}/demand-suggestion")
@@ -360,6 +365,41 @@ def growth_suggestion(pid: int, request: Request, db: Session = Depends(get_db))
         return redirect("/optimization/site", _("Projeto não encontrado."), "danger")
     token = _start_job(pid, "growth", merged(copy.deepcopy(pr.config)))
     return _wait_page(request, pid, "growth", token, pr)
+
+
+@router.post("/{pid}/layout-suggestion")
+def layout_suggestion(pid: int, request: Request, db: Session = Depends(get_db)):
+    """Proposta de disposição: o projeto em várias plantas (orientação e transversais), comparando capacidade e
+    trajeto dos pedidos (em segundo plano)."""
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", _("Projeto não encontrado."), "danger")
+    token = _start_job(pid, "layout", merged(copy.deepcopy(pr.config)))
+    return _wait_page(request, pid, "layout", token, pr)
+
+
+@router.post("/{pid}/layout-apply")
+def layout_apply(pid: int, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Aplica a variação escolhida na proposta de disposição (orientação e transversais) e otimiza de novo."""
+    import json
+
+    from services.rearrange import apply_site_changes
+
+    pr = _get(db, pid)
+    if not pr:
+        return redirect("/optimization/site", _("Projeto não encontrado."), "danger")
+    try:
+        ch = json.loads(str(form.get("changes") or "{}"))
+    except ValueError:
+        ch = {}
+    ok = {"orientation": ("length", "width"), "zone_orientation": ("along", "across")}
+    ch = {k: v for k, v in ch.items() if (k in ok and v in ok[k]) or (k in ("cross_aisles", "zone_cross") and isinstance(v, int)
+                                                                       and 0 <= v <= 20)}
+    if not ch:
+        return redirect(f"/optimization/site/{pid}", _("Variação inválida."), "danger")
+    pr.config = apply_site_changes(merged(copy.deepcopy(pr.config)), ch)
+    db.commit()
+    return redirect(f"/optimization/site/{pid}?run=1", _("Disposição aplicada ao projeto."))
 
 
 @router.get("/{pid}/job/{token}/status")
@@ -393,7 +433,14 @@ def job_result(pid: int, token: str, request: Request, db: Session = Depends(get
     if j["error"] or not res or res.get("error"):
         return redirect(f"/optimization/site/{pid}", j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
     _title, _icon, tpl = _JOB_KINDS[j["kind"]]
-    return render(request, tpl, project=pr, res=res)
+    svgs = []
+    if j["kind"] == "layout":  # plantas da atual e da melhor, lado a lado
+        for v in res.get("variants") or []:
+            if (v.get("current") or v.get("best")) and v.get("plan") is not None:
+                svgs.append((_("Atual: {label}", label=v["label"]) if v.get("current") else _("Melhor trajeto: {label}", label=v["label"]),
+                             floor_svg(v["plan"], 560)))
+        svgs.sort(key=lambda t: 0 if t[0].startswith(_("Atual")) else 1)
+    return render(request, tpl, project=pr, res=res, svgs=svgs)
 
 
 @router.post("/{pid}/demand-apply")

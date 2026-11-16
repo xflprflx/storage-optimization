@@ -551,6 +551,33 @@ O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída 
   último administrador ativo nunca são excluídos (aparecem em vermelho na prévia, com o motivo). Para manter o
   histórico de acesso, prefira desativar.
 
+## 6.0.7 Proposta de rearranjo da disposição
+
+O planejador escolhe a disposição que **comporta mais**. Com a flag de proposta, o sistema também compara disposições
+pelo **trajeto dos pedidos** do histórico (`services/rearrange.py`). Nada muda até você aplicar uma variação.
+
+- **Projeto de filial nova** — etapa *Imóvel*, interruptor **Propor a melhor disposição**. O resultado ganha o botão
+  **Proposta de disposição** (em segundo plano, com progresso e cancelamento). O projeto roda inteiro de novo em cada
+  orientação das fileiras (comprimento/largura) × 0 a 3 corredores transversais (com zonas: a orientação e os
+  transversais das zonas; zonas posicionadas por X/Y variam só os transversais). Cada variação mostra o trajeto por
+  pedido (aba Pedidos, rota otimizada) ou, sem pedidos, a caminhada média por saída; a **capacidade do piso** (módulos
+  da estrutura mais estreita que cabem nas fileiras), os módulos do plano, as bins sem lugar e o custo. A posição dos
+  SKUs pela saída fica ligada em todas, para a comparação ser justa. **Aplicar** grava a orientação e os transversais
+  no projeto e otimiza de novo.
+- **Filiais existentes (Por endereço e Pool)** — na *Posição pela saída*, **Propor rearranjo das estantes** (só com a
+  planta desenhada). Depois de otimizar, o resultado ganha **Gerar proposta de rearranjo**, com os SKUs onde a proposta
+  do otimizador os põe. A planta (*Mapa do estoque → Planta*) tem o mesmo botão, com os SKUs onde estão hoje.
+  As variações usam as mesmas estantes:
+  - **passagem transversal** de 2 m atravessando as fileiras paralelas (1 passagem a 1/3, 1/2 ou 2/3 do comprimento
+    das fileiras, ou 2 passagens): as estantes depois do vão andam para a frente; só vale quando cabe no imóvel sem
+    bater em outra fileira, obstáculo ou na referência (senão, a tabela diz o motivo);
+  - **troca de corredores**: entre corredores do mesmo formato (orientação, nº de fileiras, comprimento, profundidade
+    e nº de estantes), os de mais saídas vão para as posições mais perto da referência; as estantes mudam de lugar com
+    o que está nelas e os endereços não mudam;
+  - as duas juntas (a troca + a melhor passagem).
+  **Aplicar à planta** grava a variação como a planta da filial e guarda a anterior: **Desfazer rearranjo** (na
+  planta) volta a ela. Salvar a planta pelo editor descarta a anterior guardada.
+
 ## 7. Estruturas de armazenagem nos depósitos existentes
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):

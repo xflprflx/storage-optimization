@@ -59,7 +59,7 @@ BUILDING_FIELDS = (  # chave, rótulo, padrão, mínimo
     ("avenue_m", N_("Largura das avenidas entre zonas (m)"), "2", 0),
 )
 DEFAULT_CONFIG = {
-    "building": {k: d for k, _x, d, _x in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle", "serpentine": "",
+    "building": {k: d for k, _x, d, _x in BUILDING_FIELDS} | {"orientation": "auto", "end_caps": "1", "cap_align": "row", "address_mode": "aisle", "serpentine": "", "propose": "",
                                                           "zones": [], "obstacles": [], "sectors": []},
     "structures": {},
     "demand": {"source": "catalog", "branch_id": "", "warehouse_id": "", "sku": "", "material": "", "basis": "max", "growth": "0",
@@ -123,6 +123,7 @@ def config_from_form(form: Mapping) -> dict:
     cfg["building"]["cap_align"] = form.get("b_cap_align") if form.get("b_cap_align") in CAP_ALIGN else "row"
     cfg["building"]["address_mode"] = "row" if form.get("b_address_mode") == "row" else "aisle"
     cfg["building"]["serpentine"] = on("b_serpentine")
+    cfg["building"]["propose"] = on("b_propose")  # proposta de disposição (rearranjo) no resultado
     zones = []
     for zi in (form.getlist("z_idx") if hasattr(form, "getlist") else []):
         ori = form.get(f"z_ori_{zi}")

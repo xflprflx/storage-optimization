@@ -79,6 +79,11 @@
             </select>
           </div>
           <div class="col-12">
+            <div class="form-check form-switch small"><input class="form-check-input" type="checkbox" name="b_propose" value="1" id="b_propose" {% if b.get('propose') %}checked{% endif %}>
+              <label class="form-check-label" for="b_propose">{{ _h("<b>Propor a melhor disposição</b> (rearranjo das fileiras)") }}</label></div>
+            <div class="form-text mt-0">{{ _("O plano escolhe a disposição que comporta mais. Ligado, o resultado ganha o botão Proposta de disposição: o projeto roda em cada orientação das fileiras e quantidade de corredores transversais (com zonas, nas zonas), e as variações são comparadas pelo trajeto dos pedidos (aba Pedidos) ou pela caminhada por saída, e pela capacidade do piso.") }}</div>
+          </div>
+          <div class="col-12">
             <div class="form-check small"><input class="form-check-input" type="checkbox" name="b_end_caps" value="1" id="b_end_caps" {% if b.get('end_caps') %}checked{% endif %}>
               <label class="form-check-label" for="b_end_caps">{{ _("Cabeceiras: módulos girados 90° nas pontas das fileiras") }}</label></div>
             <div class="form-text mt-0">{{ _("Aproveitam a sobra no fim de cada trecho de fileira (menor que um módulo), atravessando a fileira dupla (costas com costas), de frente para o corredor transversal ou para uma faixa reservada com pelo menos a largura de um corredor.") }}</div>
@@ -464,6 +469,8 @@
       onsubmit="document.body.style.cursor = 'progress'"></form>
 <form method="post" action="/optimization/site/{{ project.id }}/growth-suggestion" id="growthForm"
       onsubmit="document.body.style.cursor = 'progress'"></form>
+<form method="post" action="/optimization/site/{{ project.id }}/layout-suggestion" id="layoutForm"
+      onsubmit="document.body.style.cursor = 'progress'"></form>
 
 {# ============================ Resultado ============================ #}
 {% if plan %}
@@ -474,6 +481,8 @@
   <div class="d-flex gap-2">
     <button class="btn {{ 'btn-warning' if plan.shortage else 'btn-outline-secondary' }}" type="submit" form="suggestForm"
             title="{{ _("Calcula quanto da demanda cabe com as estruturas e o imóvel atuais (roda em segundo plano, com progresso; pode levar de 1 a 2 minutos)") }}"><i class="bi bi-funnel"></i> {{ _("Sugerir redução da demanda") }}</button>
+    {% if b.get('propose') %}<button class="btn btn-outline-primary" type="submit" form="layoutForm" data-tour="site-propose"
+            title="{{ _("Roda o projeto em várias disposições (orientação das fileiras e corredores transversais) e compara o trajeto dos pedidos e a capacidade do piso (em segundo plano, com progresso; pode levar de 1 a 3 minutos)") }}"><i class="bi bi-grid-1x2"></i> {{ _("Proposta de disposição") }}</button>{% endif %}
     {% if not plan.shortage %}<button class="btn btn-outline-secondary" type="submit" form="growthForm"
             title="{{ _("Calcula até quanto a demanda pode crescer com as estruturas e o imóvel atuais (roda em segundo plano, com progresso; pode levar de 1 a 2 minutos)") }}"><i class="bi bi-graph-up-arrow"></i> {{ _("Quanto posso crescer?") }}</button>{% endif %}
     <a class="btn btn-primary" href="/optimization/site/{{ project.id }}/plan"><i class="bi bi-list-check"></i> {{ _("Plano detalhado") }}</a>

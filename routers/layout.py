@@ -111,8 +111,11 @@ def plan_editor(request: Request, branch_id: str = "", warehouse_id: str = "", d
     from models import SiteProject
 
     projects = list(db.execute(select(SiteProject.id, SiteProject.name).order_by(SiteProject.updated_at.desc())))
+    from services.branch_layout import get_layout
+
+    lay = get_layout(db, br.id, wid)
     return render(request, "layout/plan.html", branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid), projects=projects,
-                  **lk)
+                  has_prev=bool(lay is not None and (lay.data or {}).get("_prev")), **lk)
 
 
 @router.get("/layout/plan/data")
@@ -362,3 +365,131 @@ def plan_routes_json(branch_id: str = "", warehouse_id: str = "", order: str = "
         return day_payload(sample, nodes, start, ref, day, batch=batch, release=rel, tp=tp)
     return orders_payload(sample, nodes, start, ref) if not order else \
         order_payload(sample, nodes, start, ref, order, batch=batch, release=rel, tp=tp)
+
+
+# --------------------------------------------------------------------------- #
+# Proposta de rearranjo das estantes (planta desenhada)
+# --------------------------------------------------------------------------- #
+def _rearr_owner(br, wid) -> str:
+    return f"rearr:{br.id}:{wid or ''}"
+
+
+@router.post("/layout/plan/rearrange")
+async def rearrange_start(request: Request, db: Session = Depends(get_db)):
+    """Proposta de rearranjo: passagens transversais e troca de corredores na planta desenhada, medidas pelos pedidos
+    do histórico (em segundo plano). Com `cmp` (token da otimização), os SKUs ficam onde a proposta os põe."""
+    from database import SessionLocal
+    from routers.common import redirect
+    from services import jobs, route_compare
+    from services.rearrange import propose_branch
+
+    form = await request.form()
+    br, wid, wlabel = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    if br is None:
+        return redirect("/layout", _("Filial não encontrada."), "danger")
+    stored = route_compare.load(str(form.get("cmp") or ""))
+    assign = stored.get("after") if stored and stored.get("branch_id") == br.id else None
+    bid = br.id
+
+    def fn(progress, cancelled):
+        with SessionLocal() as s:
+            return propose_branch(s, bid, wid, assign=assign, progress=progress, cancelled=cancelled)
+
+    token = jobs.start(_rearr_owner(br, wid), fn)
+    back = f"/layout/plan?{_plan_qs(br, wid)}"
+    return render(request, "site/running.html", project={"id": 0, "name": f"{br.code} - {br.name} · {wlabel}"}, token=token,
+                  title=_("Proposta de rearranjo das estantes"), icon="bi-arrows-move",
+                  job_base=f"/layout/plan/rearrange/job/{token}",
+                  back_url=back, back_label=_("Voltar à planta"),
+                  intro=_("O sistema testa obras na planta desenhada — passagens transversais e troca de corredores de lugar — e "
+                          "percorre os pedidos do histórico em cada uma. Leva alguns segundos (mais em plantas grandes)."))
+
+
+def _rearr_job(db: Session, token: str):
+    """(filial, armazém, texto do armazém, tarefa) da proposta pelo token (o dono da tarefa diz a filial)."""
+    from services import jobs
+
+    j = jobs.get(token, jobs.owner_of(token) or "")
+    if j is None or not j["owner"].startswith("rearr:"):
+        return None, None, "", None
+    _k, bid, wid = j["owner"].split(":")
+    br, wid2, wlabel = _plan_scope(db, bid, wid or "none")
+    return br, wid2, wlabel, j
+
+
+@router.get("/layout/plan/rearrange/job/{token}/status")
+def rearrange_status(token: str, db: Session = Depends(get_db)):
+    from services import jobs
+
+    _br, _wid, _wl, j = _rearr_job(db, token)
+    st = jobs.status(j)
+    return JSONResponse(st, status_code=404 if j is None else 200)
+
+
+@router.post("/layout/plan/rearrange/job/{token}/cancel")
+def rearrange_cancel(token: str, db: Session = Depends(get_db)):
+    _br, _wid, _wl, j = _rearr_job(db, token)
+    if j is not None and not j["done"]:
+        j["cancel"] = True
+    return {"ok": j is not None}
+
+
+@router.get("/layout/plan/rearrange/job/{token}/result")
+def rearrange_result(token: str, request: Request, db: Session = Depends(get_db)):
+    from routers.common import redirect
+    from services.branch_layout import build, scope_bays, svg as layout_svg
+
+    br, wid, wlabel, j = _rearr_job(db, token)
+    back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
+    if j is None or not j["done"]:
+        return redirect(back, _("A busca expirou ou ainda não terminou: rode de novo."), "warning")
+    res = j["res"]
+    if j["error"] or not res or res.get("error"):
+        return redirect(back, j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
+    bays = scope_bays(db, br.id, wid)
+    svgs = []
+    for v in res["variants"]:
+        if (v.get("current") or v.get("best")) and v.get("data"):
+            svgs.append((_("Atual") if v.get("current") else _("Melhor trajeto: {label}", label=v["label"]),
+                         layout_svg(build(v["data"], bays), 560)))
+    svgs.sort(key=lambda t: 0 if t[0] == _("Atual") else 1)
+    return render(request, "layout/rearrange.html", res=res, branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid),
+                  token=token, svgs=svgs, back=back)
+
+
+@router.post("/layout/plan/rearrange/apply")
+async def rearrange_apply(request: Request, db: Session = Depends(get_db)):
+    """Grava a variação escolhida como a planta da filial (a anterior fica guardada para desfazer)."""
+    from routers.common import redirect
+    from services.branch_layout import clean, get_layout
+
+    form = await request.form()
+    br, wid, _wl, j = _rearr_job(db, str(form.get("token") or ""))
+    back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
+    try:
+        v = j["res"]["variants"][int(form.get("idx"))] if j and j.get("res") else None
+    except (ValueError, TypeError, IndexError, KeyError):
+        v = None
+    lay = get_layout(db, br.id, wid) if br is not None else None
+    if v is None or v.get("current") or not v.get("data") or lay is None:
+        return redirect(back, _("A proposta expirou: gere de novo."), "warning")
+    prev = {k: x for k, x in (lay.data or {}).items() if k != "_prev"}
+    lay.data = {**clean(v["data"]), "_prev": prev}
+    db.commit()
+    return redirect(back, _("Rearranjo aplicado à planta: {label}. Use Desfazer rearranjo para voltar à anterior.", label=v["label"]))
+
+
+@router.post("/layout/plan/rearrange/undo")
+async def rearrange_undo(request: Request, db: Session = Depends(get_db)):
+    from routers.common import redirect
+    from services.branch_layout import clean, get_layout
+
+    form = await request.form()
+    br, wid, _wl = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    lay = get_layout(db, br.id, wid) if br is not None else None
+    back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
+    if lay is None or not (lay.data or {}).get("_prev"):
+        return redirect(back, _("Não há rearranjo para desfazer."), "warning")
+    lay.data = clean(lay.data["_prev"])
+    db.commit()
+    return redirect(back, _("Rearranjo desfeito: a planta voltou a ser a anterior."), "secondary")

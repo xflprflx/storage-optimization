@@ -6,10 +6,10 @@
     <h1><i class="bi {{ icon }}"></i> {{ title }}</h1>
     <div class="small text-muted">{{ project.name }}</div>
   </div>
-  <a href="/optimization/site/{{ project.id }}?run=1#resultado" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar ao projeto") }}</a>
+  <a href="{{ back_url or ('/optimization/site/' ~ project.id ~ '?run=1#resultado') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ back_label or _("Voltar ao projeto") }}</a>
 </div>
 <div class="card" style="max-width:720px"><div class="card-body">
-  <p class="mb-2">{{ _h("O otimizador testa várias demandas para achar o limite. Isso <b>pode levar de 1 a 2 minutos</b> (mais em projetos grandes ou com objetivos de custo e de capacidade). Você pode sair desta tela: a busca continua no servidor, mas o resultado só aparece se você ficar aqui.") }}</p>
+  <p class="mb-2">{% if intro %}{{ intro|safe }}{% else %}{{ _h("O otimizador testa várias demandas para achar o limite. Isso <b>pode levar de 1 a 2 minutos</b> (mais em projetos grandes ou com objetivos de custo e de capacidade). Você pode sair desta tela: a busca continua no servidor, mas o resultado só aparece se você ficar aqui.") }}{% endif %}</p>
   <div class="progress mb-2" style="height:14px"><div class="progress-bar progress-bar-striped progress-bar-animated" id="bar" style="width:3%"></div></div>
   <div class="d-flex justify-content-between small">
     <span id="label">{{ _("Começando…") }}</span><span class="text-muted"><span id="step"></span> · <span id="elapsed">0</span> s</span>
@@ -24,7 +24,7 @@
 {% block scripts %}
 <script>
 (function () {
-  const base = '/optimization/site/{{ project.id }}/job/{{ token }}';
+  const base = '{{ job_base or ('/optimization/site/' ~ project.id ~ '/job/' ~ token) }}';
   const $ = id => document.getElementById(id);
   let stopped = false;
   async function tick() {

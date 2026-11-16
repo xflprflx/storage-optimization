@@ -269,6 +269,7 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
         if br is not None:
             token = route_compare.save({"branch_id": br.id, "warehouse_id": wid, "before": before, "after": after})
             res["view3d"] = f"/layout/plan/3d?{_plan_qs(br, wid)}&walk=1&cmp={token}&"
+            res["cmp"], res["branch_id"], res["warehouse_id"] = token, br.id, wid or "none"  # proposta de rearranjo
     return res
 
 

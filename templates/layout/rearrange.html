@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _h("Proposta de rearranjo — {code}", code=(branch.code)) }}{% endblock %}
+{% block content %}
+{% set cur = res.variants|selectattr('current')|first %}
+{% set best = res.variants|selectattr('best')|first %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-arrows-move"></i> {{ _("Proposta de rearranjo das estantes") }}</h1>
+    <div class="small text-muted">{{ branch.code }} - {{ branch.name }} · {{ wlabel }} · {{ _h("trajeto de {n} pedidos do histórico (rota otimizada)", n=(res.orders|dec(0))) }} · {% if res.basis == 'proposal' %}{{ _("SKUs onde a proposta do otimizador os põe") }}{% else %}{{ _("SKUs onde estão hoje") }}{% endif %}</div>
+  </div>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar à planta") }}</a>
+</div>
+{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> {{ _("Busca cancelada: a tabela tem só as variações testadas até ali.") }}</div>{% endif %}
+<div class="alert alert-light border small">
+  {{ _("As variações usam as mesmas estantes da planta salva. Passagem transversal: um vão atravessando as fileiras paralelas; as estantes depois do vão andam para a frente — só aparece quando cabe no imóvel sem bater em outra fileira, obstáculo ou na referência. Troca de corredores: as estantes mudam de lugar com o que está nelas (os corredores com mais saídas vão para mais perto da referência), só entre corredores do mesmo formato. Os endereços não mudam.") }}
+</div>
+{% if best and cur and not best.current %}
+<div class="alert alert-success"><i class="bi bi-trophy"></i> {{ _h("Melhor trajeto: <b>{label}</b> — {v} m por pedido contra {c} m hoje ({d}%).", label=(best.label), v=(best.opt_avg|dec(1)), c=(cur.opt_avg|dec(1)), d=(best.delta_pct|dec(1))) }}</div>
+{% elif best and best.current %}
+<div class="alert alert-info"><i class="bi bi-check2-circle"></i> {{ _("A planta atual já tem o menor trajeto entre as variações testadas.") }}</div>
+{% endif %}
+<div class="card mb-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+  <thead class="table-light"><tr>
+    <th>{{ _("Variação") }}</th>
+    <th class="text-end">{{ _("Trajeto por pedido (m)") }}</th>
+    <th class="text-end">{{ _("Lista de separação (m)") }}</th>
+    <th class="text-end">{{ _("vs. atual") }}</th>
+    <th></th></tr></thead>
+  <tbody>
+  {% for v in res.variants %}
+  <tr class="{{ 'table-success' if v.best else ('table-light' if v.current else '') }}">
+    <td>{{ v.label }}{% if v.current %} <span class="badge text-bg-secondary">{{ _("atual") }}</span>{% endif %}{% if v.best %} <span class="badge text-bg-success">{{ _("melhor trajeto") }}</span>{% endif %}
+      {% if v.error %}<div class="small text-muted">{{ v.error }}</div>{% endif %}
+      {% for w in v.what or [] %}<div class="small text-muted">{{ w }}</div>{% endfor %}</td>
+    <td class="text-end">{{ v.get('opt_avg')|dec(1) if v.get('opt_avg') is not none else '—' }}</td>
+    <td class="text-end">{{ v.get('list_avg')|dec(1) if v.get('list_avg') is not none else '—' }}</td>
+    <td class="text-end">{% if v.get('delta_pct') is not none and not v.current %}<span class="{{ 'text-muted' if v.get('delta_pct')|abs < 0.05 else ('text-success' if v.get('delta_pct') < 0 else 'text-danger') }}">{{ '+' if v.get('delta_pct') > 0 }}{{ v.get('delta_pct')|dec(1) }}%</span>{% else %}—{% endif %}</td>
+    <td class="text-end">{% if not v.current and not v.error %}
+      <form method="post" action="/layout/plan/rearrange/apply" class="m-0" onsubmit="return confirm(_t('Gravar esta variação como a planta da filial? A planta atual fica guardada (Desfazer rearranjo).'))">
+        <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="idx" value="{{ loop.index0 }}">
+        <button class="btn btn-sm {{ 'btn-success' if v.best else 'btn-outline-primary' }}"><i class="bi bi-check-lg"></i> {{ _("Aplicar à planta") }}</button>
+      </form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% if svgs %}
+<div class="row g-3">
+  {% for title, svg in svgs %}
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header bg-white small fw-semibold">{{ title }}</div>
+    <div class="card-body p-2" style="overflow:auto">{{ svg|safe }}</div></div></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

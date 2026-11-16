@@ -416,9 +416,10 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
   cada dia, a espera média do pedido (da liberação até ficar pronto) e o tempo ocioso; no 3D, os separadores esperam
   na referência ("aguardando liberação").
 - **Espera p/ agrupar (min)** (simulador de trajeto, hoje × proposta em *Posição pela saída*, 3D e Configurações →
-  padrão): só com o horário de liberação. Se há menos pedidos liberados que o tamanho do lote, o separador do lote
-  espera até esse limite pelos próximos que serão liberados e sai assim que o lote enche (ou ao fim da janela, com o
-  que tiver). 0 = sai na hora com os já liberados. A espera conta como tempo ocioso e aparece nos insights do lote
+  padrão): só com o horário de liberação. A janela conta da liberação do 1º pedido do lote (o mais antigo na fila):
+  o separador parado não sai com esse pedido — espera os próximos e sai quando o lote completa ou quando a janela
+  acaba, com os pedidos que tiver. Ao voltar de um trajeto, se o pedido mais antigo já esperou a janela inteira, sai
+  na hora. 0 = sai na hora com os já liberados. A espera conta como tempo ocioso e aparece nos insights do lote
   (minutos por dia parados à espera de pedidos).
 - **Insights de ociosidade** (simulador de trajeto, com a opção ligada): tempo ocioso por dia e % do turno, maior
   intervalo ocioso e quantas pausas de 15 min ou mais por dia, espera média na fila (e o percentil 90), o pior

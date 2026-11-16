@@ -128,7 +128,7 @@
         <input class="form-control form-control-sm" type="number" id="nkGoldP" min="0" max="120" step="0.5" value="{{ '%g'|format(st.t_gold_piece) }}"></div>
       <div class="col-6"><label class="form-label small mb-0" for="nkBatch" title="{{ _("Separação em lote (4º separador): quantos pedidos do mesmo dia vão no mesmo trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkBatch" min="2" max="20" step="1" value="{{ st.t_batch }}"></div>
-      <div class="col-6"><label class="form-label small mb-0" for="nkBWait" title="{{ _("Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = sai com os que já estão liberados).") }}">{{ _("Espera p/ agrupar (min)") }}</label>
+      <div class="col-6"><label class="form-label small mb-0" for="nkBWait" title="{{ _("Com o horário de liberação: quanto tempo o separador do lote espera por mais pedidos depois da liberação do 1º pedido; sai quando o lote completa ou quando a janela acaba (0 = sai na hora).") }}">{{ _("Espera p/ agrupar (min)") }}</label>
         <input class="form-control form-control-sm" type="number" id="nkBWait" min="0" max="240" step="1" value="{{ '%g'|format(st.t_bwait) }}" disabled></div>
     </div>
     <div class="d-flex gap-1 align-items-center mb-1">

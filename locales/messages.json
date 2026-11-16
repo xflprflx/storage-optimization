@@ -4550,19 +4550,15 @@
   ],
   "js": true
  },
- "Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = não espera).": {
-  "src": [
-   "templates/settings.html:36"
-  ]
- },
- "Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto (0 = sai com os que já estão liberados).": {
+ "Com o horário de liberação: quanto tempo o separador do lote espera por mais pedidos depois da liberação do 1º pedido; sai quando o lote completa ou quando a janela acaba (0 = sai na hora).": {
   "src": [
    "templates/optimization/page.html:267",
+   "templates/settings.html:36",
    "templates/site/view3d.html:131",
    "templates/slotting/routes.html:59"
   ]
  },
- "Com o horário de liberação: quanto tempo o separador do lote pode esperar novos pedidos para encher o trajeto. Ele espera só o necessário (sai quando o lote completa ou quando chega o último pedido que cabe na janela); 0 = sai com os pedidos já liberados. Só vale com a coluna Liberação no histórico.": {
+ "Com o horário de liberação: quanto tempo o separador do lote espera por mais pedidos, contado da liberação do 1º pedido do lote. Parado, ele não sai com o 1º pedido: sai quando o lote completa ou quando a janela acaba, com os pedidos que tiver. 0 = sai na hora com os pedidos já liberados. Só vale com a coluna Liberação no histórico.": {
   "src": [
    "services/field_help.py:56",
    "services/field_help.py:80",
@@ -10808,7 +10804,7 @@
  },
  "Lista de separação": {
   "src": [
-   "services/route_sim.py:689",
+   "services/route_sim.py:690",
    "templates/optimization/page.html:464",
    "templates/slotting/routes.html:42"
   ],
@@ -10910,12 +10906,12 @@
  },
  "Lote — {n} pedidos no trajeto": {
   "src": [
-   "services/route_sim.py:739"
+   "services/route_sim.py:740"
   ]
  },
  "Lote — {n} trajetos": {
   "src": [
-   "services/route_sim.py:865"
+   "services/route_sim.py:866"
   ]
  },
  "Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).": {
@@ -12308,7 +12304,7 @@
  },
  "Nenhum pedido do dia {day} na amostra.": {
   "src": [
-   "services/route_sim.py:808"
+   "services/route_sim.py:809"
   ]
  },
  "Nenhum produto cadastrado.": {
@@ -14116,12 +14112,12 @@
  },
  "Os SKUs do pedido {order} não estão na planta.": {
   "src": [
-   "services/route_sim.py:758"
+   "services/route_sim.py:759"
   ]
  },
  "Os SKUs dos pedidos do dia {day} não estão na planta.": {
   "src": [
-   "services/route_sim.py:840"
+   "services/route_sim.py:841"
   ]
  },
  "Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem juntos ficam perto. Usa o motor heurístico.": {
@@ -14228,7 +14224,7 @@
  },
  "Otimizada": {
   "src": [
-   "services/route_sim.py:690",
+   "services/route_sim.py:691",
    "templates/site/view3d.html:106"
   ],
   "lazy": true
@@ -14608,7 +14604,7 @@
  },
  "Pedido {order} não está na amostra.": {
   "src": [
-   "services/route_sim.py:754"
+   "services/route_sim.py:755"
   ]
  },
  "Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}": {
@@ -17849,7 +17845,7 @@
  },
  "Serpentina (rota em S)": {
   "src": [
-   "services/route_sim.py:689",
+   "services/route_sim.py:690",
    "templates/optimization/page.html:464",
    "templates/site/view3d.html:105"
   ],

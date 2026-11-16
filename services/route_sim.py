@@ -224,7 +224,8 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
     menos acrescenta caminhada (soma, para cada parada nova, da distância até a parada mais perto já no trajeto),
     entre os BATCH_CANDIDATES de centro mais perto. Com `release`, só entram pedidos JÁ liberados quando o trajeto sai:
     o relógio do separador avança com o tempo estimado de cada trajeto (parâmetros `tp`) e, sem pedido liberado, ele
-    espera o próximo. A rota do trajeto é feita nas três formas (lista, serpentina, otimizada = a melhor delas).
+    espera o próximo; com `t_bwait`, o lote incompleto espera até t_bwait min desde a liberação do 1º pedido
+    dele (sai antes se completar). A rota do trajeto é feita nas três formas (lista, serpentina, otimizada = a melhor delas).
     Endereços repetidos e do mesmo módulo = uma parada. A caminhada e as paradas do trajeto são divididas igualmente
     entre os pedidos; peças e pega continuam do pedido. Grava em cada linha blist_m/bs_m/bopt_m, batch_stops e trip."""
     tp = {**TIME_DEFAULTS, **(tp or {})}
@@ -282,13 +283,13 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
                 clock = max(clock, rel[left[0]])  # sem pedido liberado: espera o próximo
                 avail = [o for o in left if rel[o] <= clock + 1e-9]
                 if wait_s > 0 and len(avail) < size:
-                    # lote incompleto: espera até `wait_s` pelos próximos pedidos liberados — só o necessário: sai quando
-                    # o lote completa ou quando chega o último pedido que cabe na janela (nenhum na janela: sai já)
-                    need = size - len(avail)
-                    coming = sorted(rel[o] for o in left if rel[o] > clock + 1e-9)[:need]
-                    inside = [r for r in coming if r <= clock + wait_s + 1e-9]
-                    if inside:
-                        clock = inside[-1]
+                    # lote incompleto: a janela conta da liberação do 1º pedido do lote (o mais antigo na fila) — o
+                    # separador não sai com ele; sai quando o lote completa ou quando a janela acaba, com o que tiver
+                    deadline = rel[left[0]] + wait_s
+                    if deadline > clock + 1e-9:
+                        need = size - len(avail)
+                        coming = sorted(rel[o] for o in left if rel[o] > clock + 1e-9)[:need]
+                        clock = coming[-1] if len(coming) == need and coming[-1] <= deadline + 1e-9 else deadline
                         avail = [o for o in left if rel[o] <= clock + 1e-9]
             else:
                 avail = left

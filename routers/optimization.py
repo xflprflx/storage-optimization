@@ -195,7 +195,8 @@ def _slot_raw(src: Mapping, raw: dict) -> dict:
     from services.app_settings import get as setting
 
     submitted = "objective" in src
-    dflt = {**SLOT_DEFAULTS, "slot_v": f"{setting('sim_v'):g}", "slot_gold_s": f"{setting('sim_gold'):g}"}  # Configurações
+    dflt = {**SLOT_DEFAULTS, "slot_v": f"{setting('sim_v'):g}", "slot_gold_s": f"{setting('sim_gold'):g}",
+            "slot_batch": f"{float(setting('sim_batch') or 4):g}"}  # Configurações
     raw.update({k: (src.get(k, "") if submitted else d) for k, d in dflt.items()})
     return raw
 
@@ -248,8 +249,8 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
         return None
     if not any(before.values()):
         return {"error": _("Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.")}
-    tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or ""}
-    tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece") if qp.get(k)})
+    tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or "", "t_batch": raw.get("slot_batch") or ""}
+    tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece", "t_batch") if qp.get(k)})
     lids = sorted({lid for d in (before, after) for lst in d.values() for lid, _q in lst})
     addr = {}
     for i in range(0, len(lids), 900):
@@ -1221,7 +1222,8 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
 
     from services.route_sim import add_times, day_rows, time_params
 
-    sim = add_times(simulate(sample, nodes, start, d), time_params(qp))
+    tp = time_params(qp)
+    sim = add_times(simulate(sample, nodes, start, d, batch=tp["t_batch"]), tp)
     ctx.update(keep=[(k, v) for k, v in qp.multi_items() if not k.startswith("t_")], rows=day_rows(sorted(sim["rows"], key=lambda r: -r["list_m"]), qp.get("day"))[:500],
                day_link="?" + urlencode([(k, v) for k, v in qp.multi_items() if k not in ("day", "order")]) + "&", ref_label=_("ponta do corredor {ref}", ref=ref),
                how=_("letras por rua") + (_(" em serpentina") if spec.get("serpentine") else "") if spec.get("rows")
@@ -1244,9 +1246,10 @@ def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp
                          "saindo pela ponta da fileira ou por uma passagem para trocar de corredor, contornando fileiras e "
                          "obstáculos."),
                plan_link=f"/layout/plan?{plan_qs}")
-    from services.route_sim import add_times, day_rows, time_params
+    from services.route_sim import BATCH_COLOR, add_times, day_rows, time_params, trip_of
 
-    sim = add_times(simulate(sample, nodes, start), time_params(qp))
+    tp = time_params(qp)
+    sim = add_times(simulate(sample, nodes, start, batch=tp["t_batch"]), tp)
     ctx["keep"] = [(k, v) for k, v in qp.multi_items() if not k.startswith("t_")]
     if not sim["orders"]:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=_("Nenhum pedido da amostra tem SKUs com saldo "
@@ -1265,12 +1268,24 @@ def _layout_routes(request: Request, ctx: dict, g, sample, nodes, start, ref, qp
             overlay.append(f'<polyline points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in pts)}" fill="none" stroke="{color}" '
                            f'stroke-width="{3 if kind == "list" else 2.5}" vector-effect="non-scaling-stroke" '
                            f'stroke-linejoin="round" opacity=".85"' + (f' stroke-dasharray="{dash}"' if dash else "") + '/>')
+        trip = trip_of(sim, chosen)
+        if trip:  # lote: o trajeto inteiro (todos os pedidos dele), por baixo das rotas do pedido
+            pts = path_points(trip["route"], start)
+            overlay.insert(0, f'<polyline points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in pts)}" fill="none" '
+                              f'stroke="{BATCH_COLOR}" stroke-width="6" vector-effect="non-scaling-stroke" '
+                              f'stroke-linejoin="round" opacity=".35"/>')
+            mine = {n.key for n in one["routes"][chosen]["list"]}
+            for n in trip["route"]:
+                if n.key not in mine:
+                    overlay.append(f'<circle cx="{n.gx:.0f}" cy="{n.gy:.0f}" r="{fs * 0.4:.0f}" fill="{BATCH_COLOR}" '
+                                   f'stroke="#fff"><title>{html.escape(n.key)}</title></circle>')
         for i, n in enumerate(one["routes"][chosen]["list"], start=1):
             overlay.append(f'<circle cx="{n.gx:.0f}" cy="{n.gy:.0f}" r="{fs * 0.55:.0f}" fill="#d62728" stroke="#fff"/>'
                            f'<text x="{n.gx:.0f}" y="{n.gy + fs * 0.25:.0f}" font-size="{fs * 0.7:.0f}" fill="#fff" '
                            f'text-anchor="middle" font-weight="bold">{i}<title>{html.escape(n.key)}</title></text>')
         svg = layout_svg(g).replace("</svg>", "".join(overlay) + "</svg>")
-    return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel}, sim=sim, error="")
+    return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
+                                                      "trip": trip_of(sim, chosen)}, sim=sim, error="")
 
 
 @router.get("/slotting/skus.xlsx")

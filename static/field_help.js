@@ -160,11 +160,15 @@
     [30, 62, 94].forEach(y => { s += R(70, y, 190, 10); });
     const stops = [[100, 46], [230, 46], [120, 78], [240, 78]];
     const P = { list: [[30, 64], [100, 46], [230, 46], [266, 46], [266, 78], [240, 78], [120, 78], [56, 78], [30, 64]], s: [[30, 64], [56, 46], [100, 46], [230, 46], [266, 46], [266, 78], [240, 78], [120, 78], [56, 78], [30, 64]], opt: [[30, 64], [56, 46], [100, 46], [230, 46], [266, 46], [266, 78], [240, 78], [120, 78], [56, 78], [30, 64]] };
-    const col = { list: '#d62728', s: BL, opt: '#1a9850' }, k = P[h] ? h : 'opt';
+    const col = { list: '#d62728', s: BL, opt: '#1a9850', batch: '#7b3fb5' }, k = P[h] ? h : 'opt';
+    if (h === 'batch') col.opt = col.batch;  // lote: uma rota só passando pelas paradas de vários pedidos
     s += `<polyline points="${P[k].map(p => p.join(',')).join(' ')}" fill="none" stroke="${col[k]}" stroke-width="2.5" stroke-linejoin="round"/>`;
-    stops.forEach(([x, y], i) => { s += C(x, y, 6, false, { fill: h === 'stops' ? HI : '#4b5560' }) + T(x, y + 3, i + 1, false, { fill: '#fff', 'font-size': 8, stroke: 'none' }); });
+    stops.forEach(([x, y], i) => {
+      const f = h === 'stops' ? HI : h === 'batch' ? (i % 2 ? '#d97706' : '#0f766e') : '#4b5560';
+      s += C(x, y, 6, false, { fill: f }) + T(x, y + 3, h === 'batch' ? (i % 2 ? 'B' : 'A') : i + 1, false, { fill: '#fff', 'font-size': 8, stroke: 'none' });
+    });
     s += C(30, 64, 6, h === 'ref', { fill: h === 'ref' ? HI : '#111' }) + T(34, 84, _t('expedição'), h === 'ref', { 'font-size': 8 });
-    const lab = { list: _t('lista: ordem dos endereços'), s: _t('serpentina: corredor a corredor'), opt: _t('otimizada: menor caminho'), order: 'um pedido = uma rota', stops: _t('paradas do pedido') }[h];
+    const lab = { list: _t('lista: ordem dos endereços'), s: _t('serpentina: corredor a corredor'), opt: _t('otimizada: menor caminho'), order: 'um pedido = uma rota', stops: _t('paradas do pedido'), batch: _t('lote: pedidos A e B na mesma rota') }[h];
     if (lab) s += T(165, 118, lab, true, { 'font-size': 9 });
     return s;
   };

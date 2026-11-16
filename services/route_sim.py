@@ -116,15 +116,16 @@ def _tour(nodes: list[Node], start: Node, d: Callable) -> float:
     return sum(d(pts[i], pts[i + 1]) for i in range(len(pts) - 1))
 
 
-def _optimized(nodes: list[Node], start: Node, d: Callable) -> list[Node]:
-    """Vizinho mais próximo + 2-opt (pedidos pequenos)."""
+def _optimized(nodes: list[Node], start: Node, d: Callable, max_two_opt: int = 70) -> list[Node]:
+    """Vizinho mais próximo + 2-opt (só com até `max_two_opt` paradas: em lotes grandes fica o vizinho mais próximo,
+    e a serpentina costuma ganhar)."""
     left, route, cur = list(nodes), [], start
     while left:
         nxt = min(left, key=lambda n: d(cur, n))
         left.remove(nxt)
         route.append(nxt)
         cur = nxt
-    improved = len(route) > 3
+    improved = 3 < len(route) <= max_two_opt
     cost = _tour(route, start, d)
     passes = 0
     while improved and passes < 60:
@@ -195,12 +196,84 @@ def stop_groups(nodes: list[Node]) -> dict[str, list[Node]]:
     return {g[0].key: g for g in groups.values()}
 
 
+BATCH_KEYS = ("blist", "bs", "bopt")  # lote: trajeto na ordem da lista, em serpentina e otimizado
+BATCH_CANDIDATES = 12  # pedidos mais próximos avaliados a cada inclusão no trajeto
+
+
+def _xy(n: Node) -> tuple[float, float]:
+    """Posição aproximada da parada para achar pedidos vizinhos (planta: x, y; sem planta: corredor, posição)."""
+    return (n.gx, n.gy) if (n.gx or n.gy) else (n.cross, n.along)
+
+
+def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit: float, s_shape: bool,
+           keep_routes: Optional[set], routes: dict) -> list[dict]:
+    """Separação em lote: agrupa até `size` pedidos do MESMO dia (sem data: todos juntos) por trajeto e percorre as
+    paradas de todos numa rota só. Agrupamento guloso: o pedido de maior caminhada ainda livre abre o trajeto; depois
+    entra, um de cada vez, o pedido que menos acrescenta caminhada (soma, para cada parada nova, da distância até a
+    parada mais perto já no trajeto), entre os BATCH_CANDIDATES de centro mais perto. A rota do trajeto é feita nas
+    três formas (lista, serpentina, otimizada = a melhor delas). Endereços repetidos e do mesmo módulo = uma parada.
+    A caminhada e as paradas do trajeto são divididas igualmente entre os pedidos; peças e pega continuam do pedido.
+    Grava em cada linha blist_m/bs_m/bopt_m, batch_stops (parada por pedido) e trip; devolve os trajetos."""
+    by_row = {r["order"]: r for r in rows}
+    pools: dict[str, list] = {}
+    for oid in stops_of:
+        pools.setdefault(by_row[oid].get("date") or "", []).append(oid)
+    trips = []
+    for day, pool in sorted(pools.items()):
+        center = {}
+        for oid in pool:
+            pts = [_xy(n) for n in stops_of[oid][0]]
+            center[oid] = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts))
+        left = sorted(pool, key=lambda o: -stops_of[o][1])
+        while left:
+            trip = [left.pop(0)]
+            nodes = {n.key: n for n in stops_of[trip[0]][0]}
+            while len(trip) < size and left:
+                cx = sum(center[o][0] for o in trip) / len(trip)
+                cy = sum(center[o][1] for o in trip) / len(trip)
+                cands = sorted(left, key=lambda o: abs(center[o][0] - cx) + abs(center[o][1] - cy))[:BATCH_CANDIDATES]
+                have = list(nodes.values())
+
+                def extra(o):
+                    return sum(min(d(n, h) for h in have) for n in stops_of[o][0] if n.key not in nodes)
+
+                best = min(cands, key=extra)
+                left.remove(best)
+                trip.append(best)
+                nodes.update({n.key: n for n in stops_of[best][0]})
+            groups = stop_groups(list(nodes.values()))
+            uniq = [g[0] for g in groups.values()]
+            by_list = sorted(uniq, key=lambda n: _natural(n.key))
+            s_route = _s_shape(uniq, start, d) if s_shape else None
+            opt = min([r for r in (_optimized(uniq, start, d), s_route, by_list) if r is not None],
+                      key=lambda r: _tour(r, start, d))
+            tid = len(trips) + 1
+            m = {"blist": _tour(by_list, start, d) / unit, "bopt": _tour(opt, start, d) / unit}
+            if s_route is not None:
+                m["bs"] = _tour(s_route, start, d) / unit
+            n = len(trip)
+            for oid in trip:
+                r = by_row[oid]
+                for k, v in m.items():
+                    r[f"{k}_m"] = v / n
+                r["batch_stops"] = len(uniq) / n
+                r["trip"] = tid
+            trips.append({"id": tid, "date": day, "orders": trip, "stops": len(uniq), **{f"{k}_m": v for k, v in m.items()},
+                          "route": opt, "groups": {k: [x.key for x in g] for k, g in groups.items()}})
+            if keep_routes is not None and keep_routes & set(trip):
+                for oid in trip:
+                    routes.setdefault(oid, {})["batch"] = {"route": opt, "trip": tid, "orders": trip}
+    return trips
+
+
 def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Callable = dist,
-             unit: float = 100.0, keep_routes: Optional[set] = None, s_shape: bool = True) -> dict:
+             unit: float = 100.0, keep_routes: Optional[set] = None, s_shape: bool = True, batch: int = 0) -> dict:
     """Simula a amostra de pedidos. Cada SKU usa a sua posição mais perto da referência. `unit` = divisor para
-    metros (100 para cm). Retorna indicadores e, por pedido, as duas distâncias (e as rotas pedidas)."""
+    metros (100 para cm). Retorna indicadores e, por pedido, as distâncias de cada rota (e as rotas pedidas).
+    Com `batch` >= 2, também a separação em lote: até `batch` pedidos do mesmo dia por trajeto (ver _batch)."""
     near = {s: min(ns, key=lambda n: d(start, n)) for s, ns in nodes_of.items() if ns}
     rows, skipped_lines, routes = [], 0, {}
+    stops_of: dict = {}  # pedido -> paradas (representantes) e lista completa de endereços, para o lote
     for entry in sample:
         oid, skus = entry[0], entry[1]
         qty = entry[2] if len(entry) > 2 and entry[2] else None  # unidades por SKU (amostras antigas não têm)
@@ -228,17 +301,26 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         if s_route is not None:
             row["s_m"] = _tour(s_route, start, d) / unit
         rows.append(row)
+        if batch and batch >= 2:
+            stops_of[oid] = (list({n.key: n for n in pts}.values()), _tour(opt, start, d))
         if keep_routes is not None and oid in keep_routes:
             routes[oid] = {"list": by_list, "opt": opt, "s": s_route, "groups": {k: [n.key for n in g] for k, g in groups.items()}}
     if not rows:
         return {"orders": 0, "rows": [], "skipped_lines": skipped_lines, "routes": routes}
+    trips = _batch(rows, stops_of, batch, start, d, unit, s_shape, keep_routes, routes) if stops_of else []
     L = [r["list_m"] for r in rows]
     O = [r["opt_m"] for r in rows]
     lines = sum(r["lines"] for r in rows)
     q = lambda v, p: sorted(v)[min(len(v) - 1, int(round(p * (len(v) - 1))))]  # noqa: E731
-    S = [r["s_m"] for r in rows if "s_m" in r]
-    extra = {"s_avg": statistics.mean(S), "s_per_line": sum(S) / lines, "s_p50": q(S, 0.5), "s_p90": q(S, 0.9),
-             "s_total": sum(S)} if S else {}
+    extra = {}
+    for k in ("s",) + BATCH_KEYS:  # serpentina e as rotas do lote
+        V = [r[f"{k}_m"] for r in rows if f"{k}_m" in r]
+        if V:
+            extra.update({f"{k}_avg": statistics.mean(V), f"{k}_per_line": sum(V) / lines, f"{k}_p50": q(V, 0.5),
+                          f"{k}_p90": q(V, 0.9), f"{k}_total": sum(V)})
+    if trips:
+        extra.update(batch=batch, trips=trips, trips_n=len(trips),
+                     batch_gain_pct=(1 - extra["bopt_total"] / sum(O)) * 100 if sum(O) else None)
     return {**extra, "orders": len(rows), "rows": rows, "skipped_lines": skipped_lines, "routes": routes,
             "has_qty": any(len(e) > 2 and e[2] for e in sample),
             "lines": lines, "list_avg": statistics.mean(L), "opt_avg": statistics.mean(O),
@@ -246,6 +328,14 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
             "list_p50": q(L, 0.5), "list_p90": q(L, 0.9), "opt_p50": q(O, 0.5), "opt_p90": q(O, 0.9),
             "list_total": sum(L), "opt_total": sum(O),
             "gain_pct": (1 - sum(O) / sum(L)) * 100 if sum(L) else None}
+
+
+def trip_of(sim: dict, order: str) -> Optional[dict]:
+    """Trajeto do lote em que o pedido foi separado (None sem lote)."""
+    return next((t for t in sim.get("trips") or [] if order in t["orders"]), None)
+
+
+BATCH_COLOR = "#7b3fb5"
 
 
 def path_points(route: list[Node], start: Node, stops: Optional[list] = None) -> list[tuple[float, float]]:
@@ -288,7 +378,8 @@ def path_points(route: list[Node], start: Node, stops: Optional[list] = None) ->
 
 
 # m/s, s/parada, s/peça, s por item fora da zona de ouro da pega, s por peça fora da zona de ouro
-TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0, "t_gold_piece": 0.0}
+TIME_DEFAULTS = {"t_v": 1.0, "t_stop": 10.0, "t_piece": 2.0, "t_gold": 5.0, "t_gold_piece": 0.0,
+                 "t_batch": 4}  # separação em lote: pedidos por trajeto (2 a 20)
 
 
 def time_params(qp) -> dict:
@@ -298,12 +389,13 @@ def time_params(qp) -> dict:
     dflt = {**TIME_DEFAULTS, **sim_times()}  # padrão das Configurações (a tela pode mudar)
     out = {}
     for k, (lo, hi) in (("t_v", (0.2, 3.0)), ("t_stop", (0.0, 600.0)), ("t_piece", (0.0, 600.0)), ("t_gold", (0.0, 600.0)),
-                        ("t_gold_piece", (0.0, 600.0))):
+                        ("t_gold_piece", (0.0, 600.0)), ("t_batch", (2, 20))):
         try:
             v = float(str(qp.get(k) if qp.get(k) not in (None, "") else dflt[k]).replace(",", "."))
         except ValueError:
             v = dflt[k]
         out[k] = min(hi, max(lo, v))
+    out["t_batch"] = int(round(out["t_batch"]))
     return out
 
 
@@ -315,14 +407,21 @@ def add_times(sim: dict, tp: dict) -> dict:
         return sim
     fixed = lambda r: (r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
                        + r.get("out_gold", 0) * tp["t_gold"] + r.get("out_units", 0) * tp["t_gold_piece"])
+    # no lote, as paradas são as do trajeto divididas entre os pedidos (batch_stops)
+    fixed_b = lambda r: fixed(r) + (r.get("batch_stops", r["stops"]) - r["stops"]) * tp["t_stop"]  # noqa: E731
     out = {"params": tp, "pick_avg": sum(fixed(r) for r in rows) / len(rows)}
-    for k in ("list", "s", "opt"):
+    for k in ("list", "s", "opt") + BATCH_KEYS:
         if all(f"{k}_m" in r for r in rows):
-            ts = [r[f"{k}_m"] / tp["t_v"] + fixed(r) for r in rows]
+            fx = fixed_b if k in BATCH_KEYS else fixed
+            ts = [r[f"{k}_m"] / tp["t_v"] + fx(r) for r in rows]
             for r, t in zip(rows, ts):
                 r[f"{k}_t"] = t
             out[f"{k}_avg"] = sum(ts) / len(ts)
             out[f"{k}_h"] = sum(ts) / 3600
+    if sim.get("trips"):  # tempo de cada trajeto (soma dos pedidos dele)
+        t_of = {r["order"]: r.get("bopt_t", 0.0) for r in rows}
+        for t in sim["trips"]:
+            t["bopt_t"] = sum(t_of.get(o, 0.0) for o in t["orders"])
     out["units_avg"] = sum(r.get("units", r["lines"]) for r in rows) / len(rows)
     out["out_gold_avg"] = sum(r.get("out_gold", 0) for r in rows) / len(rows)
     out["out_units_avg"] = sum(r.get("out_units", 0) for r in rows) / len(rows)
@@ -343,12 +442,14 @@ def by_day(sim: dict) -> list[dict]:
     for r in sim.get("rows") or []:
         if not r.get("date"):
             continue
-        e = days.setdefault(r["date"], {"date": r["date"], "orders": 0, "lines": 0, "units": 0.0, "stops": 0})
+        e = days.setdefault(r["date"], {"date": r["date"], "orders": 0, "lines": 0, "units": 0.0, "stops": 0, "trips": set()})
+        if "trip" in r:
+            e["trips"].add(r["trip"])
         e["orders"] += 1
         e["lines"] += r["lines"]
         e["units"] += r.get("units", r["lines"])
         e["stops"] += r["stops"]
-        for k in ("list", "s", "opt"):
+        for k in ("list", "s", "opt") + BATCH_KEYS:
             if f"{k}_m" in r:
                 e[f"{k}_m"] = e.get(f"{k}_m", 0.0) + r[f"{k}_m"]
             if f"{k}_t" in r:
@@ -356,6 +457,7 @@ def by_day(sim: dict) -> list[dict]:
     out = sorted(days.values(), key=lambda e: e["date"], reverse=True)
     for e in out:
         e["gain_pct"] = (1 - e["opt_m"] / e["list_m"]) * 100 if e.get("list_m") else None
+        e["trips"] = len(e["trips"])
     return out
 
 

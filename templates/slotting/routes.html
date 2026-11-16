@@ -11,21 +11,23 @@
 </div>
 {% if error %}<div class="alert alert-warning">{{ error }}</div>{% else %}
 <div class="row g-2 mb-3" data-tour="rt-kpis">
-  {% macro card(label, a, b, unit, sub='', c=none) %}
+  {% macro card(label, a, b, unit, sub='', c=none, bt=none) %}
   <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
     <div class="small text-muted">{{ label }}</div>
     <div class="fs-6 fw-semibold"><span title="{{ _("Na ordem da lista de separação (endereços)") }}">{{ a|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">{{ _("lista") }}</span>
       {% if c is not none %}· <span class="text-primary" title="{{ _("Rota em S (serpentina)") }}">{{ c|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">{{ _("serpentina") }}</span>{% endif %}
-      · <span class="text-success" title="{{ _("Rota otimizada") }}">{{ b|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">{{ _("otimizada") }}</span></div>
+      · <span class="text-success" title="{{ _("Rota otimizada") }}">{{ b|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">{{ _("otimizada") }}</span>
+      {% if bt is not none %}· <span style="color:#7b3fb5" title="{{ _("Lote otimizado: vários pedidos por trajeto (por pedido)") }}">{{ bt|dec(1) }}{{ unit }}</span> <span class="text-muted small fw-normal">{{ _("lote") }}</span>{% endif %}</div>
     {% if sub %}<div class="small text-muted">{{ sub }}</div>{% endif %}
   </div></div></div>
   {% endmacro %}
-  {{ card(_('Caminhada média por pedido'), sim.list_avg, sim.opt_avg, ' m', 'medianas ' ~ (sim.list_p50|dec(1)) ~ ' · ' ~ (sim.get('s_p50')|dec(1)) ~ ' · ' ~ (sim.opt_p50|dec(1)) ~ ' m', sim.get('s_avg')) }}
-  {{ card(_('Por linha de pedido'), sim.list_per_line, sim.opt_per_line, ' m', (sim.lines / sim.orders)|dec(1) ~ _(' linhas por pedido'), sim.get('s_per_line')) }}
-  {{ card(_('90% dos pedidos até'), sim.list_p90, sim.opt_p90, ' m', '', sim.get('s_p90')) }}
+  {{ card(_('Caminhada média por pedido'), sim.list_avg, sim.opt_avg, ' m', 'medianas ' ~ (sim.list_p50|dec(1)) ~ ' · ' ~ (sim.get('s_p50')|dec(1)) ~ ' · ' ~ (sim.opt_p50|dec(1)) ~ ' m', sim.get('s_avg'), sim.get('bopt_avg')) }}
+  {{ card(_('Por linha de pedido'), sim.list_per_line, sim.opt_per_line, ' m', (sim.lines / sim.orders)|dec(1) ~ _(' linhas por pedido'), sim.get('s_per_line'), sim.get('bopt_per_line')) }}
+  {{ card(_('90% dos pedidos até'), sim.list_p90, sim.opt_p90, ' m', '', sim.get('s_p90'), sim.get('bopt_p90')) }}
   <div class="col-md-3 col-6"><div class="card h-100"><div class="card-body py-2">
     <div class="small text-muted">{{ _("Pedidos simulados") }}</div><div class="fs-5 fw-semibold">{{ sim.orders }}</div>
-    <div class="small text-muted">{{ _h("total {v} km na lista · a rota otimizada economizaria <b>{gain_pct}%</b>", v=((sim.list_total / 1000)|dec(1)), gain_pct=(sim.gain_pct|dec(0))) }}{% if sim.skipped_lines %} {{ _h("· {skipped_lines} linha(s) de SKUs fora do plano ignoradas", skipped_lines=(sim.skipped_lines)) }}{% endif %}</div>
+    <div class="small text-muted">{{ _h("total {v} km na lista · a rota otimizada economizaria <b>{gain_pct}%</b>", v=((sim.list_total / 1000)|dec(1)), gain_pct=(sim.gain_pct|dec(0))) }}{% if sim.skipped_lines %} {{ _h("· {skipped_lines} linha(s) de SKUs fora do plano ignoradas", skipped_lines=(sim.skipped_lines)) }}{% endif %}
+      {% if sim.get('trips') %}<div class="small" style="color:#7b3fb5">{{ _h("Lote: {n} pedidos por trajeto, <b>{trips}</b> trajetos · {km} km · <b>{gain}%</b> menos que a otimizada pedido a pedido", n=sim.batch, trips=sim.trips_n, km=((sim.bopt_total / 1000)|dec(1)), gain=(sim.batch_gain_pct|dec(0))) }}</div>{% endif %}</div>
   </div></div></div>
 </div>
 {% set tm = sim.get('times') %}
@@ -37,8 +39,9 @@
     <div class="col-auto"><div class="text-muted">{{ _("Tempo médio por pedido") }}</div>
       <div class="fs-6 fw-semibold"><span title="{{ _("Lista de separação") }}">{{ mmss(tm.list_avg) }}</span> <span class="text-muted small fw-normal">{{ _("lista") }}</span>
         {% if tm.s_avg is defined %}· <span class="text-primary">{{ mmss(tm.s_avg) }}</span> <span class="text-muted small fw-normal">{{ _("serpentina") }}</span>{% endif %}
-        · <span class="text-success">{{ mmss(tm.opt_avg) }}</span> <span class="text-muted small fw-normal">{{ _("otimizada") }}</span></div>
-      <div class="text-muted">{{ _h("pega: {mmss} por pedido ({units_avg} peça(s) e {out_gold_avg} item(ns) / {out_units_avg} peça(s) fora da zona de ouro em média) · total {list_h} h na lista, {opt_h} h na otimizada", mmss=(mmss(tm.pick_avg)), units_avg=(tm.units_avg|dec(1)), out_gold_avg=(tm.out_gold_avg|dec(1)), out_units_avg=(tm.out_units_avg|dec(1)), list_h=(tm.list_h|dec(1)), opt_h=(tm.opt_h|dec(1))) }}{% if not sim.has_qty %} {{ _h("· <span class=\"text-warning-emphasis\">amostra sem quantidades: cada linha = 1 peça (reenvie o histórico)</span>") }}{% endif %}</div></div>
+        · <span class="text-success">{{ mmss(tm.opt_avg) }}</span> <span class="text-muted small fw-normal">{{ _("otimizada") }}</span>
+        {% if tm.bopt_avg is defined %}· <span style="color:#7b3fb5">{{ mmss(tm.bopt_avg) }}</span> <span class="text-muted small fw-normal">{{ _("lote") }}</span>{% endif %}</div>
+      <div class="text-muted">{{ _h("pega: {mmss} por pedido ({units_avg} peça(s) e {out_gold_avg} item(ns) / {out_units_avg} peça(s) fora da zona de ouro em média) · total {list_h} h na lista, {opt_h} h na otimizada", mmss=(mmss(tm.pick_avg)), units_avg=(tm.units_avg|dec(1)), out_gold_avg=(tm.out_gold_avg|dec(1)), out_units_avg=(tm.out_units_avg|dec(1)), list_h=(tm.list_h|dec(1)), opt_h=(tm.opt_h|dec(1))) }}{% if tm.bopt_h is defined %} {{ _h("· {h} h em lote", h=(tm.bopt_h|dec(1))) }}{% endif %}{% if not sim.has_qty %} {{ _h("· <span class=\"text-warning-emphasis\">amostra sem quantidades: cada linha = 1 peça (reenvie o histórico)</span>") }}{% endif %}</div></div>
     <div class="col-auto ms-auto"><label class="form-label mb-0" for="t_v">{{ _("Caminhada (m/s)") }}</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.1" min="0.2" max="3" name="t_v" data-u="m/s" id="t_v" value="{{ '%g'|format(tm.params.t_v) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_stop" title="{{ _("Tempo fixo em cada endereço (chegar, localizar, conferir)") }}">{{ _("Por parada (s)") }}</label>
@@ -49,6 +52,8 @@
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold" id="t_gold" value="{{ '%g'|format(tm.params.t_gold) }}"></div>
     <div class="col-auto"><label class="form-label mb-0" for="t_gold_piece" title="{{ _("Tempo a mais por PEÇA num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/peça)") }}</label>
       <input class="form-control form-control-sm" style="width:90px" type="number" step="0.5" min="0" name="t_gold_piece" id="t_gold_piece" value="{{ '%g'|format(tm.params.t_gold_piece) }}"></div>
+    <div class="col-auto"><label class="form-label mb-0" for="t_batch" title="{{ _("Separação em lote: quantos pedidos o separador leva no mesmo trajeto") }}">{{ _("Pedidos por trajeto") }}</label>
+      <input class="form-control form-control-sm" style="width:90px" type="number" step="1" min="2" max="20" name="t_batch" id="t_batch" value="{{ tm.params.t_batch }}"></div>
     <div class="col-auto"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-stopwatch"></i> {{ _("Recalcular") }}</button></div>
   </form>
   <div class="text-muted small mt-1">{{ _h("Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro da pega × s/item + peças fora da zona de ouro × s/peça. Endereços do mesmo módulo contam como <b>uma parada</b>.") }}</div>
@@ -65,13 +70,15 @@
   <div class="table-responsive" style="max-height:340px"><table class="table table-sm table-hover mb-0 small" data-no-resize>
     <thead class="sticky-top bg-white"><tr><th>{{ _("Dia") }}</th><th class="text-end">{{ _("Pedidos") }}</th><th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Peças") }}</th>
       <th class="text-end">{{ _("Lista (km)") }}</th><th class="text-end">{{ _("Serp. (km)") }}</th><th class="text-end">{{ _("Otim. (km)") }}</th>
-      {% if tm %}<th class="text-end" title="{{ _("Horas de separação no dia (caminhada + paradas + pega), em cada rota") }}">{{ _("Horas: lista · serp. · otim.") }}</th>{% endif %}
+      {% if sim.get('trips') %}<th class="text-end" style="color:#7b3fb5" title="{{ _("Lote otimizado: trajetos no dia e quilômetros") }}">{{ _("Lote (km)") }}</th>{% endif %}
+      {% if tm %}<th class="text-end" title="{{ _("Horas de separação no dia (caminhada + paradas + pega), em cada rota") }}">{{ _("Horas: lista · serp. · otim.") }}{% if sim.get('trips') %} · {{ _("lote") }}{% endif %}</th>{% endif %}
       <th class="text-end">{{ _("Ganho") }}</th><th></th></tr></thead>
     <tbody>{% for d in days %}<tr class="{{ 'table-active' if d.date == dsel }}">
       <td><a href="{{ day_link if day_link is defined else '?' }}day={{ d.date }}#dias">{{ fmt_datetime(d.date|todate, time=False) }}</a></td>
       <td class="text-end">{{ d.orders }}</td><td class="text-end">{{ d.lines }}</td><td class="text-end">{{ d.units|dec(0) }}</td>
       <td class="text-end">{{ (d.list_m / 1000)|dec(2) }}</td><td class="text-end text-primary">{{ ((d.s_m / 1000)|dec(2)) if d.s_m is defined else '—' }}</td><td class="text-end text-success">{{ (d.opt_m / 1000)|dec(2) }}</td>
-      {% if tm %}<td class="text-end">{{ d.list_h|dec(1) }} · <span class="text-primary">{{ d.s_h|dec(1) if d.s_h is defined else '—' }}</span> · <span class="text-success">{{ d.opt_h|dec(1) }}</span></td>{% endif %}
+      {% if sim.get('trips') %}<td class="text-end" style="color:#7b3fb5" title="{{ _h("{n} trajeto(s)", n=d.trips) }}">{{ ((d.bopt_m / 1000)|dec(2)) if d.bopt_m is defined else '—' }} <span class="text-muted">({{ d.trips }})</span></td>{% endif %}
+      {% if tm %}<td class="text-end">{{ d.list_h|dec(1) }} · <span class="text-primary">{{ d.s_h|dec(1) if d.s_h is defined else '—' }}</span> · <span class="text-success">{{ d.opt_h|dec(1) }}</span>{% if d.bopt_h is defined %} · <span style="color:#7b3fb5">{{ d.bopt_h|dec(1) }}</span>{% endif %}</td>{% endif %}
       <td class="text-end">{{ (d.gain_pct|dec(0) ~ '%') if d.gain_pct is not none else '—' }}</td>
       <td class="text-end">{% if walk3d is defined %}<a class="btn btn-sm btn-outline-success py-0" href="{{ walk3d }}day={{ d.date }}" title="{{ _("O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular o dia em 3D") }}</a>{% endif %}</td>
     </tr>{% endfor %}</tbody>
@@ -81,14 +88,15 @@
 {% elif sim.get('orders') %}
 <div class="alert alert-light border small py-2"><i class="bi bi-calendar3"></i> {{ _h("Para simular um <b>dia inteiro</b>, reenvie o histórico de pedidos com a coluna <b>Data</b> (data de cada pedido).") }}</div>
 {% endif %}
-<div class="small text-muted mb-2">{{ _h("<b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). Cada SKU é buscado na posição dele mais perto da referência. {dist_note}", dist_note=(dist_note)) }}</div>
+<div class="small text-muted mb-2">{{ _h("<b>Lista</b>: visita os endereços na ordem da lista de separação (ordem dos endereços) — mostra o efeito da numeração das ruas (por exemplo, ruas em serpentina). <b>Serpentina</b>: rota em S no mesmo plano — corredores em ordem, alternando o sentido (é o que a numeração em serpentina faz a lista seguir), para comparar sem rodar o plano de novo. <b>Otimizada</b>: o melhor caminho para o pedido (vizinho mais próximo + 2-opt). <b>Lote</b>: o separador leva vários pedidos do mesmo dia no mesmo trajeto; o sistema junta os pedidos que menos aumentam o caminho e faz a melhor rota pelas paradas de todos (a caminhada e as paradas do trajeto são divididas entre os pedidos). Cada SKU é buscado na posição dele mais perto da referência. {dist_note}", dist_note=(dist_note)) }}</div>
 <div class="row g-3">
   {% if svg %}
   <div class="col-xl-8">
     <div class="card">
       <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>{{ _h("Pedido {v}", v=(sel.order if sel else '')) }}</strong>
         {% if sel and walk3d is defined %}<a class="btn btn-sm btn-success" href="{{ walk3d }}order={{ sel.order|urlencode }}" title="{{ _("Mostra o separador andando pelas três rotas no arranjo 3D e grava em vídeo") }}"><i class="bi bi-person-walking"></i> {{ _("Ver caminhada em 3D / gravar vídeo") }}</a>{% endif %}
-        {% if sel %}<span class="small">{{ _h("<span style=\"color:#d62728\">━</span> lista {list_m} m · <span style=\"color:#2f6db5\">━</span> serpentina {s_m} m · <span style=\"color:#1a9850\">━</span> otimizada {opt_m} m · {stops} parada(s)", list_m=(sel.list_m|dec(1)), s_m=(sel.s_m|dec(1)), opt_m=(sel.opt_m|dec(1)), stops=(sel.stops)) }}</span>{% endif %}</div>
+        {% if sel %}<span class="small">{{ _h("<span style=\"color:#d62728\">━</span> lista {list_m} m · <span style=\"color:#2f6db5\">━</span> serpentina {s_m} m · <span style=\"color:#1a9850\">━</span> otimizada {opt_m} m · {stops} parada(s)", list_m=(sel.list_m|dec(1)), s_m=(sel.s_m|dec(1)), opt_m=(sel.opt_m|dec(1)), stops=(sel.stops)) }}</span>{% endif %}
+        {% if sel and trip %}<span class="small w-100" style="color:#7b3fb5"><span style="opacity:.6">━</span> {{ _h("lote: trajeto nº {id} com {n} pedido(s) ({orders}) · {m} m no trajeto · {stops} parada(s)", id=trip.id, n=trip.orders|length, orders=trip.orders|join(', '), m=(trip.bopt_m|dec(1)), stops=trip.stops) }}</span>{% endif %}</div>
       <div class="card-body">{{ svg|safe }}</div>
     </div>
   </div>
@@ -98,10 +106,10 @@
       <div class="card-header bg-white d-flex justify-content-between gap-2"><strong>{{ _("Pedidos") }}</strong>
         <input class="form-control form-control-sm" style="max-width:180px" type="search" placeholder="{{ _("Filtrar") }}" id="ordFilter"></div>
       <div class="table-responsive" style="max-height:620px"><table class="table table-sm table-hover mb-0 small" id="ordTable" data-no-resize>
-        <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th>{% if days %}<th>{{ _("Data") }}</th>{% endif %}<th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Lista (m)") }}</th><th class="text-end">{{ _("Serp. (m)") }}</th><th class="text-end">{{ _("Otim. (m)") }}</th>{% if tm %}<th class="text-end" title="{{ _("Tempo na rota otimizada") }}">{{ _("Tempo") }}</th>{% endif %}</tr></thead>
+        <thead class="sticky-top bg-white"><tr><th>{{ _("Pedido") }}</th>{% if days %}<th>{{ _("Data") }}</th>{% endif %}<th class="text-end">{{ _("Linhas") }}</th><th class="text-end">{{ _("Lista (m)") }}</th><th class="text-end">{{ _("Serp. (m)") }}</th><th class="text-end">{{ _("Otim. (m)") }}</th>{% if sim.get('trips') %}<th class="text-end" style="color:#7b3fb5" title="{{ _("Parte do pedido na caminhada do trajeto em lote (e o nº do trajeto)") }}">{{ _("Lote (m)") }}</th>{% endif %}{% if tm %}<th class="text-end" title="{{ _("Tempo na rota otimizada") }}">{{ _("Tempo") }}</th>{% endif %}</tr></thead>
         <tbody>{% for r in rows %}<tr class="{{ 'table-active' if sel and r.order == sel.order }}">
           <td>{% if svg %}<a href="{{ link }}order={{ r.order|urlencode }}">{{ r.order }}</a>{% else %}{{ r.order }}{% endif %}</td>{% if days %}<td>{{ fmt_datetime(r.date|todate, time=False) if r.date else '—' }}</td>{% endif %}<td class="text-end">{{ r.lines }}</td>
-          <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td>{% if tm %}<td class="text-end">{{ mmss(r.opt_t) if r.opt_t is defined else '—' }}</td>{% endif %}</tr>{% endfor %}</tbody>
+          <td class="text-end">{{ r.list_m|dec(1) }}</td><td class="text-end text-primary">{{ r.s_m|dec(1) if r.s_m is defined else '—' }}</td><td class="text-end text-success">{{ r.opt_m|dec(1) }}</td>{% if sim.get('trips') %}<td class="text-end" style="color:#7b3fb5">{{ r.bopt_m|dec(1) if r.bopt_m is defined else '—' }}{% if r.trip is defined %} <span class="text-muted">#{{ r.trip }}</span>{% endif %}</td>{% endif %}{% if tm %}<td class="text-end">{{ mmss(r.opt_t) if r.opt_t is defined else '—' }}</td>{% endif %}</tr>{% endfor %}</tbody>
       </table></div>
       <div class="card-footer bg-white small text-muted">{{ _("Ordenados pela caminhada na lista (maiores primeiro)") }}{% if rows|length < sim.orders %} {{ _h("· {rows} de {orders}", rows=(rows|length), orders=(sim.orders)) }}{% endif %}.</div>
     </div>

@@ -258,6 +258,8 @@
             <input class="form-control form-control-sm text-end" name="slot_v" data-u="m/s" id="slot_v" value="{{ params.slot_v }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" for="slot_gold_s" title="{{ _("Tempo a mais por item pego num nível fora da zona de ouro da pega") }}">{{ _("Fora do ouro (s/item)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label mb-0" for="slot_batch" title="{{ _("Separação em lote na simulação hoje × proposta: quantos pedidos por trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
+            <input class="form-control form-control-sm text-end" name="slot_batch" id="slot_batch" type="number" min="2" max="20" step="1" value="{{ params.slot_batch }}"></div>
         </div>
         {{ switch('slot_rows', _('Letras por rua'), _('(ruas de frente com letras diferentes: A|B, C|D…; estantes 01, 02… em sequência)')) }}
         {{ switch('slot_serp', _('Ruas em serpentina'), _('(com letras por rua: B-01 fica de frente para o fim da A)')) }}
@@ -428,10 +430,16 @@
         {% elif rc %}
         {% macro hm(v) %}{% if v is none %}—{% else %}{{ (v // 3600)|int }}:{{ '%02d'|format(((v % 3600) // 60)|int) }}:{{ '%02d'|format((v % 60)|int) }}{% endif %}{% endmacro %}
         {% macro rc_delta(a, b, places=1, unit='') %}{% if a is not none and b is not none %}{% set dl = b - a %}<span class="{{ ('text-success' if dl < 0 else 'text-danger') if dl|abs > 1e-6 else 'text-muted' }}">{{ '+' if dl > 0 }}{{ dl|dec(places) }}{{ unit }}{% if a %} ({{ '+' if dl > 0 }}{{ (dl / a * 100)|dec(0) }}%){% endif %}</span>{% else %}—{% endif %}{% endmacro %}
-        <div class="border rounded p-2 mt-2" id="rcBox" data-k="opt" data-v="{{ 'day' if rc.days else 'order' }}">
+        {# lote: cada valor vem nas duas formas (bc0/bc1 = hoje individual/lote; bn0/bn1 = proposta) e cada diferença nas
+           quatro combinações; os interruptores "lote hoje" e "lote na proposta" escolhem o que aparece, sem recalcular #}
+        {% macro sw(side, a, b, places=1, unit='') %}<span class="{{ side }}0">{{ a|dec(places) if a is not none else '—' }}{{ unit if a is not none }}</span><span class="{{ side }}1">{{ b|dec(places) if b is not none else '—' }}{{ unit if b is not none }}</span>{% endmacro %}
+        {% macro swh(side, a, b) %}<span class="{{ side }}0">{{ hm(a) }}</span><span class="{{ side }}1">{{ hm(b) }}</span>{% endmacro %}
+        {% macro sd(c0, c1, n0, n1, places=1, unit='') %}{% for c in (0, 1) %}{% for n in (0, 1) %}<span class="bc{{ c }} bn{{ n }}">{{ rc_delta((c0, c1)[c], (n0, n1)[n], places, unit) }}</span>{% endfor %}{% endfor %}{% endmacro %}
+        <div class="border rounded p-2 mt-2" id="rcBox" data-k="opt" data-v="{{ 'day' if rc.days else 'order' }}" data-bc="0" data-bn="0">
           <style>
             #rcBox[data-k="list"] .rk:not(.rk-list), #rcBox[data-k="s"] .rk:not(.rk-s), #rcBox[data-k="opt"] .rk:not(.rk-opt) { display: none; }
             #rcBox[data-v="day"] .rv-order, #rcBox[data-v="order"] .rv-day { display: none; }
+            #rcBox[data-bc="0"] .bc1, #rcBox[data-bc="1"] .bc0, #rcBox[data-bn="0"] .bn1, #rcBox[data-bn="1"] .bn0 { display: none; }
           </style>
           <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
             <strong><i class="bi bi-person-walking"></i> {{ _("Simulação de separação: hoje × proposta") }}</strong>
@@ -441,6 +449,11 @@
               {% if rc.days %}<div class="btn-group btn-group-sm" role="group">
                 <button type="button" class="btn btn-outline-secondary active" data-rv="day">{{ _("Por dia") }}</button>
                 <button type="button" class="btn btn-outline-secondary" data-rv="order">{{ _("Por pedido") }}</button></div>{% endif %}
+              {% if rc.batch %}<div class="d-flex gap-2 align-items-center border rounded px-2 py-1" title="{{ _("Separação em lote: o separador leva vários pedidos do mesmo dia no mesmo trajeto. Ligue só hoje, só na proposta ou nos dois.") }}">
+                <span class="text-muted">{{ _h("Lote ({n} pedidos/trajeto):", n=rc.batch) }}</span>
+                <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="rcBc"><label class="form-check-label" for="rcBc">{{ _("hoje") }}</label></div>
+                <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="rcBn"><label class="form-check-label" for="rcBn">{{ _("proposta") }}</label></div>
+              </div>{% endif %}
               <select class="form-select form-select-sm" style="width:auto" id="rcKind" title="{{ _("Rota do separador") }}">
                 <option value="opt">{{ _("Rota otimizada") }}</option><option value="s">{{ _("Serpentina (rota em S)") }}</option><option value="list">{{ _("Lista de separação") }}</option></select>
             </div>
@@ -448,14 +461,15 @@
           <div class="row g-2 mb-2">
             {% for k in ('list', 's', 'opt') %}
             <div class="col-md-4 col-12 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Caminhada total") }}</div>
-              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_km')|dec(2) }} km → {{ rc.new.get(k ~ '_km')|dec(2) }} km</div>
-              <div>{{ rc_delta(rc.cur.get(k ~ '_km'), rc.new.get(k ~ '_km'), 2, ' km') }}</div></div></div>
+              <div class="fs-6 fw-semibold">{{ sw('bc', rc.cur.get(k ~ '_km'), rc.cur.get('b' ~ k ~ '_km'), 2, ' km') }} → {{ sw('bn', rc.new.get(k ~ '_km'), rc.new.get('b' ~ k ~ '_km'), 2, ' km') }}</div>
+              <div>{{ sd(rc.cur.get(k ~ '_km'), rc.cur.get('b' ~ k ~ '_km'), rc.new.get(k ~ '_km'), rc.new.get('b' ~ k ~ '_km'), 2, ' km') }}</div>
+              {% if rc.batch %}<div class="text-muted small"><span class="bc1">{{ _h("hoje: {n} trajetos", n=rc.cur.trips) }}</span> <span class="bn1">{{ _h("proposta: {n} trajetos", n=rc.new.trips) }}</span></div>{% endif %}</div></div>
             <div class="col-md-4 col-6 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Horas de separação") }}</div>
-              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_h')|dec(1) }} h → {{ rc.new.get(k ~ '_h')|dec(1) }} h</div>
-              <div>{{ rc_delta(rc.cur.get(k ~ '_h'), rc.new.get(k ~ '_h'), 1, ' h') }}</div></div></div>
+              <div class="fs-6 fw-semibold">{{ sw('bc', rc.cur.get(k ~ '_h'), rc.cur.get('b' ~ k ~ '_h'), 1, ' h') }} → {{ sw('bn', rc.new.get(k ~ '_h'), rc.new.get('b' ~ k ~ '_h'), 1, ' h') }}</div>
+              <div>{{ sd(rc.cur.get(k ~ '_h'), rc.cur.get('b' ~ k ~ '_h'), rc.new.get(k ~ '_h'), rc.new.get('b' ~ k ~ '_h'), 1, ' h') }}</div></div></div>
             <div class="col-md-4 col-6 rk rk-{{ k }}"><div class="border rounded p-2 h-100"><div class="text-muted">{{ _("Caminhada média por pedido") }}</div>
-              <div class="fs-6 fw-semibold">{{ rc.cur.get(k ~ '_avg')|dec(1) }} m → {{ rc.new.get(k ~ '_avg')|dec(1) }} m</div>
-              <div>{{ rc_delta(rc.cur.get(k ~ '_avg'), rc.new.get(k ~ '_avg'), 1, ' m') }}</div></div></div>
+              <div class="fs-6 fw-semibold">{{ sw('bc', rc.cur.get(k ~ '_avg'), rc.cur.get('b' ~ k ~ '_avg'), 1, ' m') }} → {{ sw('bn', rc.new.get(k ~ '_avg'), rc.new.get('b' ~ k ~ '_avg'), 1, ' m') }}</div>
+              <div>{{ sd(rc.cur.get(k ~ '_avg'), rc.cur.get('b' ~ k ~ '_avg'), rc.new.get(k ~ '_avg'), rc.new.get('b' ~ k ~ '_avg'), 1, ' m') }}</div></div></div>
             {% endfor %}
           </div>
           {% if rc.days %}
@@ -465,10 +479,11 @@
               <th class="text-end">{{ _("Hoje (h)") }}</th><th class="text-end">{{ _("Proposta (h)") }}</th><th class="text-end">{{ _("Diferença") }}</th>{% if rc.view3d %}<th></th>{% endif %}</tr></thead>
             <tbody>{% for d in rc.days %}<tr><td>{{ fmt_datetime(d.date|todate, time=False) }}</td><td class="text-end">{{ d.orders }}</td><td class="text-end">{{ d.lines }}</td>
               {% for k in ('list', 's', 'opt') %}
-              <td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_cur') or 0) / 1000)|dec(2) }}</td><td class="text-end rk rk-{{ k }}">{{ ((d.get(k ~ '_m_new') or 0) / 1000)|dec(2) }}</td>
-              <td class="text-end rk rk-{{ k }}">{{ rc_delta((d.get(k ~ '_m_cur') or 0) / 1000, (d.get(k ~ '_m_new') or 0) / 1000, 2, ' km') }}</td>
-              <td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ d.get(k ~ '_h_new')|dec(1) }}</td>
-              <td class="text-end rk rk-{{ k }}">{{ rc_delta(d.get(k ~ '_h_cur'), d.get(k ~ '_h_new'), 1) }}</td>
+              {% set c0, c1 = (d.get(k ~ '_m_cur') or 0) / 1000, (d.get('b' ~ k ~ '_m_cur') or 0) / 1000 %}{% set n0, n1 = (d.get(k ~ '_m_new') or 0) / 1000, (d.get('b' ~ k ~ '_m_new') or 0) / 1000 %}
+              <td class="text-end rk rk-{{ k }}">{{ sw('bc', c0, c1, 2) }}</td><td class="text-end rk rk-{{ k }}">{{ sw('bn', n0, n1, 2) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ sd(c0, c1, n0, n1, 2, ' km') }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ sw('bc', d.get(k ~ '_h_cur'), d.get('b' ~ k ~ '_h_cur'), 1) }}</td><td class="text-end rk rk-{{ k }}">{{ sw('bn', d.get(k ~ '_h_new'), d.get('b' ~ k ~ '_h_new'), 1) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ sd(d.get(k ~ '_h_cur'), d.get('b' ~ k ~ '_h_cur'), d.get(k ~ '_h_new'), d.get('b' ~ k ~ '_h_new'), 1) }}</td>
               {% endfor %}{% if rc.view3d %}<td class="text-end"><a class="btn btn-sm btn-outline-success py-0 rc3d" href="{{ rc.view3d }}day={{ d.date }}" title="{{ _("O dia inteiro em 3D: hoje × proposta") }}"><i class="bi bi-badge-3d"></i></a></td>{% endif %}</tr>{% endfor %}</tbody>
           </table></div>
           {% endif %}
@@ -480,12 +495,12 @@
             <tbody>{% for o in rc.orders %}<tr><td class="mono">{{ o.order }}</td>{% if rc.days %}<td>{{ fmt_datetime(o.date|todate, time=False) if o.date else '—' }}</td>{% endif %}<td class="text-end">{{ o.lines }}</td>
               <td class="text-end">{{ o.stops_cur }} → {{ o.stops_new }}</td>
               {% for k in ('list', 's', 'opt') %}
-              <td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_cur')|dec(1) }}</td><td class="text-end rk rk-{{ k }}">{{ o.get(k ~ '_m_new')|dec(1) }}</td>
-              <td class="text-end rk rk-{{ k }}">{{ rc_delta(o.get(k ~ '_m_cur'), o.get(k ~ '_m_new'), 1, ' m') }}</td>
-              <td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_cur')) }}</td><td class="text-end rk rk-{{ k }}">{{ hm(o.get(k ~ '_t_new')) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ sw('bc', o.get(k ~ '_m_cur'), o.get('b' ~ k ~ '_m_cur'), 1) }}</td><td class="text-end rk rk-{{ k }}">{{ sw('bn', o.get(k ~ '_m_new'), o.get('b' ~ k ~ '_m_new'), 1) }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ sd(o.get(k ~ '_m_cur'), o.get('b' ~ k ~ '_m_cur'), o.get(k ~ '_m_new'), o.get('b' ~ k ~ '_m_new'), 1, ' m') }}</td>
+              <td class="text-end rk rk-{{ k }}">{{ swh('bc', o.get(k ~ '_t_cur'), o.get('b' ~ k ~ '_t_cur')) }}</td><td class="text-end rk rk-{{ k }}">{{ swh('bn', o.get(k ~ '_t_new'), o.get('b' ~ k ~ '_t_new')) }}</td>
               {% endfor %}{% if rc.view3d %}<td class="text-end"><a class="btn btn-sm btn-outline-success py-0 rc3d" href="{{ rc.view3d }}order={{ o.order|urlencode }}" title="{{ _("O pedido em 3D: hoje × proposta") }}"><i class="bi bi-badge-3d"></i></a></td>{% endif %}</tr>{% endfor %}</tbody>
           </table></div>
-          <div class="text-muted mt-1" style="font-size:.75rem">{{ _h("Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.", shown=(rc.orders|length), n=(rc.n_orders), v=(rc.params.t_v|dec(1)), stop=(rc.params.t_stop|dec(0)), piece=(rc.params.t_piece|dec(1)), gold=(rc.params.t_gold|dec(1))) }}</div>
+          <div class="text-muted mt-1" style="font-size:.75rem">{{ _h("Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.", shown=(rc.orders|length), n=(rc.n_orders), v=(rc.params.t_v|dec(1)), stop=(rc.params.t_stop|dec(0)), piece=(rc.params.t_piece|dec(1)), gold=(rc.params.t_gold|dec(1))) }}{% if rc.batch %} {{ _("Lote: os pedidos do mesmo dia são agrupados até {n} por trajeto (os que menos aumentam o caminho) e a caminhada e as paradas do trajeto são divididas entre eles.", n=rc.batch) }}{% endif %}</div>
           <script>
           (function () {
             const box = document.getElementById('rcBox');
@@ -493,6 +508,8 @@
             const kindLinks = () => box.querySelectorAll('a.rc3d, a[href*="cmp="]').forEach(a => {
               const u = new URL(a.href); u.searchParams.set('kind', box.dataset.k); a.href = u.toString(); });
             document.getElementById('rcKind').addEventListener('change', e => { box.dataset.k = e.target.value; kindLinks(); });
+            [['rcBc', 'bc'], ['rcBn', 'bn']].forEach(([id, k]) => { const el = document.getElementById(id);
+              if (el) el.addEventListener('change', () => { box.dataset[k] = el.checked ? '1' : '0'; }); });
             kindLinks();
             box.querySelectorAll('[data-rv]').forEach(b => b.addEventListener('click', () => {
               box.dataset.v = b.dataset.rv;

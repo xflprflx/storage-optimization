@@ -73,6 +73,7 @@ R(P3D, "#nkGoldP", "Fora do ouro (s por peça)", "Tempo a mais por PEÇA pega nu
 # =========================================================================== simulador de trajeto
 PROUTES = r"/optimization/slotting/routes|/optimization/site/\d+/routes"
 R(PROUTES, "t_v", "Caminhada (m/s)", "Velocidade de caminhada do separador, usada para transformar metros em tempo.", "time:v")
+R(PROUTES, "t_batch", "Pedidos por trajeto", "Separação em lote: quantos pedidos do mesmo dia o separador leva no mesmo trajeto. O sistema junta os pedidos que menos aumentam o caminho; a caminhada e as paradas do trajeto são divididas entre eles.", "route:batch")
 R(PROUTES, "t_stop", "Tempo por parada (s)", "Tempo fixo em cada parada. Endereços do mesmo módulo contam como uma parada só.", "time:stop")
 R(PROUTES, "t_piece", "Tempo por peça (s)", "Tempo para pegar cada peça do pedido.", "time:piece")
 R(PROUTES, "t_gold", "Fora do ouro (s por item)", "Tempo a mais por item (linha do pedido) que está num nível fora da zona de ouro da pega.", "time:gold")
@@ -240,6 +241,9 @@ R(POPT, "objective", "Objetivo", "O que o plano deve melhorar primeiro: menos bi
 R(POPT, "#rcKind", "Rota do separador", "Rota usada na simulação de separação do resultado (hoje × proposta): otimizada, serpentina ou lista de separação (ordem dos endereços).", "route:opt")
 R(POPT, "slot_v", "Velocidade de caminhada (m/s)", "Usada no objetivo \"Menor tempo\" e no indicador \"Tempo estimado por saída\" do resultado.", "time:v")
 R(POPT, "slot_gold_s", "Fora da zona de ouro (s por item)", "Tempo a mais por item pego num nível fora da zona de ouro da pega. No objetivo \"Menor tempo\", vira metros de caminhada pela velocidade.", "time:gold")
+R(POPT, "slot_batch", "Pedidos por trajeto (lote)", "Na simulação hoje × proposta do resultado: quantos pedidos por trajeto quando o lote é ligado (hoje, proposta ou nos dois).", "route:batch")
+R(POPT, "#rcBc", "Lote hoje", "Ligado, a situação de hoje é simulada em lote (vários pedidos por trajeto); desligado, um pedido por trajeto.", "route:batch")
+R(POPT, "#rcBn", "Lote na proposta", "Ligado, a proposta é simulada em lote. Dá para comparar hoje sem lote × proposta com lote, ou os dois iguais.", "route:batch")
 R(POPT, r"prio\d", "Critério de desempate", "Entre planos iguais no objetivo, qual critério decide em seguida.", "swap:prio")
 R(POPT, "engine", "Motor do cálculo", "Heurístico (rápido) ou pesquisa operacional (OR-Tools), que busca a melhor solução comprovada.", "solver:engine")
 R(POPT, "time_limit", "Tempo limite (s)", "Tempo máximo da pesquisa operacional. Ao esgotar, fica a melhor solução achada.", "solver:time")
@@ -379,6 +383,7 @@ R(PLEV, "warehouse_id", "Armazém", "Armazém dos níveis mostrados.", "scope:wh
 PST = r"/structures"
 PSET = r"/settings"
 R(PSET, "sim_v", "Velocidade de caminhada (m/s)", "Padrão da simulação de separação: velocidade média do separador. Cada tela de simulação pode mudar na hora.", "time:v")
+R(PSET, "sim_batch", "Pedidos por trajeto (lote)", "Padrão da simulação em lote: quantos pedidos o separador leva no mesmo trajeto (2 a 20). Cada tela de simulação pode mudar.", "route:batch")
 R(PSET, "sim_stop", "Tempo por parada (s)", "Padrão da simulação: tempo fixo em cada parada (chegar, localizar, conferir).", "time:stop")
 R(PSET, "sim_piece", "Tempo por peça (s)", "Padrão da simulação: tempo para pegar cada peça.", "time:piece")
 R(PSET, "sim_gold", "Fora da zona de ouro (s por item)", "Padrão da simulação: tempo a mais por item pego fora da zona de ouro da pega.", "time:goldp")

@@ -581,9 +581,10 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
     sample, plan, nodes, start, ref, error = _route_setup(db, pr)
     if error:
         return render(request, "slotting/routes.html", **ctx, sim={}, error=error)
-    from services.route_sim import add_times, day_rows, time_params
+    from services.route_sim import BATCH_COLOR, add_times, day_rows, time_params, trip_of
 
-    rows_first = add_times(simulate(sample, nodes, start), time_params(request.query_params))
+    tp = time_params(request.query_params)
+    rows_first = add_times(simulate(sample, nodes, start, batch=tp["t_batch"]), tp)
     day = request.query_params.get("day", "")
     rows = day_rows(sorted(rows_first["rows"], key=lambda r: -r["list_m"]), day)
     chosen = order or (rows[0]["order"] if rows else "")
@@ -598,6 +599,14 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
             overlay.append(f'<polyline points="{" ".join(f"{x * sc:.1f},{y * sc:.1f}" for x, y in pts)}" fill="none" '
                            f'stroke="{color}" stroke-width="{3 if kind == "list" else 2.5}" stroke-linejoin="round" '
                            f'opacity=".85"' + (f' stroke-dasharray="{dash}"' if dash else "") + '/>')
+        trip = trip_of(rows_first, chosen)
+        if trip:  # lote: o trajeto inteiro (todos os pedidos dele), por baixo das rotas do pedido
+            pts = path_points(trip["route"], start)
+            overlay.insert(0, f'<polyline points="{" ".join(f"{x * sc:.1f},{y * sc:.1f}" for x, y in pts)}" fill="none" '
+                              f'stroke="{BATCH_COLOR}" stroke-width="7" stroke-linejoin="round" opacity=".35"/>')
+            mine = {n.key for n in sim["routes"][chosen]["list"]}
+            overlay += [f'<circle cx="{n.gx * sc:.1f}" cy="{n.gy * sc:.1f}" r="5" fill="{BATCH_COLOR}" stroke="#fff">'
+                        f'<title>{n.key}</title></circle>' for n in trip["route"] if n.key not in mine]
         for i, n in enumerate(sim["routes"][chosen]["list"], start=1):
             overlay.append(f'<circle cx="{n.gx * sc:.1f}" cy="{n.gy * sc:.1f}" r="7" fill="#d62728" stroke="#fff"/>'
                            f'<text x="{n.gx * sc:.1f}" y="{n.gy * sc + 3.5:.1f}" font-size="9" fill="#fff" '
@@ -612,7 +621,8 @@ def route_simulator(pid: int, request: Request, order: str = "", db: Session = D
     ctx["link"] = f"/optimization/site/{pid}/routes?{tq}&" + (f"day={day}&" if day else "")
     ctx["day_link"] = f"/optimization/site/{pid}/routes?{tq}&"
     return render(request, "slotting/routes.html", **{**ctx, "svg": svg, "rows": rows[:500], "sel": sel,
-                                                      "ref_label": ref["label"], "how": how, "keep": keep},
+                                                      "ref_label": ref["label"], "how": how, "keep": keep,
+                                                      "trip": trip_of(rows_first, chosen) if chosen else None},
                   sim=rows_first, error="")
 
 

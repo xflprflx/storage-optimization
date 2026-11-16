@@ -384,6 +384,19 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - **Tela cheia:** botão no canto da vista 3D (Esc volta).
 - **Gravar vídeo:** grava do início ao fim, com o painel de distâncias na imagem, e baixa um `.webm` (Chrome, Edge ou Firefox).
 
+### Separação em lote (vários pedidos por trajeto)
+
+- **Simulador de trajeto**: além de lista, serpentina e otimizada, a 4ª rota **Lote** — o separador leva até N
+  pedidos do mesmo dia no mesmo trajeto (campo *Pedidos por trajeto*, padrão em Configurações, 2 a 20).
+  Agrupamento: o pedido de maior caminhada ainda livre abre o trajeto e entram, um a um, os pedidos que menos
+  acrescentam caminhada (entre os 12 de centro mais perto); a rota do trajeto é a melhor entre otimizada,
+  serpentina e lista pelas paradas de todos (endereço repetido ou do mesmo módulo = uma parada). A caminhada e as
+  paradas do trajeto são divididas entre os pedidos; peças e pega continuam de cada pedido. A tela mostra os
+  trajetos por dia, a parte de cada pedido (e o nº do trajeto) e, na planta, o trajeto inteiro do pedido escolhido.
+- **Hoje × proposta** (resultado do Por endereço e do Pool): interruptores **Lote hoje** e **Lote na proposta**
+  (com *Pedidos por trajeto (lote)* na etapa Posição pela saída). Dá para comparar sem lote nos dois, com lote nos
+  dois ou só de um lado; os números trocam na hora (as quatro combinações já vêm calculadas).
+
 ## 6.0.3 Planta desenhada das filiais existentes
 
 O cadastro de uma filial tem só os endereços. A **Planta da filial** (`/layout/plan`, botão no *Mapa do estoque* e na etapa *Posição pela saída*) diz onde cada estante fica, vista de cima. Fica salva por filial + armazém (tabela `branch_layouts`).

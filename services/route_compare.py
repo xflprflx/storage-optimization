@@ -1,13 +1,15 @@
 """Simulação de separação no resultado da otimização (modos Por endereço e Pool): os pedidos da amostra do
 histórico percorridos com os SKUs onde estão hoje e onde ficariam com a proposta do solver — por dia (pedidos com
-data) e por pedido, nas três rotas (lista, serpentina, otimizada)."""
+data) e por pedido, nas três rotas (lista, serpentina, otimizada). Cada situação é simulada também em lote (vários
+pedidos por trajeto, chaves blist/bs/bopt), para a tela ligar o lote só hoje, só na proposta ou nos dois."""
 from __future__ import annotations
 
 from typing import Optional
 
-from services.route_sim import Node, add_times, simulate, time_params
+from services.route_sim import BATCH_KEYS, Node, add_times, simulate, time_params
 
 KINDS = ("list", "s", "opt")
+ALL_KINDS = KINDS + BATCH_KEYS  # rota individual e em lote (b + rota)
 
 
 def _nodes(assign: dict[str, list[tuple[int, float]]], geo: dict, addr: dict[int, str]) -> dict[str, list[Node]]:
@@ -60,7 +62,7 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     tp = tp or time_params({})
     sims = {}
     for side, assign in (("cur", before), ("new", after)):
-        sims[side] = add_times(simulate(sample, _nodes(assign, geo, addr), start, d), tp)
+        sims[side] = add_times(simulate(sample, _nodes(assign, geo, addr), start, d, batch=tp.get("t_batch", 0)), tp)
     cur, new = sims["cur"], sims["new"]
     if not cur.get("orders") or not new.get("orders"):
         return None
@@ -68,9 +70,10 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     def totals(sim: dict) -> dict:
         t = sim.get("times") or {}
         return {"orders": sim["orders"], "lines": sim.get("lines", 0),
-                **{f"{k}_km": sim[f"{k}_total"] / 1000 for k in KINDS if f"{k}_total" in sim},
-                **{f"{k}_h": t[f"{k}_h"] for k in KINDS if f"{k}_h" in t},
-                **{f"{k}_avg": sim[f"{k}_avg"] for k in KINDS if f"{k}_avg" in sim}}
+                "trips": sim.get("trips_n", 0),
+                **{f"{k}_km": sim[f"{k}_total"] / 1000 for k in ALL_KINDS if f"{k}_total" in sim},
+                **{f"{k}_h": t[f"{k}_h"] for k in ALL_KINDS if f"{k}_h" in t},
+                **{f"{k}_avg": sim[f"{k}_avg"] for k in ALL_KINDS if f"{k}_avg" in sim}}
 
     days = []
     nd = {e["date"]: e for e in new.get("days") or []}
@@ -78,8 +81,9 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
         f = nd.get(e["date"])
         if f is None:
             continue
-        row = {"date": e["date"], "orders": e["orders"], "lines": e["lines"], "units": e["units"]}
-        for k in KINDS:
+        row = {"date": e["date"], "orders": e["orders"], "lines": e["lines"], "units": e["units"],
+               "trips_cur": e.get("trips", 0), "trips_new": f.get("trips", 0)}
+        for k in ALL_KINDS:
             for u in ("m", "h"):
                 if f"{k}_{u}" in e and f"{k}_{u}" in f:
                     row[f"{k}_{u}_cur"], row[f"{k}_{u}_new"] = e[f"{k}_{u}"], f[f"{k}_{u}"]
@@ -91,8 +95,8 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
         if q is None:
             continue
         row = {"order": r["order"], "date": r.get("date", ""), "lines": r["lines"], "stops_cur": r["stops"],
-               "stops_new": q["stops"]}
-        for k in KINDS:
+               "stops_new": q["stops"], "trip_cur": r.get("trip"), "trip_new": q.get("trip")}
+        for k in ALL_KINDS:
             for u in ("m", "t"):
                 if f"{k}_{u}" in r and f"{k}_{u}" in q:
                     row[f"{k}_{u}_cur"], row[f"{k}_{u}_new"] = r[f"{k}_{u}"], q[f"{k}_{u}"]
@@ -100,7 +104,7 @@ def compare(sample: list, before: dict, after: dict, geo: dict, addr: dict[int, 
     orders.sort(key=lambda x: -abs(x.get("opt_m_cur", 0) - x.get("opt_m_new", 0)))
     return {"cur": totals(cur), "new": totals(new), "days": days, "orders": orders[:max_orders],
             "n_orders": len(orders), "skipped_cur": cur.get("skipped_lines", 0), "skipped_new": new.get("skipped_lines", 0),
-            "params": tp, "has_qty": cur.get("has_qty", False)}
+            "params": tp, "has_qty": cur.get("has_qty", False), "batch": cur.get("batch") or 0}
 
 
 # --------------------------------------------------------------------------- #

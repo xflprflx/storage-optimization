@@ -578,6 +578,37 @@ pelo **trajeto dos pedidos** do histórico (`services/rearrange.py`). Nada muda 
   **Aplicar à planta** grava a variação como a planta da filial e guarda a anterior: **Desfazer rearranjo** (na
   planta) volta a ela. Salvar a planta pelo editor descarta a anterior guardada.
 
+## 6.0.8 Aparência 3D de bins e estruturas
+
+No cadastro de **tipos de bin** e de **estruturas**, a seção *Aparência no 3D* escolhe como o item é desenhado no 3D
+(projeto de filial nova e planta das filiais). Só muda o desenho: otimização, capacidade e simulador usam as medidas.
+O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
+
+- **Modelo 3D**:
+  - *Automático* (padrão): o modelo da biblioteca sugerido pelo nome (e, nas estruturas, também pelo tipo); sem
+    sugestão, o desenho simples;
+  - *Desenho simples*: a caixa colorida e os montantes com bandejas de sempre;
+  - um modelo da **biblioteca**, desenhado com as medidas reais do cadastro:
+    - bins: palete com carga, caixa plástica, bin de prateleira, caixa de papelão, gaiola aramada, tambor, big bag e
+      gaveteiro;
+    - estruturas: porta-palete com longarinas, estante de aço, cantilever, flow rack e câmara fria;
+  - *Código colado*: a descrição gerada por um chat de IA a partir de uma foto.
+- **Código da IA**: *Copiar prompt para a IA* leva o prompt já com as medidas (e os níveis). No Claude, Gemini ou
+  ChatGPT, cole o prompt, anexe a foto e cole a resposta no campo. A resposta é um JSON de peças simples (caixas e
+  cilindros) em fração das medidas, com:
+  - cor e opacidade;
+  - `tint`: a peça leva a cor da vista (tipo, ABC, ocupação…);
+  - `repeat`: ripas, grades, gavetas;
+  - `each_level`: nas estruturas, longarinas e prateleiras em cada nível.
+
+  O app só lê a descrição, nunca executa código. Código inválido é recusado ao salvar, com o motivo. O limite é de
+  60 peças.
+- **Prévia** no próprio cadastro, atualizada a cada mudança, com o modelo automático escolhido.
+- **No 3D**, cada peça de um modelo é desenhada de uma vez para todos os itens (instancing). A frente do modelo fica
+  voltada para o corredor. A opção **Aparência detalhada** volta ao desenho simples. Plantas com mais de 300 mil
+  peças abrem com ela desligada. O "Palete no chão" mantém o desenho próprio. O clique numa bin continua mostrando o
+  endereço.
+
 ## 7. Estruturas de armazenagem nos depósitos existentes
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):

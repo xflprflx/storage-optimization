@@ -167,6 +167,11 @@ def _add_missing_columns(conn) -> None:
     for col in ("golden_from", "golden_to"):
         if "structure_types" in tables and col not in stcols:
             conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} BIGINT"))
+    for tbl, cols in (("bin_types", btcols), ("structure_types", stcols)):  # aparência no 3D
+        if tbl in tables and "look_model" not in cols:
+            conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN look_model VARCHAR(20) NOT NULL DEFAULT ''"))
+        if tbl in tables and "appearance" not in cols:
+            conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN appearance JSON"))
     if "products" in tables and "material_type" not in {c["name"] for c in insp.get_columns("products")}:
         conn.execute(text("ALTER TABLE products ADD COLUMN material_type VARCHAR(60) NOT NULL DEFAULT ''"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_products_material_type ON products (material_type)"))

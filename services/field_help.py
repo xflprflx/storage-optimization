@@ -53,6 +53,7 @@ R(P3D, "#nkColor", "Cor das bins", "Escolhe o que a cor de cada bin mostra: tipo
 R(P3D, "#nkCut", "Altura até", "Esconde tudo o que fica acima desta altura, para ver os níveis de baixo por dentro.", "view3d:cut")
 R(P3D, "#nkFind", "Buscar SKU ou endereço", "Digite um SKU ou endereço: as bins encontradas ficam em destaque e a câmera vai até elas.", "view3d:find")
 R(P3D, "#nkBatch", "Pedidos por trajeto (lote)", "O 4º separador, de lote, leva até este número de pedidos do mesmo dia no mesmo trajeto. Mude para ver outro agrupamento.", "route:batch")
+R(P3D, "#nkLook", "Aparência detalhada", "Desenha bins e estruturas com a aparência do cadastro (modelo da biblioteca ou código gerado por IA: palete, caixa plástica, porta-palete, câmara fria…). Desligado: caixas e montantes simples, mais leve. Em plantas com muitas peças, abre desligado.", "route:order")
 R(P3D, "#nkBWait", "Espera para agrupar (min)", "Com o horário de liberação: quanto tempo o separador do lote espera por mais pedidos, contado da liberação do 1º pedido do lote. Parado, ele não sai com o 1º pedido: sai quando o lote completa ou quando a janela acaba, com os pedidos que tiver. 0 = sai na hora com os pedidos já liberados. Só vale com a coluna Liberação no histórico.", "route:batch")
 R(P3D, "#nkRelease", "Considerar o horário de liberação", "No dia inteiro, os separadores fazem os pedidos na ordem em que foram liberados e esperam na referência quando ainda não há pedido liberado. Só com a coluna Liberação no histórico.", "time:v")
 R(P3D, "#nkBins", "Mostrar bins", "Liga ou desliga o desenho das bins (as caixas dentro das estruturas).", "view3d:bins")
@@ -417,6 +418,9 @@ R(PST, "cost", "Custo por módulo (R$)", "Usado no objetivo de menor custo do pr
 R(PST, "golden_from", "Zona de ouro: início (cm)", "Altura, a partir do piso, onde começa a faixa mais fácil de pegar.", "rack:gold")
 R(PST, "golden_to", "Zona de ouro: fim (cm)", "Altura onde termina a faixa mais fácil de pegar (tipicamente 75 a 150 cm).", "rack:gold")
 R(PST, "notes", "Observações", "Texto livre sobre a estrutura.", "tag:notes")
+R(PST, "look_model", "Modelo 3D", "Como a estrutura aparece no 3D: automático (pelo tipo e pelo nome: porta-palete, estante, cantilever, flow rack, câmara fria), desenho simples, um modelo da biblioteca (com longarinas e prateleiras em cada nível) ou o código colado de uma IA. Só muda o desenho; os cálculos usam as medidas.", "rack:levels")
+R(PST, "look_code", "Código da aparência", "O JSON que um chat de IA (Claude, Gemini, ChatGPT…) devolve a partir de uma foto, com o prompt do botão Copiar prompt. Peças com each_level se repetem em cada nível. O app só lê a descrição, nunca executa código. A prévia mostra o resultado.", "rack:levels")
+R(PST, "#lookPromptText", "Prompt para a IA", "O texto que o botão Copiar prompt leva para o chat de IA, já com as medidas e o nº de níveis do formulário. Aparece aqui quando o navegador não deixa copiar sozinho: selecione e copie.", "rack:levels")
 R(PST, "q", "Busca", "Procura pelo código, nome ou tipo da estrutura.", "find:text")
 
 # =========================================================================== tipos de bin
@@ -432,6 +436,9 @@ R(PBT, "cost", "Custo por bin (R$)", "Usado nos objetivos de menor custo.", "bin
 R(PBT, "parent_id", "Bin pai", "Para frações (compartimentos): a bin inteira que foi dividida.", "bin:parent")
 R(PBT, "div_w", "Divisões na largura", "Em quantas partes a bin pai é dividida na largura.", "bin:divw")
 R(PBT, "div_l", "Divisões no comprimento", "Em quantas partes a bin pai é dividida no comprimento.", "bin:divl")
+R(PBT, "look_model", "Modelo 3D", "Como o tipo aparece no 3D: automático (pelo nome: palete, caixa plástica, gaiola…), desenho simples, um modelo da biblioteca (desenhado com as medidas do cadastro) ou o código colado de uma IA. Só muda o desenho; os cálculos usam as medidas.", "bin:h")
+R(PBT, "look_code", "Código da aparência", "O JSON que um chat de IA (Claude, Gemini, ChatGPT…) devolve a partir de uma foto, com o prompt do botão Copiar prompt. Descreve peças simples (caixas e cilindros) em proporção das medidas; o app só lê a descrição, nunca executa código. A prévia mostra o resultado.", "bin:h")
+R(PBT, "#lookPromptText", "Prompt para a IA", "O texto que o botão Copiar prompt leva para o chat de IA, já com as medidas do formulário. Aparece aqui quando o navegador não deixa copiar sozinho: selecione e copie.", "bin:h")
 R(PBT, "q", "Busca", "Procura pelo código ou nome do tipo de bin.", "find:text")
 
 # =========================================================================== produtos

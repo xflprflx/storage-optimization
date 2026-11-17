@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_look.html" import look_section, look_scripts %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
 {% block title %}{{ _h("{v} tipo de bin", v=(_('Editar') if bin_type else _('Novo'))) }}{% endblock %}
 {% block content %}
@@ -83,6 +84,7 @@
           <div class="form-text">{{ _("Usado nos objetivos de menor custo. Num compartimento vazio = custo da bin pai ÷ compartimentos.") }}</div>
         </div>
       </div>
+      {{ look_section('bin', data, errors, look_choices('bin'), look_prompt('bin')) }}
       <div class="mt-4">
         <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
         <a href="/bin-types" class="btn btn-link">{{ _("Cancelar") }}</a>
@@ -123,4 +125,5 @@
   [par, dw, dl].forEach(e => e.addEventListener('input', grid)); grid();
 })();
 </script>
+{{ look_scripts('bin') }}
 {% endblock %}

@@ -76,7 +76,7 @@ def plan_3d(plan: SitePlan) -> dict:
         # lado do corredor (frente): fileira "L" fica antes do corredor (corredor em y local maior)
         front_far = (m.row.side == "L") if not m.rotated else False
         mod = {"x": _r(X), "y": _r(Y), "w": _r(gw), "d": _r(gd), "h": s.height, "s": s.id, "code": f"{m.aisle}-{m.bay}",
-               "fx": front_x, "levels": [], "cap": bool(m.rotated)}
+               "fx": front_x, "ff": bool(front_far), "levels": [], "cap": bool(m.rotated)}
         for lv in sorted(m.levels, key=lambda v: v.n):
             z0 = s.z(lv.n)  # 1º nível a partir da altura cadastrada, com o vão de cada nível
             mod["levels"].append({"n": lv.n, "z": _r(z0), "t": tidx.get(lv.type_id) if lv.type_id is not None else None,

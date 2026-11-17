@@ -90,6 +90,22 @@ templates.env.filters["dec_input"] = dec_input
 templates.env.globals["url_with"] = url_with
 
 
+def _look_choices(kind: str):
+    from services.appearance import model_choices
+
+    return model_choices(kind)
+
+
+def _look_prompt(kind: str):
+    from services.appearance import prompt
+
+    return prompt(kind)
+
+
+templates.env.globals["look_choices"] = _look_choices  # aparência 3D no cadastro de bins e estruturas
+templates.env.globals["look_prompt"] = _look_prompt
+
+
 def _material_types_global():
     """Opções de tipo de material para os filtros (consulta leve, distinta e indexada)."""
     from database import SessionLocal

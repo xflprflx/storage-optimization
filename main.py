@@ -27,6 +27,7 @@ from database import init_db
 from services import i18n
 from routers import (
     api,
+    appearance,
     auth as auth_routes,
     bin_types,
     branches,
@@ -240,7 +241,7 @@ def field_help_catalog():
     rules = [{**r, "t": i18n.lookup(r["t"]), "d": i18n.units_in_text(i18n.lookup(r["d"]))} for r in RULES]
     return JSONResponse(rules, headers={"Cache-Control": "public, max-age=3600"})
 
-for r in (auth_routes, users, dashboard, onboarding, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
+for r in (auth_routes, appearance, users, dashboard, onboarding, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structures, products, stock, imports, bulk, settings, api):
     app.include_router(r.router)
 
 

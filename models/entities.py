@@ -201,6 +201,9 @@ class BinType(TimestampMixin, Base):
     fraction_den: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     split_axis: Mapped[str] = mapped_column(String(10), nullable=False, default="width", server_default="width")
     dims_auto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    # aparência no 3D (services/appearance): "" = automática, "simple", modelo da biblioteca ou "custom" (código colado)
+    look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
+    appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     location_bins: Mapped[list["LocationBin"]] = relationship(back_populates="bin_type", passive_deletes=True)
     parent: Mapped[Optional["BinType"]] = relationship(remote_side="BinType.id", foreign_keys=[parent_id])
@@ -499,6 +502,8 @@ class StructureType(TimestampMixin, Base):
     first_level_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     level_heights: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+    look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")  # aparência no 3D
+    appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     def vaos(self) -> list[float]:
         """Vão de cada nível (cm), de baixo para cima."""

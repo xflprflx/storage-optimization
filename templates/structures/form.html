@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_look.html" import look_section, look_scripts %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
 {% block title %}{{ _h("{v} estrutura", v=(_('Editar') if item else _('Nova'))) }}{% endblock %}
 
@@ -108,6 +109,7 @@
           <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="{{ _("Fornecedor, modelo, prazo…") }}">
         </div>
       </div>
+      {{ look_section('struct', data, errors, look_choices('struct'), look_prompt('struct')) }}
       <div class="mt-4">
         <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
         <a href="/structures" class="btn btn-link">{{ _("Cancelar") }}</a>
@@ -232,4 +234,5 @@
   render();
 })();
 </script>
+{{ look_scripts('struct') }}
 {% endblock %}

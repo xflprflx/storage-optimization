@@ -64,6 +64,7 @@
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">{{ _("Bins") }}</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">{{ _("Estruturas") }}</label></div>
   <div class="form-check form-switch mb-0" id="nkGoldWrap"><input class="form-check-input" type="checkbox" id="nkGold" checked><label class="form-check-label" for="nkGold" title="{{ _("Faixa de altura da zona de ouro de cada estrutura") }}">{{ _("Zona de ouro") }}</label></div>
+  <div class="form-check form-switch mb-0" id="nkLookWrap" title="{{ _("Desenha bins e estruturas com a aparência do cadastro (modelo da biblioteca ou código gerado por IA). Desligado: caixas e montantes simples, mais leve em plantas muito grandes.") }}"><input class="form-check-input" type="checkbox" id="nkLook" checked><label class="form-check-label" for="nkLook">{{ _("Aparência detalhada") }}</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">{{ _("Paredes") }}</label></div>
   <div class="btn-group btn-group-sm" role="group">
     <button type="button" class="btn btn-outline-secondary" data-view="persp" title="{{ _("Vista em perspectiva") }}"><i class="bi bi-box"></i> 3D</button>
@@ -150,6 +151,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { place, geometries, geoOf, material, partColor } from '/static/look3d.js';
 
 const host = document.getElementById('nk3d'), msg = document.getElementById('nkMsg');
 const $ = id => document.getElementById(id);
@@ -286,6 +288,62 @@ const gold = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ color: '
 gold.count = goldMods.length;
 if (!goldMods.length) { document.getElementById('nkGoldWrap').style.display = 'none'; document.querySelector('#nkColor option[value=golden]').remove(); }
 scene.add(posts, plates, bins, gold);
+// aparência (services/appearance.py): cada peça de um modelo é um InstancedMesh com todos os itens daquele cadastro
+const binsPick = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ visible: false }), Math.max(1, data.bins.length));
+const lookStructs = new THREE.Group(), lookBins = new THREE.Group(), LG = geometries(), LOOKS = [];
+scene.add(binsPick, lookStructs, lookBins);
+(function buildLooks() {
+  const group = (arr, key) => arr.reduce((acc, x, i) => { (acc[key(x)] ||= []).push(i); return acc; }, {});
+  const modsBy = group(mods, m => m.s), binsBy = group(data.bins, b => b[6]);
+  const add = (look, of, items, grp) => {
+    [true, false].forEach(fx => {
+      const its = items.filter(i => !!(of === 'mod' ? mods[i] : mods[data.bins[i][8]]).fx === fx);
+      if (!its.length) return;
+      look.parts.forEach(p => {
+        const n = p.l && of === 'mod' ? its.reduce((a, i) => a + mods[i].levels.length, 0) : its.length;
+        const ax = place(p, { x: 0, y: 0, z: 0, W: 1, D: 1, H: 1, fx, ff: false }).ax;
+        const mesh = new THREE.InstancedMesh(geoOf(LG, p, ax), material(p), Math.max(1, n));
+        mesh.count = 0; grp.add(mesh);
+        LOOKS.push({ mesh, p, look, of, items: its });
+      });
+    });
+  };
+  data.structs.forEach(s => { if (s.look && modsBy[s.id]) add(s.look, 'mod', modsBy[s.id], lookStructs); });
+  data.types.forEach((t, ti) => { if (t.look && binsBy[ti]) add(t.look, 'bin', binsBy[ti], lookBins); });
+  const total = LOOKS.reduce((a, L) => a + L.mesh.instanceMatrix.count, 0);
+  if (!LOOKS.length) $('nkLookWrap').style.display = 'none';
+  else if (total > 300000) { $('nkLook').checked = false; $('nkLookWrap').title += ' ' + _t('Desligada ao abrir: a planta tem muitas peças ({n}).', { n: total.toLocaleString(NK_I18N.locale) }); }
+})();
+const col2 = new THREE.Color(), colS = new THREE.Color();
+function updateLooks(showMod, cut, mode, on) {
+  LOOKS.forEach(L => {
+    L.mesh.visible = on;
+    if (!on) return;
+    let k = 0;
+    L.items.forEach(i => {
+      if (L.of === 'mod') {
+        const m = mods[i], show = showMod(m);
+        colS.set(structById[m.s]?.color || '#888');
+        const it = { x: m.x, y: m.y, W: m.fx ? m.w : m.d, D: m.fx ? m.d : m.w, H: m.h, fx: m.fx, ff: !!m.ff };
+        (L.p.l ? m.levels.map(l => l.z) : [0]).forEach(z => {
+          const o = place(L.p, { ...it, z });
+          const vis = show && o.z >= -0.01 && o.z < cut;
+          setBox(L.mesh, k, o.x, o.y, o.z, o.w, o.d, Math.max(Math.min(o.z + o.h, cut) - o.z, 0.01), vis);
+          L.mesh.setColorAt(k++, partColor(L.p, L.look, colS, col2));
+        });
+      } else {
+        const b = data.bins[i], m = mods[b[8]];
+        const it = { x: b[0] + 0.5, y: b[1] + 0.5, z: b[2], W: (m.fx ? b[3] : b[4]) - 1, D: (m.fx ? b[4] : b[3]) - 1, H: b[5], fx: m.fx, ff: !!m.ff };
+        const o = place(L.p, it);
+        setBox(L.mesh, k, o.x, o.y, o.z, o.w, o.d, o.h, showMod(m) && b[2] + b[5] <= cut + 0.1);
+        L.mesh.setColorAt(k++, partColor(L.p, L.look, binColor(b, mode), col2));
+      }
+    });
+    L.mesh.count = k;
+    L.mesh.instanceMatrix.needsUpdate = true; if (L.mesh.instanceColor) L.mesh.instanceColor.needsUpdate = true;
+    L.mesh.computeBoundingSphere();
+  });
+}
 const tmp = new THREE.Object3D(), col = new THREE.Color();
 const setBox = (mesh, i, x, y, z, w, d, h, show) => {  // x,y = planta (cm); z = altura (cm)
   tmp.position.set(M(x), M(z), M(y));
@@ -318,9 +376,10 @@ function rebuild() {
   aisleText();
   $('nkCutV').textContent = nkU.text(`${fmt(cut / 100, 2)} m`);
   const showMod = m => !sel.size || sel.has(aisleOf(m));
+  const useLook = $('nkLook').checked;
   let ip = 0, il = 0;
   mods.forEach(m => {
-    const s = structById[m.s], show = showMod(m), color = s?.color || '#888';
+    const s = structById[m.s], show = showMod(m) && !(useLook && s?.look), color = s?.color || '#888';
     const hh = Math.min(m.h, cut), floor = !!(s && s.floor);  // "Palete no chão": sem montantes nem bandejas
     [[0, 0], [m.w - POST, 0], [0, m.d - POST], [m.w - POST, m.d - POST]].forEach(([dx, dy]) => {
       setBox(posts, ip, m.x + dx, m.y + dy, 0, POST, POST, hh, show && !floor);
@@ -342,12 +401,14 @@ function rebuild() {
   });
   gold.instanceMatrix.needsUpdate = true; gold.computeBoundingSphere();
   data.bins.forEach((b, i) => {
-    const m = mods[b[8]];
-    setBox(bins, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], showMod(m) && b[2] + b[5] <= cut + 0.1);
+    const m = mods[b[8]], vis = showMod(m) && b[2] + b[5] <= cut + 0.1;
+    setBox(bins, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], vis && !(useLook && data.types[b[6]]?.look));
+    setBox(binsPick, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], vis);  // clique: vale também com a aparência
     bins.setColorAt(i, binColor(b, mode));
   });
-  [posts, plates, bins].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; });
-  bins.computeBoundingSphere(); posts.computeBoundingSphere(); plates.computeBoundingSphere();
+  [posts, plates, bins, binsPick].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; });
+  bins.computeBoundingSphere(); posts.computeBoundingSphere(); plates.computeBoundingSphere(); binsPick.computeBoundingSphere();
+  updateLooks(showMod, cut, mode, useLook);
   legend(mode);
 }
 
@@ -399,7 +460,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const r = renderer.domElement.getBoundingClientRect();
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
-  const hit = bins.visible ? ray.intersectObject(bins)[0] : null;
+  const hit = bins.visible ? ray.intersectObject(binsPick)[0] : null;
   select(hit ? hit.instanceId : null);
 });
 function select(i) {
@@ -420,8 +481,9 @@ $('nkAisleList').addEventListener('change', rebuild);
 $('nkAisleAll').addEventListener('click', e => { e.preventDefault(); document.querySelectorAll('#nkAisleList input').forEach(i => { i.checked = false; }); rebuild(); });
 $('nkAisleInv').addEventListener('click', e => { e.preventDefault(); document.querySelectorAll('#nkAisleList input').forEach(i => { i.checked = !i.checked; }); rebuild(); });
 $('nkCut').addEventListener('input', rebuild);
-$('nkBins').addEventListener('change', e => { bins.visible = e.target.checked; if (!e.target.checked) select(null); });
-$('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = e.target.checked; });
+$('nkBins').addEventListener('change', e => { bins.visible = lookBins.visible = e.target.checked; if (!e.target.checked) select(null); });
+$('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = lookStructs.visible = e.target.checked; });
+$('nkLook').addEventListener('change', rebuild);
 $('nkWalls').addEventListener('change', e => { walls.visible = e.target.checked; });
 $('nkGold').addEventListener('change', e => { gold.visible = e.target.checked; });
 let findTimer = null;
@@ -921,7 +983,7 @@ renderer.domElement.addEventListener('dblclick', e => {
   const r = renderer.domElement.getBoundingClientRect();
   mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(mouse, camera);
-  const hit = ray.intersectObjects([bins, plates, posts, floor].filter(o => o.visible))[0];
+  const hit = ray.intersectObjects([bins.visible ? binsPick : null, plates, posts, floor].filter(o => o && o.visible))[0];
   if (hit) { controls.target.copy(hit.point); controls.update(); }
 });
 window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild, walk: WK, openWalk, play, pause };  // para testes e depuração

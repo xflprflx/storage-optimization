@@ -264,7 +264,9 @@ def plan_3d_json(branch_id: str = "", warehouse_id: str = "", db: Session = Depe
     g = geometry(db, br.id, wid)
     if g is None:
         return JSONResponse({"error": _("Esta filial ainda não tem planta desenhada. Desenhe a planta para ver o 3D.")})
-    data = layout_3d(db, g, br.id, wid, _branch_abc(db, br.id))
+    from services.appearance import enrich
+
+    data = enrich(db, layout_3d(db, g, br.id, wid, _branch_abc(db, br.id)))
     data["building"]["name"] = f"{br.code} - {br.name}"
     if g.unplaced:
         data["note"] = _("fora da planta: {v}{v2}", v=', '.join(g.unplaced[:6]), v2='…' if len(g.unplaced) > 6 else '')

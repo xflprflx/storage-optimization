@@ -1,0 +1,88 @@
+{# Aparência 3D do cadastro (bins e estruturas): modelo da biblioteca, código colado de uma IA e a prévia. #}
+{% macro look_section(kind, data, errors, choices, prompt_text) %}
+<hr class="my-4">
+<h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-badge-3d"></i> {{ _h("Aparência no 3D <span class=\"text-lowercase fw-normal\">(opcional)</span>") }}</h6>
+<div class="small text-muted mb-3">{{ _("Só muda o desenho no 3D (projeto de filial nova e planta das filiais); os cálculos usam as medidas acima. Escolha um modelo da biblioteca ou cole o código que um chat de IA (Claude, Gemini, ChatGPT…) gera a partir de uma foto.") }}</div>
+<div class="row g-3" id="lookBox" data-kind="{{ kind }}">
+  <div class="col-md-6">
+    <label class="form-label" for="look_model">{{ _("Modelo 3D") }}</label>
+    <select class="form-select" name="look_model" id="look_model">
+      {% for k, lbl in choices %}<option value="{{ k }}" {% if (data.get('look_model') or '') == k %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+    </select>
+    <div class="form-text" id="lookAuto"></div>
+    <div id="lookCodeBox" class="mt-3">
+      <label class="form-label" for="look_code">{{ _("Código da aparência (gerado pela IA)") }}</label>
+      <textarea class="form-control mono small {{ 'is-invalid' if errors.get('look_code') }}" name="look_code" id="look_code" rows="7" placeholder='{"parts": [ … ]}'>{{ data.get('look_code') or '' }}</textarea>
+      {% if errors.get('look_code') %}<div class="invalid-feedback d-block">{{ errors.get('look_code') }}</div>{% endif %}
+      <div class="small text-danger mt-1" id="lookErr"></div>
+      <div class="d-flex gap-2 flex-wrap mt-2">
+        <button type="button" class="btn btn-sm btn-outline-primary" id="lookPrompt"><i class="bi bi-clipboard"></i> {{ _("Copiar prompt para a IA") }}</button>
+        <span class="small text-muted align-self-center" id="lookCopied"></span>
+      </div>
+      <ol class="small text-muted mt-2 mb-0 ps-3">
+        <li>{{ _("Preencha as medidas acima e clique em Copiar prompt (ele já leva as medidas).") }}</li>
+        <li>{{ _("Abra o chat de IA, cole o prompt e anexe a foto (de frente; uma de lado ajuda).") }}</li>
+        <li>{{ _("Copie a resposta inteira e cole aqui: a prévia ao lado mostra o resultado. Não ficou bom? Peça o ajuste no chat e cole de novo.") }}</li>
+      </ol>
+      <textarea class="d-none" id="lookPromptText">{{ prompt_text }}</textarea>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">{{ _("Prévia") }}</label>
+    <div id="lookPreview" class="border rounded" style="height:300px; background:#f4f6f8"></div>
+    <div class="form-text">{{ _("Arraste para girar, role para aproximar. As peças em azul levam, no 3D, a cor da vista (tipo, curva ABC, ocupação…).") }}</div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro look_scripts(kind) %}
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module">
+import { mountPreview } from '/static/look3d.js';
+const $ = id => document.getElementById(id), form = $('lookBox').closest('form');
+const inp = n => form.querySelector(`[name="${n}"]`);
+const KIND = {{ kind|tojson }};
+const val = n => { const e = inp(n); if (!e) return 0; const v = window.nkU && e.dataset.u ? nkU.get(e) : parseFloat(String(e.value || '').replace(',', '.')); return isFinite(v) ? v : 0; };
+const dims = () => KIND === 'struct' ? { w: val('width'), h: val('height'), d: val('depth') } : { w: val('width'), h: val('height'), d: val('length') };
+function levels() {  // base de cada nível, como no servidor (StructureSpec.z)
+  if (KIND !== 'struct') return [];
+  const H = val('height') || 200, n = Math.max(1, parseInt(inp('levels').value, 10) || 1), base = val('first_level_cm') || 0;
+  const clear = val('level_height') || H / n;
+  const hs = String(inp('level_heights').value || '').split(/[;/\s]+/).map(v => parseFloat(v.replace(',', '.'))).filter(v => v > 0);
+  const vs = Array.from({ length: n }, (_, i) => hs[i] || clear);
+  const beam = hs.length ? Math.max(0, (H - base - vs.reduce((a, b) => a + b, 0)) / n) : 0, pitch = (H - base) / n;
+  return vs.map((_, i) => hs.length ? base + vs.slice(0, i).reduce((a, b) => a + b, 0) + beam * i : base + i * pitch);
+}
+const pv = mountPreview($('lookPreview'));
+let timer = null, seq = 0;
+async function refresh() {
+  const model = $('look_model').value, code = $('look_code').value;
+  $('lookCodeBox').style.display = model === 'custom' || (model === '' && code.trim()) ? '' : 'none';
+  const my = ++seq;
+  const body = { kind: KIND, model, code, ...dims(), name: (inp('name') || {}).value || '', type: (inp('kind') || {}).value || '' };
+  let r;
+  try { r = await (await fetch('/appearance/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
+  catch (e) { return; }
+  if (my !== seq) return;
+  $('lookErr').textContent = r.error || '';
+  const opt = [...$('look_model').options].find(o => o.value === r.auto);
+  $('lookAuto').textContent = model === '' ? (r.auto && opt ? _t('Automático: {m}', { m: opt.textContent }) : _t('Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)')) : '';
+  const floor = KIND === 'struct' && /^(palete no ch|blocado|piso)/i.test((inp('kind') || {}).value || '');
+  pv.draw(r.look, dims(), levels(), { kind: KIND, floor });
+}
+const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 300); };
+form.addEventListener('input', later); form.addEventListener('change', later);
+$('lookPrompt').addEventListener('click', async () => {
+  const d = dims(), n = KIND === 'struct' ? (parseInt(inp('levels').value, 10) || 1) : 0;
+  const r1 = v => String(Math.round(v * 10) / 10);
+  const text = $('lookPromptText').value.replaceAll('{w}', r1(d.w || 0)).replaceAll('{h}', r1(d.h || 0)).replaceAll('{d}', r1(d.d || 0)).replaceAll('{levels}', String(n));
+  try { await navigator.clipboard.writeText(text); $('lookCopied').textContent = _t('Prompt copiado: cole no chat de IA junto com a foto.'); }
+  catch (e) { $('lookPromptText').classList.remove('d-none'); $('lookPromptText').select(); $('lookCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }
+  if ($('look_model').value !== 'custom') { $('look_model').value = 'custom'; refresh(); }
+});
+refresh();
+</script>
+{% endmacro %}

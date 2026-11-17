@@ -551,7 +551,9 @@ def plan_3d_json(pid: int, db: Session = Depends(get_db)):
     plan, errors, _cfg = _plan_for(db, pr)
     if errors or plan is None or not plan.modules:
         return JSONResponse({"error": " ".join(errors) or _("O plano não tem estruturas para mostrar. Rode a otimização.")})
-    data = plan_3d(plan)
+    from services.appearance import enrich
+
+    data = enrich(db, plan_3d(plan))
     data["building"]["name"] = pr.name
     return JSONResponse(data)
 

@@ -77,6 +77,10 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
             errors.add("parent_id", _("A bin pai precisa ser uma bin inteira (não um compartimento)."))
         elif bin_type_id and db.scalar(select(BinType.id).where(BinType.parent_id == bin_type_id)):
             errors.add("parent_id", _("Este tipo é bin pai de compartimentos; não pode ser compartimento."))
+    from services.appearance import form_values
+
+    data.update(form_values(form, "bin", errors))
+    data["look_code"] = f_str(form, "look_code", 20000)
     data["dims_auto"] = False
     if parent is not None and grid and not errors.get("parent_id"):
         dims = derived_dims(parent, *grid)
@@ -137,7 +141,7 @@ def create_bin_type(request: Request, form: FormData = Depends(form_data), db: S
     if errors:
         return render(request, "bin_types/form.html", status_code=422, bin_type=None, data=data, errors=errors,
                       parents=_parents(db))
-    for k in ("div_w_txt", "div_l_txt"):
+    for k in ("div_w_txt", "div_l_txt", "look_code"):
         data.pop(k, None)
     bt = BinType(**data)
     db.add(bt)
@@ -150,8 +154,11 @@ def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_
     bt = db.get(BinType, bin_type_id)
     if not bt:
         return redirect("/bin-types", _("Tipo de bin não encontrado."), "danger")
+    from services.appearance import code_text
+
     data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
-                                        "parent_id", "dims_auto")}
+                                        "parent_id", "dims_auto", "look_model")}
+    data["look_code"] = code_text(bt.appearance)
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")
     if bt.dims_auto:  # dimensões vindas da bin pai: o formulário mostra vazio (continua automático)
         for k in ("height", "width", "length", "max_weight", "max_volume"):
@@ -170,7 +177,7 @@ def update_bin_type(bin_type_id: int, request: Request, form: FormData = Depends
     if errors:
         return render(request, "bin_types/form.html", status_code=422, bin_type=bt, data=data, errors=errors,
                       usage=_usage(db, [bt.id]).get(bt.id, (0, 0)), parents=_parents(db, bt.id))
-    for k in ("div_w_txt", "div_l_txt"):
+    for k in ("div_w_txt", "div_l_txt", "look_code"):
         data.pop(k, None)
     for k, v in data.items():
         setattr(bt, k, v)

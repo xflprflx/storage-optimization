@@ -802,6 +802,7 @@ def layout_3d(db: Session, g: Geometry, branch_id: int, warehouse_id: Optional[i
         front_x = row["orient"] == "h"
         out_mods.append({"x": round(p.x, 1), "y": round(p.y, 1), "w": round(p.w, 1), "d": round(p.d, 1),
                          "h": round(lv["h"], 1), "s": sid, "code": f"{b.aisle}-{b.bay}", "fx": front_x, "cap": False,
+                         "ff": row.get("face") == "+",
                          "levels": [{"n": x["n"], "z": round(x["z"], 1)} for x in lv["levels"]]})
         # bins de cada nível: as do próprio nível do endereço, as enviadas a um nível extra (ou excedente) e, por
         # último, as de endereços genéricos da estante (sem nível), que preenchem a estante de baixo para cima

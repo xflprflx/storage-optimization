@@ -31,8 +31,9 @@ def test_parse_accepts_the_chat_answer_and_normalizes():
 @pytest.mark.parametrize("text, part", [
     ("não é json", "JSON válido"),
     ('{"foo": 1}', "parts"),
-    ('{"parts": [{"x": 2}]}', "x fora do intervalo"),
-    ('{"parts": [{"x": "abc"}]}', "x inválido"),
+    ('{"parts": [{"x": 2, "w": 0.5, "h": 1, "d": 1}]}', "x fora do intervalo"),
+    ('{"parts": [{"x": "abc", "w": 0.5, "h": 1, "d": 1}]}', "x inválido"),
+    ('{"parts": [{"x": 0, "y": 0, "z": 0, "color": "#ff0000"}]}', "sem tamanho"),
     ('{"parts": [{"w": 0.1, "repeat": {"count": 61}}]}', "repeat.count"),
     (json.dumps({"parts": [{"w": 0.01, "repeat": {"count": 31, "dx": 0.01}}] * 2}), str(MAX_PARTS)),
 ])
@@ -64,6 +65,23 @@ def test_parse_fixes_what_ai_chats_usually_get_wrong():
     assert err == "" and obj["parts"][0]["x"] == -0.05 and obj["parts"][0]["w"] == 1.1 and any("ajustado" in n for n in notes)
     # sem as medidas do item, cm não tem como virar fração: recusa explicando
     assert parse('{"parts": [{"w": 50, "h": 20, "d": 30}]}')[0] is None
+
+
+def test_parse_reads_position_and_size_in_other_formats():
+    """A IA nem sempre usa x/y/z/w/h/d: position + size (lista ou objeto), center, width/height/depth, radius e origem
+    no meio do item. Sem isso, toda peça virava o item inteiro e a prévia ficava sempre igual."""
+    code = {"parts": [
+        {"shape": "box", "position": [0, 0, 0], "size": [1, 0.1, 1], "color": "#8b5a2b"},
+        {"shape": "box", "position": {"x": 0.1, "y": 0.1, "z": 0.1}, "dimensions": {"width": 0.3, "height": 0.5, "depth": 0.3}},
+        {"center": [0.5, 0.5, 0.5], "size": [0.2, 0.2, 0.2]},
+        {"shape": "cylinder", "x": 0.2, "y": 0, "z": 0.2, "radius": 0.3, "height": 1}]}
+    obj, err, _n = parse(json.dumps(code))
+    box = [tuple(round(p[k], 2) for k in "xyzwhd") for p in obj["parts"]]
+    assert err == "" and box == [(0, 0, 0, 1, 0.1, 1), (0.1, 0.1, 0.1, 0.3, 0.5, 0.3), (0.4, 0.4, 0.4, 0.2, 0.2, 0.2),
+                                 (0.2, 0, 0.2, 0.6, 1, 0.6)]
+    centered = {"parts": [{"x": -0.5, "y": 0, "z": -0.5, "w": 1, "h": 0.1, "d": 1}, {"x": -0.1, "y": 0.1, "z": -0.1, "w": 0.2, "h": 0.5, "d": 0.2}]}
+    obj, err, notes = parse(json.dumps(centered))
+    assert err == "" and obj["parts"][1]["x"] == pytest.approx(0.4) and any("origem" in n for n in notes)
 
 
 def test_library_models_fit_any_size_and_suggestions():

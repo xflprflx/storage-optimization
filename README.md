@@ -608,7 +608,11 @@ O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
   - números em texto;
   - medidas em cm, convertidas pelas medidas do item;
   - valores um pouco fora de 0–1;
-  - a lista de peças em outra chave.
+  - a lista de peças em outra chave;
+  - posição e tamanho em outro formato (`position`/`size` em lista ou objeto, `center`,
+    `width`/`height`/`depth`, `radius`) e origem no meio do item.
+
+  Peça sem tamanho é recusada; antes, ela virava o item inteiro.
 
   Colar o código troca o modelo para *Código colado*. Código que não dá para aplicar mostra o motivo por cima da
   prévia e é recusado ao salvar.

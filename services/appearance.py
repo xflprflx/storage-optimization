@@ -128,11 +128,67 @@ def _f(v, default: float) -> float:
         return float("nan")
 
 
-def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, list[str]]:
+_POS_KEYS = ("position", "pos", "origin", "corner", "offset", "location", "min")
+_SIZE_KEYS = ("size", "dimensions", "dims", "scale", "extent", "extents")
+_AXES = {"x": ("x", "width", "w", "largura"), "y": ("y", "height", "h", "altura"), "z": ("z", "depth", "d", "length",
+                                                                                          "l", "profundidade")}
+
+
+def _vec(v, names: dict) -> Optional[list]:
+    """[a, b, c] ou {x/width…, y/height…, z/depth…} -> [a, b, c] (None se não der)."""
+    if isinstance(v, (list, tuple)) and len(v) >= 3:
+        return list(v[:3])
+    if isinstance(v, dict):
+        out = []
+        for ax in ("x", "y", "z"):
+            k = next((n for n in names[ax] if n in v), None)
+            out.append(v[k] if k is not None else None)
+        return out if any(x is not None for x in out) else None
+    return None
+
+
+def _unpack(q: dict) -> None:
+    """Formatos alternativos de posição e tamanho que as IAs usam -> x, y, z, w, h, d (no lugar)."""
+    for k in _POS_KEYS:
+        v = _vec(q.get(k), _AXES)
+        if v is not None:
+            for key, val in zip(("x", "y", "z"), v):
+                if val is not None and key not in q:
+                    q[key] = val
+            q.pop(k, None)
+            break
+    if "center" in q or "centre" in q:
+        v = _vec(q.pop("center", None) or q.pop("centre", None), _AXES)
+        if v is not None:
+            q.update({key: val for key, val in zip(("x", "y", "z"), v) if val is not None})
+            q["_center"] = True
+    for k in _SIZE_KEYS:
+        v = _vec(q.get(k), _AXES)
+        if v is not None:
+            for key, val in zip(("w", "h", "d"), v):
+                if val is not None and key not in q:
+                    q[key] = val
+            q.pop(k, None)
+            break
+    for key, names in (("w", ("width", "largura")), ("h", ("height", "altura")),
+                       ("d", ("depth", "length", "profundidade", "comprimento"))):
+        for n in names:
+            if key not in q and n in q:
+                q[key] = q.pop(n)
+    if "radius" in q and q.get("shape") == "cylinder":  # cilindro com raio: diâmetro nos dois eixos de fora
+        r = 2 * _f(q.pop("radius"), 0)
+        ax = str(q.get("axis") or "y").lower()
+        for key in {"x": ("h", "d"), "y": ("w", "d"), "z": ("w", "h")}.get(ax, ("w", "d")):
+            q.setdefault(key, r)
+
+
+def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, list[str], str]:
     """Conserta o que a IA costuma errar, sem mudar a intenção: sinônimos de forma, cor por nome, números em texto,
-    medidas em cm (com as medidas do item) e valores um pouco fora do intervalo. Devolve as peças e os avisos."""
+    medidas em cm (com as medidas do item), valores um pouco fora do intervalo, posição e tamanho em outro formato
+    (position/size, center, width/height/depth, radius) e origem no meio do item. Devolve (peças, avisos, erro)."""
     notes: list[str] = []
     out, named, fixed = [], 0, 0
+    raise_missing: list[int] = []
     for p in parts:
         if not isinstance(p, dict):
             out.append(p)
@@ -153,9 +209,14 @@ def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, 
         elif not col:
             col = "#8a96a0"
         q["color"] = col
+        _unpack(q)
+        if not any(k in q for k in ("w", "h", "d")):
+            raise_missing.append(len(out) + 1)
         big = any(_f(q.get(k), 0) > 1.5 for k in ("w", "h", "d"))  # tamanho que só faz sentido em cm
         for k, dflt in (("x", 0), ("y", 0), ("z", 0), ("w", 1), ("h", 1), ("d", 1)):
             q[k] = _f(q.get(k), dflt)
+        if q.pop("_center", False):  # posição dada pelo centro: vira o canto
+            q["x"], q["y"], q["z"] = q["x"] - q["w"] / 2, q["y"] - q["h"] / 2, q["z"] - q["d"] / 2
         q["_cm"] = big
         for k, o in (("w", "x"), ("h", "y"), ("d", "z")):  # tamanho negativo: a peça vai para o outro lado
             if q[k] < 0:
@@ -163,6 +224,8 @@ def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, 
         if "opacity" in q:
             q["opacity"] = min(max(_f(q["opacity"], 1), 0.05), 1)
         out.append(q)
+    if raise_missing:  # sem tamanho a peça viraria o item inteiro (e toda prévia ficaria igual): recusa
+        return out, [], _("peça {i}: sem tamanho (w, h, d)", i=raise_missing[0])
     good = [q for q in out if isinstance(q, dict)]
     in_cm = any(q.pop("_cm", False) for q in good)
     if in_cm and dims and all(float(v or 0) > 0 for v in dims):  # medidas em cm, não em fração
@@ -175,6 +238,14 @@ def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, 
                     if k in rep:
                         rep[k] = _f(rep[k], 0) / m
         notes.append(_("as medidas vieram em cm e foram convertidas em fração"))
+    if good and not in_cm:  # origem no meio do item (x e z de -0,5 a 0,5): leva para o canto
+        for k, sz in (("x", "w"), ("z", "d")):
+            lo, hi = min(q[k] for q in good), max(q[k] + q[sz] for q in good)
+            if lo < -0.1 and hi <= 0.6 and lo >= -0.6:
+                for q in good:
+                    q[k] += 0.5
+                if _("a origem estava no meio do item e foi levada para o canto") not in notes:
+                    notes.append(_("a origem estava no meio do item e foi levada para o canto"))
     for q in good:
         lvl = bool(q.get("each_level")) and structure
         lo_y = -0.3 if lvl else -0.05
@@ -190,7 +261,7 @@ def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, 
         notes.append(_("{n} cor(es) por nome ou fora do formato #rrggbb trocada(s) pela cor mais próxima", n=named))
     if fixed:
         notes.append(_("{n} valor(es) um pouco fora do intervalo ajustado(s)", n=fixed))
-    return out, notes
+    return out, notes, ""
 
 
 def parse(text: str, dims: Optional[tuple] = None, structure: bool = True) -> tuple[Optional[dict], str, list]:
@@ -209,7 +280,10 @@ def parse(text: str, dims: Optional[tuple] = None, structure: bool = True) -> tu
     parts = _find_parts(obj)
     if not parts:
         return None, _("O código precisa ter a lista \"parts\" com pelo menos uma peça."), []
-    parts, notes = _repair(parts, dims, structure)
+    parts, notes, missing = _repair(parts, dims, structure)
+    if missing:
+        return None, _("Código inválido: {exc}.", exc=missing) + " " + _(
+            "Cada peça precisa do tamanho (w, h, d) e do canto (x, y, z), em fração das medidas do item."), []
     obj = {"parts": parts}
     _look, err = normalize(obj, structure=structure)
     if err and notes and any("cm" in n for n in notes):
@@ -610,6 +684,8 @@ def prompt(kind: str) -> str:
             "(longarinas, prateleiras, braços); nesse caso y é medido a partir da base do nível (ex.: longarina logo "
             "abaixo da base: \"y\": -0.04). Montantes, colunas e paredes não usam each_level. Não desenhe a carga: o "
             "software desenha as bins.\n")
+    base += _("- Em cada peça, use exatamente as chaves x, y, z, w, h e d (não use position, size, center nem "
+              "coordenadas a partir do centro).\n")
     base += _("- Use no máximo 50 peças, contando as repetições. Reproduza a forma e as cores reais; ignore etiquetas, "
               "textos e logotipos.")
     return base

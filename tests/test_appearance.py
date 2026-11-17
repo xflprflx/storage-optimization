@@ -14,8 +14,8 @@ CODE = {"parts": [{"shape": "box", "x": 0, "y": 0, "z": 0, "w": 1, "h": 0.1, "d"
 
 
 def test_parse_accepts_the_chat_answer_and_normalizes():
-    obj, err = parse("Aqui está:\n```json\n" + json.dumps(CODE) + "\n```\nQualquer dúvida…")
-    assert err == "" and obj == CODE
+    obj, err, _notes = parse("Aqui está:\n```json\n" + json.dumps(CODE) + "\n```\nQualquer dúvida…")
+    assert err == "" and obj["parts"][0]["color"] == "#8b5a2b" and len(obj["parts"]) == 3
     look, err = normalize(obj, structure=True)
     parts = look["parts"]
     assert len(parts) == 1 + 3 + 1  # o repeat vira 3 peças
@@ -32,14 +32,38 @@ def test_parse_accepts_the_chat_answer_and_normalizes():
     ("não é json", "JSON válido"),
     ('{"foo": 1}', "parts"),
     ('{"parts": [{"x": 2}]}', "x fora do intervalo"),
-    ('{"parts": [{"shape": "sphere"}]}', "shape"),
-    ('{"parts": [{"color": "red"}]}', "hexadecimal"),
+    ('{"parts": [{"x": "abc"}]}', "x inválido"),
     ('{"parts": [{"w": 0.1, "repeat": {"count": 61}}]}', "repeat.count"),
     (json.dumps({"parts": [{"w": 0.01, "repeat": {"count": 31, "dx": 0.01}}] * 2}), str(MAX_PARTS)),
 ])
 def test_invalid_codes_explain_why(text, part):
-    obj, err = parse(text)
+    obj, err, _notes = parse(text)
     assert obj is None and part in err
+
+
+def test_parse_fixes_what_ai_chats_usually_get_wrong():
+    """Comentários, vírgula sobrando, True do Python, forma e cor por nome, números em texto, medidas em cm, valores
+    um pouco fora de 0–1 e a lista em outra chave: o código entra, com o aviso do que foi ajustado."""
+    text = """Claro! Segue:
+```json
+{
+  // base do palete
+  "model": {"components": [
+    {"shape": "cube", "x": 0, "y": 0, "z": 0, "w": 100, "h": 14, "d": 120, "color": "brown"},  /* madeira */
+    {"type": "box", "x": 2, "y": 14, "z": 2, "w": 96, "h": 136, "d": 116, "color": "#36c", "tint": True,},
+  ]},
+}
+```"""
+    obj, err, notes = parse(text, (100, 150, 120), structure=False)
+    assert err == "" and len(obj["parts"]) == 2
+    p0, p1 = obj["parts"]
+    assert p0["shape"] == "box" and p0["color"] == "#8b5a2b" and p0["h"] == pytest.approx(14 / 150)
+    assert p1["color"] == "#3366cc" and p1["tint"] is True and p1["x"] == pytest.approx(0.02)
+    assert any("cm" in n for n in notes) and any("cor" in n for n in notes)
+    obj, err, notes = parse('[{"x": -0.1, "w": "1,2", "h": 0.5, "d": 1, "color": "vermelho"}]')
+    assert err == "" and obj["parts"][0]["x"] == -0.05 and obj["parts"][0]["w"] == 1.1 and any("ajustado" in n for n in notes)
+    # sem as medidas do item, cm não tem como virar fração: recusa explicando
+    assert parse('{"parts": [{"w": 50, "h": 20, "d": 30}]}')[0] is None
 
 
 def test_library_models_fit_any_size_and_suggestions():
@@ -78,15 +102,21 @@ def test_structure_form_saves_library_and_pasted_code(client, db):
     assert struct_look(st)["model"] == "cold_room"  # automático pelo nome
     # código inválido: o formulário volta com o motivo e nada muda
     bad = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": CUSTOM, "look_code": '{"parts": []}'})
+    cm = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": CUSTOM,
+                                                         "look_code": '{"parts": [{"w": 120, "h": 200, "d": 60, "color": "#fff"}]}'},
+                     follow_redirects=False)
+    assert cm.status_code == 303  # em cm: convertido com as medidas do formulário
+    db.expire_all()
+    assert db.get(StructureType, st.id).appearance["parts"][0]["w"] == 1.0
     assert bad.status_code == 422 and "parts" in bad.text
     ok = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": "", "look_code": json.dumps(CODE)},
                      follow_redirects=False)
     assert ok.status_code == 303
     db.expire_all()
     st = db.get(StructureType, st.id)
-    assert st.look_model == CUSTOM and st.appearance == CODE  # colou o código no automático: vale o código
+    assert st.look_model == CUSTOM and st.appearance["parts"][1]["repeat"] == CODE["parts"][1]["repeat"]  # vale o código
     page = client.get(f"/structures/{st.id}/edit").text
-    assert 'value="custom" selected' in page and "#8B5A2B" in page and "Copiar prompt" in page
+    assert 'value="custom" selected' in page and "#8b5a2b" in page and "Copiar prompt" in page
     client.post(f"/structures/{st.id}/edit", data={**base, "look_model": "rack", "look_code": ""})
     db.expire_all()
     assert db.get(StructureType, st.id).look_model == "rack" and db.get(StructureType, st.id).appearance is None
@@ -104,6 +134,9 @@ def test_bin_form_and_preview(client, db):
     assert pv["auto"] == "pallet" and pv["look"]["model"] == "pallet" and not pv["error"]
     pv = client.post("/appearance/preview", json={"kind": "struct", "model": "custom", "code": "x", "w": 1, "h": 1, "d": 1}).json()
     assert pv["look"] is None and pv["error"]
+    pv = client.post("/appearance/preview", json={"kind": "bin", "model": "custom", "w": 100, "h": 150, "d": 120,
+                                                  "code": '{"parts": [{"w": 100, "h": 15, "d": 120, "color": "wood"}]}'}).json()
+    assert pv["look"] and not pv["error"] and pv["notes"]
     pv = client.post("/appearance/preview", json={"kind": "struct", "model": "simple", "w": 100, "h": 200, "d": 60}).json()
     assert pv["look"] is None and not pv["error"]
 

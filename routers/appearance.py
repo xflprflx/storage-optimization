@@ -10,7 +10,8 @@ router = APIRouter(prefix="/appearance", tags=[N_("Aparência 3D")])
 
 @router.post("/preview")
 async def preview(request: Request):
-    """{kind: "bin"|"struct", model, code, w, h, d, name, type} -> {look (None = desenho simples), error, model}."""
+    """{kind: "bin"|"struct", model, code, w, h, d, name, type} -> {look (None = desenho simples), error, notes (o que
+    foi consertado no código colado), model, auto}."""
     from services.appearance import CUSTOM, look_of, model_choices, parse, suggest
 
     body = await request.json()
@@ -25,7 +26,7 @@ async def preview(request: Request):
     except ValueError:
         dims = (0.0, 0.0, 0.0)
     texts = (str(body.get("type") or ""), str(body.get("name") or "")) if kind == "struct" else (str(body.get("name") or ""), "")
-    appearance, error = (parse(code) if model == CUSTOM else (None, ""))
+    appearance, error, notes = (parse(code, dims, structure=kind == "struct") if model == CUSTOM else (None, "", []))
     look = None if error else look_of(kind, model, appearance, dims, *texts)
-    return {"look": look, "error": error, "model": model,
+    return {"look": look, "error": error, "notes": notes, "model": model,
             "auto": suggest(kind, *texts) if model == "" else None}

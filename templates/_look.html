@@ -15,6 +15,7 @@
       <textarea class="form-control mono small {{ 'is-invalid' if errors.get('look_code') }}" name="look_code" id="look_code" rows="7" placeholder='{"parts": [ … ]}'>{{ data.get('look_code') or '' }}</textarea>
       {% if errors.get('look_code') %}<div class="invalid-feedback d-block">{{ errors.get('look_code') }}</div>{% endif %}
       <div class="small text-danger mt-1" id="lookErr"></div>
+      <div class="small text-muted mt-1" id="lookNotes"></div>
       <div class="d-flex gap-2 flex-wrap mt-2">
         <button type="button" class="btn btn-sm btn-outline-primary" id="lookPrompt"><i class="bi bi-clipboard"></i> {{ _("Copiar prompt para a IA") }}</button>
         <span class="small text-muted align-self-center" id="lookCopied"></span>
@@ -29,7 +30,10 @@
   </div>
   <div class="col-md-6">
     <label class="form-label">{{ _("Prévia") }}</label>
-    <div id="lookPreview" class="border rounded" style="height:300px; background:#f4f6f8"></div>
+    <div class="position-relative">
+      <div id="lookPreview" class="border rounded" style="height:300px; background:#f4f6f8"></div>
+      <div id="lookMsg" class="position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1" style="display:none"></div>
+    </div>
     <div class="form-text">{{ _("Arraste para girar, role para aproximar. As peças em azul levam, no 3D, a cor da vista (tipo, curva ABC, ocupação…).") }}</div>
   </div>
 </div>
@@ -60,7 +64,6 @@ const pv = mountPreview($('lookPreview'));
 let timer = null, seq = 0;
 async function refresh() {
   const model = $('look_model').value, code = $('look_code').value;
-  $('lookCodeBox').style.display = model === 'custom' || (model === '' && code.trim()) ? '' : 'none';
   const my = ++seq;
   const body = { kind: KIND, model, code, ...dims(), name: (inp('name') || {}).value || '', type: (inp('kind') || {}).value || '' };
   let r;
@@ -68,12 +71,24 @@ async function refresh() {
   catch (e) { return; }
   if (my !== seq) return;
   $('lookErr').textContent = r.error || '';
+  $('lookNotes').textContent = r.notes && r.notes.length ? _t('Ajustado no código: {v}.', { v: r.notes.join('; ') }) : '';
+  const box = $('lookMsg');
+  if (r.error) {  // o código não entrou: diz por cima da prévia, para não parecer que nada aconteceu
+    box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-danger-subtle text-danger-emphasis border border-danger-subtle';
+    box.textContent = _t('Código não aplicado — {e}', { e: r.error }); box.style.display = '';
+  } else if (model === 'custom' && !code.trim()) {
+    box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-warning-subtle text-warning-emphasis';
+    box.textContent = _t('Cole o código gerado pela IA.'); box.style.display = '';
+  } else box.style.display = 'none';
   const opt = [...$('look_model').options].find(o => o.value === r.auto);
   $('lookAuto').textContent = model === '' ? (r.auto && opt ? _t('Automático: {m}', { m: opt.textContent }) : _t('Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)')) : '';
   const floor = KIND === 'struct' && /^(palete no ch|blocado|piso)/i.test((inp('kind') || {}).value || '');
   pv.draw(r.look, dims(), levels(), { kind: KIND, floor });
 }
 const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 300); };
+$('look_code').addEventListener('input', () => {  // colou o código: vale o código (o modelo vira "Código colado")
+  if ($('look_code').value.trim() && $('look_model').value !== 'custom') $('look_model').value = 'custom';
+});
 form.addEventListener('input', later); form.addEventListener('change', later);
 $('lookPrompt').addEventListener('click', async () => {
   const d = dims(), n = KIND === 'struct' ? (parseInt(inp('levels').value, 10) || 1) : 0;

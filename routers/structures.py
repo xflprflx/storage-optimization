@@ -80,7 +80,7 @@ def _validate(db: Session, form: FormData, sid: int | None):
     data["level_heights"] = hs or None
     from services.appearance import form_values
 
-    data.update(form_values(form, "struct", errors))
+    data.update(form_values(form, "struct", errors, (data.get("width"), data.get("height"), data.get("depth"))))
     data["look_code"] = f_str(form, "look_code", 20000)
     base = float(data.get("first_level_cm") or 0)
     if not errors and data["levels"] and data.get("level_height") and data.get("height"):

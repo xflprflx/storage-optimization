@@ -334,6 +334,11 @@
   ],
   "html": true
  },
+ "(As medidas vieram em cm e passam do tamanho do item: confira as medidas do cadastro ou peça à IA as frações de 0 a 1.)": {
+  "src": [
+   "services/appearance.py:216"
+  ]
+ },
  "(TODAS)": {
   "src": [
    "services/master_importer.py:32"
@@ -613,12 +618,12 @@
  },
  "- Use no máximo 50 peças, contando as repetições. Reproduza a forma e as cores reais; ignore etiquetas, textos e logotipos.": {
   "src": [
-   "services/appearance.py:460"
+   "services/appearance.py:613"
   ]
  },
  "- É uma estrutura de armazenagem com {levels} níveis. \"each_level\": true repete a peça em cada nível (longarinas, prateleiras, braços); nesse caso y é medido a partir da base do nível (ex.: longarina logo abaixo da base: \"y\": -0.04). Montantes, colunas e paredes não usam each_level. Não desenhe a carga: o software desenha as bins.\n": {
   "src": [
-   "services/appearance.py:455"
+   "services/appearance.py:608"
   ]
  },
  ". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje": {
@@ -1886,7 +1891,7 @@
  },
  "Abra o chat de IA, cole o prompt e anexe a foto (de frente; uma de lado ajuda).": {
   "src": [
-   "templates/_look.html:24"
+   "templates/_look.html:25"
   ]
  },
  "Abra o projeto, clique em Salvar e otimizar e depois em Gerar cadastro da filial: endereços, produtos e histórico são criados.": {
@@ -2036,6 +2041,12 @@
  "Ajuda nos campos: ligada (clique para desligar)": {
   "src": [
    "static/field_help.js:511"
+  ],
+  "js": true
+ },
+ "Ajustado no código: {v}.": {
+  "src": [
+   "templates/_look.html:74"
   ],
   "js": true
  },
@@ -2954,7 +2965,7 @@
  },
  "Arraste para girar, role para aproximar. As peças em azul levam, no 3D, a cor da vista (tipo, curva ABC, ocupação…).": {
   "src": [
-   "templates/_look.html:33"
+   "templates/_look.html:37"
   ]
  },
  "Arraste para mover, roda do mouse para o zoom; clique numa fileira para girar, trocar o lado do corredor ou inverter a numeração.": {
@@ -3240,7 +3251,7 @@
  },
  "Automático (pelo tipo e pelo nome)": {
   "src": [
-   "services/appearance.py:347"
+   "services/appearance.py:500"
   ]
  },
  "Automático (setor de expedição; senão as docas)": {
@@ -3256,13 +3267,13 @@
  },
  "Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)": {
   "src": [
-   "templates/_look.html:72"
+   "templates/_look.html:84"
   ],
   "js": true
  },
  "Automático: {m}": {
   "src": [
-   "templates/_look.html:72"
+   "templates/_look.html:84"
   ],
   "js": true
  },
@@ -3354,7 +3365,7 @@
  },
  "Big bag": {
   "src": [
-   "services/appearance.py:329"
+   "services/appearance.py:482"
   ],
   "lazy": true
  },
@@ -3383,7 +3394,7 @@
  },
  "Bin de prateleira (frente aberta)": {
   "src": [
-   "services/appearance.py:325"
+   "services/appearance.py:478"
   ],
   "lazy": true
  },
@@ -4085,13 +4096,13 @@
  },
  "Caixa de papelão": {
   "src": [
-   "services/appearance.py:326"
+   "services/appearance.py:479"
   ],
   "lazy": true
  },
  "Caixa plástica (monobloco)": {
   "src": [
-   "services/appearance.py:324"
+   "services/appearance.py:477"
   ],
   "lazy": true
  },
@@ -4270,7 +4281,7 @@
  },
  "Cantilever (braços)": {
   "src": [
-   "services/appearance.py:335"
+   "services/appearance.py:488"
   ],
   "lazy": true
  },
@@ -4557,8 +4568,10 @@
  },
  "Cole o código gerado pela IA.": {
   "src": [
-   "services/appearance.py:59"
-  ]
+   "services/appearance.py:201",
+   "templates/_look.html:81"
+  ],
+  "js": true
  },
  "Coloca os SKUs mais procurados perto da expedição e na altura boa de pegar.": {
   "src": [
@@ -5320,12 +5333,12 @@
  },
  "Copiar prompt para a IA": {
   "src": [
-   "templates/_look.html:19"
+   "templates/_look.html:20"
   ]
  },
  "Copie a resposta inteira e cole aqui: a prévia ao lado mostra o resultado. Não ficou bom? Peça o ajuste no chat e cole de novo.": {
   "src": [
-   "templates/_look.html:25"
+   "templates/_look.html:26"
   ]
  },
  "Copie as medidas de um produto para vários de uma vez, útil para variações de cor ou tamanho com a mesma embalagem.": {
@@ -5336,7 +5349,7 @@
  },
  "Copie o texto selecionado (Ctrl+C).": {
   "src": [
-   "templates/_look.html:83"
+   "templates/_look.html:98"
   ],
   "js": true
  },
@@ -5789,7 +5802,7 @@
  },
  "Câmara fria": {
   "src": [
-   "services/appearance.py:337"
+   "services/appearance.py:490"
   ],
   "lazy": true
  },
@@ -5845,7 +5858,7 @@
  },
  "Código colado (gerado por IA)": {
   "src": [
-   "services/appearance.py:348"
+   "services/appearance.py:501"
   ]
  },
  "Código com mais de 30 caracteres": {
@@ -5966,8 +5979,14 @@
  },
  "Código inválido: {exc}.": {
   "src": [
-   "services/appearance.py:129"
+   "services/appearance.py:282"
   ]
+ },
+ "Código não aplicado — {e}": {
+  "src": [
+   "templates/_look.html:78"
+  ],
+  "js": true
  },
  "Código vazio": {
   "src": [
@@ -6278,7 +6297,7 @@
  },
  "Descreva o objeto da foto anexada como um modelo 3D simples para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{\"parts\": [{\"shape\": \"box\", \"x\": 0, \"y\": 0, \"z\": 0, \"w\": 1, \"h\": 0.1, \"d\": 1, \"color\": \"#8b5a2b\"}]}\n\nRegras:\n- O objeto ocupa uma caixa de {w} cm de largura (x, da esquerda para a direita, visto de frente), {h} cm de altura (y, de baixo para cima) e {d} cm de profundidade (z, da frente para o fundo).\n- x, y, z = canto da peça mais à esquerda, mais baixo e mais à frente; w, h, d = tamanho da peça. Tudo em fração (0 a 1) dessas medidas.\n- shape: \"box\" (caixa) ou \"cylinder\" (cilindro, com \"axis\": \"x\", \"y\" ou \"z\" = direção do eixo; padrão \"y\").\n- color: a cor real da peça, em hexadecimal. \"opacity\" (0.1 a 1) para peças transparentes ou translúcidas.\n- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da informação exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n- \"repeat\": {\"count\": n, \"dx\": 0.1, \"dy\": 0, \"dz\": 0} repete a peça n vezes, deslocando a cada cópia (use para ripas, grades, barras, gavetas).\n": {
   "src": [
-   "services/appearance.py:438"
+   "services/appearance.py:591"
   ]
  },
  "Descrição": {
@@ -6390,7 +6409,7 @@
  },
  "Desenho simples": {
   "src": [
-   "services/appearance.py:347"
+   "services/appearance.py:500"
   ]
  },
  "Desfazer rearranjo": {
@@ -7959,7 +7978,7 @@
  },
  "Estante de aço (prateleiras)": {
   "src": [
-   "services/appearance.py:334"
+   "services/appearance.py:487"
   ],
   "lazy": true
  },
@@ -9419,7 +9438,7 @@
  },
  "Flow rack (roletes)": {
   "src": [
-   "services/appearance.py:336"
+   "services/appearance.py:489"
   ],
   "lazy": true
  },
@@ -9677,7 +9696,7 @@
  },
  "Gaiola aramada": {
   "src": [
-   "services/appearance.py:327"
+   "services/appearance.py:480"
   ],
   "lazy": true
  },
@@ -9700,7 +9719,7 @@
  },
  "Gaveteiro": {
   "src": [
-   "services/appearance.py:330"
+   "services/appearance.py:483"
   ],
   "lazy": true
  },
@@ -13737,12 +13756,13 @@
  },
  "O código não é um JSON válido ({exc}). Copie a resposta inteira da IA.": {
   "src": [
-   "services/appearance.py:63"
+   "services/appearance.py:208"
   ]
  },
  "O código precisa ter a lista \"parts\" com pelo menos uma peça.": {
   "src": [
-   "services/appearance.py:86"
+   "services/appearance.py:211",
+   "services/appearance.py:239"
   ]
  },
  "O dia do histórico que será percorrido inteiro, com o total de pedidos e a caminhada na lista e na rota otimizada.": {
@@ -14840,7 +14860,7 @@
  },
  "Palete com carga (PBR/europeu)": {
   "src": [
-   "services/appearance.py:323"
+   "services/appearance.py:476"
   ],
   "lazy": true
  },
@@ -15800,7 +15820,7 @@
  },
  "Porta-palete (longarinas)": {
   "src": [
-   "services/appearance.py:333"
+   "services/appearance.py:486"
   ],
   "lazy": true
  },
@@ -15968,7 +15988,7 @@
  },
  "Preencha as medidas acima e clique em Copiar prompt (ele já leva as medidas).": {
   "src": [
-   "templates/_look.html:23"
+   "templates/_look.html:24"
   ]
  },
  "Primeira pessoa": {
@@ -16315,7 +16335,7 @@
  },
  "Prompt copiado: cole no chat de IA junto com a foto.": {
   "src": [
-   "templates/_look.html:82"
+   "templates/_look.html:97"
   ],
   "js": true
  },
@@ -16457,7 +16477,7 @@
  },
  "Prévia": {
   "src": [
-   "templates/_look.html:31"
+   "templates/_look.html:32"
   ]
  },
  "Próxima etapa": {
@@ -18987,7 +19007,7 @@
  },
  "Tambor / bombona": {
   "src": [
-   "services/appearance.py:328"
+   "services/appearance.py:481"
   ],
   "lazy": true
  },
@@ -21287,6 +21307,11 @@
   ],
   "js": true
  },
+ "as medidas vieram em cm e foram convertidas em fração": {
+  "src": [
+   "services/appearance.py:177"
+  ]
+ },
  "as seguintes andam": {
   "src": [
    "static/field_help.js:140"
@@ -22341,7 +22366,7 @@
  },
  "mais de {n} peças (contando as repetições): simplifique o desenho": {
   "src": [
-   "services/appearance.py:127"
+   "services/appearance.py:280"
   ]
  },
  "mais vendidos perto da expedição": {
@@ -22956,32 +22981,33 @@
  },
  "peça {i}: axis deve ser x, y ou z": {
   "src": [
-   "services/appearance.py:105"
+   "services/appearance.py:258"
   ]
  },
  "peça {i}: color deve ser hexadecimal (#rrggbb)": {
   "src": [
-   "services/appearance.py:109"
+   "services/appearance.py:262"
   ]
  },
  "peça {i}: formato inválido": {
   "src": [
-   "services/appearance.py:91"
+   "services/appearance.py:244"
   ]
  },
  "peça {i}: shape deve ser \"box\" ou \"cylinder\"": {
   "src": [
-   "services/appearance.py:94"
+   "services/appearance.py:247"
   ]
  },
  "peça {i}: {name} fora do intervalo ({lo} a {hi})": {
   "src": [
-   "services/appearance.py:78"
+   "services/appearance.py:231"
   ]
  },
  "peça {i}: {name} inválido": {
   "src": [
-   "services/appearance.py:74"
+   "services/appearance.py:227",
+   "services/appearance.py:225"
   ]
  },
  "peças": {
@@ -24494,6 +24520,11 @@
   ],
   "js": true
  },
+ "{n} cor(es) por nome ou fora do formato #rrggbb trocada(s) pela cor mais próxima": {
+  "src": [
+   "services/appearance.py:190"
+  ]
+ },
  "{n} corredor(es) · profundidade {d} cm": {
   "src": [
    "services/site_report.py:112"
@@ -24552,6 +24583,11 @@
    "templates/slotting/routes.html:170"
   ],
   "html": true
+ },
+ "{n} valor(es) um pouco fora do intervalo ajustado(s)": {
+  "src": [
+   "services/appearance.py:192"
+  ]
  },
  "{occupied} ocupados": {
   "src": [

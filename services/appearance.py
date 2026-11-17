@@ -45,6 +45,11 @@ def _strip_fences(text: str) -> str:
     m = re.search(r"```(?:json)?\s*(.*?)```", t, re.S)
     if m:
         t = m.group(1).strip()
+    if t.startswith("[") and t.rstrip().endswith("]"):
+        return t  # só a lista de peças
+    ib, ic = t.find("["), t.find("{")
+    if not t.startswith("{") and ib >= 0 and (ic < 0 or ib < ic) and t.rfind("]") > ib:
+        return t[ib:t.rfind("]") + 1]  # lista de peças com texto em volta
     if not t.startswith("{"):
         i, j = t.find("{"), t.rfind("}")
         if i >= 0 and j > i:
@@ -52,19 +57,165 @@ def _strip_fences(text: str) -> str:
     return t
 
 
-def parse(text: str) -> tuple[Optional[dict], str]:
-    """Código colado -> (descrição, "") ou (None, motivo)."""
+_COLORS = {"red": "#d62728", "vermelho": "#d62728", "blue": "#2f6db5", "azul": "#2f6db5", "green": "#2e9b4f",
+           "verde": "#2e9b4f", "yellow": "#f2c230", "amarelo": "#f2c230", "orange": "#e8772e", "laranja": "#e8772e",
+           "brown": "#8b5a2b", "marrom": "#8b5a2b", "wood": "#c8955a", "madeira": "#c8955a", "gray": "#8a96a0",
+           "grey": "#8a96a0", "cinza": "#8a96a0", "silver": "#c0c7cc", "prata": "#c0c7cc", "white": "#f2f4f5",
+           "branco": "#f2f4f5", "black": "#2b2f33", "preto": "#2b2f33", "beige": "#e8dcc0", "bege": "#e8dcc0",
+           "purple": "#7b3fb5", "roxo": "#7b3fb5", "pink": "#e377c2", "rosa": "#e377c2", "cyan": "#5bc0de",
+           "transparent": "#dfe6ea", "glass": "#cfe8f3", "vidro": "#cfe8f3"}
+_SHAPES = {"box": "box", "cube": "box", "cuboid": "box", "rect": "box", "rectangle": "box", "plane": "box",
+           "panel": "box", "slab": "box", "plate": "box", "caixa": "box", "cubo": "box", "placa": "box",
+           "cylinder": "cylinder", "cyl": "cylinder", "tube": "cylinder", "pipe": "cylinder", "rod": "cylinder",
+           "drum": "cylinder", "cilindro": "cylinder", "tubo": "cylinder", "sphere": "cylinder", "cone": "cylinder"}
+
+
+def _uncomment(t: str) -> str:
+    """Tira comentários // e /* */ (fora das aspas) e vírgulas sobrando antes de } ou ]: erros comuns das IAs."""
+    out, i, n, quote = [], 0, len(t), False
+    while i < n:
+        c = t[i]
+        if quote:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(t[i + 1])
+                i += 1
+            elif c == '"':
+                quote = False
+        elif c == '"':
+            quote = True
+            out.append(c)
+        elif t.startswith("//", i):
+            while i < n and t[i] != "\n":
+                i += 1
+            continue
+        elif t.startswith("/*", i):
+            j = t.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        else:
+            out.append(c)
+        i += 1
+    t = "".join(out)
+    t = re.sub(r",\s*([}\]])", r"\1", t)
+    return re.sub(r"\b(True|False|None)\b", lambda m: {"True": "true", "False": "false", "None": "null"}[m.group(1)], t)
+
+
+def _find_parts(obj):
+    """A lista de peças onde a IA a pôs: "parts", a raiz, outra chave com uma lista de objetos ou um nível abaixo."""
+    if isinstance(obj, list):
+        return obj
+    if not isinstance(obj, dict):
+        return None
+    if isinstance(obj.get("parts"), list):
+        return obj["parts"]
+    for v in obj.values():
+        if isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+            return v
+    for v in obj.values():
+        found = _find_parts(v) if isinstance(v, dict) else None
+        if found:
+            return found
+    return None
+
+
+def _f(v, default: float) -> float:
+    if v is None or v == "":
+        return default
+    try:
+        return float(str(v).replace(",", "."))
+    except ValueError:
+        return float("nan")
+
+
+def _repair(parts: list, dims: Optional[tuple], structure: bool) -> tuple[list, list[str]]:
+    """Conserta o que a IA costuma errar, sem mudar a intenção: sinônimos de forma, cor por nome, números em texto,
+    medidas em cm (com as medidas do item) e valores um pouco fora do intervalo. Devolve as peças e os avisos."""
+    notes: list[str] = []
+    out, named, fixed = [], 0, 0
+    for p in parts:
+        if not isinstance(p, dict):
+            out.append(p)
+            continue
+        q = dict(p)
+        shape = str(q.get("shape") or q.get("type") or "box").strip().lower()
+        q["shape"] = _SHAPES.get(shape, "box")
+        q.pop("type", None)
+        col = str(q.get("color") or q.get("colour") or "").strip().lower()
+        q.pop("colour", None)
+        if re.fullmatch(r"#[0-9a-f]{3}", col):
+            col = "#" + "".join(ch * 2 for ch in col[1:])
+        elif re.fullmatch(r"[0-9a-f]{6}", col):
+            col = "#" + col
+        if col and not _HEX.match(col):
+            named += 1
+            col = _COLORS.get(col.split()[0], "#8a96a0")
+        elif not col:
+            col = "#8a96a0"
+        q["color"] = col
+        big = any(_f(q.get(k), 0) > 1.5 for k in ("w", "h", "d"))  # tamanho que só faz sentido em cm
+        for k, dflt in (("x", 0), ("y", 0), ("z", 0), ("w", 1), ("h", 1), ("d", 1)):
+            q[k] = _f(q.get(k), dflt)
+        q["_cm"] = big
+        for k, o in (("w", "x"), ("h", "y"), ("d", "z")):  # tamanho negativo: a peça vai para o outro lado
+            if q[k] < 0:
+                q[o], q[k] = q[o] + q[k], -q[k]
+        if "opacity" in q:
+            q["opacity"] = min(max(_f(q["opacity"], 1), 0.05), 1)
+        out.append(q)
+    good = [q for q in out if isinstance(q, dict)]
+    in_cm = any(q.pop("_cm", False) for q in good)
+    if in_cm and dims and all(float(v or 0) > 0 for v in dims):  # medidas em cm, não em fração
+        W, H, D = (float(v) for v in dims)
+        for q in good:
+            q["x"], q["w"], q["y"], q["h"], q["z"], q["d"] = q["x"] / W, q["w"] / W, q["y"] / H, q["h"] / H, q["z"] / D, q["d"] / D
+            rep = q.get("repeat")
+            if isinstance(rep, dict):
+                for k, m in (("dx", W), ("dy", H), ("dz", D)):
+                    if k in rep:
+                        rep[k] = _f(rep[k], 0) / m
+        notes.append(_("as medidas vieram em cm e foram convertidas em fração"))
+    for q in good:
+        lvl = bool(q.get("each_level")) and structure
+        lo_y = -0.3 if lvl else -0.05
+        for k, lo, hi in (("x", -0.05, 1.05), ("z", -0.05, 1.05), ("y", lo_y, 1.05)):
+            if q[k] == q[k] and (q[k] < lo or q[k] > hi) and lo - 0.25 <= q[k] <= hi + 0.25:
+                q[k], fixed = min(max(q[k], lo), hi), fixed + 1
+        for k in ("w", "h", "d"):
+            if q[k] == q[k] and q[k] < 0.0005:
+                q[k], fixed = 0.0005, fixed + 1
+            elif q[k] == q[k] and 1.1 < q[k] <= 1.35:
+                q[k], fixed = 1.1, fixed + 1
+    if named:
+        notes.append(_("{n} cor(es) por nome ou fora do formato #rrggbb trocada(s) pela cor mais próxima", n=named))
+    if fixed:
+        notes.append(_("{n} valor(es) um pouco fora do intervalo ajustado(s)", n=fixed))
+    return out, notes
+
+
+def parse(text: str, dims: Optional[tuple] = None, structure: bool = True) -> tuple[Optional[dict], str, list]:
+    """Código colado -> (descrição consertada, "", avisos) ou (None, motivo, []). `dims` = (largura, altura,
+    profundidade) do item em cm: com elas, medidas em cm viram frações."""
     t = _strip_fences(text)
     if not t:
-        return None, _("Cole o código gerado pela IA.")
+        return None, _("Cole o código gerado pela IA."), []
     try:
         obj = json.loads(t)
-    except ValueError as exc:
-        return None, _("O código não é um JSON válido ({exc}). Copie a resposta inteira da IA.", exc=str(exc)[:80])
-    if isinstance(obj, list):
-        obj = {"parts": obj}
-    _look, err = normalize(obj, structure=True)
-    return (obj, "") if not err else (None, err)
+    except ValueError:
+        try:
+            obj = json.loads(_uncomment(t))
+        except ValueError as exc:
+            return None, _("O código não é um JSON válido ({exc}). Copie a resposta inteira da IA.", exc=str(exc)[:80]), []
+    parts = _find_parts(obj)
+    if not parts:
+        return None, _("O código precisa ter a lista \"parts\" com pelo menos uma peça."), []
+    parts, notes = _repair(parts, dims, structure)
+    obj = {"parts": parts}
+    _look, err = normalize(obj, structure=structure)
+    if err and notes and any("cm" in n for n in notes):
+        err += " " + _("(As medidas vieram em cm e passam do tamanho do item: confira as medidas do cadastro ou peça à "
+                       "IA as frações de 0 a 1.)")
+    return (obj, "", notes) if not err else (None, err, [])
 
 
 def _num(v, lo: float, hi: float, name: str, i: int, clamp: bool = False) -> float:
@@ -72,7 +223,9 @@ def _num(v, lo: float, hi: float, name: str, i: int, clamp: bool = False) -> flo
         f = float(v)
     except (TypeError, ValueError):
         raise ValueError(_("peça {i}: {name} inválido", i=i, name=name)) from None
-    if clamp and f == f:
+    if f != f:  # texto que não é número
+        raise ValueError(_("peça {i}: {name} inválido", i=i, name=name))
+    if clamp:
         return min(max(f, lo), hi)
     if f != f or f < lo - 1e-9 or f > hi + 1e-9:
         raise ValueError(_("peça {i}: {name} fora do intervalo ({lo} a {hi})", i=i, name=name, lo=f"{lo:g}", hi=f"{hi:g}"))
@@ -411,7 +564,7 @@ def enrich(db, data: dict) -> dict:
     return data
 
 
-def form_values(form, kind: str, errors) -> dict:
+def form_values(form, kind: str, errors, dims: Optional[tuple] = None) -> dict:
     """Campos Modelo 3D e Código do formulário do cadastro -> (look_model, appearance)."""
     model = str(form.get("look_model") or "").strip()
     code = str(form.get("look_code") or "").strip()
@@ -422,7 +575,7 @@ def form_values(form, kind: str, errors) -> dict:
         model = CUSTOM  # colou o código e deixou no automático: vale o código
     appearance = None
     if model == CUSTOM:
-        appearance, err = parse(code)
+        appearance, err, _notes = parse(code, dims, structure=kind == "struct")
         if err:
             errors.add("look_code", err)
     return {"look_model": model, "appearance": appearance}

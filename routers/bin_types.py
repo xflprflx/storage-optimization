@@ -79,7 +79,7 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
             errors.add("parent_id", _("Este tipo é bin pai de compartimentos; não pode ser compartimento."))
     from services.appearance import form_values
 
-    data.update(form_values(form, "bin", errors))
+    data.update(form_values(form, "bin", errors, (data.get("width"), data.get("height"), data.get("length"))))
     data["look_code"] = f_str(form, "look_code", 20000)
     data["dims_auto"] = False
     if parent is not None and grid and not errors.get("parent_id"):

@@ -601,8 +601,17 @@ O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
   - `repeat`: ripas, grades, gavetas;
   - `each_level`: nas estruturas, longarinas e prateleiras em cada nível.
 
-  O app só lê a descrição, nunca executa código. Código inválido é recusado ao salvar, com o motivo. O limite é de
-  60 peças.
+  O app só lê a descrição, nunca executa código. O limite é de 60 peças. Os erros comuns das IAs são consertados
+  com aviso:
+  - comentários e vírgula sobrando;
+  - forma ou cor por nome;
+  - números em texto;
+  - medidas em cm, convertidas pelas medidas do item;
+  - valores um pouco fora de 0–1;
+  - a lista de peças em outra chave.
+
+  Colar o código troca o modelo para *Código colado*. Código que não dá para aplicar mostra o motivo por cima da
+  prévia e é recusado ao salvar.
 - **Prévia** no próprio cadastro, atualizada a cada mudança, com o modelo automático escolhido.
 - **No 3D**, cada peça de um modelo é desenhada de uma vez para todos os itens (instancing). A frente do modelo fica
   voltada para o corredor. A opção **Aparência detalhada** volta ao desenho simples. Plantas com mais de 300 mil

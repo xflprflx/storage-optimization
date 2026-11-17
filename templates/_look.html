@@ -51,6 +51,9 @@ const inp = n => form.querySelector(`[name="${n}"]`);
 const KIND = {{ kind|tojson }};
 const val = n => { const e = inp(n); if (!e) return 0; const v = window.nkU && e.dataset.u ? nkU.get(e) : parseFloat(String(e.value || '').replace(',', '.')); return isFinite(v) ? v : 0; };
 const dims = () => KIND === 'struct' ? { w: val('width'), h: val('height'), d: val('depth') } : { w: val('width'), h: val('height'), d: val('length') };
+const EXAMPLE = KIND === 'struct' ? { w: 100, h: 200, d: 60 } : { w: 40, h: 30, d: 60 };  // prévia sem medidas
+const missing = () => { const d = dims(); return ['w', 'h', 'd'].filter(k => !(d[k] > 0)); };
+const shown = () => { const d = dims(), m = missing(); return m.length ? EXAMPLE : d; };
 function levels() {  // base de cada nível, como no servidor (StructureSpec.z)
   if (KIND !== 'struct') return [];
   const H = val('height') || 200, n = Math.max(1, parseInt(inp('levels').value, 10) || 1), base = val('first_level_cm') || 0;
@@ -65,7 +68,7 @@ let timer = null, seq = 0;
 async function refresh() {
   const model = $('look_model').value, code = $('look_code').value;
   const my = ++seq;
-  const body = { kind: KIND, model, code, ...dims(), name: (inp('name') || {}).value || '', type: (inp('kind') || {}).value || '' };
+  const body = { kind: KIND, model, code, ...shown(), name: (inp('name') || {}).value || '', type: (inp('kind') || {}).value || '' };
   let r;
   try { r = await (await fetch('/appearance/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
   catch (e) { return; }
@@ -79,11 +82,14 @@ async function refresh() {
   } else if (model === 'custom' && !code.trim()) {
     box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-warning-subtle text-warning-emphasis';
     box.textContent = _t('Cole o código gerado pela IA.'); box.style.display = '';
+  } else if (missing().length) {  // sem medidas: desenha com as de exemplo e avisa
+    box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-info-subtle text-info-emphasis';
+    box.textContent = _t('Prévia com medidas de exemplo: preencha largura, altura e profundidade para ver no tamanho real.'); box.style.display = '';
   } else box.style.display = 'none';
   const opt = [...$('look_model').options].find(o => o.value === r.auto);
   $('lookAuto').textContent = model === '' ? (r.auto && opt ? _t('Automático: {m}', { m: opt.textContent }) : _t('Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)')) : '';
   const floor = KIND === 'struct' && /^(palete no ch|blocado|piso)/i.test((inp('kind') || {}).value || '');
-  pv.draw(r.look, dims(), levels(), { kind: KIND, floor });
+  pv.draw(r.look, shown(), levels(), { kind: KIND, floor });
 }
 const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 300); };
 $('look_code').addEventListener('input', () => {  // colou o código: vale o código (o modelo vira "Código colado")
@@ -92,9 +98,13 @@ $('look_code').addEventListener('input', () => {  // colou o código: vale o có
 form.addEventListener('input', later); form.addEventListener('change', later);
 $('lookPrompt').addEventListener('click', async () => {
   const d = dims(), n = KIND === 'struct' ? (parseInt(inp('levels').value, 10) || 1) : 0;
-  const r1 = v => String(Math.round(v * 10) / 10);
-  const text = $('lookPromptText').value.replaceAll('{w}', r1(d.w || 0)).replaceAll('{h}', r1(d.h || 0)).replaceAll('{d}', r1(d.d || 0)).replaceAll('{levels}', String(n));
-  try { await navigator.clipboard.writeText(text); $('lookCopied').textContent = _t('Prompt copiado: cole no chat de IA junto com a foto.'); }
+  const NA = _t('(medida não informada: use as proporções da foto)');
+  const r1 = v => v > 0 ? String(Math.round(v * 10) / 10) : null;
+  const put = (t, key, v) => r1(v) ? t.replaceAll(key, r1(v)) : t.replaceAll(key + ' cm', NA).replaceAll(key, NA);
+  let text = $('lookPromptText').value;
+  text = put(put(put(text, '{w}', d.w), '{h}', d.h), '{d}', d.d).replaceAll('{levels}', String(n));
+  const warn = missing().length ? ' ' + _t('Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.') : '';
+  try { await navigator.clipboard.writeText(text); $('lookCopied').textContent = _t('Prompt copiado: cole no chat de IA junto com a foto.') + warn; }
   catch (e) { $('lookPromptText').classList.remove('d-none'); $('lookPromptText').select(); $('lookCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }
   if ($('look_model').value !== 'custom') { $('look_model').value = 'custom'; refresh(); }
 });

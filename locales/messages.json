@@ -336,7 +336,7 @@
  },
  "(As medidas vieram em cm e passam do tamanho do item: confira as medidas do cadastro ou peça à IA as frações de 0 a 1.)": {
   "src": [
-   "services/appearance.py:290"
+   "services/appearance.py:291"
   ]
  },
  "(TODAS)": {
@@ -429,6 +429,12 @@
   "src": [
    "templates/optimization/page.html:228"
   ]
+ },
+ "(medida não informada: use as proporções da foto)": {
+  "src": [
+   "templates/_look.html:101"
+  ],
+  "js": true
  },
  "(melhor encontrado)": {
   "src": [
@@ -618,17 +624,17 @@
  },
  "- Em cada peça, use exatamente as chaves x, y, z, w, h e d (não use position, size, center nem coordenadas a partir do centro).\n": {
   "src": [
-   "services/appearance.py:687"
+   "services/appearance.py:690"
   ]
  },
  "- Use no máximo 50 peças, contando as repetições. Reproduza a forma e as cores reais; ignore etiquetas, textos e logotipos.": {
   "src": [
-   "services/appearance.py:689"
+   "services/appearance.py:692"
   ]
  },
  "- É uma estrutura de armazenagem com {levels} níveis. \"each_level\": true repete a peça em cada nível (longarinas, prateleiras, braços); nesse caso y é medido a partir da base do nível (ex.: longarina logo abaixo da base: \"y\": -0.04). Montantes, colunas e paredes não usam each_level. Não desenhe a carga: o software desenha as bins.\n": {
   "src": [
-   "services/appearance.py:682"
+   "services/appearance.py:685"
   ]
  },
  ". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje": {
@@ -2051,7 +2057,7 @@
  },
  "Ajustado no código: {v}.": {
   "src": [
-   "templates/_look.html:74"
+   "templates/_look.html:77"
   ],
   "js": true
  },
@@ -3117,6 +3123,12 @@
    "routers/levels.py:302"
   ]
  },
+ "Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.": {
+  "src": [
+   "templates/_look.html:106"
+  ],
+  "js": true
+ },
  "Atenção: {extra_levels} nível(is) além dos {levels} da estrutura.": {
   "src": [
    "routers/levels.py:304"
@@ -3256,7 +3268,7 @@
  },
  "Automático (pelo tipo e pelo nome)": {
   "src": [
-   "services/appearance.py:574"
+   "services/appearance.py:575"
   ]
  },
  "Automático (setor de expedição; senão as docas)": {
@@ -3272,13 +3284,13 @@
  },
  "Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)": {
   "src": [
-   "templates/_look.html:84"
+   "templates/_look.html:90"
   ],
   "js": true
  },
  "Automático: {m}": {
   "src": [
-   "templates/_look.html:84"
+   "templates/_look.html:90"
   ],
   "js": true
  },
@@ -3370,7 +3382,7 @@
  },
  "Big bag": {
   "src": [
-   "services/appearance.py:556"
+   "services/appearance.py:557"
   ],
   "lazy": true
  },
@@ -3399,7 +3411,7 @@
  },
  "Bin de prateleira (frente aberta)": {
   "src": [
-   "services/appearance.py:552"
+   "services/appearance.py:553"
   ],
   "lazy": true
  },
@@ -3999,7 +4011,7 @@
  },
  "Cada peça precisa do tamanho (w, h, d) e do canto (x, y, z), em fração das medidas do item.": {
   "src": [
-   "services/appearance.py:285"
+   "services/appearance.py:286"
   ]
  },
  "Cada variação é o projeto inteiro rodado de novo (estruturas, bins e posição dos SKUs pela saída) com outra planta: a orientação das fileiras e a quantidade de corredores transversais. As outras configurações são as do projeto.": {
@@ -4106,13 +4118,13 @@
  },
  "Caixa de papelão": {
   "src": [
-   "services/appearance.py:553"
+   "services/appearance.py:554"
   ],
   "lazy": true
  },
  "Caixa plástica (monobloco)": {
   "src": [
-   "services/appearance.py:551"
+   "services/appearance.py:552"
   ],
   "lazy": true
  },
@@ -4291,7 +4303,7 @@
  },
  "Cantilever (braços)": {
   "src": [
-   "services/appearance.py:562"
+   "services/appearance.py:563"
   ],
   "lazy": true
  },
@@ -4578,8 +4590,8 @@
  },
  "Cole o código gerado pela IA.": {
   "src": [
-   "services/appearance.py:272",
-   "templates/_look.html:81"
+   "services/appearance.py:273",
+   "templates/_look.html:84"
   ],
   "js": true
  },
@@ -5359,7 +5371,7 @@
  },
  "Copie o texto selecionado (Ctrl+C).": {
   "src": [
-   "templates/_look.html:98"
+   "templates/_look.html:108"
   ],
   "js": true
  },
@@ -5812,7 +5824,7 @@
  },
  "Câmara fria": {
   "src": [
-   "services/appearance.py:564"
+   "services/appearance.py:565"
   ],
   "lazy": true
  },
@@ -5868,7 +5880,7 @@
  },
  "Código colado (gerado por IA)": {
   "src": [
-   "services/appearance.py:575"
+   "services/appearance.py:576"
   ]
  },
  "Código com mais de 30 caracteres": {
@@ -5989,13 +6001,13 @@
  },
  "Código inválido: {exc}.": {
   "src": [
-   "services/appearance.py:356",
-   "services/appearance.py:285"
+   "services/appearance.py:357",
+   "services/appearance.py:286"
   ]
  },
  "Código não aplicado — {e}": {
   "src": [
-   "templates/_look.html:78"
+   "templates/_look.html:81"
   ],
   "js": true
  },
@@ -6308,7 +6320,7 @@
  },
  "Descreva o objeto da foto anexada como um modelo 3D simples para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{\"parts\": [{\"shape\": \"box\", \"x\": 0, \"y\": 0, \"z\": 0, \"w\": 1, \"h\": 0.1, \"d\": 1, \"color\": \"#8b5a2b\"}]}\n\nRegras:\n- O objeto ocupa uma caixa de {w} cm de largura (x, da esquerda para a direita, visto de frente), {h} cm de altura (y, de baixo para cima) e {d} cm de profundidade (z, da frente para o fundo).\n- x, y, z = canto da peça mais à esquerda, mais baixo e mais à frente; w, h, d = tamanho da peça. Tudo em fração (0 a 1) dessas medidas.\n- shape: \"box\" (caixa) ou \"cylinder\" (cilindro, com \"axis\": \"x\", \"y\" ou \"z\" = direção do eixo; padrão \"y\").\n- color: a cor real da peça, em hexadecimal. \"opacity\" (0.1 a 1) para peças transparentes ou translúcidas.\n- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da informação exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n- \"repeat\": {\"count\": n, \"dx\": 0.1, \"dy\": 0, \"dz\": 0} repete a peça n vezes, deslocando a cada cópia (use para ripas, grades, barras, gavetas).\n": {
   "src": [
-   "services/appearance.py:665"
+   "services/appearance.py:668"
   ]
  },
  "Descrição": {
@@ -6420,7 +6432,7 @@
  },
  "Desenho simples": {
   "src": [
-   "services/appearance.py:574"
+   "services/appearance.py:575"
   ]
  },
  "Desfazer rearranjo": {
@@ -7989,7 +8001,7 @@
  },
  "Estante de aço (prateleiras)": {
   "src": [
-   "services/appearance.py:561"
+   "services/appearance.py:562"
   ],
   "lazy": true
  },
@@ -9449,7 +9461,7 @@
  },
  "Flow rack (roletes)": {
   "src": [
-   "services/appearance.py:563"
+   "services/appearance.py:564"
   ],
   "lazy": true
  },
@@ -9707,7 +9719,7 @@
  },
  "Gaiola aramada": {
   "src": [
-   "services/appearance.py:554"
+   "services/appearance.py:555"
   ],
   "lazy": true
  },
@@ -9730,7 +9742,7 @@
  },
  "Gaveteiro": {
   "src": [
-   "services/appearance.py:557"
+   "services/appearance.py:558"
   ],
   "lazy": true
  },
@@ -13767,13 +13779,13 @@
  },
  "O código não é um JSON válido ({exc}). Copie a resposta inteira da IA.": {
   "src": [
-   "services/appearance.py:279"
+   "services/appearance.py:280"
   ]
  },
  "O código precisa ter a lista \"parts\" com pelo menos uma peça.": {
   "src": [
-   "services/appearance.py:282",
-   "services/appearance.py:313"
+   "services/appearance.py:283",
+   "services/appearance.py:314"
   ]
  },
  "O dia do histórico que será percorrido inteiro, com o total de pedidos e a caminhada na lista e na rota otimizada.": {
@@ -14871,7 +14883,7 @@
  },
  "Palete com carga (PBR/europeu)": {
   "src": [
-   "services/appearance.py:550"
+   "services/appearance.py:551"
   ],
   "lazy": true
  },
@@ -15831,7 +15843,7 @@
  },
  "Porta-palete (longarinas)": {
   "src": [
-   "services/appearance.py:560"
+   "services/appearance.py:561"
   ],
   "lazy": true
  },
@@ -16346,7 +16358,7 @@
  },
  "Prompt copiado: cole no chat de IA junto com a foto.": {
   "src": [
-   "templates/_look.html:97"
+   "templates/_look.html:107"
   ],
   "js": true
  },
@@ -16490,6 +16502,12 @@
   "src": [
    "templates/_look.html:32"
   ]
+ },
+ "Prévia com medidas de exemplo: preencha largura, altura e profundidade para ver no tamanho real.": {
+  "src": [
+   "templates/_look.html:87"
+  ],
+  "js": true
  },
  "Próxima etapa": {
   "src": [
@@ -19018,7 +19036,7 @@
  },
  "Tambor / bombona": {
   "src": [
-   "services/appearance.py:555"
+   "services/appearance.py:556"
   ],
   "lazy": true
  },
@@ -21177,8 +21195,8 @@
  },
  "a origem estava no meio do item e foi levada para o canto": {
   "src": [
-   "services/appearance.py:247",
-   "services/appearance.py:248"
+   "services/appearance.py:248",
+   "services/appearance.py:249"
   ]
  },
  "a posição dentro do nível, ao longo da frente da estante": {
@@ -21326,7 +21344,7 @@
  },
  "as medidas vieram em cm e foram convertidas em fração": {
   "src": [
-   "services/appearance.py:240"
+   "services/appearance.py:241"
   ]
  },
  "as seguintes andam": {
@@ -22383,7 +22401,7 @@
  },
  "mais de {n} peças (contando as repetições): simplifique o desenho": {
   "src": [
-   "services/appearance.py:354"
+   "services/appearance.py:355"
   ]
  },
  "mais vendidos perto da expedição": {
@@ -22998,38 +23016,38 @@
  },
  "peça {i}: axis deve ser x, y ou z": {
   "src": [
-   "services/appearance.py:332"
+   "services/appearance.py:333"
   ]
  },
  "peça {i}: color deve ser hexadecimal (#rrggbb)": {
   "src": [
-   "services/appearance.py:336"
+   "services/appearance.py:337"
   ]
  },
  "peça {i}: formato inválido": {
   "src": [
-   "services/appearance.py:318"
+   "services/appearance.py:319"
   ]
  },
  "peça {i}: sem tamanho (w, h, d)": {
   "src": [
-   "services/appearance.py:228"
+   "services/appearance.py:229"
   ]
  },
  "peça {i}: shape deve ser \"box\" ou \"cylinder\"": {
   "src": [
-   "services/appearance.py:321"
+   "services/appearance.py:322"
   ]
  },
  "peça {i}: {name} fora do intervalo ({lo} a {hi})": {
   "src": [
-   "services/appearance.py:305"
+   "services/appearance.py:306"
   ]
  },
  "peça {i}: {name} inválido": {
   "src": [
-   "services/appearance.py:301",
-   "services/appearance.py:299"
+   "services/appearance.py:302",
+   "services/appearance.py:300"
   ]
  },
  "peças": {
@@ -24544,7 +24562,7 @@
  },
  "{n} cor(es) por nome ou fora do formato #rrggbb trocada(s) pela cor mais próxima": {
   "src": [
-   "services/appearance.py:261"
+   "services/appearance.py:262"
   ]
  },
  "{n} corredor(es) · profundidade {d} cm": {
@@ -24608,7 +24626,7 @@
  },
  "{n} valor(es) um pouco fora do intervalo ajustado(s)": {
   "src": [
-   "services/appearance.py:263"
+   "services/appearance.py:264"
   ]
  },
  "{occupied} ocupados": {

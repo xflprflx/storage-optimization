@@ -166,3 +166,18 @@ def test_3d_payload_carries_the_appearance(client, seeded):
     assert all("look" in t for t in d["types"]) and all("ff" in m for m in d["modules"])
     html = client.get(f"/layout/plan/3d?branch_id={seeded['b']}&warehouse_id={seeded['w']}").text
     assert 'id="nkLook"' in html and "/static/look3d.js" in html
+
+
+def test_pasted_code_previews_even_before_the_measurements(client):
+    """Código real de um chat de IA (17 peças, estrutura com longarina por nível) colado com o formulário ainda sem
+    medidas: a prévia usa medidas de exemplo em vez de cair no desenho padrão (antes, a forma nunca mudava)."""
+    from pathlib import Path
+
+    code = (Path(__file__).parent / "data" / "look_carrinho.json").read_text(encoding="utf-8")
+    obj, err, notes = parse(code, (0, 0, 0), structure=True)
+    assert err == "" and len(obj["parts"]) == 17 and not notes
+    look = look_of("struct", CUSTOM, obj, (0, 0, 0))
+    assert look and len(look["parts"]) == 17 and look["parts"][0].get("l") == 1
+    assert look_of("bin", "pallet", None, (None, None, None))["model"] == "pallet"  # biblioteca: idem
+    pv = client.post("/appearance/preview", json={"kind": "struct", "model": "", "code": code, "w": "", "h": "", "d": ""}).json()
+    assert pv["look"] and len(pv["look"]["parts"]) == 17 and not pv["error"] and pv["model"] == CUSTOM

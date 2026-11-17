@@ -32,6 +32,7 @@ from services.i18n import N_, _
 
 MAX_PARTS = 60  # peças depois das repetições (o 3D desenha cada peça de todos os itens de uma vez: instancing)
 CUSTOM = "custom"
+EXAMPLE_DIMS = {"bin": (40.0, 30.0, 60.0), "struct": (100.0, 200.0, 60.0)}  # prévia sem medidas (largura, altura, prof.)
 SIMPLE = "simple"
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -603,8 +604,10 @@ def suggest(kind: str, *texts: str) -> Optional[str]:
 def look_of(kind: str, model: str, appearance, dims: tuple, *texts: str) -> Optional[dict]:
     """Peças normalizadas do item (None = desenho simples). dims = (largura, altura, profundidade) em cm."""
     w, h, d = (float(v or 0) for v in dims)
-    if model == SIMPLE or w <= 0 or h <= 0 or d <= 0:
+    if model == SIMPLE:
         return None
+    if w <= 0 or h <= 0 or d <= 0:  # medidas ainda não preenchidas: as de exemplo (o código colado é em proporção)
+        w, h, d = EXAMPLE_DIMS[kind if kind == "struct" else "bin"]
     if model == CUSTOM:
         look, _err = normalize(appearance, structure=kind == "struct") if appearance else (None, "")
         return look

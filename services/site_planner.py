@@ -2063,10 +2063,14 @@ def _md(cm: float) -> str:
 FLOOR_KINDS = (N_("palete no chao"), N_("palete no chão"), "blocado", "piso")
 
 
+FLOOR_NAMES: set = set()  # tipos de estrutura cadastrados como "paletes no piso" (services/structure_kinds)
+
+
 def is_floor(kind: str) -> bool:
-    """Estrutura do tipo "Palete no chão": paletes direto no piso (empilhados por nível), sem montantes."""
+    """Estrutura do tipo "Palete no chão": paletes direto no piso (empilhados por nível), sem montantes. Vale o nome
+    padrão ou qualquer tipo de estrutura cadastrado com a opção "paletes no piso"."""
     k = (kind or "").strip().casefold()
-    return any(k.startswith(f) for f in FLOOR_KINDS)
+    return k in FLOOR_NAMES or any(k.startswith(f) for f in FLOOR_KINDS)
 
 
 PALLET_PATTERN = ('<defs><pattern id="nkPallet" width="8" height="8" patternUnits="userSpaceOnUse">'

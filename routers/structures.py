@@ -14,8 +14,14 @@ from services.i18n import N_, _
 
 router = APIRouter(prefix="/structures", tags=[N_("Estruturas de armazenagem")])
 
-KINDS = [N_("Estante"), "Porta-palete", N_("Palete no chão"), N_("Flow rack"), N_("Cantilever"), N_("Mezanino"), N_("Outro")]
 FLOOR_KIND = N_("Palete no chão")  # paletes direto no piso (empilhados por nível), sem montantes nem longarinas
+
+
+def _kinds(db: Session):
+    """Tipos de estrutura do cadastro (o dropdown do formulário)."""
+    from services.structure_kinds import kinds
+
+    return kinds(db)
 NUM_FIELDS = (  # chave, rótulo, obrigatório
     ("width", N_("Frente do módulo"), True),
     ("depth", N_("Profundidade"), True),
@@ -32,7 +38,14 @@ NUM_FIELDS = (  # chave, rótulo, obrigatório
 def _validate(db: Session, form: FormData, sid: int | None):
     errors = FormErrors()
     data = {"code": normalize_code(f_str(form, "code")), "name": f_str(form, "name", 150),
-            "kind": f_str(form, "kind", 40), "notes": f_str(form, "notes", 200)}
+            "notes": f_str(form, "notes", 200)}
+    from models import StructureKind
+
+    kid = str(form.get("kind_id") or "")
+    kind = db.get(StructureKind, int(kid)) if kid.isdigit() else None
+    if kind is None:
+        errors.add("kind_id", _("Escolha o tipo de estrutura (cadastre em Tipos de estrutura)."))
+    data["kind_id"], data["kind"] = (kind.id, kind.name) if kind is not None else (None, "")
     if not data["code"]:
         errors.add("code", _("Código é obrigatório."))
     elif len(data["code"]) > 30:
@@ -78,10 +91,6 @@ def _validate(db: Session, form: FormData, sid: int | None):
     if data["levels"] and len(hs) > data["levels"]:
         errors.add("level_heights", _("Foram informados {len} vãos para {levels} níveis.", len=len(hs), levels=data['levels']))
     data["level_heights"] = hs or None
-    from services.appearance import form_values
-
-    data.update(form_values(form, "struct", errors, (data.get("width"), data.get("height"), data.get("depth"))))
-    data["look_code"] = f_str(form, "look_code", 20000)
     base = float(data.get("first_level_cm") or 0)
     if not errors and data["levels"] and data.get("level_height") and data.get("height"):
         vs = [hs[i] if i < len(hs) else float(data["level_height"]) for i in range(data["levels"])]
@@ -107,8 +116,13 @@ def list_structures(request: Request, q: str = "", sort: str = "", dir: str = ""
 
 
 @router.get("/new")
-def new_structure(request: Request):
-    return render(request, "structures/form.html", item=None, data={"kind": _("Estante")}, errors={}, kinds=KINDS)
+def new_structure(request: Request, db: Session = Depends(get_db)):
+    from services.structure_kinds import kinds
+
+    ks = kinds(db)
+    first = next((k for k in ks if k.name == _("Estante")), ks[0] if ks else None)
+    return render(request, "structures/form.html", item=None, data={"kind_id": first.id if first else None}, errors={},
+                  kinds=ks)
 
 
 @router.post("/new")
@@ -116,8 +130,7 @@ def create_structure(request: Request, form: FormData = Depends(form_data), db: 
     errors, data = _validate(db, form, None)
     if errors:
         return render(request, "structures/form.html", status_code=422, item=None, data=data, errors=errors,
-                      kinds=KINDS)
-    data.pop("look_code", None)
+                      kinds=_kinds(db))
     st = StructureType(**data)
     db.add(st)
     db.commit()
@@ -130,12 +143,9 @@ def edit_structure(sid: int, request: Request, db: Session = Depends(get_db)):
     st = db.get(StructureType, sid)
     if not st:
         return redirect("/structures", _("Estrutura não encontrada."), "danger")
-    from services.appearance import code_text
-
-    data = {k: getattr(st, k) for k in ("code", "name", "kind", "notes", "levels", "level_heights", "look_model")
+    data = {k: getattr(st, k) for k in ("code", "name", "kind", "kind_id", "notes", "levels", "level_heights")
             + tuple(f[0] for f in NUM_FIELDS)}
-    data["look_code"] = code_text(st.appearance)
-    return render(request, "structures/form.html", item=st, data=data, errors={}, kinds=KINDS)
+    return render(request, "structures/form.html", item=st, data=data, errors={}, kinds=_kinds(db))
 
 
 @router.post("/{sid}/edit")
@@ -145,8 +155,7 @@ def update_structure(sid: int, request: Request, form: FormData = Depends(form_d
         return redirect("/structures", _("Estrutura não encontrada."), "danger")
     errors, data = _validate(db, form, sid)
     if errors:
-        return render(request, "structures/form.html", status_code=422, item=st, data=data, errors=errors, kinds=KINDS)
-    data.pop("look_code", None)
+        return render(request, "structures/form.html", status_code=422, item=st, data=data, errors=errors, kinds=_kinds(db))
     for k, v in data.items():
         setattr(st, k, v)
     db.commit()

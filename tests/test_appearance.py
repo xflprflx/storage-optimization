@@ -106,38 +106,39 @@ def test_library_models_fit_any_size_and_suggestions():
     assert "{w}" in prompt("bin") and "{levels}" in prompt("struct") and "{levels}" not in prompt("bin")
 
 
-def test_structure_form_saves_library_and_pasted_code(client, db):
-    from models import StructureType
-
-    base = {"code": "AP-EST", "name": "Câmara fria teste", "kind": "Estante", "width": "120", "depth": "60",
-            "height": "200", "levels": "3", "level_height": "60"}
-    r = client.post("/structures/new", data={**base, "look_model": "", "look_code": ""}, follow_redirects=False)
-    assert r.status_code == 303
-    st = db.query(StructureType).filter_by(code="AP-EST").one()
-    assert st.look_model == "" and st.appearance is None
+def test_structure_kind_form_saves_library_and_pasted_code(client, db):
+    """A aparência das estruturas fica no TIPO de estrutura: vale para todas as estruturas do tipo."""
+    from models import StructureKind, StructureType
     from services.appearance import struct_look
+    from services.structure_kinds import kind_of
 
-    assert struct_look(st)["model"] == "cold_room"  # automático pelo nome
-    # código inválido: o formulário volta com o motivo e nada muda
-    bad = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": CUSTOM, "look_code": '{"parts": []}'})
-    cm = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": CUSTOM,
-                                                         "look_code": '{"parts": [{"w": 120, "h": 200, "d": 60, "color": "#fff"}]}'},
-                     follow_redirects=False)
-    assert cm.status_code == 303  # em cm: convertido com as medidas do formulário
-    db.expire_all()
-    assert db.get(StructureType, st.id).appearance["parts"][0]["w"] == 1.0
+    r = client.post("/structure-kinds/new", data={"name": "Câmara fria AP", "look_model": "", "look_code": ""},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    k = db.query(StructureKind).filter_by(name="Câmara fria AP").one()
+    assert k.look_model == "" and k.appearance is None
+    st = StructureType(code="AP-EST", name="Câmara 1", kind=k.name, kind_id=k.id, width=120, depth=60, height=200,
+                       levels=3, level_height=60)
+    db.add(st)
+    db.commit()
+    assert struct_look(st, kind_of(db, st))["model"] == "cold_room"  # automático pelo nome do tipo
+    bad = client.post(f"/structure-kinds/{k.id}/edit", data={"name": k.name, "look_model": CUSTOM, "look_code": '{"parts": []}'})
     assert bad.status_code == 422 and "parts" in bad.text
-    ok = client.post(f"/structures/{st.id}/edit", data={**base, "look_model": "", "look_code": json.dumps(CODE)},
+    ok = client.post(f"/structure-kinds/{k.id}/edit", data={"name": k.name, "look_model": "", "look_code": json.dumps(CODE)},
                      follow_redirects=False)
     assert ok.status_code == 303
     db.expire_all()
-    st = db.get(StructureType, st.id)
-    assert st.look_model == CUSTOM and st.appearance["parts"][1]["repeat"] == CODE["parts"][1]["repeat"]  # vale o código
-    page = client.get(f"/structures/{st.id}/edit").text
+    k = db.get(StructureKind, k.id)
+    assert k.look_model == CUSTOM and k.appearance["parts"][1]["repeat"] == CODE["parts"][1]["repeat"]  # vale o código
+    assert len(struct_look(st, k)["parts"]) == 5
+    page = client.get(f"/structure-kinds/{k.id}/edit").text
     assert 'value="custom" selected' in page and "#8b5a2b" in page and "Copiar prompt" in page
-    client.post(f"/structures/{st.id}/edit", data={**base, "look_model": "rack", "look_code": ""})
+    assert "Copiar prompt" not in client.get(f"/structures/{st.id}/edit").text  # saiu do cadastro de estrutura
+    client.post(f"/structure-kinds/{k.id}/edit", data={"name": k.name, "look_model": "rack", "look_code": ""})
     db.expire_all()
-    assert db.get(StructureType, st.id).look_model == "rack" and db.get(StructureType, st.id).appearance is None
+    assert db.get(StructureKind, k.id).look_model == "rack" and db.get(StructureKind, k.id).appearance is None
+    db.delete(db.get(StructureType, st.id))
+    db.commit()
 
 
 def test_bin_form_and_preview(client, db):

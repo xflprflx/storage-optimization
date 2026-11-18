@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "_look.html" import look_section, look_scripts %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
 {% block title %}{{ _h("{v} estrutura", v=(_('Editar') if item else _('Nova'))) }}{% endblock %}
 
@@ -26,9 +25,12 @@
         </div>
         <div class="col-md-3">
           <label class="form-label">{{ _("Tipo") }}</label>
-          <select class="form-select" name="kind">
-            {% for k in kinds %}<option value="{{ k|e }}" {% if data.get('kind') == k %}selected{% endif %}>{{ k }}</option>{% endfor %}
+          <select class="form-select {{ invalid(errors, 'kind_id') }}" name="kind_id">
+            {% if not data.get('kind_id') %}<option value="">—</option>{% endif %}
+            {% for k in kinds %}<option value="{{ k.id }}" data-floor="{{ 1 if k.floor else 0 }}" {% if data.get('kind_id') == k.id %}selected{% endif %}>{{ k.name }}</option>{% endfor %}
           </select>
+          {{ field_error(errors, 'kind_id') }}
+          <div class="form-text"><a href="/structure-kinds">{{ _("Tipos de estrutura") }}</a>: {{ _("composição de peças e aparência no 3D.") }}</div>
         </div>
       </div>
       <hr class="my-4">
@@ -109,7 +111,6 @@
           <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="{{ _("Fornecedor, modelo, prazo…") }}">
         </div>
       </div>
-      {{ look_section('struct', data, errors, look_choices('struct'), look_prompt('struct')) }}
       <div class="mt-4">
         <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
         <a href="/structures" class="btn btn-link">{{ _("Cancelar") }}</a>
@@ -140,7 +141,7 @@
     // bases dos níveis: como no servidor (StructureSpec.z): 1º nível + vãos + longarinas (sobra da altura repartida)
     const beam = hs.length ? Math.max(0, (H - base - vs.reduce((a, b) => a + b, 0)) / n) : 0, pitch = (H - base) / n;
     const z = i => hs.length ? base + vs.slice(0, i).reduce((a, b) => a + b, 0) + beam * i : base + i * pitch;
-    const floor = (inp('kind') && inp('kind').value) === 'Palete no chão';
+    const ko = inp('kind_id') && inp('kind_id').selectedOptions[0], floor = !!ko && ko.dataset.floor === '1';
     return { H, W, n, clear, pitch, base, vao, z, floor };
   }
   function band() { return [nkU.get(inp('golden_from')), nkU.get(inp('golden_to'))]; }
@@ -228,11 +229,10 @@
     render();
   });
   host.addEventListener('pointerup', () => { drag = null; });
-  ['height', 'width', 'levels', 'level_height', 'golden_from', 'golden_to', 'first_level_cm', 'level_heights', 'kind'].forEach(n => inp(n)?.addEventListener(n === 'kind' ? 'change' : 'input', () => { if (!drag) render(); }));
+  ['height', 'width', 'levels', 'level_height', 'golden_from', 'golden_to', 'first_level_cm', 'level_heights', 'kind_id'].forEach(n => inp(n)?.addEventListener(n === 'kind_id' ? 'change' : 'input', () => { if (!drag) render(); }));
   document.getElementById('gzSuggest').addEventListener('click', () => { const g = geo(); setBand(Math.min(75, g.H), Math.min(150, g.H)); render(); });
   document.getElementById('gzClear').addEventListener('click', () => { setBand(null, null); render(); });
   render();
 })();
 </script>
-{{ look_scripts('struct') }}
 {% endblock %}

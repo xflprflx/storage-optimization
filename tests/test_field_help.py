@@ -86,7 +86,8 @@ def _pages(client, ids) -> dict[str, str]:
     b, w = ids["b"], ids["w"]
     start = ["/", "/branches/new", f"/branches/{b}/edit", "/warehouses/new", f"/warehouses/{w}/edit", "/locations/new",
              f"/locations/{ids['loc']}/edit", "/locations/batch", "/bin-types/new", f"/bin-types/{ids['bt']}/edit",
-             "/structures/new", f"/structures/{ids['st']}/edit", "/products/new", f"/products/{ids['p']}/edit",
+             "/structures/new", f"/structures/{ids['st']}/edit", "/structure-kinds", "/structure-kinds/new",
+             "/structure-kinds/1/edit", "/structure-pieces", "/structure-pieces/new", "/structure-pieces/1/edit", "/products/new", f"/products/{ids['p']}/edit",
              f"/products/{ids['p']}", "/settings", "/stock", "/stock/new", "/imports", "/imports/history",
              f"/levels?branch_id={b}&warehouse_id={w}", f"/layout?branch_id={b}&warehouse_id={w}",
              f"/layout/plan?branch_id={b}&warehouse_id={w}", f"/layout/plan/3d?branch_id={b}&warehouse_id={w}",

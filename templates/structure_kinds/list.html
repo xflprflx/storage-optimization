@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
+{% block title %}{{ _("Tipos de estrutura") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-diagram-3"></i> {{ _("Tipos de estrutura") }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/structure-pieces" class="btn btn-outline-secondary"><i class="bi bi-nut"></i> {{ _("Peças de estrutura") }}</a>
+    <a href="/structures" class="btn btn-outline-secondary"><i class="bi bi-bookshelf"></i> {{ _("Estruturas") }}</a>
+    <a href="/structure-kinds/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo tipo") }}</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">{{ _("O tipo (estante, porta-palete…) diz de que peças a estrutura é feita — por módulo (montantes, colunas) e por nível (longarinas, prateleiras) —, o passo da furação dos montantes e a espessura do nível (usados para reespaçar os níveis na recomposição) e a aparência no 3D. No cadastro de cada estrutura você escolhe o tipo e define as medidas e os níveis.") }}</div>
+<div class="card">
+  {{ bulk_delete_bar(request, "structure_kinds", ".bulk-kinds") }}
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar pelo nome") }}"></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-kinds" title="{{ _("Selecionar todos da página") }}"></th>
+        {{ th(request, sort, 'name', _('Nome')) }}<th>{{ _("Composição") }}</th>
+        <th class="text-end">{{ _("Furação (cm)") }}</th><th class="text-end">{{ _("Espessura do nível (cm)") }}</th>
+        <th>{{ _("Modelo 3D") }}</th><th class="text-end">{{ _("Estruturas") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th>
+      </tr></thead>
+      <tbody>
+      {% for k in page.items %}
+        <tr>
+          <td><input type="checkbox" class="form-check-input bulk-kinds" value="{{ k.id }}"></td>
+          <td class="fw-semibold">{{ k.name }}{% if k.floor %} <span class="badge text-bg-light border">{{ _("paletes no piso") }}</span>{% endif %}</td>
+          <td class="small">{% for p in k.pieces %}<div>{{ p.qty|dec }} × <span class="mono">{{ p.piece.code }}</span> <span class="text-muted">{{ _(PER[p.per]) }}</span></div>{% else %}<span class="text-muted">—</span>{% endfor %}</td>
+          <td class="text-end">{{ k.pitch_cm|dec if k.pitch_cm is not none else '' }}</td>
+          <td class="text-end">{{ k.beam_cm|dec if k.beam_cm is not none else '' }}</td>
+          <td class="small">{{ models.get(k.look_model or '', '') }}</td>
+          <td class="text-end">{{ usage.get(k.id, 0) or '' }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/structure-kinds/{{ k.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/structure-kinds/' ~ k.id ~ '/delete', '', _('Excluir o tipo ') ~ k.name ~ '?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">{{ _("Nenhum tipo cadastrado.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

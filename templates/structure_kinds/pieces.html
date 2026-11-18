@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
+{% block title %}{{ _("Peças de estrutura") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-nut"></i> {{ _("Peças de estrutura") }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/structure-kinds" class="btn btn-outline-secondary"><i class="bi bi-diagram-3"></i> {{ _("Tipos de estrutura") }}</a>
+    <a href="/structure-pieces/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Nova peça") }}</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">{{ _("Montantes, longarinas, prateleiras, braços… — o que se compra, desmonta e remonta. Cada tipo de estrutura diz quantas peças usa por módulo e por nível; a mesma peça pode estar em vários tipos (as peças liberadas de uma estrutura servem para montar outra). O custo é opcional e entra no custo da recomposição.") }}</div>
+<div class="card">
+  {{ bulk_delete_bar(request, "structure_pieces", ".bulk-pieces") }}
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por código ou nome") }}"></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-pieces" title="{{ _("Selecionar todos da página") }}"></th>
+        {{ th(request, sort, 'code', _('Código')) }}{{ th(request, sort, 'name', _('Nome')) }}
+        {{ th(request, sort, 'cost', _('Custo por peça (R$)'), 'text-end') }}
+        <th class="text-end">{{ _("Em uso") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th>
+      </tr></thead>
+      <tbody>
+      {% for p in page.items %}
+        <tr>
+          <td><input type="checkbox" class="form-check-input bulk-pieces" value="{{ p.id }}"></td>
+          <td class="mono fw-semibold">{{ p.code }}</td>
+          <td>{{ p.name }}{% if p.notes %}<div class="small text-muted">{{ p.notes }}</div>{% endif %}</td>
+          <td class="text-end">{{ p.cost|dec(2) if p.cost is not none else '' }}</td>
+          <td class="text-end">{% if usage.get(p.id) %}{{ _h("{n} tipo(s)", n=usage.get(p.id)) }}{% endif %}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/structure-pieces/{{ p.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/structure-pieces/' ~ p.id ~ '/delete', '', _('Excluir a peça ') ~ p.code ~ '?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">{{ _("Nenhuma peça cadastrada.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

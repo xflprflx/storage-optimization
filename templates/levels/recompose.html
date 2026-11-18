@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Recomposição das estruturas") }}{% endblock %}
+{% block content %}
+{% set ACT = {'respace': _('Reespaçar os níveis'), 'swap': _('Trocar a estrutura')} %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-bricks"></i> {{ _("Recomposição das estruturas") }}</h1>
+    <div class="small text-muted">{{ scope }} · {{ _("peças:") }} <b>{{ _("só as das estruturas existentes") if res.pieces_mode == 'existing' else _("ilimitadas (comprar o que faltar)") }}</b> · {{ _h("ganho mínimo de {n} bin(s) por estante", n=res.min_gain) }}</div>
+  </div>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Capacidade dos níveis") }}</a>
+</div>
+{% if res.applied %}<div class="alert alert-success py-2"><i class="bi bi-check2-circle"></i> {{ _("Esta proposta já foi aplicada.") }}</div>{% endif %}
+<div class="alert alert-light border small">
+  {{ _("Para cada estante com estrutura, o otimizador compara: manter; reespaçar os níveis da própria estrutura (cada nível com o menor vão que ainda guarda as bins dele e, com a altura que sobra, níveis novos no vão da bin mais comum da estante); e trocar por outra estrutura cadastrada de mesma frente, profundidade até a atual e altura até a maior do depósito. O que está guardado não muda de nível (os endereços continuam valendo); só saem níveis de cima sem endereço nem bins. A base de cada nível respeita a espessura do nível e o passo da furação do tipo de estrutura.") }}
+  {{ _("Escolha: maior ganho de bins; depois menor custo das peças a comprar; depois menos estantes mexidas.") }}
+</div>
+<div class="row g-2 mb-3">
+  {% for lbl, v in [(_('Estantes analisadas'), res.bays), (_('Estantes a recompor'), res.changes|length), (_('Bins a mais'), res.gain), (_('Níveis a mais'), res.levels_added)] %}
+  <div class="col-6 col-md-3 col-xl"><div class="card stat-card h-100"><div class="card-body py-2 small"><div class="label">{{ lbl }}</div><div class="value fs-5">{{ v|dec(0) }}</div></div></div></div>
+  {% endfor %}
+  <div class="col-6 col-md-3 col-xl"><div class="card stat-card h-100"><div class="card-body py-2 small"><div class="label">{{ _("Custo das peças a comprar") }}</div>
+    <div class="value fs-5">{% if res.cost is not none %}R$ {{ res.cost|dec(2) }}{% else %}—{% endif %}</div>
+    {% if res.cost is none %}<div class="text-muted" style="font-size:.72rem">{{ _("sem custo cadastrado nas peças") }}</div>{% endif %}</div></div></div>
+</div>
+{% set sk = res.skipped %}
+{% if res.no_structure or sk.floor or sk.no_levels %}
+<div class="small text-muted mb-2"><i class="bi bi-info-circle"></i> {{ _("Fora da análise:") }}
+  {% if res.no_structure %}{{ _h("{n} estante(s) sem estrutura (aplique em Capacidade dos níveis → Aplicar estrutura)", n=res.no_structure) }}; {% endif %}
+  {% if sk.floor %}{{ _h("{n} de paletes no piso", n=sk.floor) }}; {% endif %}
+  {% if sk.no_levels %}{{ _h("{n} sem níveis", n=sk.no_levels) }}{% endif %}</div>
+{% endif %}
+{% if res.status == 'infeasible' %}<div class="alert alert-warning">{{ _("O otimizador não achou combinação possível com as peças disponíveis.") }}</div>{% endif %}
+{% if not res.changes %}
+<div class="alert alert-info"><i class="bi bi-check2-circle"></i> {{ _("Nenhuma recomposição vale a pena com estas condições.") }}
+  {% if res.pieces_mode == 'existing' %}{{ _("Com só as peças das estruturas existentes, um nível novo precisa das peças de um nível que sai de outra estante (ou de uma estrutura trocada): tente com peças ilimitadas para ver o que compensa comprar.") }}{% endif %}</div>
+{% else %}
+{% if res.pieces %}
+<div class="card mb-3"><div class="card-header bg-white small fw-semibold"><i class="bi bi-nut"></i> {{ _("Peças") }}</div>
+  <div class="table-responsive"><table class="table table-sm mb-0 small align-middle">
+    <thead class="table-light"><tr><th>{{ _("Peça") }}</th><th class="text-end">{{ _("Nas estruturas hoje") }}</th><th class="text-end">{{ _("Na proposta") }}</th>
+      <th class="text-end">{{ _("Liberadas") }}</th><th class="text-end">{{ _("A comprar") }}</th><th class="text-end">{{ _("Custo unit. (R$)") }}</th><th class="text-end">{{ _("Custo (R$)") }}</th></tr></thead>
+    <tbody>{% for p in res.pieces %}<tr><td><span class="mono">{{ p.code }}</span> {{ p.name }}</td>
+      <td class="text-end">{{ p.have|dec(0) }}</td><td class="text-end">{{ p.need|dec(0) }}</td>
+      <td class="text-end">{{ p.freed|dec(0) if p.freed else '' }}</td><td class="text-end {{ 'fw-semibold' if p.bought }}">{{ p.bought|dec(0) if p.bought else '' }}</td>
+      <td class="text-end">{{ p.unit|dec(2) if p.unit is not none else '—' }}</td><td class="text-end">{{ p.cost|dec(2) if p.cost is not none else '—' }}</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+{% endif %}
+<form method="post" action="/levels/recompose/apply" onsubmit="return confirm(_t('Gravar a recomposição no cadastro (estrutura das estantes, vão e capacidade dos níveis, níveis novos)? Dá para desfazer em Capacidade dos níveis.'))">
+  <input type="hidden" name="token" value="{{ token }}">
+  <div class="card mb-3">
+    <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center small">
+      <span class="fw-semibold"><i class="bi bi-list-check"></i> {{ _h("Estantes a recompor ({n})", n=res.changes|length) }}</span>
+      <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary" name="only" value="1" {% if res.applied %}disabled{% endif %}><i class="bi bi-check2-square"></i> {{ _("Aplicar as marcadas") }}</button>
+        <button class="btn btn-sm btn-primary" {% if res.applied %}disabled{% endif %}><i class="bi bi-check-lg"></i> {{ _("Aplicar todas") }}</button>
+      </div>
+    </div>
+    <div class="table-responsive"><table class="table table-sm table-hover mb-0 small align-middle">
+      <thead class="table-light"><tr><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".rc-pick" checked></th>
+        <th>{{ _("Estante") }}</th><th>{{ _("O que fazer") }}</th><th class="text-end">{{ _("Níveis") }}</th>
+        <th>{{ _("Vãos de baixo para cima (cm)") }}</th><th class="text-end">{{ _("Ganho") }}</th><th>{{ _("Peças") }}</th></tr></thead>
+      <tbody>
+      {% for c in res.changes %}
+        <tr><td><input type="checkbox" class="form-check-input rc-pick" name="pick" value="{{ loop.index0 }}" checked></td>
+          <td class="mono fw-semibold text-nowrap">{{ c.aisle }}-{{ c.bay }}</td>
+          <td>{{ ACT[c.kind] }}{% if c.kind == 'swap' %}: <span class="mono">{{ c.from_code }}</span> → <span class="mono">{{ c.to_code }}</span>{% else %} <span class="text-muted mono">{{ c.from_code }}</span>{% endif %}</td>
+          <td class="text-end text-nowrap">{{ c.levels_from }} → <b>{{ c.levels_to }}</b></td>
+          <td><div class="text-muted">{{ c.vaos_from|map('int')|join(' · ') }}</div><div>{{ c.vaos_to|map('int')|join(' · ') }}</div></td>
+          <td class="text-end text-nowrap"><b>+{{ c.gain }}</b> <span class="text-muted mono">{{ c.ref }}</span></td>
+          <td class="text-nowrap">{% for pid, d in c.pieces.items() %}{% set pp = (res.pieces|selectattr('id', 'equalto', pid)|first) %}<div class="{{ 'text-danger' if d > 0 else 'text-success' }}">{{ '+' if d > 0 }}{{ d|dec(0) }} <span class="mono">{{ pp.code if pp else pid }}</span></div>{% endfor %}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</form>
+{% endif %}
+{% if last %}<div class="small text-muted"><i class="bi bi-clock-history"></i> {{ _h("Última recomposição aplicada neste depósito: {when}. Para desfazer, use o botão em Capacidade dos níveis.", when=(last.created_at|string)[:16]) }}</div>{% endif %}
+{% endblock %}

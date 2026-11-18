@@ -272,6 +272,9 @@ R(POPT, "slot_rows", "Letras por rua", "Os endereços usam uma letra por rua: ru
 R(POPT, "slot_serp", "Ruas em serpentina", "Com letras por rua: a rua de frente começa onde a outra termina.", "slot:serp")
 R(POPT, "slot_aff", "Itens que saem juntos perto", "SKUs que costumam sair no mesmo pedido ficam em endereços vizinhos.", "slot:aff")
 R(POPT, "slot_rearr", "Propor rearranjo das estantes", "Só com a planta desenhada. Depois de otimizar, o resultado ganha o botão Gerar proposta de rearranjo: o sistema testa passagens transversais atravessando as fileiras e a troca de corredores de lugar (os de mais saídas mais perto da referência), com os SKUs onde a proposta os põe, e compara o trajeto dos pedidos do histórico. Nada muda na planta até você aplicar uma variação.", "site:cross")
+R(POPT, "recomp", "Propor recomposição das estruturas", "Depois de analisar, o resultado ganha o botão Gerar proposta de recomposição: para cada estante com estrutura, o otimizador compara manter, reespaçar os níveis (menos vão, mais níveis) e trocar por outra estrutura cadastrada, com o que está guardado no mesmo nível, e escolhe o maior ganho de bins dentro das peças. Nada muda até você aplicar.", "rack:levels")
+R(POPT, "recomp_pieces", "Peças da recomposição", "Só as das estruturas existentes: um nível novo precisa das peças que saem de outra estante (ou de uma estrutura trocada). Ilimitadas: o que faltar é comprado, pelo custo da peça (Cadastros → Peças de estrutura).", "rack:levels")
+R(POPT, "recomp_min", "Ganho mínimo por estante", "Só propõe mexer numa estante quando ela ganha pelo menos este número de bins (do tipo mais comum nela).", "rack:levels")
 R(POPT, "types", "Tipos de bin permitidos", "Só os tipos marcados podem ser sugeridos pelo plano.", "bin:type")
 R(POPT, "fill_limit", "Enchimento máximo (%)", "Até quanto do volume de cada bin pode ser ocupado.", "fit:fill")
 R(POPT, "growth", "Margem sobre a quantidade (%)", "Folga somada à quantidade de cada SKU, para o saldo poder crescer.", "fit:growth")
@@ -362,6 +365,8 @@ R(PLOC, r"bin_content.*|content_.*|c_.*", "Conteúdo da bin", "Qual produto e qu
 
 # =========================================================================== capacidade dos níveis
 PLEV = r"/levels"
+R(PLEV, "pieces", "Peças da recomposição", "Só as das estruturas existentes (as liberadas por uma estante servem para outra) ou ilimitadas (o que faltar é comprado, pelo custo da peça).", "rack:levels")
+R(PLEV, "min_gain", "Ganho mínimo por estante", "Só propõe mexer numa estante quando ela ganha pelo menos este número de bins.", "rack:levels")
 R(PLEV, "aisle", "Corredor", "Filtra os níveis de um corredor.", "addr:aisle")
 R(PLEV, "bay", "Estante", "Filtra os níveis de uma estante.", "addr:bay")
 R(PLEV, "level", "Nível", "Mostra só os níveis com este código (o andar da estante, contado de baixo para cima).", "addr:level")
@@ -406,6 +411,7 @@ R(PSET, "sim_gold_piece", "Fora da zona de ouro (s por peça)", "Padrão da simu
 R(PST, "code", "Código da estrutura", "Identificador curto e único (ex.: EST-100).", "tag:code")
 R(PST, "name", "Nome da estrutura", "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).", "tag:name")
 R(PST, "kind", "Tipo", "Estante, porta-palete, palete no chão… O palete no chão é desenhado sem montantes, em camadas.", "rack:pallet")
+R(PST, "kind_id", "Tipo", "O tipo de estrutura cadastrado (Cadastros → Tipos de estrutura): diz de que peças a estrutura é feita (por módulo e por nível), a furação e a aparência no 3D. Um tipo marcado como paletes no piso é desenhado sem montantes, em camadas.", "rack:pallet")
 R(PST, "width", "Frente (largura útil, cm)", "Espaço livre entre as colunas, onde as bins ficam lado a lado.", "rack:width")
 R(PST, "depth", "Profundidade (cm)", "Da frente ao fundo do nível.", "rack:depth")
 R(PST, "height", "Altura total (cm)", "Do piso ao topo. Precisa caber no pé-direito útil do imóvel.", "rack:height")
@@ -424,6 +430,25 @@ R(PST, "#lookPromptText", "Prompt para a IA", "O texto que o botão Copiar promp
 R(PST, "q", "Busca", "Procura pelo código, nome ou tipo da estrutura.", "find:text")
 
 # =========================================================================== tipos de bin
+PSK = r"/structure-kinds"
+R(PSK, "name", "Nome do tipo", "Como o tipo aparece no cadastro de estruturas (ex.: Porta-palete seletivo, Estante leve).", "tag:name")
+R(PSK, "floor", "Paletes no piso", "Tipo blocado: paletes direto no piso, empilhados por nível, sem montantes nem longarinas. O 3D desenha os paletes em camadas.", "rack:pallet")
+R(PSK, "cp_piece", "Peça", "A peça da composição (Cadastros → Peças de estrutura). A mesma peça pode estar em vários tipos: na recomposição, as peças liberadas de uma estrutura servem para montar outra.", "rack:levels")
+R(PSK, "cp_qty", "Quantidade", "Quantas peças o tipo usa por módulo ou por nível (ex.: 2 longarinas por nível).", "rack:levels")
+R(PSK, "cp_per", "Por", "Por módulo: montantes, colunas, bases (não mudam com o número de níveis). Por nível: longarinas, prateleiras, braços, pistas (uma estrutura de N níveis usa N vezes).", "rack:levels")
+R(PSK, "pitch_cm", "Passo da furação", "Distância entre os furos do montante, onde a longarina encaixa (ex.: 5 cm). Na recomposição, a base de cada nível fica num múltiplo dela. Vazio = qualquer altura.", "rack:levels")
+R(PSK, "beam_cm", "Espessura do nível", "Altura da longarina ou da prateleira: o que cada nível ocupa além do vão. Vazio = a sobra da altura total de cada estrutura, repartida entre os níveis.", "rack:levels")
+R(PSK, "notes", "Observações", "Texto livre sobre o tipo.", "tag:notes")
+R(PSK, "look_model", "Modelo 3D", "Como as estruturas deste tipo aparecem no 3D: automático (pelo nome), desenho simples, um modelo da biblioteca ou o código colado de uma IA. O desenho se ajusta às medidas e aos níveis de cada estrutura; os cálculos não mudam.", "rack:levels")
+R(PSK, "look_code", "Código da aparência", "O JSON que um chat de IA (Claude, Gemini, ChatGPT…) devolve a partir de uma foto, com o prompt do botão Copiar prompt. Peças com each_level se repetem em cada nível. O app só lê a descrição, nunca executa código.", "rack:levels")
+R(PSK, "#lookPromptText", "Prompt para a IA", "O texto que o botão Copiar prompt leva para o chat de IA. Aparece aqui quando o navegador não deixa copiar sozinho: selecione e copie.", "rack:levels")
+R(PSK, "q", "Busca", "Procura pelo nome do tipo.", "find:text")
+PSP = r"/structure-pieces"
+R(PSP, "code", "Código da peça", "Identificador curto e único (ex.: LONG-270).", "tag:code")
+R(PSP, "name", "Nome da peça", "Descrição da peça (ex.: Longarina 2,70 m).", "tag:name")
+R(PSP, "cost", "Custo por peça", "Opcional. Na recomposição das estruturas, as peças a comprar entram no custo por este valor.", "tag:code")
+R(PSP, "notes", "Observações", "Fornecedor, medida, código do fabricante…", "tag:notes")
+R(PSP, "q", "Busca", "Procura pelo código ou nome da peça.", "find:text")
 PBT = r"/bin-types"
 R(PBT, "code", "Código do tipo de bin", "Identificador curto e único (ex.: CX-P).", "tag:code")
 R(PBT, "name", "Nome do tipo de bin", "Descrição que aparece nas telas.", "tag:name")

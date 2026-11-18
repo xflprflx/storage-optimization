@@ -15,6 +15,27 @@
   <a href="/imports/levels" class="btn btn-outline-secondary"><i class="bi bi-upload"></i> {{ _("Importar") }}</a>
 </div>
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if branch_id %}
+<div class="card mb-3" data-tour="lv-recomp"><div class="card-body py-2 small d-flex flex-wrap gap-2 align-items-center">
+  <strong><i class="bi bi-bricks"></i> {{ _("Recomposição das estruturas") }}</strong>
+  <span class="text-muted">{{ _("Reespaçar os níveis ou trocar a estrutura das estantes deste depósito, com as peças dos tipos de estrutura.") }}</span>
+  <form method="post" action="/levels/recompose" class="d-flex gap-2 align-items-center ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+    <input type="hidden" name="branch_id" value="{{ branch_id }}"><input type="hidden" name="warehouse_id" value="{{ warehouse_id }}">
+    <select class="form-select form-select-sm" name="pieces" style="width:auto" title="{{ _("Peças disponíveis para recompor") }}">
+      <option value="existing">{{ _("Só as peças das estruturas existentes") }}</option>
+      <option value="unlimited">{{ _("Peças ilimitadas (comprar o que faltar)") }}</option>
+    </select>
+    <input class="form-control form-control-sm text-end" style="width:80px" type="number" min="1" step="1" name="min_gain" value="1" title="{{ _("Ganho mínimo por estante (bins)") }}">
+    <button class="btn btn-sm btn-primary"><i class="bi bi-lightbulb"></i> {{ _("Propor recomposição") }}</button>
+  </form>
+  {% if recomp_log %}
+  <form method="post" action="/levels/recompose/undo" class="m-0" onsubmit="return confirm(_t('Voltar as estantes da última recomposição à estrutura, aos vãos e às capacidades de antes?'))">
+    <input type="hidden" name="branch_id" value="{{ branch_id }}"><input type="hidden" name="warehouse_id" value="{{ warehouse_id }}">
+    <button class="btn btn-sm btn-outline-secondary" title="{{ _h("Aplicada em {when}", when=(recomp_log.created_at|string)[:16]) }}"><i class="bi bi-arrow-counterclockwise"></i> {{ _("Desfazer a última recomposição") }}</button>
+  </form>
+  {% endif %}
+</div></div>
+{% endif %}
 
 <div class="card mb-3">
   <div class="card-body border-bottom">

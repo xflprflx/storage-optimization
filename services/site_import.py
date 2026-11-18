@@ -429,6 +429,9 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     updated += 1
                 st.name = (_cell(row, cm["name"]) or st.name or code)[:150]
                 st.kind = (_cell(row, cm["kind"]) or st.kind or "")[:40]
+                from services.structure_kinds import attach_kind
+
+                attach_kind(db, st)  # o tipo escrito na planilha vira (ou usa) o tipo de estrutura cadastrado
                 for k in ("width", "depth", "height", "level_height", "max_load", "cost"):
                     if v[k] is not None:
                         setattr(st, k, Decimal(str(v[k])))

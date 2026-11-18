@@ -325,6 +325,18 @@
         {{ switch('uniform_levels', _('Um único tipo de bin por nível')) }}
         {{ switch('keep_space', _('Não exceder o espaço atual do endereço'), _('(nível sem capacidade cadastrada)')) }}
         {% endif %}
+        <div class="fw-semibold mt-2 mb-1" data-tour="opt-recomp">{{ _("Estruturas") }}</div>
+        {{ switch('recomp', _('Propor recomposição das estruturas'), _('(reespaçar níveis, trocar estruturas)')) }}
+        <div class="row g-2 mb-1">
+          <div class="col-7"><label class="form-label mb-0" for="recomp_pieces">{{ _("Peças") }}</label>
+            <select class="form-select form-select-sm" name="recomp_pieces" id="recomp_pieces">
+              <option value="existing" {% if params.recomp_pieces != 'unlimited' %}selected{% endif %}>{{ _("Só as das estruturas existentes") }}</option>
+              <option value="unlimited" {% if params.recomp_pieces == 'unlimited' %}selected{% endif %}>{{ _("Ilimitadas (comprar o que faltar)") }}</option>
+            </select></div>
+          <div class="col-5"><label class="form-label mb-0" for="recomp_min" title="{{ _("Só propõe mexer numa estante quando ela ganha pelo menos este número de bins") }}">{{ _("Ganho mín. (bins)") }}</label>
+            <input class="form-control form-control-sm text-end" name="recomp_min" id="recomp_min" type="number" min="1" step="1" value="{{ params.recomp_min }}"></div>
+        </div>
+        <div class="text-muted">{{ _h("Usa a <a href=\"/structure-kinds\" target=\"_blank\">composição de peças</a> dos tipos de estrutura, a furação e a espessura do nível. A proposta é gerada no resultado e só muda o cadastro quando você aplica.") }}</div>
       </div>
       <div class="card-footer bg-white" data-step-footer>
         <button class="btn btn-accent w-100" data-tour="opt-run"><i class="bi bi-cpu"></i> {{ _("Analisar") }}</button>
@@ -411,6 +423,20 @@
       </div></div></div>
       {% endfor %}
     </div>
+
+    {% if params.recomp and filters.branch_id %}
+    <div class="card mb-3 border-primary-subtle" id="recompBox"><div class="card-body py-2 small d-flex flex-wrap gap-2 align-items-center">
+      <strong><i class="bi bi-bricks"></i> {{ _("Recomposição das estruturas") }}</strong>
+      <span class="text-muted">{{ _("Reespaçar os níveis (menos vão, mais níveis) ou trocar a estrutura de cada estante, com o que está guardado no mesmo nível.") }}
+        {{ _("Peças:") }} <b>{{ _("só as das estruturas existentes") if params.recomp_pieces != 'unlimited' else _("ilimitadas (comprar o que faltar)") }}</b>.</span>
+      <form method="post" action="/levels/recompose" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+        <input type="hidden" name="branch_id" value="{{ filters.branch_id }}"><input type="hidden" name="warehouse_id" value="{{ filters.warehouse_id }}">
+        <input type="hidden" name="pieces" value="{{ params.recomp_pieces }}"><input type="hidden" name="min_gain" value="{{ params.recomp_min }}">
+        <input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}">
+        <button class="btn btn-sm btn-primary"><i class="bi bi-lightbulb"></i> {{ _("Gerar proposta de recomposição") }}</button>
+      </form>
+    </div></div>
+    {% endif %}
 
     {% if slot %}{% set a, z = slot.before, slot.after %}
     <div class="card mb-3">

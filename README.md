@@ -622,6 +622,58 @@ O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
   peças abrem com ela desligada. O "Palete no chão" mantém o desenho próprio. O clique numa bin continua mostrando o
   endereço.
 
+## 6.0.9 Tipos de estrutura, peças e recomposição das estruturas
+
+**Cadastros → Peças de estrutura** (`/structure-pieces`): montantes, longarinas, prateleiras, braços… — código, nome
+e custo por peça (opcional).
+
+**Cadastros → Tipos de estrutura** (`/structure-kinds`): os tipos que aparecem no cadastro de estrutura. Cada tipo
+tem:
+- **composição de peças**: quantas peças por **módulo** (montantes, colunas) e por **nível** (longarinas,
+  prateleiras). Uma estrutura de N níveis usa as peças por módulo + N × as por nível. A mesma peça pode estar em vários
+  tipos;
+- **paletes no piso** (blocado): desenhado e calculado como o antigo "Palete no chão";
+- **passo da furação** e **espessura do nível** (opcionais), usados para reespaçar os níveis;
+- **aparência no 3D**: modelo da biblioteca ou código gerado por IA. A aparência saiu do cadastro de estrutura e vale
+  para todas as estruturas do tipo.
+
+No cadastro de **estrutura**, o tipo vem dos tipos cadastrados; as medidas e os níveis continuam ali. Bancos antigos
+ganham os tipos e as peças padrão (sem custo) ao iniciar. As estruturas são ligadas ao tipo pelo nome, e a aparência
+que estava na estrutura passa para o tipo. Importações que trazem um tipo novo criam o tipo.
+
+**Recomposição das estruturas** (`services/recompose.py`): flag **Propor recomposição das estruturas** na otimização
+(Por endereço e Pool, cartão Restrições → Estruturas) ou o botão em **Capacidade dos níveis**. Para cada estante com
+estrutura, o otimizador (CP-SAT) compara:
+- **manter**;
+- **reespaçar os níveis** da própria estrutura. Cada nível com bins fica com o menor vão que ainda as guarda (bin
+  mais alta + 5 cm de folga). Com a altura que sobra entram níveis novos no vão da bin mais comum da estante. A base
+  de cada nível respeita a espessura do nível e o passo da furação;
+- **trocar a estrutura** por outra cadastrada de mesma frente, profundidade até a atual e altura até a maior do
+  depósito, com os níveis dela ou reespaçada.
+
+O que está guardado não muda de nível, e os endereços continuam valendo. Só saem níveis de cima sem endereço nem bins.
+
+Peças, à escolha:
+- **só as das estruturas existentes**: as liberadas por uma estante servem para outra;
+- **ilimitadas**: o que faltar é comprado, pelo custo da peça.
+
+Escolha lexicográfica:
+1. maior ganho de bins (do tipo mais comum em cada estante);
+2. menor custo das peças a comprar (sem custos: menos peças);
+3. menos estantes mexidas.
+
+O **ganho mínimo por estante** filtra mudanças pequenas. A proposta mostra o saldo das peças (hoje, na proposta,
+liberadas, a comprar e o custo) e, por estante, os níveis e os vãos antes e depois, o ganho e as peças.
+
+**Aplicar** (todas ou as marcadas) grava:
+- a estrutura da estante;
+- o vão e a capacidade de cada nível;
+- os níveis novos (reservados, sem endereço);
+- a remoção dos níveis vazios de cima.
+
+**Desfazer a última recomposição**, em Capacidade dos níveis, volta a estrutura, os vãos e as capacidades e tira os
+níveis criados.
+
 ## 7. Estruturas de armazenagem nos depósitos existentes
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):

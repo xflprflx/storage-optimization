@@ -1,8 +1,8 @@
 {# Aparência 3D do cadastro (bins e estruturas): modelo da biblioteca, código colado de uma IA e a prévia. #}
-{% macro look_section(kind, data, errors, choices, prompt_text) %}
+{% macro look_section(kind, data, errors, choices, prompt_text, has_dims=true) %}
 <hr class="my-4">
 <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-badge-3d"></i> {{ _h("Aparência no 3D <span class=\"text-lowercase fw-normal\">(opcional)</span>") }}</h6>
-<div class="small text-muted mb-3">{{ _("Só muda o desenho no 3D (projeto de filial nova e planta das filiais); os cálculos usam as medidas acima. Escolha um modelo da biblioteca ou cole o código que um chat de IA (Claude, Gemini, ChatGPT…) gera a partir de uma foto.") }}</div>
+<div class="small text-muted mb-3">{% if has_dims %}{{ _("Só muda o desenho no 3D (projeto de filial nova e planta das filiais); os cálculos usam as medidas acima. Escolha um modelo da biblioteca ou cole o código que um chat de IA (Claude, Gemini, ChatGPT…) gera a partir de uma foto.") }}{% else %}{{ _("Vale para todas as estruturas deste tipo: no 3D, o desenho se ajusta às medidas e aos níveis de cada uma. Só muda o desenho; os cálculos usam as medidas. Escolha um modelo da biblioteca ou cole o código que um chat de IA (Claude, Gemini, ChatGPT…) gera a partir de uma foto.") }}{% endif %}</div>
 <div class="row g-3" id="lookBox" data-kind="{{ kind }}">
   <div class="col-md-6">
     <label class="form-label" for="look_model">{{ _("Modelo 3D") }}</label>
@@ -21,7 +21,7 @@
         <span class="small text-muted align-self-center" id="lookCopied"></span>
       </div>
       <ol class="small text-muted mt-2 mb-0 ps-3">
-        <li>{{ _("Preencha as medidas acima e clique em Copiar prompt (ele já leva as medidas).") }}</li>
+        <li>{% if has_dims %}{{ _("Preencha as medidas acima e clique em Copiar prompt (ele já leva as medidas).") }}{% else %}{{ _("Clique em Copiar prompt (a IA usa as proporções da foto; o desenho se ajusta a cada estrutura).") }}{% endif %}</li>
         <li>{{ _("Abra o chat de IA, cole o prompt e anexe a foto (de frente; uma de lado ajuda).") }}</li>
         <li>{{ _("Copie a resposta inteira e cole aqui: a prévia ao lado mostra o resultado. Não ficou bom? Peça o ajuste no chat e cole de novo.") }}</li>
       </ol>
@@ -39,7 +39,7 @@
 </div>
 {% endmacro %}
 
-{% macro look_scripts(kind) %}
+{% macro look_scripts(kind, has_dims=true) %}
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
@@ -48,7 +48,7 @@
 import { mountPreview } from '/static/look3d.js';
 const $ = id => document.getElementById(id), form = $('lookBox').closest('form');
 const inp = n => form.querySelector(`[name="${n}"]`);
-const KIND = {{ kind|tojson }};
+const KIND = {{ kind|tojson }}, HAS_DIMS = {{ 'true' if has_dims else 'false' }};
 const val = n => { const e = inp(n); if (!e) return 0; const v = window.nkU && e.dataset.u ? nkU.get(e) : parseFloat(String(e.value || '').replace(',', '.')); return isFinite(v) ? v : 0; };
 const dims = () => KIND === 'struct' ? { w: val('width'), h: val('height'), d: val('depth') } : { w: val('width'), h: val('height'), d: val('length') };
 const EXAMPLE = KIND === 'struct' ? { w: 100, h: 200, d: 60 } : { w: 40, h: 30, d: 60 };  // prévia sem medidas
@@ -56,6 +56,7 @@ const missing = () => { const d = dims(); return ['w', 'h', 'd'].filter(k => !(d
 const shown = () => { const d = dims(), m = missing(); return m.length ? EXAMPLE : d; };
 function levels() {  // base de cada nível, como no servidor (StructureSpec.z)
   if (KIND !== 'struct') return [];
+  if (!inp('levels')) return [0, 50, 100, 150];  // tipo de estrutura (sem medidas): 4 níveis de exemplo
   const H = val('height') || 200, n = Math.max(1, parseInt(inp('levels').value, 10) || 1), base = val('first_level_cm') || 0;
   const clear = val('level_height') || H / n;
   const hs = String(inp('level_heights').value || '').split(/[;/\s]+/).map(v => parseFloat(v.replace(',', '.'))).filter(v => v > 0);
@@ -68,7 +69,8 @@ let timer = null, seq = 0;
 async function refresh() {
   const model = $('look_model').value, code = $('look_code').value;
   const my = ++seq;
-  const body = { kind: KIND, model, code, ...shown(), name: (inp('name') || {}).value || '', type: (inp('kind') || {}).value || '' };
+  const kindName = inp('kind') ? (inp('kind').selectedOptions ? (inp('kind').selectedOptions[0] || {}).textContent : inp('kind').value) : (inp('name') || {}).value;
+  const body = { kind: KIND, model, code, ...shown(), name: HAS_DIMS ? (inp('name') || {}).value || '' : '', type: (kindName || '').trim() };
   let r;
   try { r = await (await fetch('/appearance/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
   catch (e) { return; }
@@ -84,11 +86,13 @@ async function refresh() {
     box.textContent = _t('Cole o código gerado pela IA.'); box.style.display = '';
   } else if (missing().length) {  // sem medidas: desenha com as de exemplo e avisa
     box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-info-subtle text-info-emphasis';
-    box.textContent = _t('Prévia com medidas de exemplo: preencha largura, altura e profundidade para ver no tamanho real.'); box.style.display = '';
+    box.textContent = HAS_DIMS ? _t('Prévia com medidas de exemplo: preencha largura, altura e profundidade para ver no tamanho real.')
+      : _t('Prévia com medidas de exemplo: no 3D, o desenho se ajusta às medidas de cada estrutura deste tipo.');
+    box.style.display = '';
   } else box.style.display = 'none';
   const opt = [...$('look_model').options].find(o => o.value === r.auto);
   $('lookAuto').textContent = model === '' ? (r.auto && opt ? _t('Automático: {m}', { m: opt.textContent }) : _t('Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)')) : '';
-  const floor = KIND === 'struct' && /^(palete no ch|blocado|piso)/i.test((inp('kind') || {}).value || '');
+  const floor = KIND === 'struct' && (inp('floor') ? inp('floor').checked : /^(palete no ch|blocado|piso)/i.test(kindName || ''));
   pv.draw(r.look, shown(), levels(), { kind: KIND, floor });
 }
 const later = () => { clearTimeout(timer); timer = setTimeout(refresh, 300); };
@@ -97,13 +101,13 @@ $('look_code').addEventListener('input', () => {  // colou o código: vale o có
 });
 form.addEventListener('input', later); form.addEventListener('change', later);
 $('lookPrompt').addEventListener('click', async () => {
-  const d = dims(), n = KIND === 'struct' ? (parseInt(inp('levels').value, 10) || 1) : 0;
+  const d = dims(), n = KIND === 'struct' && inp('levels') ? (parseInt(inp('levels').value, 10) || 1) : 0;
   const NA = _t('(medida não informada: use as proporções da foto)');
   const r1 = v => v > 0 ? String(Math.round(v * 10) / 10) : null;
   const put = (t, key, v) => r1(v) ? t.replaceAll(key, r1(v)) : t.replaceAll(key + ' cm', NA).replaceAll(key, NA);
   let text = $('lookPromptText').value;
-  text = put(put(put(text, '{w}', d.w), '{h}', d.h), '{d}', d.d).replaceAll('{levels}', String(n));
-  const warn = missing().length ? ' ' + _t('Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.') : '';
+  text = put(put(put(text, '{w}', d.w), '{h}', d.h), '{d}', d.d).replaceAll('{levels}', n ? String(n) : _t('(conforme a foto)'));
+  const warn = missing().length && HAS_DIMS ? ' ' + _t('Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.') : '';
   try { await navigator.clipboard.writeText(text); $('lookCopied').textContent = _t('Prompt copiado: cole no chat de IA junto com a foto.') + warn; }
   catch (e) { $('lookPromptText').classList.remove('d-none'); $('lookPromptText').select(); $('lookCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }
   if ($('look_model').value !== 'custom') { $('look_model').value = 'custom'; refresh(); }

@@ -624,8 +624,11 @@ def bin_look(bt) -> Optional[dict]:
     return look_of("bin", bt.look_model or "", bt.appearance, (bt.width, bt.height, bt.length), bt.name, bt.code)
 
 
-def struct_look(st) -> Optional[dict]:
-    return look_of("struct", st.look_model or "", st.appearance, (st.width, st.height, st.depth), st.kind, st.name)
+def struct_look(st, kind=None) -> Optional[dict]:
+    """Aparência da estrutura: a do TIPO de estrutura (modelo da biblioteca ou código), nas medidas da estrutura."""
+    src = kind if kind is not None else st
+    return look_of("struct", src.look_model or "", src.appearance, (st.width, st.height, st.depth),
+                   kind.name if kind is not None else st.kind, st.name)
 
 
 def enrich(db, data: dict) -> dict:
@@ -634,7 +637,12 @@ def enrich(db, data: dict) -> dict:
 
     for s in data.get("structs") or []:
         st = db.get(StructureType, s.get("id")) if s.get("id") else None
-        s["look"] = struct_look(st) if st is not None and not s.get("floor") else None
+        if st is not None and not s.get("floor"):
+            from services.structure_kinds import kind_of
+
+            s["look"] = struct_look(st, kind_of(db, st))
+        else:
+            s["look"] = None
     for t in data.get("types") or []:
         bt = db.get(BinType, t.get("id")) if t.get("id") else None
         t["look"] = bin_look(bt) if bt is not None else None

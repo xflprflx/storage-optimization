@@ -477,6 +477,58 @@ class BinContent(TimestampMixin, Base):
 # --------------------------------------------------------------------------- #
 # Projeto de filial nova (greenfield): estruturas de armazenagem e projetos
 # --------------------------------------------------------------------------- #
+class StructurePiece(TimestampMixin, Base):
+    """Peça de estrutura (montante, longarina, prateleira, braço…): o que se compra, desmonta e remonta. A mesma
+    peça pode entrar na composição de vários tipos de estrutura (peças compartilhadas)."""
+
+    __tablename__ = "structure_pieces"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    cost: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # custo por peça (R$, opcional)
+    notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+    @property
+    def label(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
+class StructureKind(TimestampMixin, Base):
+    """Tipo de estrutura (Estante, Porta-palete, Palete no chão…), cadastrado pelo usuário: a composição de peças
+    (por módulo e por nível), o passo da furação dos montantes e a espessura do nível (opcionais, usados na
+    recomposição dos níveis) e a aparência no 3D (modelo da biblioteca ou código gerado por IA)."""
+
+    __tablename__ = "structure_kinds"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    floor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")  # paletes no piso
+    pitch_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # passo da furação (cm)
+    beam_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # espessura do nível (cm)
+    look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
+    appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+    pieces: Mapped[list["StructureKindPiece"]] = relationship(back_populates="kind", cascade="all, delete-orphan",
+                                                              order_by="StructureKindPiece.id")
+
+
+class StructureKindPiece(Base):
+    """Peça na composição de um tipo de estrutura: `qty` por módulo (montantes) ou por nível (longarinas)."""
+
+    __tablename__ = "structure_kind_pieces"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind_id: Mapped[int] = mapped_column(ForeignKey("structure_kinds.id", ondelete="CASCADE"), nullable=False, index=True)
+    piece_id: Mapped[int] = mapped_column(ForeignKey("structure_pieces.id", ondelete="RESTRICT"), nullable=False, index=True)
+    qty: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)
+    per: Mapped[str] = mapped_column(String(10), nullable=False, default="module", server_default="module")
+
+    kind: Mapped["StructureKind"] = relationship(back_populates="pieces")
+    piece: Mapped["StructurePiece"] = relationship()
+
+
 class StructureType(TimestampMixin, Base):
     """Estrutura de armazenagem modular (estante, porta-palete, flow rack...): um MÓDULO com frente,
     profundidade, altura total, nº de níveis e vão útil por nível (cm). Usada no projeto de filial nova."""
@@ -486,7 +538,9 @@ class StructureType(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
-    kind: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")
+    kind: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")  # nome do tipo
+    kind_id: Mapped[Optional[int]] = mapped_column(ForeignKey("structure_kinds.id", ondelete="RESTRICT"), nullable=True,
+                                                   index=True)
     width: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # frente do módulo (cm, útil)
     depth: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # profundidade (cm)
     height: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)  # altura total (cm)
@@ -502,8 +556,11 @@ class StructureType(TimestampMixin, Base):
     first_level_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     level_heights: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
-    look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")  # aparência no 3D
+    # aparência no 3D: agora no tipo de estrutura (colunas antigas, migradas para o tipo na inicialização)
+    look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
     appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    kind_ref: Mapped[Optional["StructureKind"]] = relationship(foreign_keys=[kind_id])
 
     def vaos(self) -> list[float]:
         """Vão de cada nível (cm), de baixo para cima."""
@@ -513,6 +570,19 @@ class StructureType(TimestampMixin, Base):
     @property
     def label(self) -> str:
         return f"{self.code} - {self.name}"
+
+
+class RecompositionLog(TimestampMixin, Base):
+    """Recomposição das estruturas aplicada a um depósito (services/recompose): o estado anterior das estantes
+    alteradas (estrutura, vão e capacidades de cada nível) e os níveis criados, para desfazer."""
+
+    __tablename__ = "recomposition_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, index=True)
+    warehouse_id: Mapped[Optional[int]] = mapped_column(ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=True)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    undone: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
 
 
 class SiteProject(TimestampMixin, Base):

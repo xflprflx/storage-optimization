@@ -25,7 +25,8 @@ from sqlalchemy.orm import Session
 
 from models import (BayStructure, BinContent, BinType, Branch, BranchLayout, LevelCapacity, LocationBin,
                     OptimizationRun, PickHistory, Product, ShelfLevel, SiteProject, StockItem, StockPolicy,
-                    StorageLocation, StructureType, User, UserSession, Warehouse)
+                    StorageLocation, StructureKind, StructureKindPiece, StructurePiece, StructureType, User,
+                    UserSession, Warehouse)
 from services.i18n import N_, _
 
 CHUNK = 800
@@ -184,6 +185,35 @@ def _run_structures(db, ids, cascade):
     db.execute(delete(StructureType).where(StructureType.id.in_(ids)))
 
 
+def _impact_structure_kinds(db, ids):
+    used = _count_by(db, StructureType.kind_id, ids)
+    return {k.id: {"name": k.name, "rel": {N_("estruturas do tipo"): used.get(k.id, 0)},
+                   "block": _("{v} estrutura(s) usam o tipo", v=used[k.id]) if used.get(k.id) else None,
+                   "hard": bool(used.get(k.id))}  # a estrutura precisa de um tipo: troque o tipo delas antes
+            for k in db.scalars(select(StructureKind).where(StructureKind.id.in_(ids)))}
+
+
+def _run_structure_kinds(db, ids, cascade):
+    from services.structure_kinds import refresh_floor
+
+    for k in db.scalars(select(StructureKind).where(StructureKind.id.in_(ids))):
+        db.delete(k)  # a composição sai junto
+    db.flush()
+    refresh_floor(db)
+
+
+def _impact_structure_pieces(db, ids):
+    used = _count_by(db, StructureKindPiece.piece_id, ids)
+    return {p.id: {"name": f"{p.code} - {p.name}", "rel": {N_("tipos de estrutura com a peça"): used.get(p.id, 0)},
+                   "block": _("está na composição de {v} tipo(s)", v=used[p.id]) if used.get(p.id) else None}
+            for p in db.scalars(select(StructurePiece).where(StructurePiece.id.in_(ids)))}
+
+
+def _run_structure_pieces(db, ids, cascade):
+    db.execute(delete(StructureKindPiece).where(StructureKindPiece.piece_id.in_(ids)))
+    db.execute(delete(StructurePiece).where(StructurePiece.id.in_(ids)))
+
+
 def _impact_products(db, ids):
     stock = _count_by(db, StockItem.product_id, ids, StockItem.quantity != 0)
     zero = _count_by(db, StockItem.product_id, ids, StockItem.quantity == 0)
@@ -319,6 +349,10 @@ KINDS: dict[str, dict] = {
                   "cascade": N_("as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis")},
     "structures": {"label": "estruturas", "back": "/structures", "impact": _impact_structures, "run": _run_structures,
                    "cascade": N_("a atribuição da estrutura às estantes")},
+    "structure_kinds": {"label": N_("tipos de estrutura"), "back": "/structure-kinds", "impact": _impact_structure_kinds,
+                        "run": _run_structure_kinds, "cascade": ""},
+    "structure_pieces": {"label": N_("peças de estrutura"), "back": "/structure-pieces", "impact": _impact_structure_pieces,
+                         "run": _run_structure_pieces, "cascade": N_("a peça nas composições dos tipos de estrutura")},
     "products": {"label": "produtos", "back": "/products", "impact": _impact_products, "run": _run_products,
                  "cascade": N_("os saldos dos produtos (e as políticas de estoque)")},
     "stock": {"label": N_("registros de saldo"), "back": "/stock", "impact": _impact_stock, "run": _run_stock,

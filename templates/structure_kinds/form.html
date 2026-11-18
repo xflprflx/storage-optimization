@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% from "_look.html" import look_section, look_scripts %}
+{% block title %}{{ _("Editar tipo de estrutura") if item else _("Novo tipo de estrutura") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-diagram-3"></i> {{ _('Editar tipo ') ~ item.name if item else _('Novo tipo de estrutura') }}</h1>
+  <a href="/structure-kinds" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
+</div>
+<div class="card" style="max-width: 980px"><div class="card-body">
+  {{ form_alert(errors) }}
+  <form method="post" autocomplete="off" id="kindForm">
+    {% if request.query_params.get('back') %}<input type="hidden" name="back" value="{{ request.query_params.get('back') }}">{% endif %}
+    <div class="row g-3">
+      <div class="col-md-5">
+        <label class="form-label">{{ _("Nome *") }}</label>
+        <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="40" value="{{ data.get('name') or '' }}" required autofocus placeholder="{{ _("Ex.: Porta-palete seletivo") }}">
+        {{ field_error(errors, 'name') }}
+        {% if usage %}<div class="form-text">{{ _h("{n} estrutura(s) deste tipo.", n=usage) }}</div>{% endif %}
+      </div>
+      <div class="col-md-7 d-flex align-items-end">
+        <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="floor" value="1" id="floor" {% if data.get('floor') %}checked{% endif %}>
+          <label class="form-check-label" for="floor">{{ _h("<b>Paletes no piso</b> (blocado): sem montantes nem longarinas — os níveis são camadas de paletes empilhados") }}</label></div>
+      </div>
+    </div>
+    <hr class="my-4">
+    <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-nut"></i> {{ _("Composição de peças") }}</h6>
+    <div class="small text-muted mb-2">{{ _h("Quantas peças o tipo usa <b>por módulo</b> (montantes, colunas, bases) e <b>por nível</b> (longarinas, prateleiras, braços, pistas). Ex.: porta-palete = 2 quadros de montantes por módulo + 2 longarinas por nível. Uma estrutura de N níveis usa as peças por módulo + N × as peças por nível.") }} <a href="/structure-pieces/new?back={{ request.url.path|urlencode }}">{{ _("Cadastrar peça") }}</a></div>
+    {% if errors.get('composition') %}<div class="alert alert-danger py-1 small">{{ errors.get('composition') }}</div>{% endif %}
+    <table class="table table-sm align-middle" id="compTable" style="max-width:720px">
+      <thead><tr><th>{{ _("Peça") }}</th><th style="width:120px" class="text-end">{{ _("Quantidade") }}</th><th style="width:170px">{{ _("Por") }}</th><th style="width:40px"></th></tr></thead>
+      <tbody>
+      {% for pid, q, per in (data.get('composition') or []) + [(none, none, 'module')] %}
+        <tr class="cp-row">
+          <td><select class="form-select form-select-sm" name="cp_piece"><option value="">—</option>
+            {% for p in pieces %}<option value="{{ p.id }}" {% if pid == p.id %}selected{% endif %}>{{ p.code }} — {{ p.name }}{% if p.cost is not none %} (R$ {{ p.cost|dec(2) }}){% endif %}</option>{% endfor %}</select></td>
+          <td><input class="form-control form-control-sm text-end" name="cp_qty" inputmode="decimal" value="{{ q|dec_input if q is not none else '' }}"></td>
+          <td><select class="form-select form-select-sm" name="cp_per">{% for k, lbl in PER.items() %}<option value="{{ k }}" {% if per == k %}selected{% endif %}>{{ _(lbl) }}</option>{% endfor %}</select></td>
+          <td><button type="button" class="btn btn-sm btn-outline-danger cp-del" title="{{ _("Tirar da composição") }}"><i class="bi bi-x-lg"></i></button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="cpAdd"><i class="bi bi-plus-lg"></i> {{ _("Adicionar peça") }}</button>
+    <hr class="my-4">
+    <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-arrows-vertical"></i> {{ _h("Montagem dos níveis <span class=\"text-lowercase fw-normal\">(opcional — usada para reespaçar os níveis na recomposição)</span>") }}</h6>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">{{ _("Passo da furação (cm)") }}</label>
+        <input class="form-control text-end {{ invalid(errors, 'pitch_cm') }}" name="pitch_cm" data-u="cm" inputmode="decimal" value="{{ data.get('pitch_cm')|dec_input }}" placeholder="{{ _("livre") }}">
+        {{ field_error(errors, 'pitch_cm') }}
+        <div class="form-text">{{ _("Distância entre os furos do montante (ex.: 5 cm). Os níveis só podem ficar em múltiplos dela. Vazio = qualquer altura.") }}</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ _("Espessura do nível (cm)") }}</label>
+        <input class="form-control text-end {{ invalid(errors, 'beam_cm') }}" name="beam_cm" data-u="cm" inputmode="decimal" value="{{ data.get('beam_cm')|dec_input }}" placeholder="{{ _("pela estrutura") }}">
+        {{ field_error(errors, 'beam_cm') }}
+        <div class="form-text">{{ _("Altura da longarina ou da prateleira: o que cada nível ocupa além do vão. Vazio = a sobra da altura total de cada estrutura, repartida entre os níveis.") }}</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ _("Observações") }}</label>
+        <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}">
+      </div>
+    </div>
+    {{ look_section('struct', data, errors, look_choices('struct'), look_prompt('struct'), has_dims=false) }}
+    <div class="mt-4">
+      <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+      <a href="/structure-kinds" class="btn btn-link">{{ _("Cancelar") }}</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const tb = document.querySelector('#compTable tbody');
+  document.getElementById('cpAdd').addEventListener('click', () => {
+    const last = tb.querySelector('.cp-row:last-child'), row = last.cloneNode(true);
+    row.querySelectorAll('select[name=cp_piece]').forEach(s => { s.value = ''; });
+    row.querySelectorAll('input').forEach(i => { i.value = ''; });
+    tb.appendChild(row);
+  });
+  tb.addEventListener('click', e => {
+    const b = e.target.closest('.cp-del'); if (!b) return;
+    const rows = tb.querySelectorAll('.cp-row');
+    if (rows.length > 1) b.closest('tr').remove();
+    else b.closest('tr').querySelectorAll('select, input').forEach(x => { x.value = x.name === 'cp_per' ? 'module' : ''; });
+  });
+})();
+</script>
+{{ look_scripts('struct', has_dims=false) }}
+{% endblock %}

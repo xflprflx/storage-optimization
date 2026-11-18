@@ -101,7 +101,9 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
         tallest = max((bt_h[t][1] for t, n in u.used.items() if n and t in bt_h), default=None)
         rows.append({"key": k, "code": "-".join(k[2:]), "level": sl, "usage": u, "tallest": tallest,
                      "locations": loc_counts.get(k[2:], 0), "struct": bay_st.get(k[2:4])})
-    ctx.update(rows=rows, total=total, page_no=page, pages=pages)
+    from services.recompose import last_log
+
+    ctx.update(rows=rows, total=total, page_no=page, pages=pages, recomp_log=last_log(db, bid, wid))
     return render(request, "levels/index.html", **ctx)
 
 
@@ -310,3 +312,118 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
         msgs.append(spilled)
     db.commit()
     return redirect(_back(form), " ".join(msgs), "warning" if stats["extra_levels"] else "success")
+
+
+# --------------------------------------------------------------------------- #
+# Recomposição das estruturas (reespaçar níveis, trocar estruturas)
+# --------------------------------------------------------------------------- #
+def _recomp_owner(bid: int, wid) -> str:
+    return f"recomp:{bid}:{wid or ''}"
+
+
+def _recomp_job(db: Session, token: str):
+    from services import jobs
+
+    j = jobs.get(token, jobs.owner_of(token) or "")
+    if j is None or not j["owner"].startswith("recomp:"):
+        return None, None, None
+    _k, bid, wid = j["owner"].split(":")
+    return int(bid), (int(wid) if wid else None), j
+
+
+def _scope_label(db: Session, bid: int, wid) -> str:
+    br, wh = db.get(Branch, bid), db.get(Warehouse, wid) if wid else None
+    return f"{br.code} - {br.name} · " + (f"{wh.code} - {wh.name}" if wh else _("sem armazém")) if br else ""
+
+
+@router.post("/recompose")
+def recompose_start(request: Request, form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Proposta de recomposição das estruturas do depósito (em segundo plano)."""
+    from database import SessionLocal
+    from routers.layout import _plan_scope
+    from services import jobs
+    from services.recompose import propose
+
+    br, wid, _wl = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    if br is None:
+        return redirect("/levels", _("Escolha a filial."), "warning")
+    pieces = "unlimited" if form.get("pieces") == "unlimited" else "existing"
+    min_gain = max(1, to_int(form.get("min_gain"), 1) or 1)
+    bid = br.id
+
+    def fn(progress, cancelled):
+        with SessionLocal() as s:
+            return propose(s, bid, wid, pieces=pieces, min_gain=min_gain, progress=progress, cancelled=cancelled)
+
+    token = jobs.start(_recomp_owner(bid, wid), fn)
+    back = str(form.get("back") or "")
+    return render(request, "site/running.html", project={"id": 0, "name": _scope_label(db, bid, wid)}, token=token,
+                  title=_("Recomposição das estruturas"), icon="bi-bricks", job_base=f"/levels/recompose/job/{token}",
+                  back_url=back if back.startswith("/optimization") else f"/levels?branch_id={bid}&warehouse_id={wid or 'none'}",
+                  back_label=_("Voltar"),
+                  intro=_("O sistema monta, para cada estante com estrutura, as opções de reespaçar os níveis e de trocar a "
+                          "estrutura, e escolhe com o otimizador o maior ganho de espaço dentro das peças. Leva alguns segundos."))
+
+
+@router.get("/recompose/job/{token}/status")
+def recompose_status(token: str, db: Session = Depends(get_db)):
+    from fastapi.responses import JSONResponse
+
+    from services import jobs
+
+    _b, _w, j = _recomp_job(db, token)
+    return JSONResponse(jobs.status(j), status_code=404 if j is None else 200)
+
+
+@router.post("/recompose/job/{token}/cancel")
+def recompose_cancel(token: str, db: Session = Depends(get_db)):
+    _b, _w, j = _recomp_job(db, token)
+    if j is not None and not j["done"]:
+        j["cancel"] = True
+    return {"ok": j is not None}
+
+
+@router.get("/recompose/job/{token}/result")
+def recompose_result(token: str, request: Request, db: Session = Depends(get_db)):
+    from services.recompose import last_log
+
+    bid, wid, j = _recomp_job(db, token)
+    back = f"/levels?branch_id={bid}&warehouse_id={wid or 'none'}" if bid else "/levels"
+    if j is None or not j["done"]:
+        return redirect(back, _("A busca expirou ou ainda não terminou: rode de novo."), "warning")
+    res = j["res"]
+    if j["error"] or not res or res.get("error"):
+        return redirect(back, j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
+    return render(request, "levels/recompose.html", res=res, token=token, scope=_scope_label(db, bid, wid), back=back,
+                  last=last_log(db, bid, wid))
+
+
+@router.post("/recompose/apply")
+def recompose_apply(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    from services.recompose import apply
+
+    bid, wid, j = _recomp_job(db, str(form.get("token") or ""))
+    back = f"/levels?branch_id={bid}&warehouse_id={wid or 'none'}" if bid else "/levels"
+    if j is None or not j.get("res") or j["res"].get("error"):
+        return redirect(back, _("A proposta expirou: gere de novo."), "warning")
+    sel = [to_int(v) for v in form.getlist("pick")] if hasattr(form, "getlist") else []
+    idx = [i for i in sel if i is not None] if form.get("only") == "1" else None
+    if idx is not None and not idx:
+        return redirect(back, _("Marque as estantes a recompor."), "warning")
+    st = apply(db, j["res"], idx)
+    j["res"] = {**j["res"], "applied": True}
+    return redirect(back, _("Recomposição aplicada em {bays} estante(s): {created} nível(is) criado(s), {removed} removido(s). Use Desfazer a última recomposição para voltar.", bays=st["bays"], created=st["levels_created"], removed=st["levels_removed"]))
+
+
+@router.post("/recompose/undo")
+def recompose_undo(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    from routers.layout import _plan_scope
+    from services.recompose import last_log, undo
+
+    br, wid, _wl = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    back = f"/levels?branch_id={br.id}&warehouse_id={wid or 'none'}" if br else "/levels"
+    log = last_log(db, br.id, wid) if br else None
+    if log is None:
+        return redirect(back, _("Não há recomposição para desfazer."), "warning")
+    n = undo(db, log)
+    return redirect(back, _("Recomposição desfeita: {n} estante(s) voltaram à estrutura, aos vãos e às capacidades de antes.", n=n), "secondary")

@@ -167,6 +167,8 @@ def _add_missing_columns(conn) -> None:
     for col in ("golden_from", "golden_to"):
         if "structure_types" in tables and col not in stcols:
             conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} BIGINT"))
+    if "structure_types" in tables and "kind_id" not in stcols:  # tipo de estrutura cadastrado
+        conn.execute(text("ALTER TABLE structure_types ADD COLUMN kind_id INTEGER REFERENCES structure_kinds(id)"))
     for tbl, cols in (("bin_types", btcols), ("structure_types", stcols)):  # aparência no 3D
         if tbl in tables and "look_model" not in cols:
             conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN look_model VARCHAR(20) NOT NULL DEFAULT ''"))
@@ -237,6 +239,9 @@ def init_db() -> None:
         from services.app_settings import load as load_settings
 
         load_settings(db)  # configurações (ordenação e equivalência dos endereços) antes de qualquer cálculo
+        from services.structure_kinds import ensure_kinds
+
+        ensure_kinds(db)  # tipos de estrutura e peças padrão; estruturas antigas ligadas ao tipo pelo nome
         refresh_occupancy(db, None)
         from services.stock_service import sync_default_locations
 

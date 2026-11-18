@@ -378,7 +378,7 @@
  },
  "(conforme a foto)": {
   "src": [
-   "templates/_look.html:109"
+   "templates/_look.html:130"
   ],
   "js": true
  },
@@ -438,7 +438,7 @@
  },
  "(medida não informada: use as proporções da foto)": {
   "src": [
-   "templates/_look.html:105"
+   "templates/_look.html:126"
   ],
   "js": true
  },
@@ -451,6 +451,12 @@
   "src": [
    "templates/locations/batch.html:191"
   ]
+ },
+ "(nenhuma peça na composição: descreva as peças pelo nome, ex.: montante, longarina)": {
+  "src": [
+   "templates/_look.html:132"
+  ],
+  "js": true
  },
  "(nome, material, dimensões, peso": {
   "src": [
@@ -633,19 +639,29 @@
    "routers/site.py:771"
   ]
  },
+ "- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da informação exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n": {
+  "src": [
+   "services/appearance.py:737"
+  ]
+ },
+ "- Cada parte do desenho pertence a uma peça da estrutura: informe \"piece\" com o código dela, entre estas: {pieces}. Partes da mesma peça têm a mesma cor: use a cor real dessa peça na foto. Não use \"tint\".\n": {
+  "src": [
+   "services/appearance.py:740"
+  ]
+ },
  "- Em cada peça, use exatamente as chaves x, y, z, w, h e d (não use position, size, center nem coordenadas a partir do centro).\n": {
   "src": [
-   "services/appearance.py:698"
+   "services/appearance.py:748"
   ]
  },
  "- Use no máximo 50 peças, contando as repetições. Reproduza a forma e as cores reais; ignore etiquetas, textos e logotipos.": {
   "src": [
-   "services/appearance.py:700"
+   "services/appearance.py:750"
   ]
  },
  "- É uma estrutura de armazenagem com {levels} níveis. \"each_level\": true repete a peça em cada nível (longarinas, prateleiras, braços); nesse caso y é medido a partir da base do nível (ex.: longarina logo abaixo da base: \"y\": -0.04). Montantes, colunas e paredes não usam each_level. Não desenhe a carga: o software desenha as bins.\n": {
   "src": [
-   "services/appearance.py:693"
+   "services/appearance.py:743"
   ]
  },
  ". <b>Recurso infinito:</b> a quantidade de bins não é restrição — o plano pode usar bins que não existem hoje": {
@@ -1735,7 +1751,7 @@
  },
  "A peça {code} está na composição de {n} tipo(s) de estrutura: tire-a da composição antes de excluir.": {
   "src": [
-   "routers/structure_kinds.py:105"
+   "routers/structure_kinds.py:106"
   ]
  },
  "A planilha não tem abas com dados.": {
@@ -2011,7 +2027,7 @@
  },
  "Adicionar peça": {
   "src": [
-   "templates/structure_kinds/form.html:44"
+   "templates/structure_kinds/form.html:48"
   ]
  },
  "Adicionar setor": {
@@ -2097,7 +2113,7 @@
  },
  "Ajustado no código: {v}.": {
   "src": [
-   "templates/_look.html:79"
+   "templates/_look.html:88"
   ],
   "js": true
  },
@@ -2222,7 +2238,7 @@
  "Altura da longarina ou da prateleira: o que cada nível ocupa além do vão. Vazio = a sobra da altura total de cada estrutura, repartida entre os níveis.": {
   "src": [
    "services/field_help.py:440",
-   "templates/structure_kinds/form.html:58"
+   "templates/structure_kinds/form.html:62"
   ],
   "help": true
  },
@@ -3188,7 +3204,7 @@
  },
  "Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.": {
   "src": [
-   "templates/_look.html:110"
+   "templates/_look.html:133"
   ],
   "js": true
  },
@@ -3331,7 +3347,7 @@
  },
  "Automático (pelo tipo e pelo nome)": {
   "src": [
-   "services/appearance.py:575"
+   "services/appearance.py:580"
   ]
  },
  "Automático (setor de expedição; senão as docas)": {
@@ -3347,13 +3363,13 @@
  },
  "Automático: desenho simples (nenhum modelo da biblioteca combina com o tipo e o nome)": {
   "src": [
-   "templates/_look.html:94"
+   "templates/_look.html:115"
   ],
   "js": true
  },
  "Automático: {m}": {
   "src": [
-   "templates/_look.html:94"
+   "templates/_look.html:115"
   ],
   "js": true
  },
@@ -3445,7 +3461,7 @@
  },
  "Big bag": {
   "src": [
-   "services/appearance.py:557"
+   "services/appearance.py:562"
   ],
   "lazy": true
  },
@@ -3474,7 +3490,7 @@
  },
  "Bin de prateleira (frente aberta)": {
   "src": [
-   "services/appearance.py:553"
+   "services/appearance.py:558"
   ],
   "lazy": true
  },
@@ -4201,13 +4217,13 @@
  },
  "Caixa de papelão": {
   "src": [
-   "services/appearance.py:554"
+   "services/appearance.py:559"
   ],
   "lazy": true
  },
  "Caixa plástica (monobloco)": {
   "src": [
-   "services/appearance.py:552"
+   "services/appearance.py:557"
   ],
   "lazy": true
  },
@@ -4386,7 +4402,7 @@
  },
  "Cantilever (braços)": {
   "src": [
-   "services/appearance.py:563"
+   "services/appearance.py:568"
   ],
   "lazy": true
  },
@@ -4679,7 +4695,7 @@
  "Cole o código gerado pela IA.": {
   "src": [
    "services/appearance.py:273",
-   "templates/_look.html:86"
+   "templates/_look.html:107"
   ],
   "js": true
  },
@@ -5498,9 +5514,14 @@
  },
  "Copie o texto selecionado (Ctrl+C).": {
   "src": [
-   "templates/_look.html:112"
+   "templates/_look.html:135"
   ],
   "js": true
+ },
+ "Cor da peça no 3D. Vazio = a cor do modelo (biblioteca ou código da IA). Ao colar o código da IA, as cores que ela identificou na foto entram aqui.": {
+  "src": [
+   "templates/structure_kinds/form.html:32"
+  ]
  },
  "Cor das bins": {
   "src": [
@@ -5514,6 +5535,17 @@
   "src": [
    "templates/site/view3d.html:42"
   ]
+ },
+ "Cor no 3D": {
+  "src": [
+   "templates/structure_kinds/form.html:32"
+  ]
+ },
+ "Cores identificadas pela IA nas peças: {v}.": {
+  "src": [
+   "templates/_look.html:99"
+  ],
+  "js": true
  },
  "Corredor": {
   "src": [
@@ -5941,7 +5973,7 @@
  },
  "Custo por peça": {
   "src": [
-   "routers/structure_kinds.py:46",
+   "routers/structure_kinds.py:47",
    "services/field_help.py:449"
   ],
   "help": true
@@ -5975,7 +6007,7 @@
  },
  "Câmara fria": {
   "src": [
-   "services/appearance.py:565"
+   "services/appearance.py:570"
   ],
   "lazy": true
  },
@@ -6032,7 +6064,7 @@
  },
  "Código colado (gerado por IA)": {
   "src": [
-   "services/appearance.py:576"
+   "services/appearance.py:581"
   ]
  },
  "Código com mais de 30 caracteres": {
@@ -6113,7 +6145,7 @@
   "src": [
    "routers/bin_types.py:45",
    "routers/branches.py:39",
-   "routers/structure_kinds.py:37",
+   "routers/structure_kinds.py:38",
    "routers/structures.py:52",
    "routers/warehouses.py:39"
   ]
@@ -6161,13 +6193,13 @@
  },
  "Código inválido: {exc}.": {
   "src": [
-   "services/appearance.py:357",
+   "services/appearance.py:360",
    "services/appearance.py:286"
   ]
  },
  "Código não aplicado — {e}": {
   "src": [
-   "templates/_look.html:83"
+   "templates/_look.html:104"
   ],
   "js": true
  },
@@ -6182,7 +6214,7 @@
   "src": [
    "routers/bin_types.py:43",
    "routers/branches.py:37",
-   "routers/structure_kinds.py:35",
+   "routers/structure_kinds.py:36",
    "routers/structures.py:50",
    "routers/warehouses.py:37"
   ]
@@ -6485,9 +6517,9 @@
    "templates/users/list.html:33"
   ]
  },
- "Descreva o objeto da foto anexada como um modelo 3D simples para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{\"parts\": [{\"shape\": \"box\", \"x\": 0, \"y\": 0, \"z\": 0, \"w\": 1, \"h\": 0.1, \"d\": 1, \"color\": \"#8b5a2b\"}]}\n\nRegras:\n- O objeto ocupa uma caixa de {w} cm de largura (x, da esquerda para a direita, visto de frente), {h} cm de altura (y, de baixo para cima) e {d} cm de profundidade (z, da frente para o fundo).\n- x, y, z = canto da peça mais à esquerda, mais baixo e mais à frente; w, h, d = tamanho da peça. Tudo em fração (0 a 1) dessas medidas.\n- shape: \"box\" (caixa) ou \"cylinder\" (cilindro, com \"axis\": \"x\", \"y\" ou \"z\" = direção do eixo; padrão \"y\").\n- color: a cor real da peça, em hexadecimal. \"opacity\" (0.1 a 1) para peças transparentes ou translúcidas.\n- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da informação exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n- \"repeat\": {\"count\": n, \"dx\": 0.1, \"dy\": 0, \"dz\": 0} repete a peça n vezes, deslocando a cada cópia (use para ripas, grades, barras, gavetas).\n": {
+ "Descreva o objeto da foto anexada como um modelo 3D simples para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{\"parts\": [{\"shape\": \"box\", \"x\": 0, \"y\": 0, \"z\": 0, \"w\": 1, \"h\": 0.1, \"d\": 1, \"color\": \"#8b5a2b\"}]}\n\nRegras:\n- O objeto ocupa uma caixa de {w} cm de largura (x, da esquerda para a direita, visto de frente), {h} cm de altura (y, de baixo para cima) e {d} cm de profundidade (z, da frente para o fundo).\n- x, y, z = canto da peça mais à esquerda, mais baixo e mais à frente; w, h, d = tamanho da peça. Tudo em fração (0 a 1) dessas medidas.\n- shape: \"box\" (caixa) ou \"cylinder\" (cilindro, com \"axis\": \"x\", \"y\" ou \"z\" = direção do eixo; padrão \"y\").\n- color: a cor real da peça, em hexadecimal. \"opacity\" (0.1 a 1) para peças transparentes ou translúcidas.\n- \"repeat\": {\"count\": n, \"dx\": 0.1, \"dy\": 0, \"dz\": 0} repete a peça n vezes, deslocando a cada cópia (use para ripas, grades, barras, gavetas).\n": {
   "src": [
-   "services/appearance.py:676"
+   "services/appearance.py:722"
   ]
  },
  "Descrição": {
@@ -6605,7 +6637,7 @@
  },
  "Desenho simples": {
   "src": [
-   "services/appearance.py:575"
+   "services/appearance.py:580"
   ]
  },
  "Desfazer a última recomposição": {
@@ -6919,7 +6951,7 @@
  },
  "Distância entre os furos do montante (ex.: 5 cm). Os níveis só podem ficar em múltiplos dela. Vazio = qualquer altura.": {
   "src": [
-   "templates/structure_kinds/form.html:52"
+   "templates/structure_kinds/form.html:56"
   ]
  },
  "Distância entre os furos do montante, onde a longarina encaixa (ex.: 5 cm). Na recomposição, a base de cada nível fica num múltiplo dela. Vazio = qualquer altura.": {
@@ -8032,6 +8064,11 @@
    "services/recompose.py:315"
   ]
  },
+ "Escolher a cor": {
+  "src": [
+   "templates/structure_kinds/form.html:41"
+  ]
+ },
  "Esconde o que fica acima desta altura, para ver os níveis de dentro": {
   "src": [
    "templates/site/view3d.html:60"
@@ -8178,15 +8215,15 @@
  },
  "Espessura do nível": {
   "src": [
-   "routers/structure_kinds.py:135",
    "routers/structure_kinds.py:136",
+   "routers/structure_kinds.py:137",
    "services/field_help.py:440"
   ],
   "help": true
  },
  "Espessura do nível (cm)": {
   "src": [
-   "templates/structure_kinds/form.html:55",
+   "templates/structure_kinds/form.html:59",
    "templates/structure_kinds/list.html:28"
   ]
  },
@@ -8251,7 +8288,7 @@
  },
  "Estante de aço (prateleiras)": {
   "src": [
-   "services/appearance.py:562"
+   "services/appearance.py:567"
   ],
   "lazy": true
  },
@@ -9753,7 +9790,7 @@
  },
  "Flow rack (roletes)": {
   "src": [
-   "services/appearance.py:564"
+   "services/appearance.py:569"
   ],
   "lazy": true
  },
@@ -10028,7 +10065,7 @@
  },
  "Gaiola aramada": {
   "src": [
-   "services/appearance.py:555"
+   "services/appearance.py:560"
   ],
   "lazy": true
  },
@@ -10069,7 +10106,7 @@
  },
  "Gaveteiro": {
   "src": [
-   "services/appearance.py:558"
+   "services/appearance.py:563"
   ],
   "lazy": true
  },
@@ -11010,7 +11047,7 @@
  },
  "Já existe um tipo de estrutura chamado {name}.": {
   "src": [
-   "routers/structure_kinds.py:133"
+   "routers/structure_kinds.py:134"
   ]
  },
  "Já existe um usuário {u}.": {
@@ -11031,7 +11068,7 @@
  },
  "Já existe uma peça com o código {code}.": {
   "src": [
-   "routers/structure_kinds.py:43"
+   "routers/structure_kinds.py:44"
   ]
  },
  "Já existem sub-endereços abaixo deste": {
@@ -11493,12 +11530,17 @@
  },
  "Linha {i} da composição: a quantidade deve ser maior que zero.": {
   "src": [
-   "routers/structure_kinds.py:154"
+   "routers/structure_kinds.py:157"
+  ]
+ },
+ "Linha {i} da composição: cor inválida (use #rrggbb).": {
+  "src": [
+   "routers/structure_kinds.py:161"
   ]
  },
  "Linha {i} da composição: escolha a peça.": {
   "src": [
-   "routers/structure_kinds.py:152"
+   "routers/structure_kinds.py:155"
   ]
  },
  "Linhas": {
@@ -12452,7 +12494,7 @@
  },
  "Montagem dos níveis <span class=\"text-lowercase fw-normal\">(opcional — usada para reespaçar os níveis na recomposição)</span>": {
   "src": [
-   "templates/structure_kinds/form.html:46"
+   "templates/structure_kinds/form.html:50"
   ],
   "html": true
  },
@@ -13610,8 +13652,8 @@
    "routers/bin_types.py:53",
    "routers/branches.py:47",
    "routers/products.py:56",
-   "routers/structure_kinds.py:45",
-   "routers/structure_kinds.py:127",
+   "routers/structure_kinds.py:46",
+   "routers/structure_kinds.py:128",
    "routers/structures.py:60"
   ]
  },
@@ -14769,7 +14811,7 @@
    "services/field_help.py:426",
    "services/field_help.py:441",
    "services/field_help.py:450",
-   "templates/structure_kinds/form.html:61",
+   "templates/structure_kinds/form.html:65",
    "templates/structure_kinds/piece_form.html:31"
   ],
   "help": true
@@ -15410,7 +15452,7 @@
  },
  "Palete com carga (PBR/europeu)": {
   "src": [
-   "services/appearance.py:551"
+   "services/appearance.py:556"
   ],
   "lazy": true
  },
@@ -15629,15 +15671,15 @@
  },
  "Passo da furação": {
   "src": [
-   "routers/structure_kinds.py:134",
-   "routers/structure_kinds.py:136",
+   "routers/structure_kinds.py:135",
+   "routers/structure_kinds.py:137",
    "services/field_help.py:439"
   ],
   "help": true
  },
  "Passo da furação (cm)": {
   "src": [
-   "templates/structure_kinds/form.html:49"
+   "templates/structure_kinds/form.html:53"
   ]
  },
  "Passos no plano: {n_steps}": {
@@ -16004,9 +16046,9 @@
  },
  "Peça não encontrada.": {
   "src": [
-   "routers/structure_kinds.py:79",
-   "routers/structure_kinds.py:88",
-   "routers/structure_kinds.py:102"
+   "routers/structure_kinds.py:80",
+   "routers/structure_kinds.py:89",
+   "routers/structure_kinds.py:103"
   ]
  },
  "Peça o onboarding a qualquer momento: o tour da tela em que você está, o guia passo a passo ou o glossário de conceitos.": {
@@ -16017,17 +16059,17 @@
  },
  "Peça {code} atualizada.": {
   "src": [
-   "routers/structure_kinds.py:95"
+   "routers/structure_kinds.py:96"
   ]
  },
  "Peça {code} criada.": {
   "src": [
-   "routers/structure_kinds.py:72"
+   "routers/structure_kinds.py:73"
   ]
  },
  "Peça {code} excluída.": {
   "src": [
-   "routers/structure_kinds.py:109"
+   "routers/structure_kinds.py:110"
   ]
  },
  "Peças": {
@@ -16476,7 +16518,7 @@
  },
  "Porta-palete (longarinas)": {
   "src": [
-   "services/appearance.py:561"
+   "services/appearance.py:566"
   ],
   "lazy": true
  },
@@ -17009,7 +17051,7 @@
  },
  "Prompt copiado: cole no chat de IA junto com a foto.": {
   "src": [
-   "templates/_look.html:111"
+   "templates/_look.html:134"
   ],
   "js": true
  },
@@ -17170,13 +17212,13 @@
  },
  "Prévia com medidas de exemplo: no 3D, o desenho se ajusta às medidas de cada estrutura deste tipo.": {
   "src": [
-   "templates/_look.html:90"
+   "templates/_look.html:111"
   ],
   "js": true
  },
  "Prévia com medidas de exemplo: preencha largura, altura e profundidade para ver no tamanho real.": {
   "src": [
-   "templates/_look.html:89"
+   "templates/_look.html:110"
   ],
   "js": true
  },
@@ -19798,7 +19840,7 @@
  },
  "Tambor / bombona": {
   "src": [
-   "services/appearance.py:556"
+   "services/appearance.py:561"
   ],
   "lazy": true
  },
@@ -20261,24 +20303,24 @@
  },
  "Tipo de estrutura não encontrado.": {
   "src": [
-   "routers/structure_kinds.py:214",
-   "routers/structure_kinds.py:226",
-   "routers/structure_kinds.py:239"
+   "routers/structure_kinds.py:221",
+   "routers/structure_kinds.py:233",
+   "routers/structure_kinds.py:246"
   ]
  },
  "Tipo de estrutura {name} atualizado.": {
   "src": [
-   "routers/structure_kinds.py:232"
+   "routers/structure_kinds.py:239"
   ]
  },
  "Tipo de estrutura {name} criado.": {
   "src": [
-   "routers/structure_kinds.py:205"
+   "routers/structure_kinds.py:212"
   ]
  },
  "Tipo de estrutura {name} excluído.": {
   "src": [
-   "routers/structure_kinds.py:247"
+   "routers/structure_kinds.py:254"
   ]
  },
  "Tipo de material": {
@@ -20398,7 +20440,7 @@
  },
  "Tipos e peças de estrutura": {
   "src": [
-   "routers/structure_kinds.py:20"
+   "routers/structure_kinds.py:21"
   ],
   "lazy": true
  },
@@ -20421,7 +20463,7 @@
  },
  "Tirar da composição": {
   "src": [
-   "templates/structure_kinds/form.html:39"
+   "templates/structure_kinds/form.html:43"
   ]
  },
  "Tirar {fmt} un. de {sku} da {tag} e levar para a {staging}": {
@@ -23221,7 +23263,7 @@
  },
  "livre": {
   "src": [
-   "templates/structure_kinds/form.html:50"
+   "templates/structure_kinds/form.html:54"
   ]
  },
  "livre agora": {
@@ -23283,7 +23325,7 @@
  },
  "mais de {n} peças (contando as repetições): simplifique o desenho": {
   "src": [
-   "services/appearance.py:355"
+   "services/appearance.py:358"
   ]
  },
  "mais vendidos perto da expedição": {
@@ -23350,7 +23392,8 @@
  },
  "modelo": {
   "src": [
-   "templates/products/list.html:82"
+   "templates/products/list.html:82",
+   "templates/structure_kinds/form.html:42"
   ]
  },
  "mostrado no menu": {
@@ -23880,7 +23923,7 @@
  },
  "pela estrutura": {
   "src": [
-   "templates/structure_kinds/form.html:56"
+   "templates/structure_kinds/form.html:60"
   ]
  },
  "pelo menos": {
@@ -25162,7 +25205,7 @@
  },
  "{label}: deve ser maior que zero (ou deixe vazio).": {
   "src": [
-   "routers/structure_kinds.py:138"
+   "routers/structure_kinds.py:139"
   ]
  },
  "{label}: deve ser maior que zero.": {
@@ -25540,7 +25583,7 @@
  },
  "{n} estrutura(s) são do tipo {name}: troque o tipo delas antes de excluir.": {
   "src": [
-   "routers/structure_kinds.py:242"
+   "routers/structure_kinds.py:249"
   ]
  },
  "{n} item(ns) não podem ser excluídos e ficam de fora (o motivo aparece na lista ao lado).": {

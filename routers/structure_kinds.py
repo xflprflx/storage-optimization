@@ -2,6 +2,7 @@
 estrutura (código, nome e custo)."""
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Request
@@ -140,8 +141,10 @@ def _kind_validate(db: Session, form: FormData, kid: int | None):
     pieces = form.getlist("cp_piece") if hasattr(form, "getlist") else []
     qtys = form.getlist("cp_qty") if hasattr(form, "getlist") else []
     pers = form.getlist("cp_per") if hasattr(form, "getlist") else []
+    colors = form.getlist("cp_color") if hasattr(form, "getlist") else []
+    colors = list(colors) + [""] * (len(pieces) - len(colors))
     valid = {p.id for p in db.scalars(select(StructurePiece))}
-    for i, (pid, q, per) in enumerate(zip(pieces, qtys, pers), 1):
+    for i, (pid, q, per, col) in enumerate(zip(pieces, qtys, pers, colors), 1):
         if not str(pid).strip() and not str(q).strip():
             continue  # linha vazia
         try:
@@ -153,7 +156,11 @@ def _kind_validate(db: Session, form: FormData, kid: int | None):
         elif qv is None or qv <= 0:
             errors.add("composition", _("Linha {i} da composição: a quantidade deve ser maior que zero.", i=i))
         else:
-            rows.append((int(pid), qv, per if per in PER else "module"))
+            col = str(col or "").strip().lower()
+            if col and not re.fullmatch(r"#[0-9a-f]{6}", col):
+                errors.add("composition", _("Linha {i} da composição: cor inválida (use #rrggbb).", i=i))
+                continue
+            rows.append((int(pid), qv, per if per in PER else "module", col or None))
     data["composition"] = rows
     data.update(form_values(form, "struct", errors))
     data["look_code"] = f_str(form, "look_code", 20000) or code_text(data.get("appearance"))
@@ -169,7 +176,7 @@ def _save_kind(db: Session, k: StructureKind, data: dict) -> None:
     data.pop("look_code", None)
     for key, v in data.items():
         setattr(k, key, v)
-    k.pieces = [StructureKindPiece(piece_id=pid, qty=q, per=per) for pid, q, per in comp]
+    k.pieces = [StructureKindPiece(piece_id=pid, qty=q, per=per, color=col) for pid, q, per, col in comp]
     db.flush()
     # estruturas do tipo: o nome do tipo acompanha (o cálculo e o 3D leem o nome)
     for st in db.scalars(select(StructureType).where(StructureType.kind_id == k.id)):
@@ -213,7 +220,7 @@ def edit_kind(kid: int, request: Request, db: Session = Depends(get_db)):
     if not k:
         return redirect("/structure-kinds", _("Tipo de estrutura não encontrado."), "danger")
     data = {key: getattr(k, key) for key in ("name", "floor", "pitch_cm", "beam_cm", "notes", "look_model")}
-    data["composition"] = [(p.piece_id, p.qty, p.per) for p in k.pieces]
+    data["composition"] = [(p.piece_id, p.qty, p.per, p.color) for p in k.pieces]
     data["look_code"] = code_text(k.appearance)
     return render(request, "structure_kinds/form.html", item=k, data=data, errors={}, usage=_kind_usage(db).get(k.id, 0),
                   **_kind_ctx(db))

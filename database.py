@@ -167,6 +167,8 @@ def _add_missing_columns(conn) -> None:
     for col in ("golden_from", "golden_to"):
         if "structure_types" in tables and col not in stcols:
             conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} BIGINT"))
+    if "structure_kind_pieces" in tables and "color" not in {c["name"] for c in insp.get_columns("structure_kind_pieces")}:
+        conn.execute(text("ALTER TABLE structure_kind_pieces ADD COLUMN color VARCHAR(7)"))  # cor da peça no 3D
     if "structure_types" in tables and "kind_id" not in stcols:  # tipo de estrutura cadastrado
         conn.execute(text("ALTER TABLE structure_types ADD COLUMN kind_id INTEGER REFERENCES structure_kinds(id)"))
     for tbl, cols in (("bin_types", btcols), ("structure_types", stcols)):  # aparência no 3D

@@ -28,14 +28,18 @@
     <div class="small text-muted mb-2">{{ _h("Quantas peças o tipo usa <b>por módulo</b> (montantes, colunas, bases) e <b>por nível</b> (longarinas, prateleiras, braços, pistas). Ex.: porta-palete = 2 quadros de montantes por módulo + 2 longarinas por nível. Uma estrutura de N níveis usa as peças por módulo + N × as peças por nível.") }} <a href="/structure-pieces/new?back={{ request.url.path|urlencode }}">{{ _("Cadastrar peça") }}</a></div>
     {% if errors.get('composition') %}<div class="alert alert-danger py-1 small">{{ errors.get('composition') }}</div>{% endif %}
     <table class="table table-sm align-middle" id="compTable" style="max-width:720px">
-      <thead><tr><th>{{ _("Peça") }}</th><th style="width:120px" class="text-end">{{ _("Quantidade") }}</th><th style="width:170px">{{ _("Por") }}</th><th style="width:40px"></th></tr></thead>
+      <thead><tr><th>{{ _("Peça") }}</th><th style="width:110px" class="text-end">{{ _("Quantidade") }}</th><th style="width:150px">{{ _("Por") }}</th>
+        <th style="width:150px" title="{{ _("Cor da peça no 3D. Vazio = a cor do modelo (biblioteca ou código da IA). Ao colar o código da IA, as cores que ela identificou na foto entram aqui.") }}">{{ _("Cor no 3D") }}</th><th style="width:40px"></th></tr></thead>
       <tbody>
-      {% for pid, q, per in (data.get('composition') or []) + [(none, none, 'module')] %}
+      {% for pid, q, per, col in (data.get('composition') or []) + [(none, none, 'module', none)] %}
         <tr class="cp-row">
           <td><select class="form-select form-select-sm" name="cp_piece"><option value="">—</option>
-            {% for p in pieces %}<option value="{{ p.id }}" {% if pid == p.id %}selected{% endif %}>{{ p.code }} — {{ p.name }}{% if p.cost is not none %} (R$ {{ p.cost|dec(2) }}){% endif %}</option>{% endfor %}</select></td>
+            {% for p in pieces %}<option value="{{ p.id }}" data-code="{{ p.code }}" data-name="{{ p.name }}" {% if pid == p.id %}selected{% endif %}>{{ p.code }} — {{ p.name }}{% if p.cost is not none %} (R$ {{ p.cost|dec(2) }}){% endif %}</option>{% endfor %}</select></td>
           <td><input class="form-control form-control-sm text-end" name="cp_qty" inputmode="decimal" value="{{ q|dec_input if q is not none else '' }}"></td>
           <td><select class="form-select form-select-sm" name="cp_per">{% for k, lbl in PER.items() %}<option value="{{ k }}" {% if per == k %}selected{% endif %}>{{ _(lbl) }}</option>{% endfor %}</select></td>
+          <td><div class="input-group input-group-sm">
+            <input type="color" class="form-control form-control-color cp-pick" name="cp_pick" value="{{ col or '#8a96a0' }}" title="{{ _("Escolher a cor") }}" {% if not col %}style="opacity:.35"{% endif %}>
+            <input class="form-control mono cp-color" name="cp_color" value="{{ col or '' }}" maxlength="7" placeholder="{{ _("modelo") }}"></div></td>
           <td><button type="button" class="btn btn-sm btn-outline-danger cp-del" title="{{ _("Tirar da composição") }}"><i class="bi bi-x-lg"></i></button></td>
         </tr>
       {% endfor %}
@@ -77,14 +81,23 @@
   document.getElementById('cpAdd').addEventListener('click', () => {
     const last = tb.querySelector('.cp-row:last-child'), row = last.cloneNode(true);
     row.querySelectorAll('select[name=cp_piece]').forEach(s => { s.value = ''; });
-    row.querySelectorAll('input').forEach(i => { i.value = ''; });
+    row.querySelectorAll('input').forEach(i => { i.value = i.type === 'color' ? '#8a96a0' : ''; });
+    row.querySelectorAll('.cp-pick').forEach(i => { i.style.opacity = '.35'; });
     tb.appendChild(row);
+  });
+  // cor da peça: o seletor e o texto (#rrggbb, vazio = a cor do modelo) andam juntos
+  tb.addEventListener('input', e => {
+    const tr = e.target.closest('tr'); if (!tr) return;
+    const pick = tr.querySelector('.cp-pick'), txt = tr.querySelector('.cp-color');
+    if (e.target === pick) { txt.value = pick.value; pick.style.opacity = '1'; }
+    else if (e.target === txt && /^#[0-9a-f]{6}$/i.test(txt.value)) { pick.value = txt.value; pick.style.opacity = '1'; }
+    else if (e.target === txt && !txt.value) pick.style.opacity = '.35';
   });
   tb.addEventListener('click', e => {
     const b = e.target.closest('.cp-del'); if (!b) return;
     const rows = tb.querySelectorAll('.cp-row');
     if (rows.length > 1) b.closest('tr').remove();
-    else b.closest('tr').querySelectorAll('select, input').forEach(x => { x.value = x.name === 'cp_per' ? 'module' : ''; });
+    else b.closest('tr').querySelectorAll('select, input').forEach(x => { x.value = x.name === 'cp_per' ? 'module' : (x.type === 'color' ? '#8a96a0' : ''); });
   });
 })();
 </script>

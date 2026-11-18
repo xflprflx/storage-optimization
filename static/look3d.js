@@ -40,6 +40,7 @@ export function material(p) {
 
 // cor da peça: as "tingidas" levam a cor da vista; sem nenhuma tingida, todas puxam um pouco para ela
 export function partColor(p, look, viewColor, out) {
+  if (look.solid) return out.set(p.c || '#8a96a0');  // estrutura: as cores reais de cada peça
   if (p.t) return out.copy(viewColor);
   out.set(p.c || '#8a96a0');
   return look.tint ? out : out.lerp(viewColor, 0.35);

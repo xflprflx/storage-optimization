@@ -343,6 +343,9 @@ def normalize(obj, structure: bool = False, clamp: bool = False) -> tuple[Option
                 part["t"] = 1
             if lvl:
                 part["l"] = 1
+            pc = str(p.get("piece") or "").strip().upper()[:30]
+            if pc:
+                part["pc"] = pc  # peça da estrutura (código da composição; "@FRAME"/"@LEVEL" nos modelos da biblioteca)
             rep = p.get("repeat")
             n, dx, dy, dz = 1, 0.0, 0.0, 0.0
             if isinstance(rep, dict):
@@ -376,6 +379,8 @@ class _Kit:
         if "rep" in kw:
             n, dx, dy, dz = kw.pop("rep")
             p["repeat"] = {"count": n, "dx": dx / self.W, "dy": dy / self.H, "dz": dz / self.D}
+        if not kw.pop("detail", False):  # armação ou o que se repete por nível: leva a cor da peça da composição
+            p["piece"] = "@level" if kw.get("each_level") else "@frame"
         p.update(kw)
         self.parts.append(p)
         return self
@@ -537,12 +542,12 @@ def _cold_room(w, h, d):
     k.box(0, 0, 0, t, h, d, panel, opacity=0.35).box(w - t, 0, 0, t, h, d, panel, opacity=0.35)
     k.box(0, 0, d - t, w, h, t, panel, opacity=0.35)
     k.box(0, h - t, 0, w, t, d, panel, opacity=0.3)
-    k.box(t, 0, 0, w * 0.45 - t, h - t, 2, "#dfe6ea", opacity=0.55)  # porta
-    k.box(w * 0.45 - 3, h * 0.45, -0.5, 2, 12, 1, DARK)  # puxador
+    k.box(t, 0, 0, w * 0.45 - t, h - t, 2, "#dfe6ea", opacity=0.55, detail=True)  # porta
+    k.box(w * 0.45 - 3, h * 0.45, -0.5, 2, 12, 1, DARK, detail=True)  # puxador
     strips = 8
     sw = (w * 0.55 - t) / strips
-    k.box(w * 0.45, 0, 0, sw * 0.9, h - t, 0.5, "#a8d8f0", opacity=0.35, rep=(strips, sw, 0, 0))  # cortina de tiras
-    k.box(w * 0.2, h - t - 25, d - 32, w * 0.6, 25, 30, "#9aa5ad")  # evaporador
+    k.box(w * 0.45, 0, 0, sw * 0.9, h - t, 0.5, "#a8d8f0", opacity=0.35, rep=(strips, sw, 0, 0), detail=True)  # cortina de tiras
+    k.box(w * 0.2, h - t - 25, d - 32, w * 0.6, 25, 30, "#9aa5ad", detail=True)  # evaporador
     k.box(0, -2.5, 0, w, 2.5, d, "#b8c0c6", each_level=True)  # prateleiras
     return k.done()
 
@@ -620,6 +625,46 @@ def look_of(kind: str, model: str, appearance, dims: tuple, *texts: str) -> Opti
     return look
 
 
+def piece_colors(appearance) -> dict[str, str]:
+    """Cor de cada peça da estrutura no código da IA: {código da peça: cor da 1ª parte dela}."""
+    out: dict[str, str] = {}
+    for p in (appearance or {}).get("parts") or []:
+        if isinstance(p, dict):
+            pc = str(p.get("piece") or "").strip().upper()
+            col = str(p.get("color") or "").strip().lower()
+            if pc and not pc.startswith("@") and _HEX.match(col):
+                out.setdefault(pc, col)
+    return out
+
+
+def apply_piece_colors(look: Optional[dict], comp: list) -> Optional[dict]:
+    """Cores das peças (composição do tipo: [(código, "module"|"level", cor ou None)]) nas partes do desenho: a parte
+    marcada com o código da peça leva a cor dela; nos modelos da biblioteca, a armação leva a cor da 1ª peça por
+    módulo com cor e o que se repete por nível, a da 1ª peça por nível. Estrutura: cores reais, sem tingir pela vista."""
+    if look is None:
+        return None
+    by_code = {str(c).upper(): col for c, _per, col in comp if col}
+    frame = next((col for _c, per, col in comp if col and per == "module"), None)
+    level = next((col for _c, per, col in comp if col and per == "level"), None)
+    parts = []
+    for p in look["parts"]:
+        q = {k: v for k, v in p.items() if k != "t"}
+        pc = p.get("pc")
+        col = by_code.get(pc) if pc else None
+        if col is None and pc == "@FRAME":
+            col = frame
+        elif col is None and pc == "@LEVEL":
+            col = level
+        if col:
+            q["c"] = col
+        parts.append(q)
+    return {**look, "parts": parts, "tint": False, "solid": True}
+
+
+def kind_comp_colors(kind) -> list:
+    return [(p.piece.code, p.per, p.color) for p in (kind.pieces if kind is not None else []) if p.piece is not None]
+
+
 def bin_look(bt) -> Optional[dict]:
     return look_of("bin", bt.look_model or "", bt.appearance, (bt.width, bt.height, bt.length), bt.name, bt.code)
 
@@ -627,8 +672,9 @@ def bin_look(bt) -> Optional[dict]:
 def struct_look(st, kind=None) -> Optional[dict]:
     """Aparência da estrutura: a do TIPO de estrutura (modelo da biblioteca ou código), nas medidas da estrutura."""
     src = kind if kind is not None else st
-    return look_of("struct", src.look_model or "", src.appearance, (st.width, st.height, st.depth),
+    look = look_of("struct", src.look_model or "", src.appearance, (st.width, st.height, st.depth),
                    kind.name if kind is not None else st.kind, st.name)
+    return apply_piece_colors(look, kind_comp_colors(kind))
 
 
 def enrich(db, data: dict) -> dict:
@@ -685,11 +731,15 @@ def prompt(kind: str) -> str:
         "- shape: \"box\" (caixa) ou \"cylinder\" (cilindro, com \"axis\": \"x\", \"y\" ou \"z\" = direção do eixo; "
         "padrão \"y\").\n"
         "- color: a cor real da peça, em hexadecimal. \"opacity\" (0.1 a 1) para peças transparentes ou translúcidas.\n"
-        "- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da informação "
-        "exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n"
         "- \"repeat\": {\"count\": n, \"dx\": 0.1, \"dy\": 0, \"dz\": 0} repete a peça n vezes, deslocando a cada cópia "
         "(use para ripas, grades, barras, gavetas).\n")
+    if kind != "struct":
+        base += _("- \"tint\": true nas peças do corpo principal ou da carga: o software pinta essas peças com a cor da "
+                  "informação exibida (tipo, curva ABC, ocupação). Marque pelo menos uma.\n")
     if kind == "struct":
+        base += _("- Cada parte do desenho pertence a uma peça da estrutura: informe \"piece\" com o código dela, entre "
+                  "estas: {pieces}. Partes da mesma peça têm a mesma cor: use a cor real dessa peça na foto. Não use "
+                  "\"tint\".\n")
         base += _(
             "- É uma estrutura de armazenagem com {levels} níveis. \"each_level\": true repete a peça em cada nível "
             "(longarinas, prateleiras, braços); nesse caso y é medido a partir da base do nível (ex.: longarina logo "

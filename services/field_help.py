@@ -436,6 +436,8 @@ R(PSK, "floor", "Paletes no piso", "Tipo blocado: paletes direto no piso, empilh
 R(PSK, "cp_piece", "Peça", "A peça da composição (Cadastros → Peças de estrutura). A mesma peça pode estar em vários tipos: na recomposição, as peças liberadas de uma estrutura servem para montar outra.", "rack:levels")
 R(PSK, "cp_qty", "Quantidade", "Quantas peças o tipo usa por módulo ou por nível (ex.: 2 longarinas por nível).", "rack:levels")
 R(PSK, "cp_per", "Por", "Por módulo: montantes, colunas, bases (não mudam com o número de níveis). Por nível: longarinas, prateleiras, braços, pistas (uma estrutura de N níveis usa N vezes).", "rack:levels")
+R(PSK, "cp_color", "Cor no 3D", "A cor da peça no desenho 3D (#rrggbb). Ao colar o código da IA, as cores que ela identificou na foto entram aqui; ajuste se precisar. Vazio = a cor do modelo. Nos modelos da biblioteca, a armação usa a cor da 1ª peça por módulo e o que se repete por nível, a da 1ª peça por nível.", "rack:levels")
+R(PSK, "cp_pick", "Escolher a cor", "Abre o seletor de cor do navegador e preenche a cor da peça ao lado.", "rack:levels")
 R(PSK, "pitch_cm", "Passo da furação", "Distância entre os furos do montante, onde a longarina encaixa (ex.: 5 cm). Na recomposição, a base de cada nível fica num múltiplo dela. Vazio = qualquer altura.", "rack:levels")
 R(PSK, "beam_cm", "Espessura do nível", "Altura da longarina ou da prateleira: o que cada nível ocupa além do vão. Vazio = a sobra da altura total de cada estrutura, repartida entre os níveis.", "rack:levels")
 R(PSK, "notes", "Observações", "Texto livre sobre o tipo.", "tag:notes")

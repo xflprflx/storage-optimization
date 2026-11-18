@@ -65,18 +65,39 @@ function levels() {  // base de cada nível, como no servidor (StructureSpec.z)
   return vs.map((_, i) => hs.length ? base + vs.slice(0, i).reduce((a, b) => a + b, 0) + beam * i : base + i * pitch);
 }
 const pv = mountPreview($('lookPreview'));
+// composição de peças (tipo de estrutura): código, por módulo/nível e a cor de cada linha
+const compRows = () => [...form.querySelectorAll('.cp-row')].map(tr => {
+  const o = tr.querySelector('select[name=cp_piece]').selectedOptions[0];
+  return { tr, code: (o && o.dataset.code) || '', name: (o && o.dataset.name) || '', per: tr.querySelector('select[name=cp_per]').value,
+           perTxt: tr.querySelector('select[name=cp_per]').selectedOptions[0].textContent, color: tr.querySelector('.cp-color').value };
+}).filter(r => r.code);
+let colorsFrom = null;  // o código cujas cores já entraram na composição (não sobrescreve o que a pessoa ajustou depois)
 let timer = null, seq = 0;
 async function refresh() {
   const model = $('look_model').value, code = $('look_code').value;
   const my = ++seq;
   const kindName = inp('kind') ? (inp('kind').selectedOptions ? (inp('kind').selectedOptions[0] || {}).textContent : inp('kind').value) : (inp('name') || {}).value;
-  const body = { kind: KIND, model, code, ...shown(), name: HAS_DIMS ? (inp('name') || {}).value || '' : '', type: (kindName || '').trim() };
+  const body = { kind: KIND, model, code, ...shown(), name: HAS_DIMS ? (inp('name') || {}).value || '' : '', type: (kindName || '').trim(),
+                 pieces: compRows().map(r => ({ code: r.code, per: r.per, color: r.color })) };
   let r;
   try { r = await (await fetch('/appearance/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
   catch (e) { return; }
   if (my !== seq) return;
   $('lookErr').textContent = r.error || '';
-  $('lookNotes').textContent = r.notes && r.notes.length ? _t('Ajustado no código: {v}.', { v: r.notes.join('; ') }) : '';
+  const found = r.piece_colors || {}, notes = [];
+  if (r.notes && r.notes.length) notes.push(_t('Ajustado no código: {v}.', { v: r.notes.join('; ') }));
+  const got = compRows().filter(cr => found[cr.code.toUpperCase()]);
+  if (got.length && code !== colorsFrom) {  // a IA identificou a cor de cada peça: entra na composição (uma vez por código)
+    colorsFrom = code;
+    got.forEach(cr => {
+      const c = found[cr.code.toUpperCase()];
+      cr.tr.querySelector('.cp-color').value = c;
+      const pk = cr.tr.querySelector('.cp-pick'); pk.value = c; pk.style.opacity = '1';
+    });
+    later();  // a prévia com as cores que entraram na composição
+  }
+  if (got.length) notes.push(_t('Cores identificadas pela IA nas peças: {v}.', { v: got.map(cr => cr.code).join(', ') }));
+  $('lookNotes').textContent = notes.join(' ');
   const box = $('lookMsg');
   if (r.error) {  // o código não entrou: diz por cima da prévia, para não parecer que nada aconteceu
     box.className = 'position-absolute top-0 start-0 end-0 m-2 small rounded px-2 py-1 bg-danger-subtle text-danger-emphasis border border-danger-subtle';
@@ -107,6 +128,8 @@ $('lookPrompt').addEventListener('click', async () => {
   const put = (t, key, v) => r1(v) ? t.replaceAll(key, r1(v)) : t.replaceAll(key + ' cm', NA).replaceAll(key, NA);
   let text = $('lookPromptText').value;
   text = put(put(put(text, '{w}', d.w), '{h}', d.h), '{d}', d.d).replaceAll('{levels}', n ? String(n) : _t('(conforme a foto)'));
+  const pcs = compRows().map(r => `${r.code} (${r.name}, ${r.perTxt})`);
+  text = text.replaceAll('{pieces}', pcs.length ? pcs.join('; ') : _t('(nenhuma peça na composição: descreva as peças pelo nome, ex.: montante, longarina)'));
   const warn = missing().length && HAS_DIMS ? ' ' + _t('Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.') : '';
   try { await navigator.clipboard.writeText(text); $('lookCopied').textContent = _t('Prompt copiado: cole no chat de IA junto com a foto.') + warn; }
   catch (e) { $('lookPromptText').classList.remove('d-none'); $('lookPromptText').select(); $('lookCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }

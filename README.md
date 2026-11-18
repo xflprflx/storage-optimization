@@ -635,7 +635,12 @@ tem:
 - **paletes no piso** (blocado): desenhado e calculado como o antigo "Palete no chão";
 - **passo da furação** e **espessura do nível** (opcionais), usados para reespaçar os níveis;
 - **aparência no 3D**: modelo da biblioteca ou código gerado por IA. A aparência saiu do cadastro de estrutura e vale
-  para todas as estruturas do tipo.
+  para todas as estruturas do tipo;
+- **cor de cada peça** (coluna *Cor no 3D* da composição). O prompt da IA lista as peças da composição e pede, em cada
+  parte do desenho, a peça (`"piece"`) e a cor real dela na foto. Ao colar o código, as cores identificadas entram na
+  composição, e você pode ajustar. Nos modelos da biblioteca, a armação leva a cor da peça por módulo e o que se repete
+  por nível leva a da peça por nível. No 3D, a estrutura aparece com essas cores reais; quem leva a cor da vista
+  (tipo, ABC, ocupação) são as bins.
 
 No cadastro de **estrutura**, o tipo vem dos tipos cadastrados; as medidas e os níveis continuam ali. Bancos antigos
 ganham os tipos e as peças padrão (sem custo) ao iniciar. As estruturas são ligadas ao tipo pelo nome, e a aparência

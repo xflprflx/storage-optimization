@@ -524,6 +524,7 @@ class StructureKindPiece(Base):
     piece_id: Mapped[int] = mapped_column(ForeignKey("structure_pieces.id", ondelete="RESTRICT"), nullable=False, index=True)
     qty: Mapped[Decimal] = mapped_column(DecimalType(4), nullable=False)
     per: Mapped[str] = mapped_column(String(10), nullable=False, default="module", server_default="module")
+    color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)  # cor da peça no 3D (#rrggbb)
 
     kind: Mapped["StructureKind"] = relationship(back_populates="pieces")
     piece: Mapped["StructurePiece"] = relationship()

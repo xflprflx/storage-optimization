@@ -182,3 +182,55 @@ def test_pasted_code_previews_even_before_the_measurements(client):
     assert look_of("bin", "pallet", None, (None, None, None))["model"] == "pallet"  # biblioteca: idem
     pv = client.post("/appearance/preview", json={"kind": "struct", "model": "", "code": code, "w": "", "h": "", "d": ""}).json()
     assert pv["look"] and len(pv["look"]["parts"]) == 17 and not pv["error"] and pv["model"] == CUSTOM
+
+
+def test_piece_colors_from_the_ai_and_the_register(client, db):
+    """Cada peça da composição tem cor (cadastro); a IA marca cada parte do desenho com a peça ("piece") e a cor real;
+    no 3D a estrutura usa essas cores (sem tingir pela vista)."""
+    from models import StructureKind, StructurePiece, StructureType
+    from services.appearance import piece_colors, struct_look
+    from services.structure_kinds import kind_of
+
+    client.post("/structure-pieces/new", data={"code": "CL-MONT", "name": "Montante CL"})
+    client.post("/structure-pieces/new", data={"code": "CL-LONG", "name": "Longarina CL"})
+    mont, long_ = (db.query(StructurePiece).filter_by(code=c).one() for c in ("CL-MONT", "CL-LONG"))
+    # prompt de estrutura: pede o código e a cor de cada peça, não o "tint"
+    p = prompt("struct")
+    assert "{pieces}" in p and '"piece"' in p and "Marque pelo menos uma" not in p and "Marque pelo menos uma" in prompt("bin")
+    # cor inválida na composição: recusada
+    bad = client.post("/structure-kinds/new", data={"name": "PP CL", "cp_piece": [str(mont.id)], "cp_qty": ["2"],
+                                                    "cp_per": ["module"], "cp_color": ["azul"]})
+    assert bad.status_code == 422 and "#rrggbb" in bad.text
+    r = client.post("/structure-kinds/new", data={"name": "PP CL", "look_model": "rack",
+                                                  "cp_piece": [str(mont.id), str(long_.id)], "cp_qty": ["2", "2"],
+                                                  "cp_per": ["module", "level"], "cp_color": ["#FFCC00", ""]},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    k = db.query(StructureKind).filter_by(name="PP CL").one()
+    assert [(p_.piece.code, p_.color) for p_ in k.pieces] == [("CL-MONT", "#ffcc00"), ("CL-LONG", None)]
+    st = StructureType(code="CL-PP", name="PP CL", kind=k.name, kind_id=k.id, width=270, depth=110, height=500,
+                       levels=4, level_height=110)
+    db.add(st)
+    db.commit()
+    look = struct_look(st, kind_of(db, st))
+    assert look["solid"] and not any(p_.get("t") for p_ in look["parts"])
+    frame = {p_["c"] for p_ in look["parts"] if p_.get("pc") == "@FRAME"}
+    level = {p_["c"] for p_ in look["parts"] if p_.get("pc") == "@LEVEL"}
+    assert frame == {"#ffcc00"} and level == {"#e8772e"}  # longarina sem cor: a do modelo
+    # código da IA com a peça e a cor de cada parte: a cor é identificada; a da composição manda no desenho
+    code = {"parts": [{"x": 0, "y": 0, "z": 0, "w": 0.05, "h": 1, "d": 1, "color": "#1E4D8C", "piece": "cl-mont"},
+                      {"x": 0, "y": -0.04, "z": 0, "w": 1, "h": 0.04, "d": 0.05, "color": "#F07F1A", "piece": "CL-LONG",
+                       "each_level": True},
+                      {"x": 0.4, "y": 0, "z": 0, "w": 0.2, "h": 0.2, "d": 0.01, "color": "#ffffff"}]}
+    assert piece_colors(code) == {"CL-MONT": "#1e4d8c", "CL-LONG": "#f07f1a"}
+    pv = client.post("/appearance/preview", json={"kind": "struct", "model": "custom", "code": json.dumps(code),
+                                                  "w": 270, "h": 500, "d": 110,
+                                                  "pieces": [{"code": "CL-MONT", "per": "module", "color": "#ffcc00"},
+                                                             {"code": "CL-LONG", "per": "level", "color": ""}]}).json()
+    assert pv["piece_colors"] == {"CL-MONT": "#1e4d8c", "CL-LONG": "#f07f1a"}
+    cols = [p_["c"] for p_ in pv["look"]["parts"]]
+    assert cols == ["#ffcc00", "#f07f1a", "#ffffff"] and pv["look"]["solid"]
+    page = client.get(f"/structure-kinds/{k.id}/edit").text
+    assert 'name="cp_color" value="#ffcc00"' in page and 'data-code="CL-MONT"' in page
+    db.delete(db.get(StructureType, st.id))
+    db.commit()

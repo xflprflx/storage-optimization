@@ -1,6 +1,6 @@
-# Neokioski — Gestão de Estoque
+# Neokioski — Gestão e otimização de armazenagem
 
-Sistema web local para gestão física de depósitos, mapa visual do estoque e otimização de armazenagem em bins. Desenvolvido com FastAPI, Jinja2 e SQLite.
+Sistema web local para gestão física de depósitos, mapa visual do estoque e otimização de armazenagem em bins: escolha das bins de cada endereço (Por endereço e Pool), posição dos produtos pela saída, projeto de filiais novas, planta desenhada, simulador de trajeto e vista 3D. Desenvolvido com FastAPI, Jinja2, SQLite e OR-Tools (CP-SAT).
 
 ## 🚀 Como rodar
 
@@ -66,7 +66,8 @@ flowchart TD
     E --> F(5. Capacidade dos Níveis)
     F --> G(6. Produtos / SKUs)
     G --> H(7. Saldos em Estoque)
-    H --> I([Fim: Sistema Populado])
+    H --> J(8. Histórico de pedidos — opcional)
+    J --> I([Fim: Sistema Populado])
 
     style B fill:#f9f,stroke:#333,stroke-width:2px
     style C fill:#f9f,stroke:#333,stroke-width:2px
@@ -76,6 +77,8 @@ flowchart TD
     style G fill:#fbf,stroke:#333,stroke-width:2px
     style H fill:#fbf,stroke:#333,stroke-width:2px
 ```
+
+As importações ficam em **Importações** (`/imports`), na mesma ordem. O histórico de pedidos só é preciso para a posição pela saída e o simulador de trajeto (ver 6.0.1 e 6.1). Estruturas, tipos de estrutura e peças são cadastrados na tela ou vêm na planilha do projeto de filial nova.
 
 *Nota: Ao sincronizar dados na importação, os registros que não constarem na nova planilha e que não estiverem em uso serão removidos automaticamente.*
 
@@ -188,7 +191,7 @@ flowchart TD
     G --> I[Gerar cadastro da filial\nníveis, capacidades, endereços e bins]
 ```
 
-- **Estruturas** (`Cadastros → Estruturas de armazenagem`): cada módulo tem frente útil, profundidade, altura total, nº de níveis, vão útil por nível, carga por nível e custo.
+- **Estruturas** (`Cadastros → Estruturas de armazenagem`): cada módulo tem tipo, frente útil, profundidade, altura total, nº de níveis, vão útil por nível, carga por nível e custo. O tipo de estrutura (ver 6.0.9) traz a composição de peças, a aparência no 3D, a condição de armazenagem e a porta (ver 6.0.10).
 - **Zonas** (opcional): áreas com orientação de fileiras, largura de corredor, corredores transversais e estruturas permitidas próprias. Há dois modos:
   - **Posicionadas por X/Y:** cada zona é um retângulo em qualquer lugar do imóvel, como um obstáculo (X, Y, comprimento em X, largura em Y; largura vazia = até a parede), e o espaço entre as zonas é a circulação. Uma fileira pode ficar de frente para a borda da zona, e a ponta recebe cabeceira, quando do lado de fora há ao menos um corredor livre (sem parede, outra zona ou obstáculo). Zonas sobrepostas ou fora do imóvel são recusadas com mensagem clara.
   - **Empilhadas:** sem X/Y, as zonas são faixas ao longo do comprimento a partir da frente (docas), separadas por **avenidas** transversais.
@@ -286,7 +289,7 @@ flowchart TD
   - **Filtros e cortes:** filtro por corredor e corte por altura, para ver os níveis de dentro.
   - **Busca e seleção:** busca por SKU ou endereço (destaca as bins). Clicar numa bin mostra o endereço, o SKU, o tipo de bin, a ocupação e a estante.
   - **Exibição:** liga/desliga bins, estruturas e paredes, e vistas 3D, de cima e de frente.
-  - **Simular caminhada:** anima a separação de um pedido da aba Pedidos (ver 6.0.1) e grava em vídeo. **Tela cheia** no canto da vista.
+  - **Simular caminhada:** anima a separação de um pedido ou de um dia da aba Pedidos (ver 6.0.1), com até 4 separadores (lista, serpentina, otimizada e lote), e grava em vídeo. **Tela cheia** no canto da vista.
   - **Navegação:** a roda aproxima em direção ao ponto sob o mouse. Perto do alvo, o zoom continua avançando dentro do imóvel, e a câmera não atravessa o piso. O duplo clique centraliza a câmera no ponto clicado.
 
   Usa Three.js (CDN jsdelivr, versão fixa). Lógica da geometria em `services/site_3d.py`.
@@ -333,8 +336,8 @@ A origem também fica nos resultados salvos (lista, detalhe e comparação). O l
 ## 6. Telas em passo a passo
 
 As telas de otimização (Por endereço, Pool e Projeto de filial nova) mostram uma etapa por vez:
-- **Por endereço e Pool:** Escopo → O que otimizar → Restrições.
-- **Projeto de filial nova:** Imóvel → Zonas e circulação → Estruturas → Demanda → Bins e regras → Objetivo.
+- **Por endereço e Pool:** Escopo → O que otimizar → Posição pela saída → Restrições.
+- **Projeto de filial nova:** Imóvel → Zonas e circulação → Estruturas → Demanda → Bins e regras → Posição dos SKUs → Objetivo.
 
 A barra de etapas é clicável, há botões Anterior/Próximo e a etapa atual é lembrada durante a sessão. Se faltar um campo obrigatório numa etapa escondida, a tela abre essa etapa. Depois de rodar, a tela abre na última etapa, com o resultado logo abaixo. O componente é genérico (`data-stepper` + `.nk-step` em `templates/base.html`).
 
@@ -356,7 +359,7 @@ Fica em `/optimization/site/{id}/routes` no projeto (link no cartão *Posição 
 
 **Data do pedido e simulação de um dia inteiro:** a aba Pedidos aceita a coluna **Data** (opcional; AAAA-MM-DD, DD/MM/AAAA, DD.MM.AAAA ou, em inglês, MM/DD/AAAA). Com ela, a amostra guarda **dias inteiros** (do mais recente para trás, até 3.000 pedidos; dias com mais de 5.000 pedidos ficam fora) e o simulador mostra o cartão **Simulação por dia**: para cada dia, pedidos, linhas, peças, quilômetros e **horas de separação** nas três rotas e o ganho da otimizada. Clicar no dia filtra a lista de pedidos; **Simular o dia em 3D** abre a caminhada com todos os pedidos do dia em sequência (um separador por rota, saindo e voltando à referência a cada pedido; o painel mostra em que pedido ele está). Na caminhada 3D, *Simular: um pedido / um dia inteiro* troca entre os dois modos. Sem a coluna Data, a amostra continua sendo de pedidos sorteados (só a simulação por pedido). Históricos enviados antes desta versão precisam ser importados de novo para ter as datas — exceto nos **projetos criados a partir de um exemplo**: ao iniciar, o app reconhece o exemplo (pelos pedidos ou pelos códigos dos SKUs) e reimporta a aba Pedidos dele com as datas, sem mexer no resto do projeto (`site_examples.refresh_example_orders`).
 
-Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o mais perto da referência) e volta. São três rotas no mesmo plano:
+Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o mais perto da referência) e volta. São três rotas no mesmo plano (a 4ª, **Lote**, junta vários pedidos num trajeto; ver *Separação em lote*):
 - **Lista:** na ordem dos endereços, como a lista de separação costuma sair. Mostra o efeito da numeração (por exemplo, a serpentina).
 - **Serpentina:** rota em S, com os corredores em ordem e alternando o sentido. São testadas as duas ordens dos corredores (do primeiro ao último ou o contrário) e os dois sentidos de entrada no primeiro, e fica a de menor caminhada: o separador entra e sai pela ponta que for melhor.
 - **Otimizada:** a melhor entre vizinho mais próximo + 2-opt e as outras duas.
@@ -367,7 +370,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 - respeita a **mão única** dos corredores marcados assim na planta da filial;
 - sem planta (filial existente sem desenho), a distância é a estimada pelo endereço.
 
-**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça** + itens fora da zona de ouro da pega × **s por item fora do ouro** + peças fora da zona de ouro × **s por peça fora do ouro**. Todos são editáveis na tela; os valores iniciais ficam em **Configurações → Simulação de separação** (de fábrica: 1 m/s, 10 s, 2 s, 5 s por item e 0 s por peça) e valem no simulador, na caminhada 3D, no resultado das otimizações (velocidade e fora do ouro do objetivo "Menor tempo" e da simulação hoje × proposta) e nos projetos novos. A velocidade do vídeo e a câmera iniciais da caminhada 3D também ficam lá. Mudar numa tela não altera o padrão; a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
+**Tempo:** tempo do pedido = caminhada ÷ velocidade + paradas × **tempo por parada** + peças × **tempo por peça** + itens fora da zona de ouro da pega × **s por item fora do ouro** + peças fora da zona de ouro × **s por peça fora do ouro** + o **tempo das portas** abertas (ver 6.0.10). Todos são editáveis na tela; os valores iniciais ficam em **Configurações → Simulação de separação** (de fábrica: 1 m/s, 10 s, 2 s, 5 s por item e 0 s por peça) e valem no simulador, na caminhada 3D, no resultado das otimizações (velocidade e fora do ouro do objetivo "Menor tempo" e da simulação hoje × proposta) e nos projetos novos. A velocidade do vídeo e a câmera iniciais da caminhada 3D também ficam lá. Mudar numa tela não altera o padrão; a tela mostra o tempo médio por pedido de cada rota, o tempo de pega e o total em horas.
 
 **Uma parada por módulo:** endereços do pedido no mesmo módulo (mesma estante, mesmo ponto de parada) são **uma parada**: o separador não sai e volta, e o tempo fixo da parada conta uma vez (as peças e os itens fora do ouro de todos os endereços somam). A zona de ouro da pega de cada endereço vem da estrutura da estante e do nível onde as bins estão de fato (nível extra, excedente ou, no endereço genérico da estante, os níveis que as bins ocupam).
 
@@ -375,7 +378,7 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 
 **Caminhada em 3D e vídeo** (botão *Ver caminhada em 3D / gravar vídeo* no simulador ou *Simular caminhada* no Arranjo 3D; dados em `/optimization/site/{id}/routes3d.json`):
 - **Separadores animados:** um boneco com carrinho anda pelos corredores, para em cada endereço e pega o produto. As bins do endereço se acendem na cor de quem pegou.
-- **Rotas:** uma rota (lista, serpentina ou otimizada) ou **as três ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
+- **Rotas:** uma rota (lista, serpentina, otimizada ou lote) ou **as quatro ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
 - **Painel:** distância percorrida, paradas feitas, **peças pegas / total** e tempo de cada rota; no topo, linhas, paradas e peças do pedido. A lista de paradas risca as já feitas. O tempo de caminhada do vídeo usa a mesma distância da simulação (a do painel).
 - **Corredores:** o filtro *Corredor* do 3D aceita **vários corredores** (marque um ou mais; *Todos* limpa, *Inverter* troca a seleção).
 - **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças + **fora do ouro** (s) × itens fora da zona de ouro da pega, todos editáveis. Cada parada (um módulo) dura o tempo fixo mais as peças e os itens fora do ouro dos endereços dela; a lista de paradas e o painel ("pegando …") mostram **todos os endereços** do módulo, as peças, os itens fora do ouro e o tempo de cada uma, e as bins de todos os endereços da parada se acendem. Também há o campo *Fora do ouro (s/peça)*.
@@ -428,6 +431,17 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
   trabalho liberado na hora), os dias mais e menos ociosos e recomendações em texto (janelas ociosas, fila, horário
   mais carregado, folga da equipe e o efeito do lote).
 
+## 6.0.2 Resultados salvos e comparação
+
+Cada execução de otimização fica guardada (tabela `optimization_runs`): Por endereço, Pool e Projeto de filial nova. Ficam os parâmetros, os indicadores (antes → depois, ou o valor no projeto), as situações e os detalhes (linhas da tabela, até 3.000; no projeto também estruturas e bins).
+- **Sem duplicar:** a mesma execução (mesmos parâmetros e os mesmos dados de entrada) não é repetida; paginar ou ordenar a tela não cria outro registro.
+- **Aba Resultados salvos** (`/optimization/runs`):
+  - filtro por modo, filial e texto;
+  - nome/observação em cada resultado;
+  - Excel (indicadores, detalhes e parâmetros), reabrir com os mesmos parâmetros e excluir.
+- **Comparar:** marque dois ou mais resultados. A tela mostra os indicadores lado a lado, com a diferença em relação ao 1º (verde = melhor, vermelho = pior), e a tabela dos parâmetros que mudaram.
+- **Após rodar:** a própria tela do resultado mostra "Resultado salvo como nº …" com o link para comparar.
+
 ## 6.0.3 Planta desenhada das filiais existentes
 
 O cadastro de uma filial tem só os endereços. A **Planta da filial** (`/layout/plan`, botão no *Mapa do estoque* e na etapa *Posição pela saída*) diz onde cada estante fica, vista de cima. Fica salva por filial + armazém (tabela `branch_layouts`).
@@ -476,70 +490,18 @@ O painel *Situação* lista as estantes que ficaram **fora da planta** e as que 
   - a distância entre os itens que saem juntos também;
   - os campos de corredor de referência e distâncias passam a valer só para estantes fora da planta;
   - o resultado mostra "referência da planta".
-- **Simulador de trajeto da filial:** mede pelo menor caminho na planta (corredores, contornando fileiras e obstáculos, com a mão única) e desenha as três rotas do pedido escolhido, com as paradas numeradas. SKUs sem saldo usam os endereços atribuídos (saldo zero), como na filial recém-criada pelo projeto.
+- **Simulador de trajeto da filial:** mede pelo menor caminho na planta (corredores, contornando fileiras e obstáculos, com a mão única) e desenha as rotas do pedido escolhido, com as paradas numeradas. SKUs sem saldo usam os endereços atribuídos (saldo zero), como na filial recém-criada pelo projeto.
 - **Rótulos das ruas:** o nome da fileira vai para um lado livre (esquerda/direita ou acima/abaixo) — não fica escondido sob outra fileira ou obstáculo, nem fora do imóvel (editor, planta do simulador e 3D).
 - **3D da filial** (`/layout/plan/3d`): as bins de cada endereço ficam no **nível onde estão de fato** — o próprio, um **nível extra** escolhido no endereço ou o nível do **excedente** —, e as de um **endereço genérico da estante** (sem nível) preenchem a estante de baixo para cima. Cada estante na sua posição, com a frente e a **profundidade da estrutura cadastrada** (alinhada ao corredor; sem estrutura, a da fileira), os níveis com o **vão cadastrado de cada nível** (Capacidade dos níveis; a sobra da altura da estrutura vira a espessura das longarinas; sem vão, altura ÷ níveis) e as bins cadastradas em cada endereço, com as medidas do tipo de bin, lado a lado, na ordem das posições (bins que não cabem na profundidade aparecem sobrepostas). Tem as mesmas cores (tipo de bin, ocupação, estrutura, SKU, zonas de ouro, curva ABC pelo histórico), a **simulação de caminhada** e a **gravação em vídeo**.
 
 Obstáculos aparecem na planta e no 3D e **desviam o trajeto**. Remover a planta volta a estimar a caminhada pelo endereço.
 
-## 6.0.2 Resultados salvos e comparação
-
-Cada execução de otimização fica guardada (tabela `optimization_runs`): Por endereço, Pool e Projeto de filial nova. Ficam os parâmetros, os indicadores (antes → depois, ou o valor no projeto), as situações e os detalhes (linhas da tabela, até 3.000; no projeto também estruturas e bins).
-- **Sem duplicar:** a mesma execução (mesmos parâmetros e os mesmos dados de entrada) não é repetida; paginar ou ordenar a tela não cria outro registro.
-- **Aba Resultados salvos** (`/optimization/runs`):
-  - filtro por modo, filial e texto;
-  - nome/observação em cada resultado;
-  - Excel (indicadores, detalhes e parâmetros), reabrir com os mesmos parâmetros e excluir.
-- **Comparar:** marque dois ou mais resultados. A tela mostra os indicadores lado a lado, com a diferença em relação ao 1º (verde = melhor, vermelho = pior), e a tabela dos parâmetros que mudaram.
-- **Após rodar:** a própria tela do resultado mostra "Resultado salvo como nº …" com o link para comparar.
-
-## 6.1 Posição pela saída nos modos Por endereço e Pool
-
-A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.
-
-- **Histórico de saídas por filial:** envie uma planilha com a aba **Pedidos** (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna **Saída** — pela etapa *Posição pela saída*, por **Importações → 8. Histórico de pedidos** (`/imports/history`) ou pelo botão *Histórico de pedidos* da planta. Depois do envio, uma tela de **conferência** mostra o tipo, a aba e as colunas sugeridas (um `<select>` por campo) e a amostra da aba com as colunas marcadas: dá para trocar, por exemplo, "Código" por "Produto" como SKU antes de importar. Há a opção *Converter quantidades para valor absoluto*. O histórico fica salvo para a filial, só o resumo (tabela `pick_histories`), e pode ser substituído ou removido (também na tela de Importações).
-- **Caminhada estimada pelo endereço:** o sistema não tem a planta de uma filial existente, então a conta é: corredores de distância até o *corredor mais perto da expedição* × *distância entre corredores* + posição da estante no corredor × *frente da estante*. As estantes 01/02 ficam na ponta da expedição; ímpares de um lado e pares do outro.
-- **Zona de ouro:** vem da estrutura cadastrada na estante (início/fim em cm). Sem estrutura, vale o campo *Níveis de ouro* (ex.: 2,3). Um nível fora dela "custa" os metros informados.
-- **Pool:** os SKUs mais procurados por bin escolhem primeiro e, entre bins equivalentes, ficam nos endereços mais fáceis. Os itens C não disputam esses endereços, e quem sai junto fica perto do parceiro já posicionado. O objetivo do pool (menos bins, volume…) continua mandando: a posição pela saída entra como desempate antes da proximidade de hoje. Com a posição pela saída ligada, o pool usa o motor heurístico.
-- **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
-- **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
-
-
-**Simulação de separação no resultado (hoje × proposta):** com o histórico de pedidos da filial (aba Pedidos), o resultado de *Por endereço* e *Pool* traz o cartão **Simulação de separação: hoje × proposta**: os pedidos da amostra percorridos com os SKUs **onde estão hoje** (saldo) e **onde ficam na proposta** do solver (no Pool, as bins realocadas; no Por endereço, as trocas sugeridas). Mostra caminhada total, horas de separação e caminhada média por pedido, **por dia** (com a coluna Data no histórico) e **por pedido** (os 400 de maior diferença), na rota otimizada, na serpentina ou na lista de separação. O tempo usa a velocidade e o tempo fora da zona de ouro da etapa Posição pela saída (mais 10 s por parada e 2 s por peça); a distância é a mesma da posição pela saída (planta desenhada, quando houver, ou a estimada pelo endereço). Sem saldo no escopo (filial recém-criada) não há situação atual para comparar. **Em 3D:** com a planta da filial desenhada, o botão **Ver em 3D** (e o ícone em cada dia e em cada pedido) abre o Arranjo 3D da planta com **dois separadores** fazendo os mesmos pedidos — **Hoje** (vermelho), com os SKUs onde estão, e **Proposta** (verde), onde ficariam — na rota escolhida (otimizada, serpentina ou lista), um pedido ou o dia inteiro, com painel, tempos e gravação de vídeo. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam. A proposta fica guardada na memória do servidor (as últimas 30 otimizações): depois de reiniciar, rode a otimização de novo para abrir o 3D.
-## 6.0.6 Altura do 1º nível, vão por nível e palete no chão
-
-**Cadastro da estrutura** (Cadastros → Estruturas):
-- **Altura do 1º nível (cm):** a base do 1º nível a partir do piso (0 = no chão).
-- **Vão de cada nível (cm), de baixo para cima:** ex.: `60; 40; 35`. Os níveis sem vão informado usam o vão útil. A sobra da altura total (altura − 1º nível − soma dos vãos) vira a espessura das longarinas; o cadastro recusa quando o 1º nível + os vãos passam da altura. O desenho de frente do módulo mostra os níveis nas alturas reais.
-- **Tipo "Palete no chão":** paletes direto no piso, empilhados por nível (cada nível = uma camada), sem montantes nem longarinas.
-
-**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima) e a capacidade de cada nível pelo seu vão.
-
-**Onde vale:**
-- **3D** (projeto e filial): a base de cada nível sai da altura do 1º nível + vãos (+ longarinas); no palete no chão, um palete de madeira por camada e as bins em cima dele.
-- **Zona de ouro da pega:** o meio de cada nível na altura real (projeto, filial e posição pela saída).
-- **Projeto de filial nova:** cada tipo de bin só ocupa os níveis cujo vão comporta a bin + a folga (o solver e a distribuição dos tipos nos níveis respeitam), e os níveis criados na filial gerada recebem o vão de cada um. A planilha do projeto aceita as colunas *Altura do 1º nível (cm)* e *Vãos por nível (cm)* na aba Estruturas.
-- **Planta 2D:** módulos de palete no chão aparecem com as tábuas do palete (listras).
-
-## 6.0.5 Configurações de endereço e níveis extras
-
-**Cadastros → Configurações** (`/settings`):
-- **Ordenação dos números:** numérica (2, 3, 10) ou alfabética (10, 2, 3). Vale para o mapa, a planta, o 3D e a ordem da lista de separação no simulador (a ordem física dos níveis — mapa, 3D, vão e capacidade por nível, excedente — é sempre pelo número).
-- **Zeros à esquerda não diferenciam** (`07` = `7`, em qualquer parte do endereço): `F.07.01.01` e `F.7.01.02-A` ficam na mesma estante. Com a opção ligada, o cadastro recusa um endereço equivalente a um existente (e a hierarquia compara assim), e estantes/níveis são agrupados pelo código equivalente (estrutura, capacidade dos níveis, mapa, planta, 3D e posição pela saída). Os códigos gravados não mudam. As importações já reconheciam `07` = `7` ao procurar um endereço.
-
-**Bins em outro nível da estante:**
-1. o nível precisa existir: com endereços ou criado em *Capacidade dos níveis* (nível reservado, ou "criar níveis que faltam");
-2. em *Endereços → editar*, cada linha de bins tem a coluna **Nível**: o próprio ou um **nível extra** da mesma estante;
-3. o excedente da capacidade vai sozinho para o nível de cima, dedicado ao endereço.
-**Endereço genérico** é uma **marca no endereço** (caixa *Endereço genérico* no cadastro, coluna *Genérico* na importação de endereços, selo "genérico" na lista), qualquer que seja o código: o endereço não usa o próprio nível — cada linha de bins vai para o nível escolhido na coluna *Nível* ou, sem nível escolhido, as bins ocupam os níveis da estante de baixo para cima (3D, zona de ouro da pega e uso dos níveis seguem isso). Um endereço só até a estante (sem nível) se comporta do mesmo jeito.
-O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída e tempo do simulador) usam o nível onde as bins estão.
-
 ## 6.0.4 Exclusão em massa
 
-- **Cadastros** (Filiais, Armazéns, Tipos de bin, Estruturas, Produtos, Saldos e Projetos de filial nova): marque os itens (o checkbox do cabeçalho marca a página) e clique em *Excluir selecionados*; em Produtos e Saldos também *Excluir todos do filtro*. A tela seguinte mostra os **registros relacionados** (totais e por item) e a opção **Excluir também os relacionados**:
+- **Cadastros** (Filiais, Armazéns, Tipos de bin, Estruturas, Tipos de estrutura, Peças de estrutura, Produtos, Saldos e Projetos de filial nova): marque os itens (o checkbox do cabeçalho marca a página) e clique em *Excluir selecionados*; em Produtos e Saldos também *Excluir todos do filtro*. A tela seguinte mostra os **registros relacionados** (totais e por item) e a opção **Excluir também os relacionados**:
   - filial / armazém: endereços (com saldos e bins), níveis, estruturas das estantes, planta, políticas, histórico de pedidos e resultados de otimização;
   - tipo de bin: as bins desse tipo nos endereços, as frações filhas e as capacidades dos níveis;
-  - estrutura: a atribuição às estantes; produto: os saldos; projeto: os resultados guardados.
+  - estrutura: a atribuição às estantes; tipo de estrutura: as estruturas do tipo (bloqueio: exclua ou troque o tipo delas antes); peça: a composição dos tipos que a usam; produto: os saldos; projeto: os resultados guardados.
   Sem a opção, os itens com relacionados que impedem a exclusão ficam de fora e a mensagem diz quantos.
 - **Endereços:** *Excluir selecionados* ou *Excluir todos os filtrados*, com a opção de excluir também os **ocupados** (com os saldos; o endereço padrão dos produtos é recalculado).
 - **Resultados de otimização** (`/optimization/runs`): *Excluir selecionados* ou *Excluir todos do filtro* (modo, filial e busca).
@@ -550,6 +512,36 @@ O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída 
 - **Usuários** (só administradores): *Excluir selecionados* remove os usuários e as sessões deles. Você mesmo e o
   último administrador ativo nunca são excluídos (aparecem em vermelho na prévia, com o motivo). Para manter o
   histórico de acesso, prefira desativar.
+
+## 6.0.5 Configurações de endereço e níveis extras
+
+**Cadastros → Configurações** (`/settings`; também guarda os padrões da **Simulação de separação**: tempos, pedidos por trajeto do lote, espera para agrupar e vídeo/câmera da caminhada 3D):
+- **Ordenação dos números:** numérica (2, 3, 10) ou alfabética (10, 2, 3). Vale para o mapa, a planta, o 3D e a ordem da lista de separação no simulador (a ordem física dos níveis — mapa, 3D, vão e capacidade por nível, excedente — é sempre pelo número).
+- **Zeros à esquerda não diferenciam** (`07` = `7`, em qualquer parte do endereço): `F.07.01.01` e `F.7.01.02-A` ficam na mesma estante. Com a opção ligada, o cadastro recusa um endereço equivalente a um existente (e a hierarquia compara assim), e estantes/níveis são agrupados pelo código equivalente (estrutura, capacidade dos níveis, mapa, planta, 3D e posição pela saída). Os códigos gravados não mudam. As importações já reconheciam `07` = `7` ao procurar um endereço.
+
+**Bins em outro nível da estante:**
+1. o nível precisa existir: com endereços ou criado em *Capacidade dos níveis* (nível reservado, ou "criar níveis que faltam");
+2. em *Endereços → editar*, cada linha de bins tem a coluna **Nível**: o próprio ou um **nível extra** da mesma estante;
+3. o excedente da capacidade vai sozinho para o nível de cima, dedicado ao endereço.
+
+**Endereço genérico** é uma **marca no endereço** (caixa *Endereço genérico* no cadastro, coluna *Genérico* na importação de endereços, selo "genérico" na lista), qualquer que seja o código: o endereço não usa o próprio nível — cada linha de bins vai para o nível escolhido na coluna *Nível* ou, sem nível escolhido, as bins ocupam os níveis da estante de baixo para cima (3D, zona de ouro da pega e uso dos níveis seguem isso). Um endereço só até a estante (sem nível) se comporta do mesmo jeito.
+
+O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída e tempo do simulador) usam o nível onde as bins estão.
+
+## 6.0.6 Altura do 1º nível, vão por nível e palete no chão
+
+**Cadastro da estrutura** (Cadastros → Estruturas de armazenagem):
+- **Altura do 1º nível (cm):** a base do 1º nível a partir do piso (0 = no chão).
+- **Vão de cada nível (cm), de baixo para cima:** ex.: `60; 40; 35`. Os níveis sem vão informado usam o vão útil. A sobra da altura total (altura − 1º nível − soma dos vãos) vira a espessura das longarinas; o cadastro recusa quando o 1º nível + os vãos passam da altura. O desenho de frente do módulo mostra os níveis nas alturas reais.
+- **Paletes no piso:** estruturas de um tipo marcado com *Paletes no piso* (o tipo padrão "Palete no chão", ver 6.0.9) guardam paletes direto no piso, empilhados por nível (cada nível = uma camada), sem montantes nem longarinas.
+
+**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima) e a capacidade de cada nível pelo seu vão.
+
+**Onde vale:**
+- **3D** (projeto e filial): a base de cada nível sai da altura do 1º nível + vãos (+ longarinas); no palete no chão, um palete de madeira por camada e as bins em cima dele.
+- **Zona de ouro da pega:** o meio de cada nível na altura real (projeto, filial e posição pela saída).
+- **Projeto de filial nova:** cada tipo de bin só ocupa os níveis cujo vão comporta a bin + a folga (o solver e a distribuição dos tipos nos níveis respeitam), e os níveis criados na filial gerada recebem o vão de cada um. A planilha do projeto aceita as colunas *Altura do 1º nível (cm)* e *Vãos por nível (cm)* na aba Estruturas.
+- **Planta 2D:** módulos de palete no chão aparecem com as tábuas do palete (listras).
 
 ## 6.0.7 Proposta de rearranjo da disposição
 
@@ -580,7 +572,7 @@ pelo **trajeto dos pedidos** do histórico (`services/rearrange.py`). Nada muda 
 
 ## 6.0.8 Aparência 3D de bins e estruturas
 
-No cadastro de **tipos de bin** e de **estruturas**, a seção *Aparência no 3D* escolhe como o item é desenhado no 3D
+No cadastro de **tipos de bin** e de **tipos de estrutura** (ver 6.0.9), a seção *Aparência no 3D* escolhe como o item é desenhado no 3D
 (projeto de filial nova e planta das filiais). Só muda o desenho: otimização, capacidade e simulador usam as medidas.
 O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
 
@@ -619,7 +611,7 @@ O serviço fica em `services/appearance.py` e o desenho em `static/look3d.js`.
 - **Prévia** no próprio cadastro, atualizada a cada mudança, com o modelo automático escolhido.
 - **No 3D**, cada peça de um modelo é desenhada de uma vez para todos os itens (instancing). A frente do modelo fica
   voltada para o corredor. A opção **Aparência detalhada** volta ao desenho simples. Plantas com mais de 300 mil
-  peças abrem com ela desligada. O "Palete no chão" mantém o desenho próprio. O clique numa bin continua mostrando o
+  peças abrem com ela desligada. Os tipos com *Paletes no piso* mantêm o desenho próprio. O clique numa bin continua mostrando o
   endereço.
 
 ## 6.0.9 Tipos de estrutura, peças e recomposição das estruturas
@@ -712,6 +704,19 @@ dividida pelas folhas. A porta de giro varre, no corredor, um setor de círculo 
   pedido.
 - **3D**: o arco no piso e as folhas da porta, que abrem quando um separador para na estante.
 
+## 6.1 Posição pela saída nos modos Por endereço e Pool
+
+A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.
+
+- **Histórico de saídas por filial:** envie uma planilha com a aba **Pedidos** (pedido, SKU, quantidade, data opcional) ou uma lista de SKUs com a coluna **Saída** — pela etapa *Posição pela saída*, por **Importações → 8. Histórico de pedidos** (`/imports/history`) ou pelo botão *Histórico de pedidos* da planta. Depois do envio, uma tela de **conferência** mostra o tipo, a aba e as colunas sugeridas (um `<select>` por campo) e a amostra da aba com as colunas marcadas: dá para trocar, por exemplo, "Código" por "Produto" como SKU antes de importar. Há a opção *Converter quantidades para valor absoluto*. O histórico fica salvo para a filial, só o resumo (tabela `pick_histories`), e pode ser substituído ou removido (também na tela de Importações).
+- **Caminhada estimada pelo endereço:** o sistema não tem a planta de uma filial existente, então a conta é: corredores de distância até o *corredor mais perto da expedição* × *distância entre corredores* + posição da estante no corredor × *frente da estante*. As estantes 01/02 ficam na ponta da expedição; ímpares de um lado e pares do outro.
+- **Zona de ouro:** vem da estrutura cadastrada na estante (início/fim em cm). Sem estrutura, vale o campo *Níveis de ouro* (ex.: 2,3). Um nível fora dela "custa" os metros informados.
+- **Pool:** os SKUs mais procurados por bin escolhem primeiro e, entre bins equivalentes, ficam nos endereços mais fáceis. Os itens C não disputam esses endereços, e quem sai junto fica perto do parceiro já posicionado. O objetivo do pool (menos bins, volume…) continua mandando: a posição pela saída entra como desempate antes da proximidade de hoje. Com a posição pela saída ligada, o pool usa o motor heurístico.
+- **Por endereço:** os produtos ficam nos endereços, então o resultado sugere **trocas de endereço aos pares**. As trocas são entre endereços com um único SKU e exatamente as mesmas bins (sempre viáveis), e só quando o mais procurado ganha pelo menos 2 m. As trocas não são aplicadas automaticamente.
+- **Indicadores hoje → plano/trocas:** caminhada média por saída (ponderada pela popularidade; também a de uma posição ao acaso), saídas na zona de ouro e distância entre os pares que mais saem juntos.
+
+**Simulação de separação no resultado (hoje × proposta):** com o histórico de pedidos da filial (aba Pedidos), o resultado de *Por endereço* e *Pool* traz o cartão **Simulação de separação: hoje × proposta**: os pedidos da amostra percorridos com os SKUs **onde estão hoje** (saldo) e **onde ficam na proposta** do solver (no Pool, as bins realocadas; no Por endereço, as trocas sugeridas). Mostra caminhada total, horas de separação e caminhada média por pedido, **por dia** (com a coluna Data no histórico) e **por pedido** (os 400 de maior diferença), na rota otimizada, na serpentina ou na lista de separação. O tempo usa a velocidade e o tempo fora da zona de ouro da etapa Posição pela saída (o tempo por parada e por peça vem de **Configurações → Simulação de separação**); a distância é a mesma da posição pela saída (planta desenhada, quando houver, ou a estimada pelo endereço). Sem saldo no escopo (filial recém-criada) não há situação atual para comparar. **Em 3D:** com a planta da filial desenhada, o botão **Ver em 3D** (e o ícone em cada dia e em cada pedido) abre o Arranjo 3D da planta com **dois separadores** fazendo os mesmos pedidos — **Hoje** (vermelho), com os SKUs onde estão, e **Proposta** (verde), onde ficariam — na rota escolhida (otimizada, serpentina ou lista), um pedido ou o dia inteiro, com painel, tempos e gravação de vídeo. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam. A proposta fica guardada na memória do servidor (as últimas 30 otimizações): depois de reiniciar, rode a otimização de novo para abrir o 3D.
+
 ## 7. Estruturas de armazenagem nos depósitos existentes
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):
@@ -753,6 +758,16 @@ Para desenvolvedores:
   traduzidos, com os mesmos `{marcadores}` e tags;
 - resultados de otimização salvos guardam os textos no idioma em que foram gerados.
 
+## Guia e onboarding
+
+O menu **Guia** (barra do topo) tem:
+- **Tour desta tela:** destaca, passo a passo, os campos e botões da tela aberta, com o que fazer e o conceito por trás. Um ponto no botão *Guia* avisa quando a tela tem um tour ainda não visto;
+- **Guia passo a passo** (`/onboarding`): trilhas (explorar com um exemplo, cadastrar a operação, otimizar, posição pela saída e trajeto, planta e 3D). As etapas ficam marcadas conforme o cadastro avança, e o Painel convida para a próxima;
+- **Conceitos em linguagem simples:** glossário (endereço, bin, enchimento, objetivo, desempate, curva ABC, zonas de ouro…), com o link para o ponto da tela onde cada um aparece;
+- **Reiniciar o onboarding:** marca todos os tours como não vistos.
+
+O progresso é por usuário (ver *Acesso*). Para desenvolvedores: os tours, o glossário e as trilhas ficam em `services/onboarding.py`, e o tour no navegador em `static/onboarding.js`. Campo novo destacado num tour precisa existir na tela de exemplo do tour (`tests/test_onboarding.py`).
+
 ## Ajuda nos campos
 
 Todo campo de toda tela tem um cartão de ajuda: ao passar o mouse (ou focar o campo com o teclado) aparecem o nome, a explicação e um **desenho** com a parte de que o campo trata em destaque — por exemplo, a cota "1º nível" na estante, a coluna da planilha no mapeamento ou o corredor na planta.
@@ -764,19 +779,23 @@ Todo campo de toda tela tem um cartão de ajuda: ao passar o mouse (ou focar o c
 
 ## Testes
 
-```
+```bash
 pip install -r requirements-dev.txt
 python -m pytest tests
 ```
 
-Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `neokioski.db`).
+Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `neokioski.db`), e entram como administrador (`tests/conftest.py`). Além das regras de negócio, eles conferem que todo texto está traduzido (`test_i18n.py`), que todo campo tem ajuda (`test_field_help.py`) e que todo seletor dos tours existe na tela (`test_onboarding.py`).
 
 ## Estrutura do Projeto
 
-- `main.py` : Entrypoint FastAPI.
-- `database.py` : Motor SQLite + WAL, gerencia sessões e migrações transparentes.
-- `models/` e `services/` : Modelagem das entidades e regras de negócios (endereços, geração em lotes, cálculos físicos).
-- `routers/` e `templates/` : API REST / Views e os templates em Jinja2 (HTML/Bootstrap 5).
+- `main.py`: entrypoint FastAPI.
+- `database.py`: motor SQLite + WAL, sessões e migrações automáticas (tabelas e colunas novas, ajustes de dados na inicialização).
+- `models/`: entidades SQLAlchemy.
+- `services/`: regras de negócio (otimizadores, projeto de filial nova, planta, simulador, 3D, importações, i18n, ajuda dos campos, onboarding).
+- `routers/` e `templates/`: telas (Jinja2 + Bootstrap 5) e os endpoints JSON pontuais.
+- `static/`: JavaScript compartilhado (traduções, unidades, ajuda dos campos, tours, aparência 3D).
+- `locales/`: catálogos de tradução; `scripts/`: extração das traduções e geração das planilhas de exemplo.
+- `samples/`: planilhas de exemplo; `tests/`: testes automatizados.
 
 ## Importante: Atualizar para uma nova versão
 

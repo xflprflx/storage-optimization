@@ -285,7 +285,7 @@
  },
  "\"Ótimo comprovado\": não existe solução melhor. \"Melhor no tempo\": a melhor encontrada no tempo limite (aumente o tempo se quiser). \"Heurística\": o solver não melhorou a regra simples a tempo.": {
   "src": [
-   "services/onboarding.py:183"
+   "services/onboarding.py:199"
   ],
   "lazy": true
  },
@@ -1578,7 +1578,7 @@
  },
  "A caixa, gaveta ou palete dentro do endereço. Quantas unidades cabem nela é o menor de três limites: encaixe em grade, volume × enchimento máximo e peso máximo.": {
   "src": [
-   "services/onboarding.py:255"
+   "services/onboarding.py:271"
   ],
   "lazy": true
  },
@@ -1595,7 +1595,7 @@
  },
  "A capacidade do nível é uma restrição: a otimização por endereço nunca propõe mais bins do que o nível comporta. Sem capacidade cadastrada, ela é estimada pela largura do nível.": {
   "src": [
-   "services/onboarding.py:126"
+   "services/onboarding.py:140"
   ],
   "lazy": true
  },
@@ -1691,7 +1691,7 @@
  },
  "A faixa de altura confortável para pegar itens, contada do piso. Um bom começo é 75 a 150 cm (botão Sugerir).": {
   "src": [
-   "services/onboarding.py:78"
+   "services/onboarding.py:80"
   ],
   "lazy": true
  },
@@ -1719,7 +1719,7 @@
  },
  "A heurística decide um item por vez com uma regra simples (rápida, mas pode deixar ganho na mesa). A pesquisa operacional (OR-Tools CP-SAT) monta um modelo matemático e prova quando achou o ótimo. Ela parte da solução da heurística, então nunca fica pior.": {
   "src": [
-   "services/onboarding.py:172"
+   "services/onboarding.py:188"
   ],
   "lazy": true
  },
@@ -1747,7 +1747,7 @@
  },
  "A meta a otimizar. Menos volume de bins (menos ar) é um bom começo: tira bins grandes demais. Menos bins reduz a quantidade; Mínimo de mudanças só corrige o que não comporta o saldo.": {
   "src": [
-   "services/onboarding.py:165"
+   "services/onboarding.py:181"
   ],
   "lazy": true
  },
@@ -1908,7 +1908,7 @@
  },
  "A tabela compara, critério a critério, a heurística com a pesquisa operacional. Valores em verde são o ganho do modelo matemático.": {
   "src": [
-   "services/onboarding.py:184"
+   "services/onboarding.py:200"
   ],
   "lazy": true
  },
@@ -1995,7 +1995,7 @@
  },
  "Abra o projeto, clique em Salvar e otimizar e depois em Gerar cadastro da filial: endereços, produtos e histórico são criados.": {
   "src": [
-   "services/onboarding.py:290"
+   "services/onboarding.py:308"
   ],
   "lazy": true
  },
@@ -2115,7 +2115,7 @@
  },
  "Afinidade": {
   "src": [
-   "services/onboarding.py:272"
+   "services/onboarding.py:288"
   ],
   "lazy": true
  },
@@ -2176,9 +2176,9 @@
    "templates/layout/index.html:72"
   ]
  },
- "Ajuste para a sua operação. Padrões: 1 m/s de caminhada, 10 s por parada, 2 s por peça e 5 s a mais por item fora da zona de ouro.": {
+ "Ajuste para a sua operação. Os padrões ficam em Configurações (de fábrica: 1 m/s de caminhada, 10 s por parada, 2 s por peça e 5 s a mais por item fora da zona de ouro).": {
   "src": [
-   "services/onboarding.py:224"
+   "services/onboarding.py:240"
   ],
   "lazy": true
  },
@@ -2442,11 +2442,23 @@
   ],
   "help": true
  },
+ "Ambiente, refrigerado, congelado ou controlado, informada no produto e no tipo de estrutura. Um produto só vai para estruturas da mesma condição; sem condição, vale ambiente.": {
+  "src": [
+   "services/onboarding.py:291"
+  ],
+  "lazy": true
+ },
  "Ambiente, refrigerado, congelado ou controlado. O produto só vai para estruturas do tipo com a mesma condição (projeto de filial nova, Pool e trocas da posição pela saída).": {
   "src": [
    "services/field_help.py:479"
   ],
   "help": true
+ },
+ "Ambiente, refrigerado, congelado ou controlado. Um produto com condição só vai para estruturas da mesma condição: no projeto de filial nova, no Pool e nas trocas da posição pela saída.": {
+  "src": [
+   "services/onboarding.py:90"
+  ],
+  "lazy": true
  },
  "Amostra da aba": {
   "src": [
@@ -2472,7 +2484,7 @@
  },
  "Analisar": {
   "src": [
-   "services/onboarding.py:181",
+   "services/onboarding.py:197",
    "templates/optimization/index.html:150",
    "templates/optimization/page.html:342",
    "templates/optimization/pool.html:129"
@@ -2518,7 +2530,7 @@
  },
  "Antes → depois de cada indicador: bins, volume de bins, largura de frente e ocupação. Leia primeiro estes cartões para saber o tamanho do ganho.": {
   "src": [
-   "services/onboarding.py:186"
+   "services/onboarding.py:202"
   ],
   "lazy": true
  },
@@ -2601,6 +2613,12 @@
   ],
   "help": true
  },
+ "Aparência no 3D": {
+  "src": [
+   "services/onboarding.py:93"
+  ],
+  "lazy": true
+ },
  "Aparência no 3D <span class=\"text-lowercase fw-normal\">(opcional)</span>": {
   "src": [
    "templates/_look.html:4"
@@ -2621,7 +2639,7 @@
  },
  "Aplicar": {
   "src": [
-   "services/onboarding.py:190",
+   "services/onboarding.py:206",
    "templates/levels/index.html:93",
    "templates/locations/list.html:122",
    "templates/products/list.html:87",
@@ -2739,7 +2757,7 @@
    "services/site_service.py:311"
   ]
  },
- "Aqui fica a descrição do estoque: filiais, endereços, tipos de bin (com medidas internas), estruturas e produtos (com medidas da unidade).": {
+ "Aqui fica a descrição do estoque: filiais, endereços, tipos de bin (com medidas internas), estruturas (com os tipos e as peças delas) e produtos (com medidas da unidade).": {
   "src": [
    "services/onboarding.py:32"
   ],
@@ -2902,7 +2920,7 @@
   "src": [
    "routers/warehouses.py:25",
    "services/onboarding.py:53",
-   "services/onboarding.py:298",
+   "services/onboarding.py:316",
    "templates/base.html:115",
    "templates/base.html:138",
    "templates/branches/list.html:24"
@@ -2954,7 +2972,7 @@
   "src": [
    "services/field_help.py:300",
    "services/field_help.py:541",
-   "services/onboarding.py:107"
+   "services/onboarding.py:121"
   ],
   "help": true,
   "lazy": true
@@ -3110,7 +3128,7 @@
  },
  "Arraste para girar, botão direito para mover e a roda do mouse para o zoom.": {
   "src": [
-   "services/onboarding.py:147"
+   "services/onboarding.py:163"
   ],
   "lazy": true
  },
@@ -3121,7 +3139,7 @@
  },
  "Arraste para mover, roda do mouse para o zoom; clique numa fileira para girar, trocar o lado do corredor ou inverter a numeração.": {
   "src": [
-   "services/onboarding.py:142"
+   "services/onboarding.py:158"
   ],
   "lazy": true
  },
@@ -3138,7 +3156,7 @@
  },
  "As bins de hoje são o \"antes\". Sem elas o sistema não sabe o que trocar e todo endereço aparece como \"Bins atuais não comportam o saldo\".": {
   "src": [
-   "services/onboarding.py:96"
+   "services/onboarding.py:110"
   ],
   "lazy": true
  },
@@ -3155,7 +3173,7 @@
  },
  "As bins ficam e os produtos mudam de endereço, agrupando-se em menos bins. Libera mais espaço, mas exige movimentar produtos.": {
   "src": [
-   "services/onboarding.py:323"
+   "services/onboarding.py:341"
   ],
   "lazy": true
  },
@@ -3167,7 +3185,7 @@
  },
  "As caixas, gavetas ou paletes com as medidas INTERNAS. Inclua os tipos que você poderia comprar: o sistema só propõe tipos cadastrados.": {
   "src": [
-   "services/onboarding.py:300"
+   "services/onboarding.py:318"
   ],
   "lazy": true
  },
@@ -3184,7 +3202,7 @@
  },
  "As estruturas candidatas. Para cada uma: deixar o sistema escolher a quantidade (com mínimo e máximo opcionais), fixar uma quantidade ou não usar.": {
   "src": [
-   "services/onboarding.py:203"
+   "services/onboarding.py:219"
   ],
   "lazy": true
  },
@@ -3201,7 +3219,7 @@
  },
  "As medidas são sempre métricas nas planilhas (cm, kg, L), em qualquer idioma.": {
   "src": [
-   "services/onboarding.py:104"
+   "services/onboarding.py:118"
   ],
   "lazy": true
  },
@@ -3254,7 +3272,7 @@
  },
  "Associe a estrutura às estantes por condição, ex.: corredores A a C, estantes 01 a 20. Os vãos, a zona de ouro e a frente da estrutura passam a valer nelas.": {
   "src": [
-   "services/onboarding.py:123"
+   "services/onboarding.py:137"
   ],
   "lazy": true
  },
@@ -3562,7 +3580,7 @@
  },
  "Bin e capacidade": {
   "src": [
-   "services/onboarding.py:254"
+   "services/onboarding.py:270"
   ],
   "lazy": true
  },
@@ -3708,7 +3726,7 @@
  },
  "Bins e regras": {
   "src": [
-   "services/onboarding.py:206",
+   "services/onboarding.py:222",
    "templates/site/project.html:317",
    "templates/site/project.html:319"
   ],
@@ -3722,7 +3740,7 @@
  },
  "Bins em massa": {
   "src": [
-   "services/onboarding.py:94"
+   "services/onboarding.py:108"
   ],
   "lazy": true
  },
@@ -3741,7 +3759,7 @@
  },
  "Bins existentes ou infinitas": {
   "src": [
-   "services/onboarding.py:159"
+   "services/onboarding.py:175"
   ],
   "lazy": true
  },
@@ -3796,7 +3814,7 @@
  },
  "Bins nos endereços": {
   "src": [
-   "services/onboarding.py:307"
+   "services/onboarding.py:325"
   ],
   "lazy": true
  },
@@ -3962,9 +3980,9 @@
  },
  "Buscar": {
   "src": [
-   "services/onboarding.py:93",
-   "services/onboarding.py:149",
-   "services/onboarding.py:235"
+   "services/onboarding.py:107",
+   "services/onboarding.py:165",
+   "services/onboarding.py:251"
   ],
   "lazy": true
  },
@@ -4022,7 +4040,7 @@
  },
  "CSV ou Excel exportado do seu ERP/WMS. Para produtos, as colunas essenciais são SKU, descrição e as medidas da unidade (altura, largura, comprimento em cm; peso em kg).": {
   "src": [
-   "services/onboarding.py:107"
+   "services/onboarding.py:121"
   ],
   "lazy": true
  },
@@ -4085,7 +4103,7 @@
  },
  "Cabeçalho": {
   "src": [
-   "services/onboarding.py:108"
+   "services/onboarding.py:122"
   ],
   "lazy": true
  },
@@ -4109,13 +4127,13 @@
  },
  "Cada cartão é um tipo de cadastro. Clique para baixar o modelo (CSV), preencha e envie. A planilha pode ter qualquer nome de coluna: você liga cada coluna ao campo certo na tela seguinte.": {
   "src": [
-   "services/onboarding.py:101"
+   "services/onboarding.py:115"
   ],
   "lazy": true
  },
  "Cada corredor com as estantes e os níveis. Passe o mouse para ver o endereço, as bins e o saldo.": {
   "src": [
-   "services/onboarding.py:131"
+   "services/onboarding.py:147"
   ],
   "lazy": true
  },
@@ -4148,7 +4166,7 @@
  },
  "Cada linha diz o que fazer: \"Pode melhorar\" (troca sugerida), \"Bins atuais não comportam o saldo\" (corrigir), \"Sem saldo: liberar bins\", \"Já está ótimo\", \"Inviável com as restrições\" (afrouxe alguma regra) ou \"Faltam dimensões\" (complete o cadastro).": {
   "src": [
-   "services/onboarding.py:188"
+   "services/onboarding.py:204"
   ],
   "lazy": true
  },
@@ -4187,7 +4205,7 @@
  },
  "Cadastrar a sua operação": {
   "src": [
-   "services/onboarding.py:293"
+   "services/onboarding.py:311"
   ],
   "lazy": true
  },
@@ -4198,7 +4216,7 @@
  },
  "Cadastrar ou importar": {
   "src": [
-   "services/onboarding.py:232"
+   "services/onboarding.py:248"
   ],
   "lazy": true
  },
@@ -4261,6 +4279,12 @@
  "Cadastro de tipo de bin": {
   "src": [
    "services/onboarding.py:63"
+  ],
+  "lazy": true
+ },
+ "Cadastro de tipo de estrutura": {
+  "src": [
+   "services/onboarding.py:84"
   ],
   "lazy": true
  },
@@ -4335,7 +4359,7 @@
  },
  "Calibre os tempos (velocidade, parada, peça) com a sua operação e simule pedidos e dias inteiros para estimar horas de separação.": {
   "src": [
-   "services/onboarding.py:336"
+   "services/onboarding.py:354"
   ],
   "lazy": true
  },
@@ -4346,7 +4370,7 @@
  },
  "Caminhada": {
   "src": [
-   "services/onboarding.py:150",
+   "services/onboarding.py:166",
    "templates/optimization/page.html:590"
   ],
   "lazy": true
@@ -4373,7 +4397,7 @@
  },
  "Caminhada e tempo médio por pedido numa amostra do histórico, com os produtos onde estão hoje.": {
   "src": [
-   "services/onboarding.py:222"
+   "services/onboarding.py:238"
   ],
   "lazy": true
  },
@@ -4414,7 +4438,7 @@
  },
  "Caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro × tempo extra. Endereços do mesmo módulo contam como uma parada.": {
   "src": [
-   "services/onboarding.py:275"
+   "services/onboarding.py:293"
   ],
   "lazy": true
  },
@@ -4556,8 +4580,8 @@
   "src": [
    "routers/levels.py:22",
    "routers/optimization.py:1025",
-   "services/onboarding.py:120",
-   "services/onboarding.py:309",
+   "services/onboarding.py:134",
+   "services/onboarding.py:327",
    "templates/base.html:119",
    "templates/base.html:141"
   ],
@@ -4570,7 +4594,7 @@
  },
  "Capacidade em massa": {
   "src": [
-   "services/onboarding.py:124"
+   "services/onboarding.py:138"
   ],
   "lazy": true
  },
@@ -4717,7 +4741,7 @@
  },
  "Classificação por popularidade no histórico: A são os SKUs que somam 80% das saídas (poucos itens, muito movimento), B os que levam até 95% e C o resto.": {
   "src": [
-   "services/onboarding.py:267"
+   "services/onboarding.py:283"
   ],
   "lazy": true
  },
@@ -4743,7 +4767,7 @@
  },
  "Clique onde o separador começa e termina o pedido, normalmente a expedição.": {
   "src": [
-   "services/onboarding.py:140"
+   "services/onboarding.py:156"
   ],
   "lazy": true
  },
@@ -4856,7 +4880,7 @@
  },
  "Com 100% de enchimento a bin \"cabe no papel\" mas não na prática: as unidades não se encaixam perfeitamente e o separador precisa de espaço para a mão.": {
   "src": [
-   "services/onboarding.py:178"
+   "services/onboarding.py:194"
   ],
   "lazy": true
  },
@@ -4876,6 +4900,12 @@
   "src": [
    "templates/imports/upload.html:37"
   ]
+ },
+ "Com a composição, a recomposição das estruturas sabe quais peças uma mudança libera e quais precisa comprar.": {
+  "src": [
+   "services/onboarding.py:88"
+  ],
+  "lazy": true
  },
  "Com a configuração atual, <b>{shortage} bin(s)</b> ficam sem lugar. Escolha uma das formas de reduzir a demanda (ou volte e aumente estruturas/imóvel).": {
   "src": [
@@ -4914,7 +4944,7 @@
  },
  "Com histórico de pedidos, os SKUs mais populares ficam perto da expedição e nos níveis de ouro.": {
   "src": [
-   "services/onboarding.py:207"
+   "services/onboarding.py:223"
   ],
   "lazy": true
  },
@@ -4942,19 +4972,19 @@
  },
  "Com o cadastro pronto, veja quantas bins e quanto espaço você economiza.": {
   "src": [
-   "services/onboarding.py:318"
+   "services/onboarding.py:336"
   ],
   "lazy": true
  },
  "Com o histórico o sistema calcula a popularidade de cada SKU (curva ABC: A = os que somam 80% das saídas, B até 95%, C o resto) e quais saem juntos no mesmo pedido (afinidade).": {
   "src": [
-   "services/onboarding.py:116"
+   "services/onboarding.py:130"
   ],
   "lazy": true
  },
  "Com o horário de liberação ligado: em que horas o separador fica parado, onde a fila cresce, quantos separadores dariam conta em cada hora e o efeito do lote.": {
   "src": [
-   "services/onboarding.py:228"
+   "services/onboarding.py:244"
   ],
   "lazy": true
  },
@@ -5032,7 +5062,7 @@
  },
  "Comece pelo Por endereço: é o de menor impacto na operação (só troca bins). O Pool libera mais espaço, mas mexe no endereço dos produtos.": {
   "src": [
-   "services/onboarding.py:157"
+   "services/onboarding.py:173"
   ],
   "lazy": true
  },
@@ -5155,7 +5185,7 @@
  },
  "Comparar": {
   "src": [
-   "services/onboarding.py:218"
+   "services/onboarding.py:234"
   ],
   "lazy": true
  },
@@ -5183,7 +5213,7 @@
  },
  "Compare cenários (ex.: enchimento 85% × 90%) e exporte o plano de implantação para a equipe executar.": {
   "src": [
-   "services/onboarding.py:325"
+   "services/onboarding.py:343"
   ],
   "lazy": true
  },
@@ -5248,8 +5278,10 @@
  },
  "Composição de peças": {
   "src": [
+   "services/onboarding.py:86",
    "templates/structure_kinds/form.html:53"
-  ]
+  ],
+  "lazy": true
  },
  "Compr. X (m)": {
   "src": [
@@ -5358,7 +5390,7 @@
  },
  "Comprimento × largura × pé-direito útil (altura livre até vigas e sprinklers), largura dos corredores e afastamento das paredes. Ex.: 40 × 25 m, 8 m, corredores de 1,2 m.": {
   "src": [
-   "services/onboarding.py:200"
+   "services/onboarding.py:216"
   ],
   "lazy": true
  },
@@ -5378,10 +5410,10 @@
   "src": [
    "services/field_help.py:436",
    "services/field_help.py:479",
+   "services/onboarding.py:290",
+   "services/onboarding.py:89",
    "services/site_import.py:271",
-   "services/site_import.py:280",
-   "services/site_import.py:948",
-   "templates/products/form.html:30"
+   "services/site_import.py:280"
   ],
   "help": true,
   "lazy": true
@@ -5411,7 +5443,7 @@
  "Configurações": {
   "src": [
    "routers/settings.py:13",
-   "services/onboarding.py:244",
+   "services/onboarding.py:260",
    "templates/base.html:126",
    "templates/settings.html:2",
    "templates/settings.html:4"
@@ -5463,7 +5495,7 @@
  },
  "Conheça as telas": {
   "src": [
-   "services/onboarding.py:284"
+   "services/onboarding.py:302"
   ],
   "lazy": true
  },
@@ -5593,7 +5625,7 @@
  },
  "Copie as medidas de um produto para vários de uma vez, útil para variações de cor ou tamanho com a mesma embalagem.": {
   "src": [
-   "services/onboarding.py:236"
+   "services/onboarding.py:252"
   ],
   "lazy": true
  },
@@ -5611,7 +5643,7 @@
  "Cor das bins": {
   "src": [
    "services/field_help.py:52",
-   "services/onboarding.py:148"
+   "services/onboarding.py:164"
   ],
   "help": true,
   "lazy": true
@@ -5761,7 +5793,7 @@
  },
  "Corredor-Estante-Nível-Posição (ex.: A-01-2-1). Gere em lote a partir das faixas (ex.: corredores A a D, estantes 01 a 20) ou importe.": {
   "src": [
-   "services/onboarding.py:305"
+   "services/onboarding.py:323"
   ],
   "lazy": true
  },
@@ -5852,7 +5884,7 @@
  },
  "Cria o cadastro da filial a partir do plano: endereços, estruturas, bins, produtos e, se houver, o histórico de pedidos.": {
   "src": [
-   "services/onboarding.py:213"
+   "services/onboarding.py:229"
   ],
   "lazy": true
  },
@@ -5914,7 +5946,7 @@
  },
  "Criar ou importar": {
   "src": [
-   "services/onboarding.py:97"
+   "services/onboarding.py:111"
   ],
   "lazy": true
  },
@@ -5942,13 +5974,13 @@
  },
  "Crie um projeto a partir de um exemplo": {
   "src": [
-   "services/onboarding.py:286"
+   "services/onboarding.py:304"
   ],
   "lazy": true
  },
  "Crie um projeto a partir de um exemplo para ver o fluxo completo sem preparar planilhas; depois gere a filial e use as outras telas com ela.": {
   "src": [
-   "services/onboarding.py:197"
+   "services/onboarding.py:213"
   ],
   "lazy": true
  },
@@ -5966,7 +5998,7 @@
  },
  "Curva ABC": {
   "src": [
-   "services/onboarding.py:266",
+   "services/onboarding.py:282",
    "services/site_report.py:349",
    "services/slotting.py:561",
    "templates/slotting/skus.html:21"
@@ -6344,11 +6376,6 @@
    "templates/settings.html:6"
   ]
  },
- "DEBUG stages": {
-  "src": [
-   "services/or_engine.py:482"
-  ]
- },
  "Da <b>pega</b>: a faixa de altura mais fácil de pegar (cadastrada em cada estrutura). Da <b>caminhada</b>: as posições mais perto do ponto de referência. O ideal para os itens A é estar nas duas.": {
   "src": [
    "templates/site/project.html:407"
@@ -6380,7 +6407,7 @@
  },
  "Da pega: a faixa de altura confortável (ex.: 75–150 cm). Da caminhada: os endereços mais perto da expedição (padrão: os 20% mais perto). Os produtos A devem estar nas duas.": {
   "src": [
-   "services/onboarding.py:269"
+   "services/onboarding.py:285"
   ],
   "lazy": true
  },
@@ -6476,7 +6503,7 @@
  },
  "Decidir o endereço de cada produto pela popularidade: os mais procurados nos melhores lugares, para reduzir caminhada e esforço na separação.": {
   "src": [
-   "services/onboarding.py:271"
+   "services/onboarding.py:287"
   ],
   "lazy": true
  },
@@ -6538,13 +6565,13 @@
  },
  "Deixe marcado se o relatório lança a saída com sinal negativo (ex.: -3): o sistema usa o valor absoluto.": {
   "src": [
-   "services/onboarding.py:117"
+   "services/onboarding.py:131"
   ],
   "lazy": true
  },
  "Demanda": {
   "src": [
-   "services/onboarding.py:204",
+   "services/onboarding.py:220",
    "services/site_report.py:116",
    "templates/site/project.html:269"
   ],
@@ -6657,13 +6684,13 @@
  },
  "Desempate": {
   "src": [
-   "services/onboarding.py:167"
+   "services/onboarding.py:183"
   ],
   "lazy": true
  },
  "Desempate (prioridade)": {
   "src": [
-   "services/onboarding.py:260"
+   "services/onboarding.py:276"
   ],
   "lazy": true
  },
@@ -6713,13 +6740,13 @@
  },
  "Desenhe a planta para medir a caminhada pelos corredores e ver o estoque em 3D.": {
   "src": [
-   "services/onboarding.py:340"
+   "services/onboarding.py:358"
   ],
   "lazy": true
  },
  "Desenhe a planta para que a caminhada seja medida pelos corredores de verdade, e não estimada pelo endereço.": {
   "src": [
-   "services/onboarding.py:133"
+   "services/onboarding.py:149"
   ],
   "lazy": true
  },
@@ -6730,7 +6757,7 @@
  },
  "Desenho": {
   "src": [
-   "services/onboarding.py:142"
+   "services/onboarding.py:158"
   ],
   "lazy": true
  },
@@ -6883,7 +6910,7 @@
  },
  "Digite um SKU ou endereço para destacá-lo e levar a câmera até lá.": {
   "src": [
-   "services/onboarding.py:149"
+   "services/onboarding.py:165"
   ],
   "lazy": true
  },
@@ -7189,7 +7216,7 @@
  },
  "Dois modos": {
   "src": [
-   "services/onboarding.py:155"
+   "services/onboarding.py:171"
   ],
   "lazy": true
  },
@@ -7328,7 +7355,7 @@
  },
  "Em Projeto de filial nova, escolha um dos exemplos prontos e clique em Criar projeto.": {
   "src": [
-   "services/onboarding.py:287"
+   "services/onboarding.py:305"
   ],
   "lazy": true
  },
@@ -7432,7 +7459,7 @@
  },
  "Encaixe geométrico confere se as unidades cabem fisicamente em grade, não só pelo volume. A rotação diz se o produto pode deitar (qualquer orientação) ou só girar com a altura para cima.": {
   "src": [
-   "services/onboarding.py:180"
+   "services/onboarding.py:196"
   ],
   "lazy": true
  },
@@ -7468,7 +7495,7 @@
  },
  "Enchimento e margem": {
   "src": [
-   "services/onboarding.py:176"
+   "services/onboarding.py:192"
   ],
   "lazy": true
  },
@@ -7501,7 +7528,7 @@
    "routers/optimization.py:742",
    "routers/optimization.py:1021",
    "routers/optimization.py:1037",
-   "services/onboarding.py:256"
+   "services/onboarding.py:272"
   ],
   "lazy": true
  },
@@ -7514,7 +7541,7 @@
  },
  "Enchimento máximo (padrão 85%) deixa folga para pegar e repor sem forçar. Margem (ex.: 20%) dimensiona para 20% a mais que a quantidade, prevendo crescimento.": {
   "src": [
-   "services/onboarding.py:177"
+   "services/onboarding.py:193"
   ],
   "lazy": true
  },
@@ -7544,7 +7571,7 @@
  },
  "Encontre por SKU, descrição ou material.": {
   "src": [
-   "services/onboarding.py:235"
+   "services/onboarding.py:251"
   ],
   "lazy": true
  },
@@ -7589,7 +7616,7 @@
  },
  "Endereço = Corredor-Estante-Nível-Posição, ex.: A-01-2-1 é o corredor A, estante 01, nível 2 (de baixo para cima), posição 1. Cada endereço recebe bins; cada bin guarda um SKU.": {
   "src": [
-   "services/onboarding.py:84"
+   "services/onboarding.py:98"
   ],
   "lazy": true
  },
@@ -7774,9 +7801,9 @@
  "Endereços": {
   "src": [
    "routers/locations.py:73",
-   "services/onboarding.py:92",
-   "services/onboarding.py:245",
-   "services/onboarding.py:305",
+   "services/onboarding.py:106",
+   "services/onboarding.py:261",
+   "services/onboarding.py:323",
    "services/site_report.py:223",
    "services/site_report.py:341"
   ],
@@ -7969,7 +7996,7 @@
  },
  "Enviar e conferir": {
   "src": [
-   "services/onboarding.py:118"
+   "services/onboarding.py:132"
   ],
   "lazy": true
  },
@@ -7980,7 +8007,7 @@
  },
  "Enviar e mapear": {
   "src": [
-   "services/onboarding.py:109"
+   "services/onboarding.py:123"
   ],
   "lazy": true
  },
@@ -8001,7 +8028,7 @@
  },
  "Enviar planilha": {
   "src": [
-   "services/onboarding.py:106"
+   "services/onboarding.py:120"
   ],
   "lazy": true
  },
@@ -8057,13 +8084,13 @@
  },
  "Escolha a filial (e o armazém) para listar os níveis de cada estante.": {
   "src": [
-   "services/onboarding.py:121"
+   "services/onboarding.py:135"
   ],
   "lazy": true
  },
  "Escolha a filial (obrigatória) e, para um teste rápido, restrinja a um corredor (Endereço contém: A-) ou a alguns SKUs. Escopos menores rodam mais rápido.": {
   "src": [
-   "services/onboarding.py:158"
+   "services/onboarding.py:174"
   ],
   "lazy": true
  },
@@ -8079,7 +8106,7 @@
  },
  "Escolha a filial e o armazém para ver o mapa.": {
   "src": [
-   "services/onboarding.py:129"
+   "services/onboarding.py:145"
   ],
   "lazy": true
  },
@@ -8100,7 +8127,7 @@
  },
  "Escolha a filial, o armazém e, se já cadastrou, a estrutura das estantes: ela é associada às estantes geradas e preenche o vão e a capacidade dos níveis.": {
   "src": [
-   "services/onboarding.py:83"
+   "services/onboarding.py:97"
   ],
   "lazy": true
  },
@@ -8129,7 +8156,7 @@
  },
  "Escolha o objetivo \"Menor tempo de separação\": os SKUs da curva A vão para perto da expedição e para a zona de ouro. O resultado compara hoje × proposta em caminhada e horas.": {
   "src": [
-   "services/onboarding.py:334"
+   "services/onboarding.py:352"
   ],
   "lazy": true
  },
@@ -8212,8 +8239,8 @@
  },
  "Escopo": {
   "src": [
-   "services/onboarding.py:121",
-   "services/onboarding.py:158",
+   "services/onboarding.py:135",
+   "services/onboarding.py:174",
    "services/plan_export.py:54",
    "services/plan_export.py:223",
    "templates/optimization/page.html:75",
@@ -8496,7 +8523,7 @@
  },
  "Estantes ímpares e pares costumam ficar em lados opostos do corredor; a numeração importa para estimar a caminhada quando não há planta desenhada.": {
   "src": [
-   "services/onboarding.py:87"
+   "services/onboarding.py:101"
   ],
   "lazy": true
  },
@@ -8575,7 +8602,7 @@
  "Estrutura das estantes": {
   "src": [
    "services/field_help.py:338",
-   "services/onboarding.py:122"
+   "services/onboarding.py:136"
   ],
   "help": true,
   "lazy": true
@@ -8659,7 +8686,7 @@
  "Estruturas": {
   "src": [
    "routers/runs.py:97",
-   "services/onboarding.py:202",
+   "services/onboarding.py:218",
    "services/site_import.py:261",
    "services/site_import.py:935",
    "services/site_report.py:130",
@@ -8675,7 +8702,7 @@
  "Estruturas de armazenagem": {
   "src": [
    "routers/structures.py:15",
-   "services/onboarding.py:302",
+   "services/onboarding.py:320",
    "templates/base.html:120",
    "templates/site/project.html:235",
    "templates/structures/list.html:3",
@@ -8825,6 +8852,12 @@
    "templates/structure_kinds/form.html:17"
   ]
  },
+ "Ex.: Porta-palete, Estante de aço ou Câmara refrigerada. É o que você escolhe no cadastro de cada estrutura.": {
+  "src": [
+   "services/onboarding.py:85"
+  ],
+  "lazy": true
+ },
  "Excel ou CSV com Imóvel, Estruturas, Bins e/ou SKUs (dimensões, peso, saldo, min e max level). Depois de enviar, você confere e ajusta qual aba e qual coluna correspondem a cada campo.": {
   "src": [
    "templates/site/project.html:32"
@@ -8889,7 +8922,7 @@
  },
  "Exceções": {
   "src": [
-   "services/onboarding.py:88"
+   "services/onboarding.py:102"
   ],
   "lazy": true
  },
@@ -9162,7 +9195,7 @@
  },
  "Exemplos prontos": {
   "src": [
-   "services/onboarding.py:196"
+   "services/onboarding.py:212"
   ],
   "lazy": true
  },
@@ -9183,7 +9216,7 @@
  },
  "Existentes: o plano só usa as bins que você já tem (não precisa comprar). Recurso infinito: o sistema diz quantas de cada tipo seriam necessárias, útil para planejar compras.": {
   "src": [
-   "services/onboarding.py:160"
+   "services/onboarding.py:176"
   ],
   "lazy": true
  },
@@ -9195,7 +9228,7 @@
  },
  "Explorar com dados de exemplo": {
   "src": [
-   "services/onboarding.py:281"
+   "services/onboarding.py:299"
   ],
   "lazy": true
  },
@@ -9215,7 +9248,7 @@
  },
  "Exporte o plano de implantação (Excel/PDF) para a equipe executar. Depois de executado, aplique os selecionados ou todos para atualizar o cadastro de bins.": {
   "src": [
-   "services/onboarding.py:191"
+   "services/onboarding.py:207"
   ],
   "lazy": true
  },
@@ -9471,7 +9504,7 @@
  },
  "Fileiras e obstáculos": {
   "src": [
-   "services/onboarding.py:138"
+   "services/onboarding.py:154"
   ],
   "lazy": true
  },
@@ -9555,9 +9588,9 @@
   ],
   "help": true
  },
- "Filiais → armazéns → tipos de bin → endereços → capacidade dos níveis → produtos → saldos. Cada um depende dos anteriores: um saldo só entra se o produto e o endereço já existirem.": {
+ "Filiais → armazéns → tipos de bin → endereços → capacidade dos níveis → produtos → saldos → histórico de pedidos (opcional). Cada um depende dos anteriores: um saldo só entra se o produto e o endereço já existirem.": {
   "src": [
-   "services/onboarding.py:103"
+   "services/onboarding.py:117"
   ],
   "lazy": true
  },
@@ -9862,19 +9895,19 @@
  },
  "Filtre por SKU, endereço, filial e armazém.": {
   "src": [
-   "services/onboarding.py:242"
+   "services/onboarding.py:258"
   ],
   "lazy": true
  },
  "Filtre por endereço (ex.: A-01 traz a estante 01 do corredor A), filial, armazém, SKU ou situação.": {
   "src": [
-   "services/onboarding.py:93"
+   "services/onboarding.py:107"
   ],
   "lazy": true
  },
  "Filtros": {
   "src": [
-   "services/onboarding.py:242"
+   "services/onboarding.py:258"
   ],
   "lazy": true
  },
@@ -9899,12 +9932,6 @@
   "src": [
    "templates/locations/batch.html:42"
   ]
- },
- "Floor": {
-  "src": [
-   "services/site_planner.py:909"
-  ],
-  "lazy": true
  },
  "Flow rack": {
   "src": [
@@ -10293,7 +10320,7 @@
  },
  "Gerar a filial": {
   "src": [
-   "services/onboarding.py:212"
+   "services/onboarding.py:228"
   ],
   "lazy": true
  },
@@ -10304,7 +10331,7 @@
  },
  "Gerar automaticamente": {
   "src": [
-   "services/onboarding.py:136",
+   "services/onboarding.py:152",
    "templates/layout/plan.html:126"
   ],
   "lazy": true
@@ -10326,7 +10353,7 @@
  },
  "Gerar endereços em lote": {
   "src": [
-   "services/onboarding.py:82",
+   "services/onboarding.py:96",
    "templates/base.html:117",
    "templates/locations/batch.html:3"
   ],
@@ -10344,13 +10371,13 @@
  },
  "Gere automaticamente, ajuste fileiras e obstáculos e marque a expedição: a caminhada passa a ser medida pelos corredores reais.": {
   "src": [
-   "services/onboarding.py:344"
+   "services/onboarding.py:362"
   ],
   "lazy": true
  },
  "Gere em lote para criar muitos de uma vez, ou importe uma planilha com endereço, tipo de bin e quantidade.": {
   "src": [
-   "services/onboarding.py:97"
+   "services/onboarding.py:111"
   ],
   "lazy": true
  },
@@ -10413,7 +10440,7 @@
  },
  "Grave e depois associe a estrutura às estantes em Capacidade dos níveis (ou já ao gerar os endereços em lote).": {
   "src": [
-   "services/onboarding.py:80"
+   "services/onboarding.py:82"
   ],
   "lazy": true
  },
@@ -10425,13 +10452,14 @@
  },
  "Grave o tipo.": {
   "src": [
-   "services/onboarding.py:70"
+   "services/onboarding.py:70",
+   "services/onboarding.py:94"
   ],
   "lazy": true
  },
  "Grave. A posição pela saída, o simulador de trajeto e o 3D passam a usar esta planta.": {
   "src": [
-   "services/onboarding.py:143"
+   "services/onboarding.py:159"
   ],
   "lazy": true
  },
@@ -10501,7 +10529,7 @@
  },
  "Heurística: regra rápida que decide um item por vez; boa, mas sem garantia. Pesquisa operacional: modelo matemático do escopo inteiro resolvido por um solver (OR-Tools); diz se a solução é ótima comprovada ou a melhor achada no tempo limite.": {
   "src": [
-   "services/onboarding.py:263"
+   "services/onboarding.py:279"
   ],
   "lazy": true
  },
@@ -10552,14 +10580,14 @@
  },
  "Histórico de resultados": {
   "src": [
-   "services/onboarding.py:216"
+   "services/onboarding.py:232"
   ],
   "lazy": true
  },
  "Histórico de saídas": {
   "src": [
-   "services/onboarding.py:112",
-   "services/onboarding.py:331"
+   "services/onboarding.py:126",
+   "services/onboarding.py:349"
   ],
   "lazy": true
  },
@@ -10831,7 +10859,7 @@
  "Importações": {
   "src": [
    "routers/imports.py:28",
-   "services/onboarding.py:99",
+   "services/onboarding.py:113",
    "services/onboarding.py:34",
    "templates/base.html:133",
    "templates/imports/index.html:2",
@@ -10841,25 +10869,25 @@
  },
  "Importe endereço, SKU e quantidade. É a quantidade que precisa caber nas bins propostas.": {
   "src": [
-   "services/onboarding.py:314"
+   "services/onboarding.py:332"
   ],
   "lazy": true
  },
  "Importe o saldo por endereço do seu ERP/WMS: endereço, SKU e quantidade.": {
   "src": [
-   "services/onboarding.py:240"
+   "services/onboarding.py:256"
   ],
   "lazy": true
  },
  "Importe os SKUs com as medidas da unidade que fica na bin (cm e kg). Sem medidas, o produto aparece como \"Faltam dimensões\".": {
   "src": [
-   "services/onboarding.py:312"
+   "services/onboarding.py:330"
   ],
   "lazy": true
  },
  "Importe os produtos com as medidas da UNIDADE que fica na bin (a peça ou a caixa de venda, não o fardo).": {
   "src": [
-   "services/onboarding.py:233"
+   "services/onboarding.py:249"
   ],
   "lazy": true
  },
@@ -10871,7 +10899,7 @@
  },
  "Imóvel": {
   "src": [
-   "services/onboarding.py:200",
+   "services/onboarding.py:216",
    "services/site_import.py:261",
    "services/site_import.py:897",
    "services/site_report.py:104",
@@ -10936,8 +10964,8 @@
  "Indicadores": {
   "src": [
    "routers/runs.py:92",
-   "services/onboarding.py:185",
-   "services/onboarding.py:222",
+   "services/onboarding.py:201",
+   "services/onboarding.py:238",
    "services/site_report.py:299",
    "templates/runs/detail.html:23",
    "templates/runs/list.html:41"
@@ -11014,7 +11042,7 @@
  },
  "Informe quantas bins de cada tipo cabem num nível, ex.: 6 × CX-P ou 3 × CX-G, e o vão em cm. Use condições para aplicar a muitos níveis de uma vez.": {
   "src": [
-   "services/onboarding.py:125"
+   "services/onboarding.py:139"
   ],
   "lazy": true
  },
@@ -11041,7 +11069,7 @@
  },
  "Insights de ociosidade": {
   "src": [
-   "services/onboarding.py:227",
+   "services/onboarding.py:243",
    "templates/slotting/routes.html:76"
   ],
   "lazy": true
@@ -11085,13 +11113,13 @@
  },
  "Isso se chama otimização lexicográfica: o 2º critério nunca piora o 1º, só escolhe entre empates. Por isso a ordem importa.": {
   "src": [
-   "services/onboarding.py:169"
+   "services/onboarding.py:185"
   ],
   "lazy": true
  },
  "Isso é uma restrição de recurso. Com bins existentes a solução pode ser um pouco pior, porque o sistema fica limitado ao que há no armazém.": {
   "src": [
-   "services/onboarding.py:161"
+   "services/onboarding.py:177"
   ],
   "lazy": true
  },
@@ -11265,7 +11293,7 @@
  },
  "Lançar ou importar": {
   "src": [
-   "services/onboarding.py:239"
+   "services/onboarding.py:255"
   ],
   "lazy": true
  },
@@ -11612,7 +11640,7 @@
  },
  "Ligue para considerar a popularidade dos produtos (precisa do histórico de saídas). Informe o corredor mais perto da expedição; com planta desenhada, a caminhada vem dela.": {
   "src": [
-   "services/onboarding.py:174"
+   "services/onboarding.py:190"
   ],
   "lazy": true
  },
@@ -11967,7 +11995,7 @@
  },
  "Mapa": {
   "src": [
-   "services/onboarding.py:131"
+   "services/onboarding.py:147"
   ],
   "lazy": true
  },
@@ -11975,9 +12003,9 @@
   "src": [
    "routers/layout.py:17",
    "routers/layout.py:245",
-   "services/onboarding.py:128",
+   "services/onboarding.py:144",
    "services/onboarding.py:36",
-   "services/onboarding.py:342",
+   "services/onboarding.py:360",
    "templates/base.html:129"
   ],
   "lazy": true
@@ -12175,13 +12203,13 @@
  },
  "Marque dois ou mais resultados e compare os indicadores lado a lado, ex.: enchimento 85% × 90%, ou Menos bins × Menos volume.": {
   "src": [
-   "services/onboarding.py:218"
+   "services/onboarding.py:234"
   ],
   "lazy": true
  },
  "Marque endereços na lista e informe o tipo e a quantidade de bins que eles têm hoje, ex.: 4 × CX-P. Faça isso para todo o armazém antes de otimizar.": {
   "src": [
-   "services/onboarding.py:95"
+   "services/onboarding.py:109"
   ],
   "lazy": true
  },
@@ -12225,7 +12253,7 @@
  },
  "Marque se a 1ª linha tem os nomes das colunas.": {
   "src": [
-   "services/onboarding.py:108"
+   "services/onboarding.py:122"
   ],
   "lazy": true
  },
@@ -12240,12 +12268,6 @@
    "services/field_help.py:63"
   ],
   "help": true
- },
- "MasterResult": {
-  "src": [
-   "services/master_importer.py:116"
-  ],
-  "lazy": true
  },
  "Material": {
   "src": [
@@ -12314,7 +12336,7 @@
  },
  "Medidas em massa": {
   "src": [
-   "services/onboarding.py:236"
+   "services/onboarding.py:252"
   ],
   "lazy": true
  },
@@ -12463,7 +12485,7 @@
  },
  "Menos módulos de estrutura, menor custo total ou menos metros de fileira.": {
   "src": [
-   "services/onboarding.py:209"
+   "services/onboarding.py:225"
   ],
   "lazy": true
  },
@@ -12534,7 +12556,7 @@
  },
  "Meça alguns pedidos reais com um cronômetro e calibre estes valores: com eles certos, o tempo simulado vira uma previsão confiável de horas de separação.": {
   "src": [
-   "services/onboarding.py:225"
+   "services/onboarding.py:241"
   ],
   "lazy": true
  },
@@ -12620,7 +12642,7 @@
  },
  "Monta a planta a partir dos endereços: uma fileira por lado de corredor, com a largura de corredor informada. É o jeito mais rápido; depois ajuste o que for diferente.": {
   "src": [
-   "services/onboarding.py:137"
+   "services/onboarding.py:153"
   ],
   "lazy": true
  },
@@ -12671,7 +12693,7 @@
  },
  "Monte o cadastro da sua filial real. Cada etapa pode ser digitada ou importada de planilha.": {
   "src": [
-   "services/onboarding.py:294"
+   "services/onboarding.py:312"
   ],
   "lazy": true
  },
@@ -12693,7 +12715,7 @@
   ],
   "help": true
  },
- "Mostra o separador andando pelas três rotas no arranjo 3D e grava em vídeo": {
+ "Mostra o separador andando pelas quatro rotas no arranjo 3D e grava em vídeo": {
   "src": [
    "templates/slotting/routes.html:189"
   ]
@@ -12865,7 +12887,7 @@
  },
  "Motor e tempo limite": {
   "src": [
-   "services/onboarding.py:170"
+   "services/onboarding.py:186"
   ],
   "lazy": true
  },
@@ -13126,7 +13148,7 @@
  },
  "Na próxima etapa você confere a aba e as colunas. Só o resumo (popularidade, pares e uma amostra de pedidos) fica salvo.": {
   "src": [
-   "services/onboarding.py:118"
+   "services/onboarding.py:132"
   ],
   "lazy": true
  },
@@ -13137,7 +13159,7 @@
  },
  "Na próxima tela você liga cada coluna ao campo certo e vê uma prévia com os erros linha a linha antes de gravar. Nada é gravado antes de você confirmar.": {
   "src": [
-   "services/onboarding.py:110"
+   "services/onboarding.py:124"
   ],
   "lazy": true
  },
@@ -13787,9 +13809,11 @@
  },
  "Nome do tipo": {
   "src": [
-   "services/field_help.py:434"
+   "services/field_help.py:434",
+   "services/onboarding.py:85"
   ],
-  "help": true
+  "help": true,
+  "lazy": true
  },
  "Nome do tipo de bin": {
   "src": [
@@ -13911,7 +13935,7 @@
  },
  "Novo projeto": {
   "src": [
-   "services/onboarding.py:194",
+   "services/onboarding.py:210",
    "templates/site/index.html:19"
   ],
   "lazy": true
@@ -14184,7 +14208,7 @@
  },
  "Níveis e vãos": {
   "src": [
-   "services/onboarding.py:76"
+   "services/onboarding.py:78"
   ],
   "lazy": true
  },
@@ -14451,7 +14475,7 @@
  },
  "O caminho mais rápido para ver o sistema funcionando: cria uma filial completa a partir de um exemplo, sem preparar planilhas.": {
   "src": [
-   "services/onboarding.py:282"
+   "services/onboarding.py:300"
   ],
   "lazy": true
  },
@@ -14524,7 +14548,7 @@
  },
  "O histórico é de uma filial: os pedidos (ou saídas) dela, de preferência dos últimos 3 a 6 meses.": {
   "src": [
-   "services/onboarding.py:113"
+   "services/onboarding.py:127"
   ],
   "lazy": true
  },
@@ -14547,7 +14571,7 @@
  },
  "O local da operação, com um código curto (ex.: CD01) igual ao do seu ERP/WMS. Tudo o mais pertence a uma filial.": {
   "src": [
-   "services/onboarding.py:296"
+   "services/onboarding.py:314"
   ],
   "lazy": true
  },
@@ -14685,7 +14709,7 @@
  },
  "O projeto é resolvido em ordem: 1º guardar toda a demanda (falta é muito penalizada), 2º o objetivo escolhido, 3º o desempate. Se faltar espaço, o resultado diz quanto não coube.": {
   "src": [
-   "services/onboarding.py:210"
+   "services/onboarding.py:226"
   ],
   "lazy": true
  },
@@ -14697,7 +14721,7 @@
  },
  "O que colorir": {
   "src": [
-   "services/onboarding.py:130"
+   "services/onboarding.py:146"
   ],
   "lazy": true
  },
@@ -14714,7 +14738,7 @@
  },
  "O que importar": {
   "src": [
-   "services/onboarding.py:100"
+   "services/onboarding.py:114"
   ],
   "lazy": true
  },
@@ -14749,7 +14773,7 @@
  },
  "O que precisa caber: SKUs com medidas e a quantidade a guardar (de uma planilha ou do cadastro de uma filial existente, com um fator de crescimento).": {
   "src": [
-   "services/onboarding.py:205"
+   "services/onboarding.py:221"
   ],
   "lazy": true
  },
@@ -14778,11 +14802,11 @@
  },
  "O saldo é o \"antes\": a otimização compara as bins de hoje com a proposta para essas quantidades.": {
   "src": [
-   "services/onboarding.py:241"
+   "services/onboarding.py:257"
   ],
   "lazy": true
  },
- "O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)": {
+ "O separador faz todos os pedidos do dia em sequência, nas quatro rotas, no arranjo 3D (e grava em vídeo)": {
   "src": [
    "templates/slotting/routes.html:175"
   ]
@@ -14913,8 +14937,8 @@
   "src": [
    "routers/optimization.py:1019",
    "services/field_help.py:248",
-   "services/onboarding.py:164",
-   "services/onboarding.py:208",
+   "services/onboarding.py:180",
+   "services/onboarding.py:224",
    "templates/optimization/page.html:155",
    "templates/site/project.html:424"
   ],
@@ -14929,7 +14953,7 @@
  },
  "Objetivo e restrições": {
   "src": [
-   "services/onboarding.py:258"
+   "services/onboarding.py:274"
   ],
   "lazy": true
  },
@@ -14940,13 +14964,13 @@
  },
  "Objetivo é o número que o sistema tenta deixar o menor (ou maior) possível. Restrições são regras que nunca podem ser quebradas, como o saldo caber na bin e a bin caber no nível.": {
   "src": [
-   "services/onboarding.py:166"
+   "services/onboarding.py:182"
   ],
   "lazy": true
  },
  "Objetivo é o que se quer minimizar ou maximizar (ex.: volume de bins). Restrições são regras que nunca podem ser quebradas (o saldo cabe, a bin cabe no nível). Otimizar é achar a melhor solução que respeita todas as regras.": {
   "src": [
-   "services/onboarding.py:259"
+   "services/onboarding.py:275"
   ],
   "lazy": true
  },
@@ -15033,7 +15057,7 @@
  },
  "Ociosidade alta num horário fixo é tempo para reposição ou inventário; fila num horário é sinal para liberar pedidos antes ou reforçar a equipe só naquela hora.": {
   "src": [
-   "services/onboarding.py:229"
+   "services/onboarding.py:245"
   ],
   "lazy": true
  },
@@ -15111,7 +15135,7 @@
  },
  "Ocupação (tem saldo ou não), % enchimento (volume do saldo ÷ volume das bins) ou tipo de bin. Enchimento baixo indica bins grandes demais para o saldo.": {
   "src": [
-   "services/onboarding.py:130"
+   "services/onboarding.py:146"
   ],
   "lazy": true
  },
@@ -15160,7 +15184,7 @@
  },
  "Ocupação e preenchimento de cada corredor, estante e nível: mostra onde há bins grandes demais para o saldo.": {
   "src": [
-   "services/onboarding.py:342"
+   "services/onboarding.py:360"
   ],
   "lazy": true
  },
@@ -15226,7 +15250,7 @@
  },
  "Onde criar": {
   "src": [
-   "services/onboarding.py:83"
+   "services/onboarding.py:97"
   ],
   "lazy": true
  },
@@ -15302,13 +15326,13 @@
  },
  "Ordem natural (2 antes de 10) ou alfabética, e se 07 e 7 são o mesmo código. Afeta a ordem das listas de separação.": {
   "src": [
-   "services/onboarding.py:245"
+   "services/onboarding.py:261"
   ],
   "lazy": true
  },
  "Ordem recomendada": {
   "src": [
-   "services/onboarding.py:102"
+   "services/onboarding.py:116"
   ],
   "lazy": true
  },
@@ -15399,7 +15423,7 @@
  },
  "Os módulos (estantes, porta-paletes) com frente, níveis e zona de ouro. Com eles, a zona de ouro e a caminhada usam medidas reais em vez de estimativas.": {
   "src": [
-   "services/onboarding.py:303"
+   "services/onboarding.py:321"
   ],
   "lazy": true
  },
@@ -15432,7 +15456,7 @@
  },
  "Os produtos ficam onde estão e o sistema troca as bins. Comece com o objetivo \"Menos volume de bins\" e o motor de pesquisa operacional.": {
   "src": [
-   "services/onboarding.py:321"
+   "services/onboarding.py:339"
   ],
   "lazy": true
  },
@@ -15444,13 +15468,13 @@
  },
  "Os tempos padrão da separação (velocidade, parada, peça, fora do ouro) e as opções da caminhada 3D. Valem para todas as telas de simulação.": {
   "src": [
-   "services/onboarding.py:246"
+   "services/onboarding.py:262"
   ],
   "lazy": true
  },
  "Os tipos de bin permitidos e as mesmas regras da otimização (enchimento máximo, rotação, peso).": {
   "src": [
-   "services/onboarding.py:206"
+   "services/onboarding.py:222"
   ],
   "lazy": true
  },
@@ -15484,7 +15508,7 @@
  },
  "Otimizar as bins": {
   "src": [
-   "services/onboarding.py:317"
+   "services/onboarding.py:335"
   ],
   "lazy": true
  },
@@ -15508,7 +15532,7 @@
  "Otimização de bins": {
   "src": [
    "routers/optimization.py:30",
-   "services/onboarding.py:154",
+   "services/onboarding.py:170",
    "services/onboarding.py:38",
    "templates/base.html:130",
    "templates/optimization/index.html:3",
@@ -15524,13 +15548,13 @@
  },
  "Otimização por endereço": {
   "src": [
-   "services/onboarding.py:320"
+   "services/onboarding.py:338"
   ],
   "lazy": true
  },
  "Otimize o projeto e gere a filial": {
   "src": [
-   "services/onboarding.py:289"
+   "services/onboarding.py:307"
   ],
   "lazy": true
  },
@@ -15656,7 +15680,7 @@
  },
  "Para cada parte do endereço escolha faixa de números, faixa de letras, valor fixo ou não utilizar. Ex.: corredor A a D, estante 1 a 20 com 2 dígitos (01…20), nível 1 a 5, posição 1 a 4. Só o corredor é obrigatório; \"Não utilizar\" encerra o endereço naquela parte.": {
   "src": [
-   "services/onboarding.py:86"
+   "services/onboarding.py:100"
   ],
   "lazy": true
  },
@@ -15691,7 +15715,7 @@
  },
  "Para o que foge do padrão, ex.: no corredor D, estantes 19 e 20, o nível vai só de 1 a 3. A exceção vale só para os códigos indicados.": {
   "src": [
-   "services/onboarding.py:88"
+   "services/onboarding.py:102"
   ],
   "lazy": true
  },
@@ -15703,7 +15727,7 @@
  },
  "Para um armazém que ainda não existe (ou uma reforma): você informa o imóvel e a demanda, e o sistema calcula quantas estruturas de cada tipo, onde ficam e quais endereços e bins criar.": {
   "src": [
-   "services/onboarding.py:195"
+   "services/onboarding.py:211"
   ],
   "lazy": true
  },
@@ -15712,7 +15736,7 @@
    "templates/locations/form.html:57"
   ]
  },
- "Para volumes grandes, importe planilhas (CSV ou Excel) em vez de digitar. Siga a ordem: filiais → armazéns → tipos de bin → endereços → capacidade dos níveis → produtos → saldos.": {
+ "Para volumes grandes, importe planilhas (CSV ou Excel) em vez de digitar. Siga a ordem: filiais → armazéns → tipos de bin → endereços → capacidade dos níveis → produtos → saldos → histórico de pedidos (opcional).": {
   "src": [
    "services/onboarding.py:35"
   ],
@@ -15898,7 +15922,7 @@
  },
  "Pedido, SKU, quantidade e data dos últimos 3 a 6 meses. Dá a curva ABC e os pares que saem juntos.": {
   "src": [
-   "services/onboarding.py:331"
+   "services/onboarding.py:349"
   ],
   "lazy": true
  },
@@ -16017,7 +16041,7 @@
  },
  "Pegar acima do ombro ou abaixo do joelho é mais lento e cansativo. Os níveis cujo meio cai nessa faixa são \"de ouro\": a otimização põe ali os produtos que mais saem.": {
   "src": [
-   "services/onboarding.py:79"
+   "services/onboarding.py:81"
   ],
   "lazy": true
  },
@@ -16181,13 +16205,13 @@
  },
  "Pesquisa operacional (padrão) busca a melhor solução para o escopo inteiro; 15 s costumam bastar. Heurística é instantânea e serve para escopos muito grandes ou para conferir.": {
   "src": [
-   "services/onboarding.py:171"
+   "services/onboarding.py:187"
   ],
   "lazy": true
  },
  "Pesquisa operacional × heurística": {
   "src": [
-   "services/onboarding.py:262"
+   "services/onboarding.py:278"
   ],
   "lazy": true
  },
@@ -16278,13 +16302,13 @@
  },
  "Pinte por curva ABC ou zona de ouro para ver onde estão os produtos mais procurados e simule a separação andando pelos corredores.": {
   "src": [
-   "services/onboarding.py:346"
+   "services/onboarding.py:364"
   ],
   "lazy": true
  },
  "Pinte por zona de ouro ou curva ABC para ver se os produtos A estão nos níveis de ouro e perto da expedição. Se estiverem espalhados, a posição pela saída tem ganho a oferecer.": {
   "src": [
-   "services/onboarding.py:148"
+   "services/onboarding.py:164"
   ],
   "lazy": true
  },
@@ -16330,7 +16354,7 @@
  },
  "Planilha de pedidos": {
   "src": [
-   "services/onboarding.py:114"
+   "services/onboarding.py:128"
   ],
   "lazy": true
  },
@@ -16419,8 +16443,8 @@
  },
  "Planta da filial": {
   "src": [
-   "services/onboarding.py:135",
-   "services/onboarding.py:344",
+   "services/onboarding.py:151",
+   "services/onboarding.py:362",
    "templates/layout/index.html:31",
    "templates/layout/plan.html:20",
    "templates/optimization/page.html:222",
@@ -16446,8 +16470,8 @@
  },
  "Planta e 3D": {
   "src": [
-   "services/onboarding.py:339",
-   "services/onboarding.py:132"
+   "services/onboarding.py:357",
+   "services/onboarding.py:148"
   ],
   "lazy": true
  },
@@ -16503,7 +16527,7 @@
  "Ponto de referência": {
   "src": [
    "services/field_help.py:196",
-   "services/onboarding.py:139"
+   "services/onboarding.py:155"
   ],
   "help": true,
   "lazy": true
@@ -16520,13 +16544,13 @@
  },
  "Pool com posição pela saída": {
   "src": [
-   "services/onboarding.py:333"
+   "services/onboarding.py:351"
   ],
   "lazy": true
  },
  "Pool de bins": {
   "src": [
-   "services/onboarding.py:323",
+   "services/onboarding.py:341",
    "services/run_history.py:22",
    "templates/runs/list.html:13"
   ],
@@ -16587,7 +16611,7 @@
  },
  "Por dia": {
   "src": [
-   "services/onboarding.py:226",
+   "services/onboarding.py:242",
    "templates/optimization/page.html:501"
   ],
   "lazy": true
@@ -16611,19 +16635,19 @@
  },
  "Por endereço × Pool": {
   "src": [
-   "services/onboarding.py:264"
+   "services/onboarding.py:280"
   ],
   "lazy": true
  },
  "Por endereço: cada endereço guarda os mesmos produtos e o sistema escolhe as melhores bins para eles. Pool: as bins ficam onde estão e os produtos mudam de endereço.": {
   "src": [
-   "services/onboarding.py:156"
+   "services/onboarding.py:172"
   ],
   "lazy": true
  },
  "Por endereço: produtos ficam, bins trocam. Pool: bins ficam, produtos mudam de endereço. O primeiro é mais simples de executar; o segundo costuma liberar mais espaço.": {
   "src": [
-   "services/onboarding.py:265"
+   "services/onboarding.py:281"
   ],
   "lazy": true
  },
@@ -16678,8 +16702,10 @@
  },
  "Porta": {
   "src": [
+   "services/onboarding.py:91",
    "templates/structure_kinds/form.html:36"
-  ]
+  ],
+  "lazy": true
  },
  "Porta (sem, de giro, de correr)": {
   "src": [
@@ -16695,6 +16721,12 @@
  "Porta-palete (longarinas)": {
   "src": [
    "services/appearance.py:566"
+  ],
+  "lazy": true
+ },
+ "Porta-palete, estante de aço, câmara… O tipo traz as peças, a aparência no 3D, a condição de armazenagem (ex.: refrigerado) e a porta. Tipos novos ficam em Cadastros → Tipos de estrutura.": {
+  "src": [
+   "services/onboarding.py:77"
   ],
   "lazy": true
  },
@@ -16776,7 +16808,7 @@
  },
  "Posição dos SKUs": {
   "src": [
-   "services/onboarding.py:207",
+   "services/onboarding.py:223",
    "templates/site/project.html:356",
    "templates/site/project.html:561"
   ],
@@ -16810,7 +16842,7 @@
  },
  "Posição pela saída": {
   "src": [
-   "services/onboarding.py:173",
+   "services/onboarding.py:189",
    "templates/optimization/page.html:197",
    "templates/optimization/page.html:444"
   ],
@@ -16818,13 +16850,13 @@
  },
  "Posição pela saída (slotting)": {
   "src": [
-   "services/onboarding.py:270"
+   "services/onboarding.py:286"
   ],
   "lazy": true
  },
  "Posição pela saída e trajeto": {
   "src": [
-   "services/onboarding.py:328"
+   "services/onboarding.py:346"
   ],
   "lazy": true
  },
@@ -17045,8 +17077,8 @@
  "Produtos": {
   "src": [
    "routers/products.py:32",
-   "services/onboarding.py:231",
-   "services/onboarding.py:312",
+   "services/onboarding.py:247",
+   "services/onboarding.py:330",
    "templates/base.html:124",
    "templates/dashboard.html:37",
    "templates/products/detail.html:8"
@@ -17086,7 +17118,7 @@
  },
  "Produtos que saem juntos no mesmo pedido. Deixá-los perto um do outro encurta a rota. O sistema considera um par quando ele aparece em pelo menos 20% dos pedidos do menos vendido dos dois.": {
   "src": [
-   "services/onboarding.py:273"
+   "services/onboarding.py:289"
   ],
   "lazy": true
  },
@@ -17167,8 +17199,8 @@
   "src": [
    "routers/site.py:29",
    "services/field_help.py:114",
-   "services/onboarding.py:193",
-   "services/onboarding.py:199",
+   "services/onboarding.py:209",
+   "services/onboarding.py:215",
    "services/run_history.py:22",
    "templates/runs/list.html:14"
   ],
@@ -17337,6 +17369,12 @@
    "services/route_compare.py:177"
   ]
  },
+ "Propõe reespaçar os níveis ou trocar a estrutura das estantes para caber mais bins, com as peças que já existem ou comprando as que faltam. Você confere antes de aplicar, e dá para desfazer.": {
+  "src": [
+   "services/onboarding.py:142"
+  ],
+  "lazy": true
+ },
  "Providenciar": {
   "src": [
    "services/action_plan.py:290",
@@ -17360,7 +17398,7 @@
  },
  "Pré-visualizar e gerar": {
   "src": [
-   "services/onboarding.py:89"
+   "services/onboarding.py:103"
   ],
   "lazy": true
  },
@@ -17377,7 +17415,7 @@
  },
  "Pré-visualize primeiro: a lista mostra o que será criado e os conflitos com endereços existentes. Endereços ocupados nunca são sobrescritos. Depois, Gerar agora.": {
   "src": [
-   "services/onboarding.py:90"
+   "services/onboarding.py:104"
   ],
   "lazy": true
  },
@@ -17486,7 +17524,7 @@
  },
  "Quais bins (tipo e quantidade) cada endereço tem hoje, ex.: 4 × CX-P. É o \"antes\" que a otimização compara com a proposta.": {
   "src": [
-   "services/onboarding.py:307"
+   "services/onboarding.py:325"
   ],
   "lazy": true
  },
@@ -17546,7 +17584,7 @@
  },
  "Qualidade da solução": {
   "src": [
-   "services/onboarding.py:182"
+   "services/onboarding.py:198"
   ],
   "lazy": true
  },
@@ -17582,13 +17620,13 @@
  },
  "Quando várias soluções empatam no objetivo, o 2º critério escolhe entre elas, depois o 3º. O critério de baixo nunca piora o de cima.": {
   "src": [
-   "services/onboarding.py:261"
+   "services/onboarding.py:277"
   ],
   "lazy": true
  },
  "Quantas bins de cada tipo cabem em cada nível (ex.: 6 × CX-P). É o limite que a otimização por endereço respeita.": {
   "src": [
-   "services/onboarding.py:310"
+   "services/onboarding.py:328"
   ],
   "lazy": true
  },
@@ -17627,6 +17665,12 @@
    "services/field_help.py:443"
   ],
   "help": true
+ },
+ "Quantas peças vão em cada módulo (montantes, colunas) e em cada nível (longarinas, prateleiras). As peças vêm de Cadastros → Peças de estrutura.": {
+  "src": [
+   "services/onboarding.py:87"
+  ],
+  "lazy": true
  },
  "Quantas unidades cabem numa bin é o MENOR de três limites: o encaixe das unidades em grade (com rotação), o volume da bin × enchimento máximo ÷ volume da unidade e o peso máximo ÷ peso da unidade. Medidas externas superestimam a capacidade.": {
   "src": [
@@ -17800,7 +17844,7 @@
  },
  "Quantidade por SKU": {
   "src": [
-   "services/onboarding.py:162"
+   "services/onboarding.py:178"
   ],
   "lazy": true
  },
@@ -17812,7 +17856,7 @@
  },
  "Quantidades negativas": {
   "src": [
-   "services/onboarding.py:117"
+   "services/onboarding.py:131"
   ],
   "lazy": true
  },
@@ -17836,7 +17880,7 @@
  },
  "Quanto do volume da bin pode ser ocupado, ex.: 85%. A folga existe porque as unidades não se encaixam perfeitamente e é preciso espaço para a mão.": {
   "src": [
-   "services/onboarding.py:257"
+   "services/onboarding.py:273"
   ],
   "lazy": true
  },
@@ -17891,7 +17935,7 @@
  },
  "Quantos níveis o módulo tem e o vão útil de cada um (altura livre entre uma prateleira e a de cima). Se os vãos forem diferentes, informe um por nível, de baixo para cima.": {
   "src": [
-   "services/onboarding.py:76"
+   "services/onboarding.py:78"
   ],
   "lazy": true
  },
@@ -17985,11 +18029,13 @@
  "Recomposição das estruturas": {
   "src": [
    "routers/levels.py:361",
+   "services/onboarding.py:141",
    "templates/levels/index.html:20",
    "templates/levels/recompose.html:2",
    "templates/levels/recompose.html:7",
    "templates/optimization/page.html:429"
-  ]
+  ],
+  "lazy": true
  },
  "Recomposição desfeita: {n} estante(s) voltaram à estrutura, aos vãos e às capacidades de antes.": {
   "src": [
@@ -18090,7 +18136,7 @@
  },
  "Regra padrão por nível": {
   "src": [
-   "services/onboarding.py:85"
+   "services/onboarding.py:99"
   ],
   "lazy": true
  },
@@ -18311,7 +18357,7 @@
  },
  "Resultado por endereço": {
   "src": [
-   "services/onboarding.py:187"
+   "services/onboarding.py:203"
   ],
   "lazy": true
  },
@@ -18347,8 +18393,8 @@
  },
  "Resultados salvos": {
   "src": [
-   "services/onboarding.py:215",
-   "services/onboarding.py:325",
+   "services/onboarding.py:231",
+   "services/onboarding.py:343",
    "templates/optimization/page.html:64",
    "templates/runs/list.html:3",
    "templates/runs/list.html:15",
@@ -18392,7 +18438,7 @@
  },
  "Roda a otimização. Nada muda no cadastro: o resultado é uma proposta que você confere antes de aplicar.": {
   "src": [
-   "services/onboarding.py:181"
+   "services/onboarding.py:197"
   ],
   "lazy": true
  },
@@ -18404,7 +18450,7 @@
  },
  "Roda o modelo (alguns segundos a poucos minutos). O resultado traz planta, quantidades, custo e o plano em PDF/Excel.": {
   "src": [
-   "services/onboarding.py:211"
+   "services/onboarding.py:227"
   ],
   "lazy": true
  },
@@ -18762,7 +18808,7 @@
  },
  "Saldo atual dimensiona para o estoque de hoje. Min/Max level dimensiona para o estoque mínimo ou máximo planejado do produto, evitando que a bin fique pequena quando o estoque subir.": {
   "src": [
-   "services/onboarding.py:163"
+   "services/onboarding.py:179"
   ],
   "lazy": true
  },
@@ -18807,9 +18853,9 @@
  },
  "Saldos": {
   "src": [
-   "services/onboarding.py:238",
+   "services/onboarding.py:254",
    "services/onboarding.py:40",
-   "services/onboarding.py:314",
+   "services/onboarding.py:332",
    "templates/base.html:131",
    "templates/stock/list.html:3"
   ],
@@ -18852,9 +18898,9 @@
    "services/onboarding.py:56",
    "services/onboarding.py:61",
    "services/onboarding.py:70",
-   "services/onboarding.py:80",
-   "templates/account.html:20",
-   "templates/bin_types/form.html:89"
+   "services/onboarding.py:82",
+   "services/onboarding.py:94",
+   "templates/account.html:20"
   ],
   "lazy": true
  },
@@ -18875,7 +18921,7 @@
  },
  "Salvar e otimizar": {
   "src": [
-   "services/onboarding.py:211",
+   "services/onboarding.py:227",
    "templates/site/project.html:460"
   ],
   "lazy": true
@@ -18887,7 +18933,7 @@
  },
  "Salvar planta": {
   "src": [
-   "services/onboarding.py:143",
+   "services/onboarding.py:159",
    "templates/layout/plan.html:28"
   ],
   "lazy": true
@@ -18947,7 +18993,7 @@
  },
  "Se várias soluções empatam no objetivo, o 2º critério decide, depois o 3º e o 4º. Ex.: objetivo Menos bins e desempate por Mínimo de mudanças: entre as soluções com menos bins, a que mexe em menos coisa.": {
   "src": [
-   "services/onboarding.py:168"
+   "services/onboarding.py:184"
   ],
   "lazy": true
  },
@@ -19271,6 +19317,12 @@
   ],
   "help": true
  },
+ "Sem porta, de giro ou de correr. A porta de giro precisa de espaço livre no corredor para abrir, e o tempo de abrir e fechar entra no simulador de trajeto.": {
+  "src": [
+   "services/onboarding.py:92"
+  ],
+  "lazy": true
+ },
  "Sem quantidade": {
   "src": [
    "services/site_planner.py:75"
@@ -19548,7 +19600,7 @@
  },
  "Simula o separador montando um pedido ou um dia inteiro, com a rota e o tempo de cada parada. Dá para gravar em vídeo.": {
   "src": [
-   "services/onboarding.py:151"
+   "services/onboarding.py:167"
   ],
   "lazy": true
  },
@@ -19556,8 +19608,8 @@
   "src": [
    "routers/layout.py:247",
    "routers/site.py:536",
-   "services/onboarding.py:221",
-   "services/onboarding.py:336",
+   "services/onboarding.py:237",
+   "services/onboarding.py:354",
    "templates/layout/plan.html:26",
    "templates/site/project.html:562"
   ],
@@ -19593,7 +19645,7 @@
  },
  "Simulação": {
   "src": [
-   "services/onboarding.py:246"
+   "services/onboarding.py:262"
   ],
   "lazy": true
  },
@@ -19624,7 +19676,7 @@
  },
  "Simule um dia inteiro de pedidos e veja o total de horas, para dimensionar a equipe.": {
   "src": [
-   "services/onboarding.py:226"
+   "services/onboarding.py:242"
   ],
   "lazy": true
  },
@@ -19675,7 +19727,7 @@
  },
  "Slotting: os produtos que mais saem (curva A) vão para perto da expedição (zona de ouro da caminhada) e na altura confortável (zona de ouro da pega). Menos caminhada e menos esforço por pedido.": {
   "src": [
-   "services/onboarding.py:175"
+   "services/onboarding.py:191"
   ],
   "lazy": true
  },
@@ -19854,11 +19906,6 @@
    "templates/optimization/page.html:649"
   ]
  },
- "Summary": {
-  "src": [
-   "services/bin_optimizer.py:940"
-  ]
- },
  "Só abrir a tela": {
   "src": [
    "templates/onboarding.html:82"
@@ -20014,7 +20061,7 @@
  },
  "Só se a filial tem depósitos fisicamente separados (ex.: seco e refrigerado): a otimização nunca mistura armazéns.": {
   "src": [
-   "services/onboarding.py:298"
+   "services/onboarding.py:316"
   ],
   "lazy": true
  },
@@ -20169,7 +20216,7 @@
  },
  "Tempo de separação": {
   "src": [
-   "services/onboarding.py:274"
+   "services/onboarding.py:292"
   ],
   "lazy": true
  },
@@ -20187,7 +20234,7 @@
  },
  "Tempo do pedido = caminhada ÷ velocidade + paradas × tempo por parada + peças × tempo por peça + itens fora da zona de ouro × tempo extra. Os valores padrão ficam em Configurações.": {
   "src": [
-   "services/onboarding.py:152"
+   "services/onboarding.py:168"
   ],
   "lazy": true
  },
@@ -20368,7 +20415,7 @@
  },
  "Tempos": {
   "src": [
-   "services/onboarding.py:223"
+   "services/onboarding.py:239"
   ],
   "lazy": true
  },
@@ -20544,6 +20591,12 @@
    "routers/bulk.py:60"
   ]
  },
+ "Tipo de estrutura": {
+  "src": [
+   "services/onboarding.py:76"
+  ],
+  "lazy": true
+ },
  "Tipo de estrutura não encontrado.": {
   "src": [
    "routers/structure_kinds.py:236",
@@ -20651,7 +20704,7 @@
  },
  "Tipos de bin": {
   "src": [
-   "services/onboarding.py:300",
+   "services/onboarding.py:318",
    "templates/base.html:139"
   ],
   "lazy": true
@@ -20723,13 +20776,13 @@
  },
  "Toda análise fica guardada com os parâmetros e os indicadores. Use para testar cenários: rode com objetivos ou restrições diferentes e compare.": {
   "src": [
-   "services/onboarding.py:217"
+   "services/onboarding.py:233"
   ],
   "lazy": true
  },
  "Toda distância é medida a partir desse ponto pelo caminho mais curto entre os corredores. A \"zona de ouro da caminhada\" são os endereços mais perto dele.": {
   "src": [
-   "services/onboarding.py:141"
+   "services/onboarding.py:157"
   ],
   "lazy": true
  },
@@ -21010,6 +21063,12 @@
    "templates/imports/history.html:34"
   ]
  },
+ "Um modelo da biblioteca ou o código gerado por uma IA a partir de uma foto. Só muda o desenho no 3D.": {
+  "src": [
+   "services/onboarding.py:93"
+  ],
+  "lazy": true
+ },
  "Um nível fora da zona de ouro \"fica\" esses metros mais longe. 0 = só a caminhada conta. Vale para estruturas com zona de ouro cadastrada.": {
   "src": [
    "templates/site/project.html:413"
@@ -21071,7 +21130,7 @@
  },
  "Um tour rápido pela barra de navegação e pelo painel.": {
   "src": [
-   "services/onboarding.py:284"
+   "services/onboarding.py:302"
   ],
   "lazy": true
  },
@@ -21115,7 +21174,7 @@
  },
  "Uma fileira é uma linha de estantes de um lado do corredor. Obstáculos (pilares, docas, escritórios) bloqueiam a passagem e desviam a caminhada.": {
   "src": [
-   "services/onboarding.py:138"
+   "services/onboarding.py:154"
   ],
   "lazy": true
  },
@@ -21160,13 +21219,13 @@
  },
  "Uma linha por item de pedido: nº do pedido, SKU, quantidade e, se tiver, a data e o horário de liberação para separação (para simular o dia com o horário). Também serve uma lista de SKUs com o total de saída, mas sem pedidos não há afinidade nem simulação de trajeto.": {
   "src": [
-   "services/onboarding.py:115"
+   "services/onboarding.py:129"
   ],
   "lazy": true
  },
  "Uma posição do armazém identificada por Corredor-Estante-Nível-Posição, ex.: A-01-2-1. O nível conta de baixo para cima. Cada endereço tem bins, e cada bin guarda um SKU.": {
   "src": [
-   "services/onboarding.py:253"
+   "services/onboarding.py:269"
   ],
   "lazy": true
  },
@@ -21211,7 +21270,7 @@
  },
  "Unidades na bin": {
   "src": [
-   "services/onboarding.py:179",
+   "services/onboarding.py:195",
    "templates/optimization/page.html:299"
   ],
   "lazy": true
@@ -21322,7 +21381,7 @@
  },
  "Use o histórico de pedidos para pôr os produtos que mais saem nos melhores lugares e medir a caminhada.": {
   "src": [
-   "services/onboarding.py:329"
+   "services/onboarding.py:347"
   ],
   "lazy": true
  },
@@ -21622,14 +21681,14 @@
  },
  "Vista 3D": {
   "src": [
-   "services/onboarding.py:146",
-   "services/onboarding.py:147"
+   "services/onboarding.py:162",
+   "services/onboarding.py:163"
   ],
   "lazy": true
  },
  "Vista 3D e caminhada": {
   "src": [
-   "services/onboarding.py:346"
+   "services/onboarding.py:364"
   ],
   "lazy": true
  },
@@ -22052,7 +22111,7 @@
  "Zona de ouro": {
   "src": [
    "services/field_help.py:62",
-   "services/onboarding.py:77",
+   "services/onboarding.py:79",
    "services/site_report.py:338",
    "services/site_report.py:344",
    "templates/site/plan.html:144",
@@ -22206,7 +22265,7 @@
  },
  "Zonas de ouro": {
   "src": [
-   "services/onboarding.py:268",
+   "services/onboarding.py:284",
    "templates/site/view3d.html:479"
   ],
   "lazy": true,
@@ -22219,7 +22278,7 @@
  },
  "Zonas e circulação": {
   "src": [
-   "services/onboarding.py:201",
+   "services/onboarding.py:217",
    "templates/site/project.html:111"
   ],
   "lazy": true
@@ -26625,13 +26684,13 @@
  },
  "Áreas que não recebem estrutura: docas, expedição, escritório, pilares. A expedição também é o ponto de referência da caminhada.": {
   "src": [
-   "services/onboarding.py:201"
+   "services/onboarding.py:217"
   ],
   "lazy": true
  },
  "É com essas medidas que o sistema calcula quantas unidades cabem em cada tipo de bin. Produto sem medida aparece como \"Faltam dimensões\" e não é otimizado.": {
   "src": [
-   "services/onboarding.py:234"
+   "services/onboarding.py:250"
   ],
   "lazy": true
  },

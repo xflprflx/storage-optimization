@@ -906,7 +906,7 @@ class ModulePlaced:
     y0: Optional[float] = None  # cabeceira: posição transversal do canto
     faces: str = ""  # cabeceira: área livre para onde a frente do módulo está voltada
     segment: int = 0
-    zone: Optional[N_("Floor")] = None
+    zone: Optional[Floor] = None
 
     @property
     def grect(self) -> tuple[float, float, float, float]:

@@ -937,7 +937,7 @@ def optimize(addresses: list[AddressIn], types: dict[int, BinSpec], prm: Params,
     return results, s
 
 
-def summarize(results: list[AddressResult]) -> _("Summary"):
+def summarize(results: list[AddressResult]) -> Summary:
     s = Summary(addresses=len(results))
     for r in results:
         s.by_status[r.status] = s.by_status.get(r.status, 0) + 1

@@ -172,7 +172,7 @@
       {% if sim.release_on %}<td class="text-end text-nowrap">{{ clk(d.start_s) }} → <span class="text-success">{{ clk((d.start_s or 0) + d.opt_end) if d.opt_end is defined else '—' }}</span>{% if d.bopt_end is defined %} · <span style="color:#7b3fb5">{{ clk((d.start_s or 0) + d.bopt_end) }}</span>{% endif %}</td>
       <td class="text-end text-nowrap"><span class="text-success">{{ mmss(d.opt_lead) if d.opt_lead is defined else '—' }}</span>{% if d.bopt_lead is defined %} · <span style="color:#7b3fb5">{{ mmss(d.bopt_lead) }}</span>{% endif %}</td>{% endif %}
       <td class="text-end">{{ (d.gain_pct|dec(0) ~ '%') if d.gain_pct is not none else '—' }}</td>
-      <td class="text-end">{% if walk3d is defined %}<a class="btn btn-sm btn-outline-success py-0" href="{{ walk3d }}day={{ d.date }}" title="{{ _("O separador faz todos os pedidos do dia em sequência, nas três rotas, no arranjo 3D (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular o dia em 3D") }}</a>{% endif %}</td>
+      <td class="text-end">{% if walk3d is defined %}<a class="btn btn-sm btn-outline-success py-0" href="{{ walk3d }}day={{ d.date }}" title="{{ _("O separador faz todos os pedidos do dia em sequência, nas quatro rotas, no arranjo 3D (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular o dia em 3D") }}</a>{% endif %}</td>
     </tr>{% endfor %}</tbody>
   </table></div>
   {% if dsel %}<div class="card-footer bg-white small">{{ _h("Mostrando só os pedidos de <b>{day}</b>.", day=(fmt_datetime(dsel|todate, time=False))) }} <a href="{{ day_link if day_link is defined else '?' }}">{{ _("Ver todos os pedidos") }}</a></div>{% endif %}
@@ -186,7 +186,7 @@
   <div class="col-xl-8">
     <div class="card">
       <div class="card-header bg-white d-flex justify-content-between flex-wrap gap-2"><strong>{{ _h("Pedido {v}", v=(sel.order if sel else '')) }}</strong>
-        {% if sel and walk3d is defined %}<a class="btn btn-sm btn-success" href="{{ walk3d }}order={{ sel.order|urlencode }}" title="{{ _("Mostra o separador andando pelas três rotas no arranjo 3D e grava em vídeo") }}"><i class="bi bi-person-walking"></i> {{ _("Ver caminhada em 3D / gravar vídeo") }}</a>{% endif %}
+        {% if sel and walk3d is defined %}<a class="btn btn-sm btn-success" href="{{ walk3d }}order={{ sel.order|urlencode }}" title="{{ _("Mostra o separador andando pelas quatro rotas no arranjo 3D e grava em vídeo") }}"><i class="bi bi-person-walking"></i> {{ _("Ver caminhada em 3D / gravar vídeo") }}</a>{% endif %}
         {% if sel %}<span class="small">{{ _h("<span style=\"color:#d62728\">━</span> lista {list_m} m · <span style=\"color:#2f6db5\">━</span> serpentina {s_m} m · <span style=\"color:#1a9850\">━</span> otimizada {opt_m} m · {stops} parada(s)", list_m=(sel.list_m|dec(1)), s_m=(sel.s_m|dec(1)), opt_m=(sel.opt_m|dec(1)), stops=(sel.stops)) }}</span>{% endif %}
         {% if sel and trip %}<span class="small w-100" style="color:#7b3fb5"><span style="opacity:.6">━</span> {{ _h("lote: trajeto nº {id} com {n} pedido(s) ({orders}) · {m} m no trajeto · {stops} parada(s)", id=trip.id, n=trip.orders|length, orders=trip.orders|join(', '), m=(trip.bopt_m|dec(1)), stops=trip.stops) }}</span>{% endif %}</div>
       <div class="card-body">{{ svg|safe }}</div>

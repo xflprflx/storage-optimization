@@ -23,6 +23,7 @@ __pycache__/
 .eggs/
 build/
 dist/
+*.whl
 
 # Ambientes virtuais
 .venv/

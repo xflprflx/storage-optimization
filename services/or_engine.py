@@ -479,7 +479,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
     final = _pool_metrics(res, types)
     import os
     if os.environ.get("NK_OR_DEBUG"):
-        print(_("DEBUG stages"), lex.stages, "heur", heur, "final", final)
+        print("DEBUG stages", lex.stages, "heur", heur, "final", final)
     if _better(heur, final, prio):
         # o solver não terminou a tempo melhor que a heurística: fica a heurística (com aviso)
         greedy.solver = _info("heuristic", t0, lex.stages, heur, heur,

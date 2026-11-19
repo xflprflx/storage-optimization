@@ -113,7 +113,7 @@ class MasterOptions:
     drop_levels: bool = False  # endereços + sync: excluir também a posição física (nível) que ficar vazia
 
 
-def _sync(res: N_("MasterResult"), opts: MasterOptions, fn) -> None:
+def _sync(res: MasterResult, opts: MasterOptions, fn) -> None:
     """Roda a sincronização se o arquivo veio limpo; senão avisa e não exclui nada."""
     from services.import_sync import blocked_reason
 

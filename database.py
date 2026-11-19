@@ -169,6 +169,14 @@ def _add_missing_columns(conn) -> None:
             conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} BIGINT"))
     if "structure_kind_pieces" in tables and "color" not in {c["name"] for c in insp.get_columns("structure_kind_pieces")}:
         conn.execute(text("ALTER TABLE structure_kind_pieces ADD COLUMN color VARCHAR(7)"))  # cor da peça no 3D
+    kcols = {c["name"] for c in insp.get_columns("structure_kinds")} if "structure_kinds" in tables else set()
+    for col, ddl in (("condition", "VARCHAR(20) NOT NULL DEFAULT ''"), ("door_type", "VARCHAR(10) NOT NULL DEFAULT ''"),
+                     ("door_leaves", "INTEGER NOT NULL DEFAULT 1"), ("door_hinge", "VARCHAR(5) NOT NULL DEFAULT 'left'"),
+                     ("door_angle", "INTEGER NOT NULL DEFAULT 90"), ("door_time_s", "BIGINT")):  # porta e condição
+        if "structure_kinds" in tables and col not in kcols:
+            conn.execute(text(f"ALTER TABLE structure_kinds ADD COLUMN {col} {ddl}"))
+    if "products" in tables and "storage_condition" not in {c["name"] for c in insp.get_columns("products")}:
+        conn.execute(text("ALTER TABLE products ADD COLUMN storage_condition VARCHAR(20) NOT NULL DEFAULT ''"))
     if "structure_types" in tables and "kind_id" not in stcols:  # tipo de estrutura cadastrado
         conn.execute(text("ALTER TABLE structure_types ADD COLUMN kind_id INTEGER REFERENCES structure_kinds(id)"))
     for tbl, cols in (("bin_types", btcols), ("structure_types", stcols)):  # aparência no 3D

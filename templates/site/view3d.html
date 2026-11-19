@@ -314,6 +314,57 @@ scene.add(binsPick, lookStructs, lookBins);
   if (!LOOKS.length) $('nkLookWrap').style.display = 'none';
   else if (total > 300000) { $('nkLook').checked = false; $('nkLookWrap').title += ' ' + _t('Desligada ao abrir: a planta tem muitas peças ({n}).', { n: total.toLocaleString(NK_I18N.locale) }); }
 })();
+// portas de giro (tipo de estrutura): o arco no piso e as folhas, que abrem quando um separador para na estante
+const doorGroup = new THREE.Group(), DOORS = [], ADDR_MOD = {};
+scene.add(doorGroup);
+data.bins.forEach(b => { if (b[9] != null && ADDR_MOD[b[9]] == null) ADDR_MOD[b[9]] = b[8]; });
+(function buildDoors() {
+  const leafMat = new THREE.MeshLambertMaterial({ color: '#dfe6ea', transparent: true, opacity: 0.55, depthWrite: false });
+  const arcMat = new THREE.LineDashedMaterial({ color: '#7b3fb5', dashSize: 0.12, gapSize: 0.08 });
+  mods.forEach((m, mi) => {
+    const dr = structById[m.s]?.door;
+    if (!dr || dr.type !== 'swing') return;
+    // frente e lado como no 3D (place): origem = canto esquerdo da frente, eu = ao longo da frente, et = para dentro
+    let o, eu, et, W;
+    if (m.fx) { W = m.w; [o, eu, et] = m.ff ? [[m.x + m.w, m.y + m.d], [-1, 0], [0, -1]] : [[m.x, m.y], [1, 0], [0, 1]]; }
+    else { W = m.d; [o, eu, et] = m.ff ? [[m.x + m.w, m.y], [0, 1], [-1, 0]] : [[m.x, m.y + m.d], [0, -1], [1, 0]]; }
+    const leaves = dr.leaves === 2 ? [[0, 1, W / 2], [W, -1, W / 2]] : (dr.hinge === 'right' ? [[W, -1, W]] : [[0, 1, W]]);
+    const g = new THREE.Group(); doorGroup.add(g);
+    const D = { mi, g, k: 0, leaves: [] };
+    leaves.forEach(([a0, sgn, r]) => {
+      const hx = o[0] + eu[0] * a0, hy = o[1] + eu[1] * a0;
+      const pts = [];  // arco no piso
+      for (let i = 0; i <= 16; i++) {
+        const ph = (dr.angle * Math.PI / 180) * i / 16, a = a0 + sgn * r * Math.cos(ph), b = -r * Math.sin(ph);
+        pts.push(new THREE.Vector3(M(o[0] + eu[0] * a + et[0] * b), 0.012, M(o[1] + eu[1] * a + et[1] * b)));
+      }
+      pts.push(new THREE.Vector3(M(hx), 0.012, M(hy)));
+      const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), arcMat); ln.computeLineDistances(); g.add(ln);
+      // folha: gira na dobradiça; fechada rente à frente, abre para o corredor
+      const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0.5, 0.5, 0);
+      const leaf = new THREE.Mesh(geo, leafMat); leaf.scale.set(M(r), M(m.h) * 0.96, 0.02);
+      const pivot = new THREE.Object3D(); pivot.position.set(M(hx - et[0]), 0, M(hy - et[1])); pivot.add(leaf); g.add(pivot);
+      const dir = [eu[0] * sgn, eu[1] * sgn], th0 = Math.atan2(-dir[1], dir[0]), thO = Math.atan2(et[1], -et[0]);
+      let dth = thO - th0; dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+      D.leaves.push({ pivot, th0, sign: Math.sign(dth) || 1, max: Math.min(dr.angle, 100) * Math.PI / 180 });
+      pivot.rotation.y = th0;
+    });
+    DOORS.push(D);
+  });
+  if (!DOORS.length) return;
+})();
+function doorsTick() {  // abre as portas das estantes onde algum separador está pegando
+  if (!DOORS.length) return;
+  const open = new Set();
+  (WK.walkers || []).forEach(w => {
+    if (w.pick == null) return;
+    ((w.R.groups && w.R.groups[w.pick]) || [w.R.keys[w.pick]]).forEach(a => { const mi = ADDR_MOD[a]; if (mi != null) open.add(mi); });
+  });
+  DOORS.forEach(D => {
+    D.k += ((open.has(D.mi) ? 1 : 0) - D.k) * (WK.playing ? 0.2 : 1);
+    D.leaves.forEach(L => { L.pivot.rotation.y = L.th0 + L.sign * L.max * D.k; });
+  });
+}
 const col2 = new THREE.Color(), colS = new THREE.Color();
 function updateLooks(showMod, cut, mode, on) {
   LOOKS.forEach(L => {
@@ -409,6 +460,7 @@ function rebuild() {
   [posts, plates, bins, binsPick].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; });
   bins.computeBoundingSphere(); posts.computeBoundingSphere(); plates.computeBoundingSphere(); binsPick.computeBoundingSphere();
   updateLooks(showMod, cut, mode, useLook);
+  DOORS.forEach(D => { D.g.visible = showMod(mods[D.mi]); });
   legend(mode);
 }
 
@@ -482,7 +534,7 @@ $('nkAisleAll').addEventListener('click', e => { e.preventDefault(); document.qu
 $('nkAisleInv').addEventListener('click', e => { e.preventDefault(); document.querySelectorAll('#nkAisleList input').forEach(i => { i.checked = !i.checked; }); rebuild(); });
 $('nkCut').addEventListener('input', rebuild);
 $('nkBins').addEventListener('change', e => { bins.visible = lookBins.visible = e.target.checked; if (!e.target.checked) select(null); });
-$('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = lookStructs.visible = e.target.checked; });
+$('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = lookStructs.visible = doorGroup.visible = e.target.checked; });
 $('nkLook').addEventListener('change', rebuild);
 $('nkWalls').addEventListener('change', e => { walls.visible = e.target.checked; });
 $('nkGold').addEventListener('change', e => { gold.visible = e.target.checked; });
@@ -595,6 +647,7 @@ async function loadDay(day, autoplay = true) {
 function clearWalk() {
   WK.group.traverse(o => { if (o.isSprite) { o.material.map?.dispose(); o.material.dispose(); } });
   WK.group.clear(); WK.walkers = []; WK.stops = {};
+  doorsTick();  // sem separador: as portas fecham
 }
 
 function pointAt(w, d) {  // posição (m) a `d` metros do início e o segmento em que está
@@ -738,6 +791,7 @@ function update() {
     w.ring.scale.set(s, s, s);
     w.segs.forEach(g => { const v = w.d - g.d0; g.dn.visible = v > 1e-4; if (v > 1e-4) g.dn.scale.set(Math.min(v, g.len), 1, 1); });
   });
+  doorsTick();
   Object.entries(WK.stops).forEach(([key, st]) => {  // quem pegou primeiro (até o tempo atual)
     let by = null;
     WK.walkers.forEach(w => { if (w.arrive[key] != null && w.arrive[key] <= t + 1e-9 && (!by || w.arrive[key] < by.arrive[key])) by = w; });
@@ -986,6 +1040,6 @@ renderer.domElement.addEventListener('dblclick', e => {
   const hit = ray.intersectObjects([bins.visible ? binsPick : null, plates, posts, floor].filter(o => o && o.visible))[0];
   if (hit) { controls.target.copy(hit.point); controls.update(); }
 });
-window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild, walk: WK, openWalk, play, pause };  // para testes e depuração
+window.nk3dView = { scene, camera, controls, bins, data, select, view, rebuild, walk: WK, openWalk, play, pause, doors: DOORS, update };  // para testes e depuração
 </script>
 {% endblock %}

@@ -26,6 +26,13 @@
           <input class="form-control" name="material_type" maxlength="60" list="materialTypes" value="{{ data.get('material_type') or '' }}" placeholder="{{ _("Ex.: Eletrônico") }}">
           <datalist id="materialTypes">{% for mt, n in material_types() if mt %}<option value="{{ mt }}">{% endfor %}</datalist>
         </div>
+        <div class="col-md-3">
+          <label class="form-label" for="storage_condition">{{ _("Condição de armazenagem") }}</label>
+          <select class="form-select" name="storage_condition" id="storage_condition">
+            {% for k, lbl in storage_conditions().items() %}<option value="{{ k }}" {% if (data.get('storage_condition') or '') == k %}selected{% endif %}>{{ _(lbl) }}</option>{% endfor %}
+          </select>
+          <div class="form-text">{{ _("O produto só vai para estruturas com esta condição (tipo de estrutura).") }}</div>
+        </div>
       </div>
       <hr class="my-4">
       <h6 class="text-muted text-uppercase small mb-3"><i class="bi bi-rulers"></i> {{ _("Dimensões físicas") }}</h6>

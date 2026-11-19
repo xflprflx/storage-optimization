@@ -427,9 +427,18 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         nodes = _nodes(db, g2, branch_id, wid, stock, gold, assign)
         return _walk(simulate(sample, nodes, g2.ref_node())), g2
 
+    def door_block(g2) -> str:
+        """Porta de giro que passaria a bater em algo na variação (a que já batia na planta atual não conta)."""
+        new = [dr for dr in g2.doors if dr["hit"] and dr["bay"] not in base_hits]
+        if not new:
+            return ""
+        more = _(" e mais {n}", n=len(new) - 1) if len(new) > 1 else ""
+        return _("não serve: a porta de {bay} bateria em {what} ao abrir{more}", bay=new[0]["bay"], what=new[0]["hit"], more=more)
+
     steps = 6
     prog(0, steps, _("Medindo a planta atual"))
     w0, g = measure(data)
+    base_hits = {dr["bay"] for dr in g.doors if dr["hit"]}
     if not w0:
         return {"error": _("Nenhum pedido da amostra tem SKUs em estantes da planta.")}
     variants = [{"label": _("Planta atual"), "current": True, "data": data, **w0, "what": []}]
@@ -458,7 +467,11 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
             if moved_any(why):
                 variants.append({"label": label, "error": why})
             continue
-        wv, _g = measure(new)
+        wv, g_new = measure(new)
+        blocked = door_block(g_new)
+        if blocked:
+            variants.append({"label": label, "error": blocked})
+            continue
         v = {"label": label, "data": new, **wv, "orient": orient, "cuts": cuts,
              "what": [_("Abrir {n} passagem(ns) de {gap} m atravessando as fileiras ao longo de {axis}, em {where}; as "
                         "estantes depois de cada passagem andam {gap} m.", n=len(cuts), gap=fmt_num(gap / 100), axis=axis,
@@ -471,7 +484,10 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         base_nodes = _nodes(db, g, branch_id, wid, stock, gold, assign)
         demand, dist_of = _corridor_demand(g, base_nodes, sample, g.ref_node())
         new, moves = swap_corridors(data, g, demand, dist_of)
-        if new is not None:
+        blocked = door_block(build(new, bays)) if new is not None else ""
+        if new is not None and blocked:
+            variants.append({"label": _("Troca de corredores ({n} mudança(s))", n=len(moves)), "error": blocked})
+        elif new is not None:
             wv, _g = measure(new)
             what = [_("Trocar as estantes de lugar (com o que está nelas), os corredores com mais saídas mais perto da "
                       "referência: {moves}.", moves="; ".join(_("{a} vai para o lugar de {b}", a=a, b=b) for a, b in moves))]
@@ -482,7 +498,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
                 g_sw = build(new, bays)
                 orient, cuts = best_pass["orient"], best_pass["cuts"]
                 both, why = add_passages(new, g_sw, orient, cuts, gap)
-                if both is not None:
+                if both is not None and not door_block(build(both, bays)):
                     wb, _g = measure(both)
                     variants.append({"label": _("Troca de corredores + {label}", label=best_pass["label"]), "data": both,
                                      **wb, "what": what + best_pass["what"]})

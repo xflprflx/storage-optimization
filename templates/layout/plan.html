@@ -242,6 +242,12 @@
     const step = Math.max(D.L, D.W) > 6000 ? 500 : 100, grid = el('g', { stroke: '#e6ebef', 'stroke-width': sw * 0.6 }, svg);
     for (let x = step; x < D.L; x += step) el('line', { x1: x, y1: 0, x2: x, y2: D.W }, grid);
     for (let y = step; y < D.W; y += step) el('line', { x1: 0, y1: y, x2: D.L, y2: y }, grid);
+    (INFO.doors || []).forEach(dr => dr.pts.forEach(pts => {  // área de abertura das portas de giro
+      const col = dr.hit ? '#d62728' : '#7b3fb5';
+      const pg = el('polygon', { points: pts.map(p => p.join(',')).join(' '), fill: col, 'fill-opacity': 0.12, stroke: col,
+                                 'stroke-width': sw, 'stroke-dasharray': `${sw * 4} ${sw * 3}` }, svg);
+      el('title', {}, pg).textContent = dr.bay + (dr.hit ? ' — ' + _t('a porta bate em {what} ao abrir', { what: dr.hit }) : '');
+    }));
     (INFO.corridors || []).forEach(c => {
       const a = c.orient === 'h' ? { x: c.lo, y: c.center - c.width / 2, width: c.hi - c.lo, height: c.width }
         : { x: c.center - c.width / 2, y: c.lo, width: c.width, height: c.hi - c.lo };
@@ -611,7 +617,7 @@
   }
   function info() {
     const u = INFO.unplaced || [], d = INFO.dup || [];
-    $('checkInfo').innerHTML = '<div>' + _t('{placed} estante(s) na planta · {corridors} corredor(es) de caminhada', {placed: INFO.placed || 0, corridors: (INFO.corridors || []).length}) + '<\/div>' + ((u.length ? '<div class="text-danger mt-1">' + _t('Fora da planta: {u}', {u: u.map(esc).join('; ')}) + '<\/div><div class="text-muted">' + _t('Endereços dessas estantes usam a caminhada estimada pelo endereço.') + '<\/div>' : '<div class="text-success">' + _t('Todas as estantes estão na planta.') + '<\/div>')) + ((d.length ? '<div class="text-warning-emphasis mt-1">' + _t('Em mais de uma fileira (vale a primeira): {d}', {d: d.map(esc).join(', ')}) + '<\/div>' : '')) + (((INFO.warn || []).length ? `<div class="text-danger mt-1">${INFO.warn.map(esc).join('<br>')}</div>` : '')) + '<div class="text-muted mt-1">' + _t('Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.') + '<\/div>';
+    $('checkInfo').innerHTML = '<div>' + _t('{placed} estante(s) na planta · {corridors} corredor(es) de caminhada', {placed: INFO.placed || 0, corridors: (INFO.corridors || []).length}) + '<\/div>' + ((u.length ? '<div class="text-danger mt-1">' + _t('Fora da planta: {u}', {u: u.map(esc).join('; ')}) + '<\/div><div class="text-muted">' + _t('Endereços dessas estantes usam a caminhada estimada pelo endereço.') + '<\/div>' : '<div class="text-success">' + _t('Todas as estantes estão na planta.') + '<\/div>')) + ((d.length ? '<div class="text-warning-emphasis mt-1">' + _t('Em mais de uma fileira (vale a primeira): {d}', {d: d.map(esc).join(', ')}) + '<\/div>' : '')) + (((INFO.warn || []).length ? `<div class="text-danger mt-1">${INFO.warn.map(esc).join('<br>')}</div>` : '')) + '<div class="text-muted mt-1">' + _t('Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.') + ((INFO.doors || []).length ? ' ' + _t('Roxo tracejado = abertura das portas (vermelho: bate em algo).') : '') + '<\/div>';
   }
   function load(r) {
     D = r.data; INFO = r; BAYS = r.bays || BAYS;

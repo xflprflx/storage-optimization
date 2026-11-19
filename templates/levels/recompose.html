@@ -29,6 +29,8 @@
   {% if sk.floor %}{{ _h("{n} de paletes no piso", n=sk.floor) }}; {% endif %}
   {% if sk.no_levels %}{{ _h("{n} sem níveis", n=sk.no_levels) }}{% endif %}</div>
 {% endif %}
+{% if res.door_blocked %}<div class="small text-muted mb-2"><i class="bi bi-door-open"></i> {{ _h("{n} troca(s) descartada(s): a porta de giro da estrutura nova bateria em algo ao abrir (planta desenhada).", n=res.door_blocked) }}</div>{% endif %}
+{% if not res.door_checked %}<div class="small text-muted mb-2"><i class="bi bi-info-circle"></i> {{ _("Sem planta desenhada: a abertura das portas não foi conferida nas trocas de estrutura.") }}</div>{% endif %}
 {% if res.status == 'infeasible' %}<div class="alert alert-warning">{{ _("O otimizador não achou combinação possível com as peças disponíveis.") }}</div>{% endif %}
 {% if not res.changes %}
 <div class="alert alert-info"><i class="bi bi-check2-circle"></i> {{ _("Nenhuma recomposição vale a pena com estas condições.") }}

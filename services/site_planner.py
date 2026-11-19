@@ -125,6 +125,8 @@ class StructureSpec:
     base: float = 0.0  # altura da base do 1º nível a partir do piso (cm)
     level_hs: Optional[list] = None  # vão de cada nível, de baixo para cima (cm); None = level_h em todos
     kind: str = ""  # tipo (Estante, Porta-palete, Palete no chão…)
+    condition: str = ""  # condição de armazenagem do tipo ("" = ambiente): só recebe SKUs da mesma condição
+    door: Optional[dict] = None  # porta do tipo (services/doors.door_of): a de giro pede corredor para abrir
     # vão por nível: tipo de bin -> níveis (1 = de baixo) em que ele cabe (preenchido no cálculo; vazio = todos)
     fit_levels: dict = field(default_factory=dict, repr=False)
 
@@ -211,6 +213,7 @@ class Demand:
     cap: Optional[int] = None  # limite de unidades definido pelo usuário (sugestão de redução da demanda)
     bin_fill: Optional[float] = None  # ocupação das bins do SKU (%, volume), depois de alocado
     pop: Optional[float] = None  # popularidade (linhas de pedido ou unidades de saída no período)
+    condition: str = ""  # condição de armazenagem exigida ("" = ambiente)
     abc: str = ""  # curva ABC pela popularidade (A = até 80% das saídas, B = até 95%, C = o resto)
 
     @property
@@ -1100,6 +1103,72 @@ class SitePlan:
 # --------------------------------------------------------------------------- #
 # Planejamento
 # --------------------------------------------------------------------------- #
+VT = 10 ** 7  # tipo "virtual" = tipo + condição × VT (o solver separa a demanda por condição de armazenagem)
+
+
+def _solve_by_condition(floor, active, demands, choices, fixed_need, caps, prm, types):
+    """Sem condição de armazenagem, o solver de sempre. Com condição (em algum SKU ou estrutura), cada tipo de bin vira
+    um tipo por condição que só cabe nas estruturas da mesma condição: a demanda refrigerada só conta com estruturas
+    refrigeradas (e a ambiente, com as ambiente). A solução volta aos tipos reais (cada estrutura tem uma condição)."""
+    conds = sorted({d.condition for d in demands} | {s.condition for s in active})
+    if conds == [""]:
+        return _solve(floor, active, fixed_need, caps, prm, types, choices)
+    ci = {c: i for i, c in enumerate(conds)}
+    vt = lambda t, c: t + ci[c] * VT  # noqa: E731
+    chosen = {id(d) for d, _o in choices}
+    need: dict[int, int] = {}
+    for d in demands:
+        if id(d) not in chosen:
+            for t, n in (d.bins or {}).items():
+                need[vt(t, d.condition)] = need.get(vt(t, d.condition), 0) + n
+    ch = [(d, [{vt(t, d.condition): n for t, n in o.items()} for o in opts]) for d, opts in choices]
+    cond_of = {s.id: s.condition for s in active}
+    caps_v = {(vt(t, c), sid): (v if cond_of.get(sid, "") == c else 0) for (t, sid), v in caps.items() for c in conds}
+    types_v = {vt(t, c): spec for t, spec in types.items() for c in conds}
+    saved = {s.id: s.fit_levels for s in active}
+    for s in active:
+        s.fit_levels = {vt(t, c): v for t, v in (s.fit_levels or {}).items() for c in conds}
+    try:
+        sol = _solve(floor, active, need, caps_v, prm, types_v, ch)
+    finally:
+        for s in active:
+            s.fit_levels = saved[s.id]
+    if "z" in sol:
+        z: dict = {}
+        for (t, sid), n in sol["z"].items():
+            z[(t % VT, sid)] = z.get((t % VT, sid), 0) + n
+        sol["z"] = z
+    return sol
+
+
+def _door_aisles(plan, floor, active: list[StructureSpec]) -> None:
+    """Porta de giro: a estrutura só vai para zonas cujo corredor comporta a folha aberta + a passagem."""
+    from services.doors import leaves
+    from services.structure_kinds import DOOR_PASSAGE_CM
+
+    for s in active:
+        if (s.door or {}).get("type") != "swing":
+            continue
+        leaf = max((r for _a, _s, r in leaves(s.door, s.width)), default=0.0)
+        need = leaf + DOOR_PASSAGE_CM
+        ok = 0
+        for zn in floor.zones:
+            if not zn.allows(s.id):
+                continue
+            if (zn.aisle_cm or 0) + EPS < need:
+                ids = zn.struct_ids if zn.struct_ids is not None else {x.id for x in active}
+                zn.struct_ids = set(ids) - {s.id}
+            else:
+                ok += 1
+        if floor.zones and not ok:
+            plan.notes.append(_("{code}: a porta abre {leaf} cm no corredor e precisa de corredor de pelo menos {need} cm "
+                                "(folha + {p} cm de passagem): nenhum corredor comporta, a estrutura não foi usada.",
+                                code=s.code, leaf=f"{leaf:g}", need=f"{need:g}", p=f"{DOOR_PASSAGE_CM:g}"))
+        elif any((zn.aisle_cm or 0) + EPS < need for zn in floor.zones):
+            plan.notes.append(_("{code}: só nas zonas com corredor de pelo menos {need} cm (porta de giro: folha + {p} cm de "
+                                "passagem).", code=s.code, need=f"{need:g}", p=f"{DOOR_PASSAGE_CM:g}"))
+
+
 def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpec], demands: list[Demand],
               prm: SiteParams, parents: Optional[dict] = None) -> SitePlan:
     parents = parents or {}
@@ -1118,6 +1187,14 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
     floor = build_layout(b, active)
     plan.floor = floor
     plan.notes.extend(floor.notes)
+    _door_aisles(plan, floor, active)
+    have = {s.condition for s in active}
+    for c in sorted({d.condition for d in demands} - have):  # condição sem estrutura: esses SKUs ficam sem lugar
+        from services.structure_kinds import CONDITIONS
+
+        n = sum(1 for d in demands if d.condition == c)
+        plan.notes.append(_("{n} SKU(s) exigem a condição {c}, mas nenhuma estrutura ativa tem essa condição (tipo de "
+                            "estrutura): ficam sem lugar.", n=n, c=_(CONDITIONS.get(c, c))))
     if any(c in PLACEMENT_CRITERIA for c in prm.order):
         prm.walk_ref = ref_point(plan, prm.slotting or {})  # trajeto no solver: distância até a expedição
         if not any(d.pop for d in demands):
@@ -1190,7 +1267,7 @@ def plan_site(b: Building, structs: list[StructureSpec], types: dict[int, BinSpe
                 if d.status == "falta":
                     d.status, d.note = "ok", ""
         solve_caps = _weight_caps(caps, demands, choices, active, stat)
-        sol = _solve(floor, active, fixed_need, solve_caps, prm, types, choices)
+        sol = _solve_by_condition(floor, active, demands, choices, fixed_need, solve_caps, prm, types)
         for (d, opts), k in zip(choices, sol.get("picks") or []):
             d.bins = opts[k]
         _finish(plan, floor, structs, active, sol, caps, types, demands, prm, parents)
@@ -1352,6 +1429,8 @@ def _solve(floor: Layout, active: list[StructureSpec], need: dict[int, int], cap
                         cmax = int(math.floor(bk.depth / s.width + EPS)) if s.width > 0 else 0
                         if cmax <= 0 or dmm[s.id] > min(glen[g] for g in gs) or not zn.allows(s.id):
                             continue
+                        if (s.door or {}).get("type") == "swing":
+                            continue  # cabeceira olha para o transversal/faixa: porta de giro não entra
                         key = (zi, bk.id, k, e, s.id)
                         cmax_of[key] = cmax
                         cu[key] = m.NewBoolVar(f"cu_{zi}_{bk.id}_{k}_{e}_{s.id}")
@@ -1673,10 +1752,14 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
             partners.setdefault(b_, {})[a] = st
     placed_pts: dict[str, list] = {}  # SKU -> pontos das posições já ocupadas
 
-    for t in sorted({t for d in demands for t in (d.bins or {})}, key=lambda k: types[k].code):
-        slots = sorted([lv for m in plan.modules for lv in m.levels if lv.type_id == t],
+    conds = sorted({d.condition for d in demands} | {m.struct.condition for m in plan.modules})
+    for t, cond in [(t, c) for t in sorted({t for d in demands for t in (d.bins or {})}, key=lambda k: types[k].code)
+                    for c in conds]:  # condição de armazenagem: o SKU só vai para estrutura da mesma condição
+        slots = sorted([lv for m in plan.modules if m.struct.condition == cond for lv in m.levels if lv.type_id == t],
                        key=lambda lv: (lv.n, _bay_key(owner[id(lv)])))
-        order = sorted([d for d in demands if (d.bins or {}).get(t)], key=lambda d: (d.material, d.sku))
+        order = sorted([d for d in demands if (d.bins or {}).get(t) and d.condition == cond], key=lambda d: (d.material, d.sku))
+        if not order:
+            continue
         if sl:  # slotting: melhores posições primeiro; SKUs mais procurados (por bin) primeiro, vizinhos de quem sai junto
             # faixas de facilidade (SLOT_BUCKET_M): dentro de cada faixa, na ordem das estantes, para que posições
             # seguidas na lista sejam vizinhas na planta (itens que saem juntos ficam lado a lado)
@@ -1705,7 +1788,8 @@ def _place(plan: SitePlan, floor: Layout, active: list[StructureSpec], seg_mods:
                 # disponível para bins mais leves
                 j = next((j for j in range(si, len(slots)) if room(slots[j]) > 0), None)
                 if j is None:  # acabaram os níveis do tipo (ex.: limite de carga): usa um nível livre compatível
-                    extra = next((lv for m in plan.modules for lv in sorted(m.levels, key=lambda v: v.n)
+                    extra = next((lv for m in plan.modules if m.struct.condition == cond
+                                  for lv in sorted(m.levels, key=lambda v: v.n)
                                   if lv.type_id is None and caps.get((t, m.struct.id), 0) > 0
                                   and (not m.struct.fit_levels or lv.n in m.struct.fit_levels.get(t, []))), None)
                     if extra is None:

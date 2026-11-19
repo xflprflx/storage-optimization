@@ -387,6 +387,8 @@ class Product(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     # Tipo de material (ex.: Eletrônico, Químico, Embalagem). Vazio = não informado.
     material_type: Mapped[str] = mapped_column(String(60), nullable=False, default="", server_default="", index=True)
+    # condição de armazenagem que o produto exige ("" = ambiente; refrigerado, congelado, controlado)
+    storage_condition: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
     height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
@@ -509,6 +511,14 @@ class StructureKind(TimestampMixin, Base):
     look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
     appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+    # condição de armazenagem ("" = ambiente; refrigerado, congelado, controlado): só recebe SKUs da mesma condição
+    condition: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
+    # porta na frente do módulo: "" = sem porta | "swing" (de giro: precisa de espaço para abrir) | "sliding" (de correr)
+    door_type: Mapped[str] = mapped_column(String(10), nullable=False, default="", server_default="")
+    door_leaves: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")  # 1 ou 2 folhas
+    door_hinge: Mapped[str] = mapped_column(String(5), nullable=False, default="left", server_default="left")
+    door_angle: Mapped[int] = mapped_column(Integer, nullable=False, default=90, server_default="90")  # 90 ou 180°
+    door_time_s: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # abrir + fechar (s)
 
     pieces: Mapped[list["StructureKindPiece"]] = relationship(back_populates="kind", cascade="all, delete-orphan",
                                                               order_by="StructureKindPiece.id")

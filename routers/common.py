@@ -102,6 +102,13 @@ def _look_prompt(kind: str):
     return prompt(kind)
 
 
+def _storage_conditions():
+    from services.structure_kinds import CONDITIONS
+
+    return CONDITIONS
+
+
+templates.env.globals["storage_conditions"] = _storage_conditions  # condição de armazenagem (produto)
 templates.env.globals["look_choices"] = _look_choices  # aparência 3D no cadastro de bins e estruturas
 templates.env.globals["look_prompt"] = _look_prompt
 

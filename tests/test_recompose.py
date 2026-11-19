@@ -203,3 +203,27 @@ def test_optimization_flag_offers_recomposition(client, seeded):
     html = client.get(f"/optimization?{q}").text
     assert 'id="recompBox"' in html and 'name="pieces" value="unlimited"' in html and 'name="min_gain" value="2"' in html
     assert 'id="recompBox"' not in client.get(f"/optimization?{q.replace('recomp=1', 'recomp=')}").text
+
+
+def test_recompose_never_swaps_across_storage_conditions(client, db, depot):
+    """A estrutura alternativa (feita das peças existentes) é refrigerada: a estante ambiente não troca por ela."""
+    from models import StructureKind, StructureKindPiece, StructurePiece, StructureType
+    from services.recompose import propose
+
+    col = db.query(StructurePiece).filter_by(code="RC-COL").one()
+    k = StructureKind(name="Câmara RC", beam_cm=Decimal("2"), condition="refrigerado", notes="")
+    k.pieces = [StructureKindPiece(piece_id=col.id, qty=Decimal(2), per="module")]
+    db.add(k)
+    db.flush()
+    alt = StructureType(code="RC-CAM", name="Câmara RC", kind=k.name, kind_id=k.id, width=Decimal(100),
+                        depth=Decimal(60), height=Decimal(200), levels=2, level_height=Decimal(30))
+    db.add(alt)
+    db.commit()
+    try:
+        res = propose(db, depot["b"], None, pieces="existing")
+        assert not any(c["to_code"] == "RC-CAM" for c in res["changes"])
+        assert res["door_checked"] is False  # filial sem planta: a abertura das portas não é conferida
+    finally:
+        db.delete(db.get(StructureType, alt.id))
+        db.delete(db.get(StructureKind, k.id))
+        db.commit()

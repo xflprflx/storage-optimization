@@ -88,6 +88,15 @@ class _Ctx:
         k = self.kind.get(st.id)
         return float(k.pitch_cm) if k is not None and k.pitch_cm else None
 
+    def condition(self, st) -> str:
+        k = self.kind.get(st.id)
+        return (k.condition or "") if k is not None else ""
+
+    def door(self, st):
+        from services.doors import door_of
+
+        return door_of(self.kind.get(st.id))
+
     def floor(self, st) -> bool:
         from services.site_planner import is_floor
 
@@ -213,6 +222,13 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
             for t, n in c.items():
                 count_all[t] += n
     scope_ref = max((t for t in count_all if ctx.height(t)), key=lambda t: count_all[t], default=None)
+    from services.branch_layout import door_hits, geometry
+
+    try:
+        geo = geometry(db, branch_id, wid)  # planta desenhada: confere a abertura das portas de giro na troca
+    except Exception:  # noqa: BLE001  (sem planta válida: a porta não é conferida)
+        geo = None
+    door_blocked = 0
     prog(1, 4, _("Montando as opções de cada estante"))
     items = []  # por estante: {bay, cands: [{st, vaos, gain, pieces, label}]}
     for b in bays:
@@ -240,6 +256,18 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
             for t in ctx.structs:
                 if t.id == st.id or ctx.floor(t) or abs(float(t.width) - float(st.width)) > 1 + EPS:
                     continue
+                if ctx.condition(t) != ctx.condition(st):
+                    continue  # câmara refrigerada só troca por outra da mesma condição (e vice-versa)
+                dr = ctx.door(t)
+                if dr and dr.get("type") == "swing" and geo is not None:
+                    pb = geo.placed.get((b["aisle"], b["bay"]))
+                    if pb is not None:
+                        import dataclasses
+
+                        trial = dataclasses.replace(pb, bay=dataclasses.replace(pb.bay, door=dr))
+                        if door_hits(geo, (b["aisle"], b["bay"]), trial):
+                            door_blocked += 1
+                            continue
                 if float(t.depth) > float(st.depth) + 1 + EPS or float(t.height) > max(hmax, float(st.height)) + EPS:
                     continue
                 targets.append((t, _f(t.first_level_cm)))
@@ -357,7 +385,8 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
             "bays": len(items), "skipped": skipped, "changes": changes, "gain": sum(c["gain"] for c in changes),
             "levels_added": sum(c["levels_to"] - c["levels_from"] for c in changes), "pieces": plist,
             "cost": total_cost if any(p["bought"] for p in plist) else (0.0 if any_cost else None),
-            "status": status if ok else "infeasible", "no_structure": _count_no_structure(db, branch_id, wid)}
+            "status": status if ok else "infeasible", "no_structure": _count_no_structure(db, branch_id, wid),
+            "door_blocked": door_blocked, "door_checked": geo is not None}
 
 
 def _count_no_structure(db: Session, branch_id: int, wid: Optional[int]) -> int:

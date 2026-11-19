@@ -321,8 +321,13 @@ def parse_config(cfg: dict) -> tuple[Building, dict, SiteParams, list[str]]:
 
 
 def structure_specs(db: Session, modes: dict) -> list[StructureSpec]:
+    from services.doors import door_of
+    from services.structure_kinds import kind_of
+
     out = []
-    for st in db.scalars(select(StructureType).order_by(StructureType.code)):
+    sts = list(db.scalars(select(StructureType).order_by(StructureType.code)))
+    kinds = {st.id: kind_of(db, st) for st in sts}  # condição de armazenagem e porta vêm do tipo de estrutura
+    for st in sts:
         md = modes.get(st.id, {"mode": "off", "qty": 0, "min_qty": 0, "max_qty": None})
         out.append(StructureSpec(st.id, st.code, st.name, float(st.width), float(st.depth), float(st.height),
                                  int(st.levels), float(st.level_height),
@@ -331,7 +336,9 @@ def structure_specs(db: Session, modes: dict) -> list[StructureSpec]:
                                  golden_from=float(st.golden_from) if st.golden_from is not None else None,
                                  golden_to=float(st.golden_to) if st.golden_to is not None else None,
                                  base=float(st.first_level_cm or 0), kind=st.kind or "",
-                                 level_hs=st.vaos() if st.level_heights else None))
+                                 level_hs=st.vaos() if st.level_heights else None,
+                                 condition=(kinds[st.id].condition or "") if kinds[st.id] is not None else "",
+                                 door=door_of(kinds[st.id])))
     return out
 
 
@@ -388,7 +395,8 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
             if filled != dims:
                 from_cat += 1
             dims = filled
-        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims)))
+        cond = (it.get("condition") or (p.storage_condition if p is not None else "") or "").strip().lower()
+        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims), condition=cond))
     if no_level:
         notes.append(_("{no_level} SKU(s) do arquivo sem {v} level: usou o saldo.", no_level=no_level, v='min' if basis == 'min' else 'max'))
     if from_cat:
@@ -448,7 +456,8 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
             continue
         f = lambda v: float(v) if v is not None else None  # noqa: E731
         out.append(Demand(p.sku, p.name, p.material_type or "",
-                          ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight))))
+                          ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight)),
+                          condition=p.storage_condition or ""))
     if no_level:
         label = _("nível mínimo") if basis == "min" else _("nível máximo")
         notes.append(_("{no_level} SKU(s) sem {label} cadastrado: usou o saldo atual.", no_level=no_level, label=label))

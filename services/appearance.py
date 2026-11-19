@@ -684,9 +684,12 @@ def enrich(db, data: dict) -> dict:
     for s in data.get("structs") or []:
         st = db.get(StructureType, s.get("id")) if s.get("id") else None
         if st is not None and not s.get("floor"):
+            from services.doors import door_of
             from services.structure_kinds import kind_of
 
-            s["look"] = struct_look(st, kind_of(db, st))
+            k = kind_of(db, st)
+            s["look"] = struct_look(st, k)
+            s["door"] = door_of(k)  # porta: arco no piso e as folhas, que abrem quando o separador para ali
         else:
             s["look"] = None
     for t in data.get("types") or []:

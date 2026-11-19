@@ -679,6 +679,35 @@ liberadas, a comprar e o custo) e, por estante, os níveis e os vãos antes e de
 **Desfazer a última recomposição**, em Capacidade dos níveis, volta a estrutura, os vãos e as capacidades e tira os
 níveis criados.
 
+## 6.0.10 Portas e condição de armazenagem
+
+**Condição de armazenagem** — no tipo de estrutura (ambiente, refrigerado, congelado, controlado/seguro) e no produto
+(cadastro e, no projeto de filial nova, a coluna opcional *Condição de armazenagem* da aba SKUs). O produto só vai
+para estruturas com a mesma condição; ambiente = sem condição especial. A regra vale:
+- **no projeto de filial nova**: o solver separa a demanda por condição (tipos de bin "virtuais" por condição) e a
+  distribuição dos SKUs só usa níveis de estruturas da mesma condição. Condição sem estrutura: os SKUs ficam sem lugar,
+  com aviso;
+- **no Pool**: um pool por condição;
+- **nas trocas da posição pela saída** (Por endereço): só entre endereços da mesma condição;
+- **na recomposição**: troca só por estrutura da mesma condição.
+
+**Portas** (tipo de estrutura): sem porta, **de giro** ou **de correr**; 1 ou 2 folhas; dobradiça à esquerda ou à
+direita, vista de frente; abertura de 90° ou 180°; e o tempo para abrir e fechar. A folha mede a frente do módulo
+dividida pelas folhas. A porta de giro varre, no corredor, um setor de círculo com raio = largura da folha
+(`services/doors.py`, mesma convenção de frente e lado do 3D).
+- **Planta desenhada**: os arcos aparecem em roxo tracejado, ou em vermelho quando a porta bate em algo. Contam
+  fileira, obstáculo, parede e a referência. O painel *Situação* e o desenho avisam
+  "A-03: a porta bate em a fileira B ao abrir". A porta da estrutura vizinha não conta, porque raramente abrem juntas.
+- **Projeto de filial nova**: a estrutura com porta de giro só entra em zonas com corredor de pelo menos
+  folha + 80 cm de passagem. Também não vira cabeceira, que fica de frente para o transversal. A proposta de
+  disposição já respeita isso.
+- **Propostas**: o rearranjo descarta variações em que alguma porta passaria a bater em algo. A recomposição não
+  troca por estrutura com porta que bateria, conferido na planta desenhada; sem planta, avisa que não conferiu.
+- **Simulador de trajeto**: soma o tempo da porta uma vez por porta em cada pedido (vários itens na mesma estante =
+  uma abertura). No lote, uma vez por trajeto, dividida entre os pedidos. O cabeçalho mostra os segundos de porta por
+  pedido.
+- **3D**: o arco no piso e as folhas da porta, que abrem quando um separador para na estante.
+
 ## 7. Estruturas de armazenagem nos depósitos existentes
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):

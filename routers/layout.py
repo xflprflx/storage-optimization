@@ -95,6 +95,8 @@ def _geom_info(g) -> dict:
                            "rows": [rows[ri]["id"] for ri in c.rows]} for c in g.corridors],
             "pairs": [[rows[i]["id"], rows[j]["id"], round(gap, 1), manual] for i, j, gap, manual in g.pairs],
             "warn": g.warn,
+            "doors": [{"bay": dr["bay"], "hit": dr["hit"], "pts": [[[round(x, 1), round(y, 1)] for x, y in pts] for pts in dr["pts"]]}
+                      for dr in g.doors],
             "unplaced": g.unplaced, "dup": g.dup[:50], "placed": len(g.placed)}
 
 

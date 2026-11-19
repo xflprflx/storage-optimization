@@ -32,7 +32,9 @@
       {% for k in page.items %}
         <tr>
           <td><input type="checkbox" class="form-check-input bulk-kinds" value="{{ k.id }}"></td>
-          <td class="fw-semibold">{{ k.name }}{% if k.floor %} <span class="badge text-bg-light border">{{ _("paletes no piso") }}</span>{% endif %}</td>
+          <td class="fw-semibold">{{ k.name }}{% if k.floor %} <span class="badge text-bg-light border">{{ _("paletes no piso") }}</span>{% endif %}
+            {% if k.condition %} <span class="badge text-bg-info">{{ _(CONDITIONS.get(k.condition, k.condition)) }}</span>{% endif %}
+            {% if k.door_type %} <span class="badge text-bg-light border" title="{{ _(DOOR_TYPES[k.door_type]) }}"><i class="bi bi-door-open"></i> {{ _("porta") }}{% if k.door_type == 'swing' %} {{ k.door_leaves }}× {{ k.door_angle }}°{% endif %}</span>{% endif %}</td>
           <td class="small">{% for p in k.pieces %}<div>{{ p.qty|dec }} × <span class="mono">{{ p.piece.code }}</span> <span class="text-muted">{{ _(PER[p.per]) }}</span></div>{% else %}<span class="text-muted">—</span>{% endfor %}</td>
           <td class="text-end">{{ k.pitch_cm|dec if k.pitch_cm is not none else '' }}</td>
           <td class="text-end">{{ k.beam_cm|dec if k.beam_cm is not none else '' }}</td>

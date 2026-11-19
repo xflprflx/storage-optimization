@@ -132,6 +132,15 @@ def _kind_validate(db: Session, form: FormData, kid: int | None):
             stmt = stmt.where(StructureKind.id != kid)
         if db.scalar(stmt):
             errors.add("name", _("Já existe um tipo de estrutura chamado {name}.", name=data["name"]))
+    from services.structure_kinds import CONDITIONS, DOOR_TYPES, HINGES
+
+    cond, dt, hg = str(form.get("condition") or ""), str(form.get("door_type") or ""), str(form.get("door_hinge") or "left")
+    data["condition"] = cond if cond in CONDITIONS else ""
+    data["door_type"] = dt if dt in DOOR_TYPES else ""
+    data["door_hinge"] = hg if hg in HINGES else "left"
+    data["door_leaves"] = 2 if str(form.get("door_leaves")) == "2" else 1
+    data["door_angle"] = 180 if str(form.get("door_angle")) == "180" else 90
+    data["door_time_s"] = f_dec(form, "door_time_s", errors, _("Tempo da porta"))
     data["pitch_cm"] = f_dec(form, "pitch_cm", errors, _("Passo da furação"))
     data["beam_cm"] = f_dec(form, "beam_cm", errors, _("Espessura do nível"))
     for k, lbl in (("pitch_cm", _("Passo da furação")), ("beam_cm", _("Espessura do nível"))):
@@ -168,7 +177,10 @@ def _kind_validate(db: Session, form: FormData, kid: int | None):
 
 
 def _kind_ctx(db: Session) -> dict:
-    return {"pieces": list(db.scalars(select(StructurePiece).order_by(StructurePiece.code))), "PER": PER}
+    from services.structure_kinds import CONDITIONS, DOOR_TYPES, HINGES
+
+    return {"pieces": list(db.scalars(select(StructurePiece).order_by(StructurePiece.code))), "PER": PER,
+            "CONDITIONS": CONDITIONS, "DOOR_TYPES": DOOR_TYPES, "HINGES": HINGES}
 
 
 def _save_kind(db: Session, k: StructureKind, data: dict) -> None:
@@ -191,8 +203,11 @@ def list_kinds(request: Request, q: str = "", sort: str = "", dir: str = "", pag
     stmt, srt = apply_sort(stmt, sort, dir, {"name": StructureKind.name}, default="name", tiebreak=StructureKind.id)
     from services.appearance import model_choices
 
+    from services.structure_kinds import CONDITIONS, DOOR_TYPES
+
     return render(request, "structure_kinds/list.html", page=paginate(db, stmt, page), q=q, sort=srt,
-                  usage=_kind_usage(db), models=dict(model_choices("struct")), PER=PER)
+                  usage=_kind_usage(db), models=dict(model_choices("struct")), PER=PER, CONDITIONS=CONDITIONS,
+                  DOOR_TYPES=DOOR_TYPES)
 
 
 @router.get("/structure-kinds/new")
@@ -219,7 +234,8 @@ def edit_kind(kid: int, request: Request, db: Session = Depends(get_db)):
     k = db.get(StructureKind, kid)
     if not k:
         return redirect("/structure-kinds", _("Tipo de estrutura não encontrado."), "danger")
-    data = {key: getattr(k, key) for key in ("name", "floor", "pitch_cm", "beam_cm", "notes", "look_model")}
+    data = {key: getattr(k, key) for key in ("name", "floor", "pitch_cm", "beam_cm", "notes", "look_model", "condition",
+                                              "door_type", "door_leaves", "door_hinge", "door_angle", "door_time_s")}
     data["composition"] = [(p.piece_id, p.qty, p.per, p.color) for p in k.pieces]
     data["look_code"] = code_text(k.appearance)
     return render(request, "structure_kinds/form.html", item=k, data=data, errors={}, usage=_kind_usage(db).get(k.id, 0),

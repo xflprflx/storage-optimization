@@ -152,7 +152,8 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
     types = load_types(db)
     groups, locs, notes = load_pool(db, location_ids, basis, focus, prm.bin_source)
     results: list[PoolResult] = []
-    for gk, grp in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or 0)):
+    groups = _split_by_condition(db, groups)
+    for gk, grp in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or 0, kv[0][2:] if len(kv[0]) > 2 else ())):
         r = optimize_pool(grp["bins"], list(grp["demands"].values()), types, prm, grp["reserved"], grp["no_dims"],
                           grp.get("secondary") if (focus is not None and prm.bin_source == "any") else None)
         r.fixed_pids = dict(grp.get("fixed", {}))
@@ -163,6 +164,31 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
                        "fixed_skus": len(grp.get("fixed", {}))}
         results.append(r)
     return results, locs, types, notes
+
+
+def _split_by_condition(db: Session, groups: dict) -> dict:
+    """Condição de armazenagem: cada pool (filial + armazém) vira um pool por condição — as bins das estruturas
+    refrigeradas só recebem SKUs refrigerados, e vice-versa. Sem condição cadastrada, nada muda."""
+    from services.structure_kinds import location_conditions, product_conditions
+
+    loc_ids = [b.location_id for g in groups.values() for b in g["bins"]]
+    pids = [d.product_id for g in groups.values() for d in g["demands"].values()] + \
+        [d.product_id for g in groups.values() for d in (g.get("secondary") or [])]
+    lc, pcnd = location_conditions(db, loc_ids), product_conditions(db, pids)
+    if not any(lc.values()) and not any(pcnd.values()):
+        return groups
+    out = {}
+    for gk, grp in groups.items():
+        conds = sorted({lc.get(b.location_id, "") for b in grp["bins"]} | {pcnd.get(d.product_id, "") for d in grp["demands"].values()})
+        for c in conds:
+            sub = dict(grp)
+            sub["bins"] = [b for b in grp["bins"] if lc.get(b.location_id, "") == c]
+            sub["demands"] = {k: d for k, d in grp["demands"].items() if pcnd.get(d.product_id, "") == c}
+            if grp.get("secondary"):
+                sub["secondary"] = [d for d in grp["secondary"] if pcnd.get(d.product_id, "") == c]
+            if sub["bins"] or sub["demands"]:
+                out[tuple(gk) + ((c,) if c else ())] = sub
+    return out
 
 
 def pool_closure(results, skus) -> set:

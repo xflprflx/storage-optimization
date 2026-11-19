@@ -42,6 +42,10 @@ def _validate(db: Session, form: FormData, product_id: int | None):
         "name": f_str(form, "name", 255),
         "material_type": MaterialResolver(db)(f_str(form, "material_type")),
     }
+    from services.structure_kinds import CONDITIONS
+
+    cond = str(form.get("storage_condition") or "")
+    data["storage_condition"] = cond if cond in CONDITIONS else ""
     if not data["sku"]:
         errors.add("sku", _("SKU é obrigatório."))
     elif len(data["sku"]) > 60:
@@ -385,7 +389,8 @@ def edit_product(product_id: int, request: Request, db: Session = Depends(get_db
     prod = db.get(Product, product_id)
     if not prod:
         return redirect("/products", _("Produto não encontrado."), "danger")
-    data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "height", "width", "length", "weight")}
+    data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "storage_condition", "height", "width", "length",
+                                          "weight")}
     data["policies"] = _policy_form_rows(db, prod)
     return _form(request, db, prod, data, {})
 

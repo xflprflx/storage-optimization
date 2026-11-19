@@ -83,6 +83,7 @@ class Bay:
     levels: Optional[int]
     struct: Optional[StructureType] = None
     base: Optional[float] = None  # altura do 1º nível nesta estante (None = a da estrutura)
+    door: Optional[dict] = None  # porta do tipo de estrutura (services/doors.door_of)
 
 
 def scope_bays(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict[str, list[Bay]]:
@@ -105,13 +106,19 @@ def scope_bays(db: Session, branch_id: int, warehouse_id: Optional[int]) -> dict
         st[(canon(bs.aisle), canon(bs.bay))] = t
         if bs.first_level_cm is not None:
             bases[(canon(bs.aisle), canon(bs.bay))] = float(bs.first_level_cm)
+    from services.doors import door_of
+    from services.structure_kinds import kind_of
+
+    door_by_st: dict[int, Optional[dict]] = {}
+    for t in {t.id: t for t in st.values()}.values():
+        door_by_st[t.id] = door_of(kind_of(db, t))
     out: dict[str, list[Bay]] = {}
     for (ca, cb), b in pairs.items():
         t = st.get((ca, cb))
         a = disp_a[ca]
         out.setdefault(a, []).append(Bay(a, b, float(t.width) if t else 0.0, float(t.depth) if t else None,
                                          float(t.height) if t else None, t.levels if t else None, t,
-                                         bases.get((ca, cb))))
+                                         bases.get((ca, cb)), door_by_st.get(t.id) if t else None))
     for a in out:
         out[a].sort(key=lambda x: natural_key(x.bay))
     return dict(sorted(out.items(), key=lambda kv: natural_key(kv[0])))
@@ -296,6 +303,7 @@ class Geometry:
     back_addrs: Optional[set] = None  # endereços com as bins no fundo (atendidos pela face de trás)
     warn: list[str] = field(default_factory=list)
     net: object = None  # rede de caminhada (services/walk_net.WalkNet)
+    doors: list = field(default_factory=list)  # portas de giro: {"bay", "pts" (áreas varridas), "hit" (no que bate)}
 
     @property
     def ref(self) -> dict:
@@ -465,6 +473,7 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
         g.corridors.append(cor)
         for k, *_x in members:
             ent_corr[(info[k][0], info[k][5])] = cor
+    _check_doors(g)
     if with_net:
         g.net = _net(g)
 
@@ -475,8 +484,10 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
 
     for key, p in g.placed.items():
         cor = ent_corr[(p.row, "front")]
+        dr = p.bay.door
         g.nodes[key] = Node(key=f"{key[0]}-{key[1]}", gx=p.gx, gy=p.gy, zone=cor.index, aisle=0, along=p.along,
-                            cross=cor.center, ends=cor.ends, to_global=tg_of(cor), corridor=cor.index, net=g.net)
+                            cross=cor.center, ends=cor.ends, to_global=tg_of(cor), corridor=cor.index, net=g.net,
+                            door=(f"{key[0]}-{key[1]}", dr["time"]) if dr and dr.get("time") else None)
         bc = ent_corr.get((p.row, "back"))
         if bc is not None:  # pega pelos dois lados: parada também na face de trás (para as bins do fundo)
             r = rows[p.row]
@@ -497,6 +508,40 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
                      _("{other} sem número", other=other) if other else ""]
             g.unplaced.append(f"{a} ({', '.join(p for p in parts if p)})")
     return g
+
+
+def door_hits(g: "Geometry", key: tuple, pb: "PlacedBay") -> Optional[str]:
+    """No que a porta de giro da estante bate (rótulo legível) ou None."""
+    from services.doors import hits, sample
+
+    door = pb.bay.door
+    if not door or door.get("type") != "swing":
+        return None
+    r = g.data["rows"][pb.row]
+    rects = [(x, y, w, d, _("a fileira {aisle}", aisle=g.data["rows"][ri]["aisle"])) for x, y, w, d, ri in g.row_rects
+             if ri != pb.row]
+    rects += [(o["x"], o["y"], o["w"], o["d"], _("o obstáculo {name}", name=o.get("name") or "")) for o in g.data.get("obstacles") or []]
+    ref = g.data.get("ref") or {}
+    if ref:
+        rects.append((ref["x"] - 20, ref["y"] - 20, 40, 40, _("a referência")))
+    hit = hits(sample(pb.x, pb.y, pb.w, pb.d, r["orient"] == "h", r["face"] == "+", door), rects, (g.data["L"], g.data["W"]))
+    return _("a parede") if hit == "@wall" else hit
+
+
+def _check_doors(g: "Geometry") -> None:
+    """Portas de giro: a área de abertura de cada estante e o aviso quando bate em algo."""
+    from services.doors import sectors
+
+    for key, pb in g.placed.items():
+        door = pb.bay.door
+        if not door or door.get("type") != "swing":
+            continue
+        r = g.data["rows"][pb.row]
+        hit = door_hits(g, key, pb)
+        g.doors.append({"bay": f"{key[0]}-{key[1]}", "hit": hit,
+                        "pts": sectors(pb.x, pb.y, pb.w, pb.d, r["orient"] == "h", r["face"] == "+", door)})
+        if hit:
+            g.warn.append(_("{bay}: a porta bate em {what} ao abrir", bay=f"{key[0]}-{key[1]}", what=hit))
 
 
 _NET_CACHE: dict[str, object] = {}
@@ -568,6 +613,12 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
                    f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}'
                    f'{_(" · palete no chão") if fl else ""}</title></rect>')
     rows = d["rows"]
+    for dr in g.doors:  # área de abertura das portas de giro (vermelha quando bate em algo)
+        col = "#d62728" if dr["hit"] else "#7b3fb5"
+        for pts in dr["pts"]:
+            out.append(f'<polygon points="{" ".join(f"{x:.0f},{y:.0f}" for x, y in pts)}" fill="{col}" fill-opacity=".12" '
+                       f'stroke="{col}" stroke-width="{fs / 10:.1f}" stroke-dasharray="{fs / 4:.0f} {fs / 6:.0f}">'
+                       f'<title>{_esc(dr["bay"])}{(" — " + _esc(dr["hit"])) if dr["hit"] else ""}</title></polygon>')
     blocks = [rr[:4] for rr in g.row_rects] + [(o["x"], o["y"], o["w"], o["d"]) for o in d["obstacles"]]
     for x, y, w, h, ri in g.row_rects:
         r = rows[ri]

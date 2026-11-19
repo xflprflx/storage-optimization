@@ -19,6 +19,11 @@ from models import StructureKind, StructureKindPiece, StructurePiece, StructureT
 from services.i18n import N_, _
 
 PER = {"module": N_("por módulo"), "level": N_("por nível")}
+CONDITIONS = {"": N_("Ambiente"), "refrigerado": N_("Refrigerado"), "congelado": N_("Congelado"),
+              "controlado": N_("Controlado (seguro)")}
+DOOR_TYPES = {"": N_("Sem porta"), "swing": N_("De giro (abre para o corredor)"), "sliding": N_("De correr")}
+HINGES = {"left": N_("Dobradiça à esquerda"), "right": N_("Dobradiça à direita")}
+DOOR_PASSAGE_CM = 80.0  # passagem mínima no corredor com a porta aberta (cm)
 
 # padrões da primeira inicialização (o usuário edita): peças típicas, sem custo
 DEFAULT_PIECES = (("MONT-PP", N_("Quadro de montantes (porta-palete)")), ("LONG-PP", N_("Longarina (porta-palete)")),
@@ -124,3 +129,38 @@ def pieces_for(comp: list[tuple[int, float, str]], levels: int, modules: int = 1
     for pid, q, per in comp:
         out[pid] += q * modules * (levels if per == "level" else 1)
     return dict(out)
+
+
+def location_conditions(db: Session, location_ids) -> dict[int, str]:
+    """Endereço -> condição de armazenagem da estrutura da estante dele ("" = ambiente ou sem estrutura)."""
+    from models import BayStructure, StorageLocation
+
+    ids = sorted(set(location_ids))
+    if not ids:
+        return {}
+    conds = {k.id: (k.condition or "") for k in db.scalars(select(StructureKind)) if k.condition}
+    if not conds:
+        return {i: "" for i in ids}
+    out: dict[int, str] = {i: "" for i in ids}
+    for i in range(0, len(ids), 900):
+        rows = db.execute(select(StorageLocation.id, StructureType.kind_id)
+                          .join(BayStructure, (BayStructure.branch_id == StorageLocation.branch_id)
+                                & (BayStructure.aisle == StorageLocation.aisle) & (BayStructure.bay == StorageLocation.bay)
+                                & ((BayStructure.warehouse_id == StorageLocation.warehouse_id)
+                                   | (BayStructure.warehouse_id.is_(None) & StorageLocation.warehouse_id.is_(None))))
+                          .join(StructureType, StructureType.id == BayStructure.structure_type_id)
+                          .where(StorageLocation.id.in_(ids[i:i + 900])))
+        for lid, kid in rows:
+            out[lid] = conds.get(kid, "")
+    return out
+
+
+def product_conditions(db: Session, product_ids) -> dict[int, str]:
+    from models import Product
+
+    ids = sorted(set(product_ids))
+    out: dict[int, str] = {}
+    for i in range(0, len(ids), 900):
+        out.update({pid: c for pid, c in db.execute(select(Product.id, Product.storage_condition)
+                                                     .where(Product.id.in_(ids[i:i + 900]))).all()})
+    return {k: (v or "") for k, v in out.items()}

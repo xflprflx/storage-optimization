@@ -433,6 +433,12 @@ R(PST, "q", "Busca", "Procura pelo código, nome ou tipo da estrutura.", "find:t
 PSK = r"/structure-kinds"
 R(PSK, "name", "Nome do tipo", "Como o tipo aparece no cadastro de estruturas (ex.: Porta-palete seletivo, Estante leve).", "tag:name")
 R(PSK, "floor", "Paletes no piso", "Tipo blocado: paletes direto no piso, empilhados por nível, sem montantes nem longarinas. O 3D desenha os paletes em camadas.", "rack:pallet")
+R(PSK, "condition", "Condição de armazenagem", "Ambiente, refrigerado, congelado ou controlado (seguro). A estrutura só recebe produtos com a mesma condição (cadastro do produto): no projeto de filial nova, no Pool e nas trocas da posição pela saída. Na recomposição, só troca por estrutura da mesma condição.", "rack:levels")
+R(PSK, "door_type", "Tipo de porta", "Sem porta, de giro (abre para o corredor e precisa de espaço) ou de correr (não ocupa o corredor). A de giro é conferida na planta (bate em fileira, obstáculo, parede ou referência?), no projeto de filial nova (corredor da folha + 80 cm) e nas propostas de rearranjo e recomposição.", "rack:levels")
+R(PSK, "door_leaves", "Folhas", "1 folha (a frente inteira, gira na dobradiça) ou 2 folhas (metade da frente cada, giram nas pontas). O raio de abertura é a largura da folha.", "rack:levels")
+R(PSK, "door_hinge", "Dobradiça", "Lado da dobradiça da folha única, olhando a estrutura de frente (do corredor).", "rack:levels")
+R(PSK, "door_angle", "Abertura máxima", "90° (um quarto de círculo na frente) ou 180° (meio círculo): a área que precisa ficar livre no corredor.", "rack:levels")
+R(PSK, "door_time_s", "Tempo para abrir e fechar", "Segundos somados no simulador de trajeto a cada porta aberta: uma vez por pedido (mesmo com vários itens na estante) ou, no lote, uma vez por trajeto.", "rack:levels")
 R(PSK, "cp_piece", "Peça", "A peça da composição (Cadastros → Peças de estrutura). A mesma peça pode estar em vários tipos: na recomposição, as peças liberadas de uma estrutura servem para montar outra.", "rack:levels")
 R(PSK, "cp_qty", "Quantidade", "Quantas peças o tipo usa por módulo ou por nível (ex.: 2 longarinas por nível).", "rack:levels")
 R(PSK, "cp_per", "Por", "Por módulo: montantes, colunas, bases (não mudam com o número de níveis). Por nível: longarinas, prateleiras, braços, pistas (uma estrutura de N níveis usa N vezes).", "rack:levels")
@@ -470,6 +476,7 @@ R(PBT, "q", "Busca", "Procura pelo código ou nome do tipo de bin.", "find:text"
 
 # =========================================================================== produtos
 PPR = r"/products"
+R(PPR, "storage_condition", "Condição de armazenagem", "Ambiente, refrigerado, congelado ou controlado. O produto só vai para estruturas do tipo com a mesma condição (projeto de filial nova, Pool e trocas da posição pela saída).", "tag:code")
 R(PPR, "sku", "SKU", "Código único do produto no catálogo, o mesmo em todas as filiais.", "prod:sku")
 R(PPR, "name", "Nome do produto", "Descrição do produto, como aparece nas listas e nos relatórios.", "prod:name")
 R(PPR, "material_type", "Tipo de material", "Agrupa produtos parecidos (ex.: fixação, elétrico), para filtros e para o posicionamento.", "prod:material")

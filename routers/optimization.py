@@ -300,10 +300,13 @@ def _address_slotting(db: Session, slot: dict, location_ids: list[int], results)
         for l, q in lst:
             by_loc.setdefault(l, []).append((sku, q))
     sig = {r.id: tuple(sorted((r.current or {}).items())) for r in results if r.current}
+    from services.structure_kinds import location_conditions
+
+    cond = location_conditions(db, list(by_loc))  # trocas só entre endereços da mesma condição de armazenagem
     groups: dict[tuple, list] = {}
     for l, items in by_loc.items():
         if len(items) == 1 and l in sig and l in geo:
-            groups.setdefault(sig[l], []).append(l)
+            groups.setdefault((sig[l], cond.get(l, "")), []).append(l)
     # trocas aos pares, dentro de cada grupo (mesmas bins): do mais procurado para o menos, o SKU troca com o do
     # endereço mais fácil que esteja com um SKU bem menos procurado, se ganhar ao menos MIN_GAIN de caminhada
     min_gain = max(2.0, 2 * slot["spec"]["bay_m"])

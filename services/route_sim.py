@@ -38,6 +38,7 @@ class Node:
     corridor: object = None  # corredor na rede de caminhada (services/walk_net)
     gold: Optional[bool] = None  # endereço na zona de ouro da PEGA (None = estrutura sem zona de ouro)
     net: object = None  # rede de caminhada da planta: com ela, a distância e o trajeto contornam as estruturas
+    door: Optional[tuple] = None  # (porta, segundos para abrir e fechar): estante com porta (tipo de estrutura)
 
 
 def _natural(v: str):
@@ -71,6 +72,9 @@ def plan_nodes(plan) -> tuple[dict[str, list[Node]], dict]:
             node = dict(gx=gx, gy=gy, zone=zn.index, aisle=m.row.aisle, along=m.x0 + m.struct.width / 2,
                         cross=y + w / 2 if w > 0 else (m.row.y + m.row.depth if m.row.side == "L" else m.row.y),
                         ends=tuple(ends), to_global=zn.to_global)
+        dr = m.struct.door
+        if dr and dr.get("time"):
+            node["door"] = (f"{m.aisle}-{m.bay}", dr["time"])  # estrutura com porta: abrir e fechar a cada visita
         has_gold = m.struct.golden_from is not None and m.struct.golden_to is not None
         for lv in m.levels:
             gold = m.struct.is_golden(lv.n) if has_gold else None  # zona de ouro da pega do nível
@@ -243,6 +247,7 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
             nodes.update({n.key: n for n in stops_of[o][0]})
         groups = stop_groups(list(nodes.values()))
         uniq = [g[0] for g in groups.values()]
+        trip_doors = sum({n.door[0]: n.door[1] for n in nodes.values() if n.door}.values())
         by_list = sorted(uniq, key=lambda n: _natural(n.key))
         s_route = _s_shape(uniq, start, d) if s_shape else None
         opt = min([r for r in (_optimized(uniq, start, d), s_route, by_list) if r is not None],
@@ -258,6 +263,7 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
                 r[f"{k}_m"] = v / n
             r["batch_stops"] = len(uniq) / n
             r["trip"] = tid
+            r["batch_door_s"] = trip_doors / n  # no lote, cada porta abre uma vez por trajeto
         t = {"id": tid, "date": by_row[trip[0]].get("date") or "", "orders": list(trip), "stops": len(uniq),
              **{f"{k}_m": v for k, v in m.items()}, "route": opt, "groups": {k: [x.key for x in g] for k, g in groups.items()}}
         if start_s is not None:
@@ -267,7 +273,7 @@ def _batch(rows: list, stops_of: dict, size: int, start: Node, d: Callable, unit
             for oid in trip:
                 routes.setdefault(oid, {})["batch"] = {"route": opt, "trip": tid, "orders": trip}
         rr = [by_row[o] for o in trip]
-        return (m["bopt"] / tp["t_v"] + len(uniq) * tp["t_stop"] + sum(r.get("units", r["lines"]) for r in rr) * tp["t_piece"]
+        return (m["bopt"] / tp["t_v"] + len(uniq) * tp["t_stop"] + trip_doors + sum(r.get("units", r["lines"]) for r in rr) * tp["t_piece"]
                 + sum(r.get("out_gold", 0) for r in rr) * tp["t_gold"] + sum(r.get("out_units", 0) for r in rr) * tp["t_gold_piece"])
 
     for day, pool in sorted(pools.items()):
@@ -352,6 +358,9 @@ def simulate(sample: list, nodes_of: dict[str, list[Node]], start: Node, d: Call
         dl, do = _tour(by_list, start, d) / unit, _tour(opt, start, d) / unit
         row = {"order": oid, "lines": len(skus), "stops": len(uniq), "units": units, "out_gold": out_gold,
                "out_units": out_units, "list_m": dl, "opt_m": do}
+        doors = {n.door[0]: n.door[1] for n in pts if n.door}  # cada porta abre e fecha uma vez no pedido
+        if doors:
+            row["door_s"] = sum(doors.values())
         if len(entry) > 3 and entry[3]:
             row["date"] = entry[3]
         if len(entry) > 4:
@@ -467,9 +476,11 @@ def add_times(sim: dict, tp: dict) -> dict:
     if not rows:
         return sim
     fixed = lambda r: (r["stops"] * tp["t_stop"] + r.get("units", r["lines"]) * tp["t_piece"]  # noqa: E731
-                       + r.get("out_gold", 0) * tp["t_gold"] + r.get("out_units", 0) * tp["t_gold_piece"])
-    # no lote, as paradas são as do trajeto divididas entre os pedidos (batch_stops)
-    fixed_b = lambda r: fixed(r) + (r.get("batch_stops", r["stops"]) - r["stops"]) * tp["t_stop"]  # noqa: E731
+                       + r.get("out_gold", 0) * tp["t_gold"] + r.get("out_units", 0) * tp["t_gold_piece"]
+                       + r.get("door_s", 0.0))  # portas (câmara, armário): abrir e fechar
+    # no lote, as paradas são as do trajeto divididas entre os pedidos (batch_stops); as portas também
+    fixed_b = lambda r: (fixed(r) + (r.get("batch_stops", r["stops"]) - r["stops"]) * tp["t_stop"]  # noqa: E731
+                         - r.get("door_s", 0.0) + r.get("batch_door_s", r.get("door_s", 0.0)))
     out = {"params": tp, "pick_avg": sum(fixed(r) for r in rows) / len(rows)}
     for k in ("list", "s", "opt") + BATCH_KEYS:
         if all(f"{k}_m" in r for r in rows):
@@ -484,6 +495,7 @@ def add_times(sim: dict, tp: dict) -> dict:
         for t in sim["trips"]:
             t["bopt_t"] = sum(t_of.get(o, 0.0) for o in t["orders"])
     out["units_avg"] = sum(r.get("units", r["lines"]) for r in rows) / len(rows)
+    out["door_avg"] = sum(r.get("door_s", 0.0) for r in rows) / len(rows)  # portas por pedido (s)
     out["out_gold_avg"] = sum(r.get("out_gold", 0) for r in rows) / len(rows)
     out["out_units_avg"] = sum(r.get("out_units", 0) for r in rows) / len(rows)
     sim["times"] = out

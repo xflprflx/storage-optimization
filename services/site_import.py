@@ -27,6 +27,28 @@ from services.i18n import N_, _
 
 MAX_ITEMS = 200_000
 
+def condition_code(text: str) -> str:
+    """Texto da planilha -> condição de armazenagem ("" = ambiente)."""
+    import unicodedata
+
+    t = "".join(c for c in unicodedata.normalize("NFD", (text or "").strip().lower()) if not unicodedata.combining(c))
+    if not t:
+        return ""
+    if t.startswith(("congel", "frozen", "freez")):
+        return "congelado"
+    if t.startswith(("refrig", "resfri", "frio", "chill", "cold")):
+        return "refrigerado"
+    if t.startswith(("control", "segur", "secur")):
+        return "controlado"
+    return ""
+
+
+def _cond_label(code) -> str:
+    from services.structure_kinds import CONDITIONS
+
+    return _(CONDITIONS[code]) if code in CONDITIONS and code else ""
+
+
 SKU_COLS = {
     "sku": ["sku", "codigo", "codigosku", "codproduto", "codigodoproduto", "codigoproduto", "item", "material code"],
     "name": ["produto", "nome", "descricao", "descricaodoproduto", "nomedoproduto"],
@@ -38,6 +60,7 @@ SKU_COLS = {
     "stock": ["saldo", "estoque", "quantidade", "qtd", "saldoatual", "estoqueatual", "qtde"],
     "min": ["min", "minlevel", "nivelminimo", "estoqueminimo", "minimo"],
     "max": ["max", "maxlevel", "nivelmaximo", "estoquemaximo", "maximo"],
+    "condition": ["condicao", "condicaodearmazenagem", "condicaoarmazenagem", "armazenagem", "temperatura", "condition"],
     "out": ["saida", "saidas", "saidaperiodo", "giro", "vendas", "demandadesaida", "consumo", "linhasdepedido",
             "popularidade"],
 }
@@ -199,7 +222,8 @@ FIELD_LABELS = {
              "cost": N_("Custo por bin (R$)")},
     "skus": {"sku": "SKU", "name": N_("Produto"), "material": N_("Tipo de material"), "h": N_("Altura (cm)"), "w": N_("Largura (cm)"),
              "l": N_("Comprimento (cm)"), "wt": N_("Peso unitário (kg)"), "stock": N_("Saldo"), "min": N_("Min level"),
-             "max": N_("Max level"), "out": N_("Saída (linhas ou unid./período)")},
+             "max": N_("Max level"), "out": N_("Saída (linhas ou unid./período)"),
+             "condition": N_("Condição de armazenagem")},
     "zones": {"name": N_("Nome"), "length": N_("Comprimento em X (m)"), "orientation": N_("Orientação das fileiras"),
               "aisle": "Corredor (m)", "cross": N_("Corredores transversais"), "structures": N_("Estruturas permitidas (códigos)"),
               "x": "X (m)", "y": "Y (m)", "width": N_("Largura em Y (m)")},
@@ -586,6 +610,9 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     out = _dec(row, cm.get("out"), _("saída"), e, i)
                     if out is not None:
                         it["out"] = out
+                    cond = condition_code(_cell(row, cm.get("condition")))
+                    if cond:
+                        it["condition"] = cond
                     if e:
                         bad += 1
                         if bad <= 10:
@@ -862,9 +889,10 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
            for bt in db.scalars(select(BinType).where(BinType.parent_id.is_(None)).order_by(BinType.code))], {2: 30})
     sheet(wb.create_sheet("SKUs"),
           ["SKU", N_("Produto"), _("Material"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso (kg)"), _("Saldo"),
-           _("Min level"), _("Max level"), _("Saída (linhas ou unid./período)")],
+           _("Min level"), _("Max level"), _("Saída (linhas ou unid./período)"), _("Condição de armazenagem")],
           [(it["sku"], it.get("name"), it.get("material"), it.get("h"), it.get("w"), it.get("l"), it.get("wt"),
-            it.get("stock"), it.get("min"), it.get("max"), it.get("out")) for it in cfg.get("items") or []], {2: 36, 11: 18})
+            it.get("stock"), it.get("min"), it.get("max"), it.get("out"), _cond_label(it.get("condition")))
+           for it in cfg.get("items") or []], {2: 36, 11: 18, 12: 22})
     # o projeto guarda só o resumo dos pedidos: a aba vem vazia, no formato esperado
     sheet(wb.create_sheet(_("Pedidos")), [_("Pedido"), _("Data"), "SKU", N_("Quantidade"), _("Liberação")], [],
           {1: 14, 2: 12, 5: 16})

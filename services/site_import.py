@@ -43,6 +43,51 @@ def condition_code(text: str) -> str:
     return ""
 
 
+def door_code(text: str) -> Optional[str]:
+    """Texto da planilha -> tipo de porta ("" = sem porta; None = não informado)."""
+    import unicodedata
+
+    t = "".join(c for c in unicodedata.normalize("NFD", (text or "").strip().lower()) if not unicodedata.combining(c))
+    if not t:
+        return None
+    if "correr" in t or "slid" in t:
+        return "sliding"
+    if "giro" in t or "swing" in t or "abrir" in t or t in ("sim", "yes", "1"):
+        return "swing"
+    return ""
+
+
+def _kind_extras(db, st, row, cm) -> None:
+    """Colunas opcionais do tipo de estrutura na aba Estruturas: condição de armazenagem e porta. Só o que vier
+    preenchido muda o tipo."""
+    from decimal import Decimal, InvalidOperation
+
+    from services.structure_kinds import kind_of, refresh_floor
+
+    k = kind_of(db, st)
+    if k is None:
+        return
+    cond = _cell(row, cm.get("condition"))
+    if cond:
+        k.condition = condition_code(cond)
+    dt = door_code(_cell(row, cm.get("door")))
+    if dt is not None:
+        k.door_type = dt
+    lv = _cell(row, cm.get("door_leaves"))
+    if lv.strip() in ("1", "2"):
+        k.door_leaves = int(lv.strip())
+    ang = _cell(row, cm.get("door_angle")).replace("°", "").strip()
+    if ang in ("90", "180"):
+        k.door_angle = int(ang)
+    tm = _cell(row, cm.get("door_time")).replace(",", ".").strip()
+    if tm:
+        try:
+            k.door_time_s = Decimal(tm)
+        except InvalidOperation:
+            pass
+    refresh_floor(db)
+
+
 def _cond_label(code) -> str:
     from services.structure_kinds import CONDITIONS
 
@@ -98,6 +143,12 @@ STRUCT_COLS = {
     "golden_to": ["zonadeourofim", "zonadeourofimcm", "fimouro", "fim da zona de ouro"],
     "first_level": ["alturado1nivel", "alturado1onivel", "alturaprimeironivel", "primeironivel", "1nivelcm", "base"],
     "level_heights": ["vaospornivel", "vaosporniveis", "vaodecadanivel", "vaosporniveiscm", "vaos"],
+    # do tipo de estrutura (opcionais): condição de armazenagem e porta
+    "condition": ["condicao", "condicaodearmazenagem", "condicaoarmazenagem", "armazenagem"],
+    "door": ["porta", "tipodeporta", "door"],
+    "door_leaves": ["folhas", "folhasdaporta", "nfolhas"],
+    "door_angle": ["abertura", "aberturadaporta", "aberturagraus", "aberturamaxima"],
+    "door_time": ["tempodaporta", "tempodaportas", "tempoporta", "tempodaportasegundos"],
 }
 BIN_COLS = {
     "code": ["codigo", "cod", "code"],
@@ -216,7 +267,10 @@ FIELD_LABELS = {
                    "max_load": N_("Carga por nível (kg)"), "cost": N_("Custo por módulo (R$)"), "mode": N_("Modo"),
                    "qty": N_("Qtd fixa"), "min_qty": N_("Mínimo"), "max_qty": N_("Máximo"),
                    "golden_from": N_("Zona de ouro início (cm)"), "golden_to": N_("Zona de ouro fim (cm)"),
-                   "first_level": N_("Altura do 1º nível (cm)"), "level_heights": N_("Vãos por nível (cm, ex.: 45; 40; 35)")},
+                   "first_level": N_("Altura do 1º nível (cm)"), "level_heights": N_("Vãos por nível (cm, ex.: 45; 40; 35)"),
+                   "condition": N_("Condição de armazenagem"), "door": N_("Porta (sem, de giro, de correr)"),
+                   "door_leaves": N_("Folhas da porta"), "door_angle": N_("Abertura da porta (°)"),
+                   "door_time": N_("Tempo da porta (s)")},
     "bins": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
              "length": N_("Comprimento (cm)"), "max_weight": N_("Peso máx. (kg)"), "max_volume": "Volume (L)",
              "cost": N_("Custo por bin (R$)")},
@@ -453,9 +507,6 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     updated += 1
                 st.name = (_cell(row, cm["name"]) or st.name or code)[:150]
                 st.kind = (_cell(row, cm["kind"]) or st.kind or "")[:40]
-                from services.structure_kinds import attach_kind
-
-                attach_kind(db, st)  # o tipo escrito na planilha vira (ou usa) o tipo de estrutura cadastrado
                 for k in ("width", "depth", "height", "level_height", "max_load", "cost"):
                     if v[k] is not None:
                         setattr(st, k, Decimal(str(v[k])))
@@ -474,6 +525,11 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                         st.level_heights = [h for h in hs if h > 0][:st.levels or 50] or None
                     except ValueError:
                         errs.append(_("Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).", i=i, code=code))
+                from services.structure_kinds import attach_kind
+
+                with db.no_autoflush:  # depois das medidas: a estrutura nova só vai ao banco completa
+                    attach_kind(db, st)  # o tipo escrito na planilha vira (ou usa) o tipo de estrutura cadastrado
+                    _kind_extras(db, st, row, cm)
                 total = float(st.first_level_cm or 0) + sum(st.vaos())
                 if st.height and total > float(st.height) + 1e-6:
                     errs.append(_("Estruturas linha {i} ({code}): 1º nível + vãos ({total} cm) passam da altura total ({float} cm) — altura do 1º nível e vãos por nível não foram gravados.", i=i, code=code, total=f"{total:g}", float=f"{float(st.height):g}"))

@@ -134,3 +134,51 @@ def test_registers_save_door_and_condition(client, db):
     assert db.query(Product).filter_by(sku="DR-SKU").one().storage_condition == "refrigerado"
     assert [condition_code(t) for t in ("Refrigerado", "congelados", "Frio", "seguro", "seco", "")] == \
         ["refrigerado", "congelado", "refrigerado", "controlado", "", ""]
+
+
+def test_cold_room_example_project(client, db):
+    """Exemplo "Loja com câmaras refrigeradas": a planilha cria o tipo com porta e condição; os refrigerados vão só
+    para as câmaras, a zona das câmaras tem corredor para a porta, e o tempo da porta entra no simulador."""
+    import copy
+    import re
+    from urllib.parse import urlencode
+
+    from models import SiteProject, StructureKind
+    from services.file_reader import token_path
+    from services.site_import import auto_mapping, read_sheets
+    from services.site_service import merged, run_project
+
+    r = client.post("/optimization/site/new", data={"sample": "loja-camaras", "name": "Câmaras"})
+    token = re.search(r'name="token" value="([^"]+)"', r.text).group(1)
+    action = re.search(r'action="(/optimization/site/(\d+)/upload/confirm)"', r.text)
+    fields = {"token": token, "orders_abs": "1"}
+    mapping = auto_mapping(read_sheets(token_path(token)))
+    assert {"condition", "door", "door_leaves", "door_angle", "door_time"} <= set(mapping["structures"]["cols"])
+    assert mapping["skus"]["cols"].get("condition") is not None
+    for kind, v in mapping.items():
+        fields[f"sheet_{kind}"] = v["sheet"]
+        for fld, i in v["cols"].items():
+            fields[f"col_{kind}_{fld}"] = "" if i is None else str(i)
+    r = client.post(action.group(1), content=urlencode(fields), headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    follow_redirects=False)
+    from urllib.parse import unquote_plus
+
+    assert "level=danger" not in r.headers["location"], unquote_plus(r.headers["location"])
+    pid = int(action.group(2))
+    k = db.query(StructureKind).filter_by(name="Câmara refrigerada").one()
+    assert (k.condition, k.door_type, k.door_leaves, k.door_angle, float(k.door_time_s)) == ("refrigerado", "swing", 2, 90, 6.0)
+    cfg = merged(copy.deepcopy(db.get(SiteProject, pid).config))
+    cold = {it["sku"] for it in cfg["items"] if it.get("condition") == "refrigerado"}
+    assert len(cold) > 20
+    cfg["params"].update({"time_limit": "10"})
+    plan, errs = run_project(db, cfg)
+    assert not errs and not plan.errors
+    where = {}
+    for m in plan.modules:
+        for lv in m.levels:
+            for pos in lv.positions:
+                where.setdefault(pos.sku in cold, set()).add(m.struct.code)
+    assert where[True] == {"CAM-120-70"} and "CAM-120-70" not in where[False]
+    assert not any("a porta abre" in n for n in plan.notes)  # corredor de 2 m comporta a folha de 60 cm + 80
+    html = client.get(f"/optimization/site/{pid}/routes").text
+    assert "portas:" in html  # tempo da porta no cabeçalho do simulador

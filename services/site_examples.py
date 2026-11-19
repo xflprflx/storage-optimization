@@ -24,7 +24,10 @@ STRUCTURES = {
     "EST-100-60": ("Estante média 100 × 60, 5 níveis", "Estante", 100, 60, 210, 5, 40, 150, 560),
     "EST-120-60": ("Estante reforçada 120 × 60, 4 níveis", "Estante", 120, 60, 240, 4, 58, 250, 790),
     "PP-270-110": ("Porta-palete 270 × 110, 3 níveis", "Porta-palete", 270, 110, 600, 3, 160, 2000, 2400),
+    "CAM-120-70": ("Câmara refrigerada 120 × 70, 5 prateleiras", "Câmara refrigerada", 120, 70, 200, 5, 32, 80, 6800),
 }
+# do tipo de estrutura (colunas opcionais): condição de armazenagem, porta, folhas, abertura (°), tempo da porta (s)
+KIND_EXTRA = {"CAM-120-70": ("Refrigerado", "De giro", 2, 90, 6)}
 # zona de ouro (cm do piso) das estantes: entre a cintura e o ombro
 GOLDEN = {"EST-100-40": (75, 150), "EST-100-60": (75, 150), "EST-120-60": (75, 150),
           "PP-270-110": (0, 160)}  # porta-palete: a separação boa é no nível do chão
@@ -67,6 +70,15 @@ BULKY = [  # itens volumosos/pesados, que vão para palete
 ]
 SIZES = ["3/16", "1/4", "5/16", "3/8", "1/2", "M6", "M8", "M10", "M12", "6 mm", "8 mm", "10 mm", "16 A", "20 A",
          "25 A", "32 A", "20 mm", "25 mm", "32 mm", "P", "M", "G", "GG", "1,5 mm²", "2,5 mm²", "4 mm²", "9 W", "12 W"]
+COLD = [  # refrigerados (vão para a câmara): condição "Refrigerado" na aba SKUs
+    ("Iogurte", "Laticínios", (8, 11), (6, 8), (6, 8), (0.1, 0.2), 8.0),
+    ("Bebida láctea", "Laticínios", (18, 22), (7, 8), (7, 8), (0.9, 1.0), 6.0),
+    ("Queijo", "Frios", (5, 8), (9, 12), (14, 18), (0.2, 0.5), 3.0),
+    ("Presunto fatiado", "Frios", (2, 3), (14, 16), (18, 20), (0.15, 0.2), 4.0),
+    ("Manteiga", "Laticínios", (5, 6), (7, 8), (12, 13), (0.2, 0.2), 3.0),
+    ("Requeijão", "Laticínios", (7, 8), (9, 10), (9, 10), (0.2, 0.25), 3.0),
+]
+FLAVORS = ["natural", "morango", "light", "zero", "integral", "tradicional", "cremoso", "fatiado", "coco", "ameixa"]
 COLORS = ["branco", "gelo", "cinza", "areia", "grafite", "bege", "marfim", "preto", "azul", "verde"]
 
 
@@ -169,6 +181,27 @@ EXAMPLES = [
         + _skus(rng, BULKY, (8, 10), COLORS, start=5001, extras=True, scale=3, prefix="CD"),
     },
 ]
+EXAMPLES.append({
+    "slug": "loja-camaras",
+    "title": N_("Loja com câmaras refrigeradas"),
+    "description": N_("Loja/depósito de 24 × 14 m: zona de seco em estantes (corredor de 1,2 m) e, no fundo, zona de "
+                   "câmaras refrigeradas de armazenagem com porta de giro de 2 folhas (corredor de 2 m: a folha de "
+                   "60 cm abre e sobra a passagem). Laticínios e frios têm a condição Refrigerado e só vão para as "
+                   "câmaras; a porta soma 6 s no simulador a cada câmara aberta."),
+    "tags": ["24 × 14 m", N_("2 zonas"), N_("câmara refrigerada"), N_("portas"), "~260 SKUs", N_("pedidos")],
+    "building": {"length_m": 24, "width_m": 14, "clear_height_m": 4.5, "aisle_m": 1.2, "wall_gap_m": 0.2,
+                 "front_reserved_m": 2, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
+                 "avenue_m": 2, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
+    "zones": [("Seco", None, None, 13, None, "ao longo do comprimento", None, None, "EST-100-40, EST-100-60"),
+              ("Câmaras", None, None, None, None, "ao longo do comprimento", 2.0, None, "CAM-120-70")],
+    "obstacles": [],
+    "structures": {"EST-100-40": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None),
+                   "CAM-120-70": ("Otimizar", None, None, None)},
+    "bins": ["BIN-3", "BIN-5", "BIN-7"],
+    "skus": lambda rng: _skus(rng, SMALL[:12], (10, 14), SIZES, scale=1.5, prefix="LC")
+    + [(*r, "Refrigerado") for r in _skus(rng, COLD, (6, 9), FLAVORS, start=5001, extras=False, scale=1.2, prefix="LC")],
+    "orders": 1200,
+})
 BY_SLUG = {e["slug"]: e for e in EXAMPLES}
 DEFAULT = "galpao-medio"
 
@@ -289,16 +322,19 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
     sheet(wb.create_sheet("Estruturas"),
           ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
            "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx.",
-           "Zona de ouro início (cm)", "Zona de ouro fim (cm)"],
-          [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None))) for code, mode in ex["structures"].items()],
-          {2: 36})
+           "Zona de ouro início (cm)", "Zona de ouro fim (cm)", "Condição de armazenagem", "Porta", "Folhas",
+           "Abertura (°)", "Tempo da porta (s)"],
+          [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None)), *KIND_EXTRA.get(code, (None,) * 5))
+           for code, mode in ex["structures"].items()], {2: 36, 17: 22})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)"], [(code, *BINS[code]) for code in ex["bins"]], {2: 36})
     skus = ex["skus"](rng)
+    cond = any(len(r) > 10 for r in skus)  # condição de armazenagem (só nos exemplos com refrigerados)
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level"], skus, {2: 36})
+           "Min level", "Max level"] + (["Condição de armazenagem"] if cond else []),
+          [tuple(r) + ((None,) * (11 - len(r)) if cond else ()) for r in skus], {2: 36, 11: 24})
     if ex.get("orders"):
         sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade", "Liberação"],
               _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"],

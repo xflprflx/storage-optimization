@@ -127,6 +127,9 @@ def _migrate_location_bins(conn) -> None:
     conn.execute(text("DROP TABLE location_bins_old"))
 
 
+_CAPS_MIGRATED = False  # True quando a coluna calc_bins acabou de ser criada (migração da capacidade dos níveis)
+
+
 def _add_missing_columns(conn) -> None:
     """Colunas novas em tabelas existentes (SQLite: ALTER TABLE ADD COLUMN)."""
     from sqlalchemy import inspect, text
@@ -160,6 +163,17 @@ def _add_missing_columns(conn) -> None:
             conn.execute(text(f"ALTER TABLE structure_types ADD COLUMN {col} {ddl}"))
     if "bay_structures" in tables and "first_level_cm" not in {c["name"] for c in insp.get_columns("bay_structures")}:
         conn.execute(text("ALTER TABLE bay_structures ADD COLUMN first_level_cm BIGINT"))
+    if "bay_structures" in tables and "cap_params" not in {c["name"] for c in insp.get_columns("bay_structures")}:
+        conn.execute(text("ALTER TABLE bay_structures ADD COLUMN cap_params JSON"))
+    lccols = {c["name"] for c in insp.get_columns("level_capacities")} if "level_capacities" in tables else set()
+    if "level_capacities" in tables and "calc_bins" not in lccols:
+        # capacidade calculada × limite manual: o que estava gravado vira limite manual; na inicialização, as
+        # estantes com estrutura ganham a capacidade calculada e o limite igual ou acima dela é descartado
+        conn.execute(text("ALTER TABLE level_capacities ADD COLUMN calc_bins INTEGER"))
+        conn.execute(text("ALTER TABLE level_capacities ADD COLUMN manual_bins INTEGER"))
+        conn.execute(text("UPDATE level_capacities SET manual_bins = max_bins"))
+        global _CAPS_MIGRATED
+        _CAPS_MIGRATED = True
     lcols = {c["name"] for c in insp.get_columns("storage_locations")} if "storage_locations" in tables else set()
     if "storage_locations" in tables and "is_generic" not in lcols:
         conn.execute(text("ALTER TABLE storage_locations ADD COLUMN is_generic BOOLEAN NOT NULL DEFAULT 0"))
@@ -258,6 +272,10 @@ def init_db() -> None:
         sync_default_locations(db)  # endereço padrão = onde o produto está (dados antigos)
         from services.level_service import fit_structure
 
+        from services.structure_service import recalc_capacities
+
+        # capacidade dos níveis das estantes com estrutura: recalculada pelas medidas (dados antigos e mudanças)
+        recalc_capacities(db, drop_redundant=_CAPS_MIGRATED)
         from services.level_service import spill_overflow
 
         spill_overflow(db)  # bins acima da capacidade do nível ocupam os níveis seguintes da estante

@@ -323,8 +323,11 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
 
     _run(db, path, opts, res, handle)
     adj = structure_message(fit_structure(db))  # bin mais alta que o vão: a estrutura sobe
-    if adj:
+    from services.structure_service import recalc_capacities
+
+    if recalc_capacities(db) or adj:  # tipos novos ou medidas novas: a capacidade calculada acompanha
         db.commit()
+    if adj:
         res.notes.append(adj)
 
     def do():
@@ -537,6 +540,9 @@ def import_levels(db: Session, path: Path, mapping: dict, opts: MasterOptions) -
     _run(db, path, opts, res, handle)
     if touched_bays:
         adj = structure_message(fit_structure(db))
+        from services.structure_service import recalc_capacities
+
+        recalc_capacities(db, touched_bays)  # vãos importados: a capacidade calculada acompanha
         spilled = spill_message(db, spill_overflow(db, touched_bays))
         res.notes += [m for m in (adj, spilled) if m]
         db.commit()
@@ -545,6 +551,9 @@ def import_levels(db: Session, path: Path, mapping: dict, opts: MasterOptions) -
     def do():
         from services.import_sync import sync_levels
         cnt, notes = sync_levels(db, scopes, cap_seen, height_seen if mapping.get("height") is not None else None)
+        from services.structure_service import recalc_capacities
+
+        recalc_capacities(db, touched_bays)  # vãos removidos: a capacidade calculada acompanha
         res.counters.update(cnt)
         res.notes += notes
         db.commit()
@@ -585,11 +594,12 @@ MASTER_KINDS = {
                            N_("Depois de gravar as bins são aplicadas as regras de níveis (níveis dedicados e vão).")],
                   "sample": "Filial;Armazem;Corredor;Estante;Nivel;Posicao;Compartimento;Tipo de bin;Qtd bins\n"
                             "01;CD1;A;01;01;01;;CX-P;2\n01;CD1;A;01;01;02;;CX-P;2\n01;CD1;B;01;01;01;A;CX-M;1\n01;CD1;P;01;01;01;;PAL;1\n"},
-    "levels": {"sync_help": N_("Nos níveis das filiais/armazéns do arquivo, remove as capacidades (nível × tipo de bin) que o arquivo não informa e — com a coluna Vão mapeada — o vão dos níveis que ele não informa. Níveis dedicados (automáticos) ficam."),"title": N_("Importação de Capacidade dos Níveis"), "fields": LEVEL_FIELDS, "run": import_levels,
+    "levels": {"sync_help": N_("Nos níveis das filiais/armazéns do arquivo, remove os limites (nível × tipo de bin) que o arquivo não informa e — com a coluna Vão mapeada — o vão dos níveis que ele não informa. A capacidade calculada pela estrutura e os níveis dedicados (automáticos) ficam."),"title": N_("Importação de Capacidade dos Níveis"), "fields": LEVEL_FIELDS, "run": import_levels,
                "back": ("/levels", "níveis"), "scope": True, "bins_option": False,
                "help": [N_("Cada linha aplica capacidade e/ou vão a um conjunto de níveis: Corredor (obrigatório), Estante e Nível "
                         "aceitam valor único, lista (01,03) ou faixa (01-04); vazio ou \"(todas)\" = todos."),
                         N_("Tipo de bin + Cabem = \"neste nível cabem X bins do tipo\" (0 remove a capacidade do tipo). Vão em cm."),
+                        N_("Nas estantes com estrutura, a capacidade já é calculada pelas medidas: o número importado vira um limite manual e vale quando é menor que o calculado."),
                         N_("Filiais, armazéns, tipos de bin e endereços precisam existir (gere os endereços antes).")],
                "sample": "Filial;Armazem;Corredor;Estante;Nivel;Tipo de bin;Cabem;Vao (cm)\n"
                          "01;CD1;A;;;CX-P;8;25\n01;CD1;B;01-03;02-03;CX-M;3;30\n01;CD1;P;;;PAL;2;150\n"},

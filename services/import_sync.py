@@ -163,11 +163,14 @@ def sync_levels(db: Session, scopes: set[tuple], cap_seen: set[tuple], height_se
         lv = [s for s in lv if not (s.notes or "").startswith(DEDICATED_NOTE)]
         ids = [s.id for s in lv]
         for ch in _chunks(ids):
-            for cid, sl, t in db.execute(select(LevelCapacity.id, LevelCapacity.shelf_level_id, LevelCapacity.bin_type_id)
-                                         .where(LevelCapacity.shelf_level_id.in_(ch))).all():
-                if (sl, t) not in cap_seen:
-                    db.execute(delete(LevelCapacity).where(LevelCapacity.id == cid))
-                    out["Capacidades removidas"] += 1
+            for cap in list(db.scalars(select(LevelCapacity).where(LevelCapacity.shelf_level_id.in_(ch)))):
+                if (cap.shelf_level_id, cap.bin_type_id) in cap_seen or not cap.manual_bins:
+                    continue  # a calculada pela estrutura não vem do arquivo: fica
+                if cap.calc_bins:
+                    cap.manual_bins, cap.max_bins = None, cap.calc_bins  # sai o limite; vale a calculada
+                else:
+                    db.delete(cap)
+                out["Capacidades removidas"] += 1
         if height_seen is not None:
             for s in lv:
                 if s.id not in height_seen and s.height_cm is not None:

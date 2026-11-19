@@ -6,6 +6,9 @@ Aplicar uma estrutura a uma estante (Corredor + Estante):
   - define o vão de cada nível = vão útil da estrutura;
   - calcula "cabem X bins do tipo Y" em cada nível pela frente × profundidade do módulo e pela altura das bins
     (mesma regra do projeto de filial nova), para os tipos de bin inteiros com dimensões.
+
+A capacidade calculada não é uma foto: `recalc_capacities` refaz a conta sempre que a estrutura, o vão de um nível ou
+um tipo de bin mudam (e na inicialização). O limite manual (LevelCapacity.manual_bins) fica e vale quando é menor.
 """
 from __future__ import annotations
 
@@ -16,8 +19,9 @@ from typing import Iterable, Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from models import BayStructure, BinType, StructureType
-from services.level_service import ensure_level, fit_structure, matching_levels, set_capacity, spill_overflow
+from models import BayStructure, BinType, LevelCapacity, StructureType
+from services.level_service import (bay_levels, effective_capacity, ensure_level, fit_structure, matching_levels,
+                                    spill_overflow)
 from services.site_planner import SiteParams, StructureSpec, level_capacity
 from services.i18n import _
 
@@ -73,6 +77,83 @@ def capacities_for(st: StructureType, bin_types: Iterable[BinType], top_gap_cm: 
     return out
 
 
+CAP_DEFAULTS = {"top_gap": 5.0, "side_gap": 0.0, "fill": 1.0}
+
+
+def cap_params_of(link: BayStructure) -> SiteParams:
+    """Folgas do cálculo da capacidade na estante (as gravadas ao aplicar a estrutura ou ao gerar a filial)."""
+    p = {**CAP_DEFAULTS, **{k: v for k, v in (link.cap_params or {}).items() if v is not None}}
+    return SiteParams(top_gap_cm=float(p["top_gap"]), side_gap_cm=float(p["side_gap"]), level_fill=float(p["fill"]))
+
+
+def recalc_capacities(db: Session, bays: Optional[Iterable[BayKey]] = None, *, structure_ids: Optional[Iterable[int]] = None,
+                      clear_manual: bool = False, drop_redundant: bool = False) -> int:
+    """Recalcula a capacidade dos níveis das estantes com estrutura (`bays` e/ou `structure_ids`; nenhum = todas).
+    Cada nível usa o próprio vão (sem vão gravado, o da estrutura naquela posição) e as folgas da estante. Para cada
+    tipo de bin inteiro com medidas: calculada = quantas cabem; vale o menor entre ela e o limite manual. Tipo com
+    medidas que não cabe no nível perde a capacidade (e o limite); tipo sem medidas e compartimentos ficam como estão.
+    `clear_manual` apaga os limites manuais; `drop_redundant` descarta os iguais ou acima do calculado (migração).
+    Retorna quantas capacidades mudaram."""
+    from dataclasses import replace
+
+    from services.bin_optimizer import BinSpec
+    from services.layout_service import level_order_key as natural_key
+
+    only = {tuple(b) for b in bays} if bays is not None else None
+    if only is not None and not only:
+        return 0
+    q = select(BayStructure, StructureType).join(StructureType, StructureType.id == BayStructure.structure_type_id)
+    if structure_ids is not None:
+        ids = list(structure_ids)
+        if not ids:
+            return 0
+        q = q.where(BayStructure.structure_type_id.in_(ids))
+    links = [(ln, st) for ln, st in db.execute(q).all()
+             if only is None or (ln.branch_id, ln.warehouse_id, ln.aisle, ln.bay) in only]
+    if not links:
+        return 0
+    specs = [BinSpec(bt.id, bt.code, float(bt.height), float(bt.width), float(bt.length))
+             for bt in db.scalars(select(BinType))
+             if not bt.is_fraction and bt.height is not None and bt.width is not None and bt.length is not None]
+    cache: dict[tuple, dict[int, int]] = {}
+    changed = 0
+    for link, st in links:
+        prm = cap_params_of(link)
+        spec = spec_of(st)
+        levels = sorted(bay_levels(db, link.branch_id, link.warehouse_id, link.aisle, link.bay),
+                        key=lambda lv: natural_key(lv["level"]))
+        for i, lv in enumerate(levels):
+            sl = ensure_level(db, lv["key"])
+            vao = float(sl.height_cm) if sl.height_cm is not None else spec.vao(min(i + 1, spec.levels))
+            ck = (st.id, round(vao, 2), prm.top_gap_cm, prm.side_gap_cm, prm.level_fill)
+            if ck not in cache:
+                one = replace(spec, level_hs=[vao])
+                cache[ck] = {t.id: n for t in specs if (n := level_capacity(t, one, prm, None, 1)) > 0}
+            calc = cache[ck]
+            if sl.id is None:
+                db.flush()
+            rows = {c.bin_type_id: c for c in db.scalars(select(LevelCapacity).where(LevelCapacity.shelf_level_id == sl.id))}
+            for t in specs:
+                row, n = rows.get(t.id), calc.get(t.id)
+                if n is None:
+                    if row is not None:  # não cabe no nível
+                        db.delete(row)
+                        changed += 1
+                    continue
+                manual = None if row is None or clear_manual else row.manual_bins
+                if manual and drop_redundant and manual >= n:
+                    manual = None
+                eff = effective_capacity(n, manual)
+                if row is None:
+                    db.add(LevelCapacity(shelf_level_id=sl.id, bin_type_id=t.id, max_bins=eff, calc_bins=n))
+                    changed += 1
+                elif (row.calc_bins, row.manual_bins, row.max_bins) != (n, manual, eff):
+                    row.calc_bins, row.manual_bins, row.max_bins = n, manual, eff
+                    changed += 1
+    db.flush()
+    return changed
+
+
 def _level_codes(existing: list[str], n: int) -> list[str]:
     """Códigos 1..n no padrão da estante (ex.: '01'..'05' se os níveis atuais têm 2 dígitos)."""
     digits = [c for c in existing if c.isdigit()]
@@ -81,21 +162,16 @@ def _level_codes(existing: list[str], n: int) -> list[str]:
 
 
 def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, create_levels: bool = True,
-                    set_heights: bool = True, set_caps: bool = True, replace_caps: bool = True,
-                    top_gap_cm: float = 5.0, type_ids: Optional[set] = None, first_level_cm="keep") -> dict:
+                    set_heights: bool = True, clear_manual: bool = False,
+                    top_gap_cm: float = 5.0, first_level_cm="keep") -> dict:
     """Aplica a estrutura às estantes. Com vão por nível na estrutura, cada nível (de baixo para cima) recebe o seu
-    vão e a capacidade que cabe nele. `first_level_cm` = altura do 1º nível nessas estantes, quando foram montadas
-    diferente da estrutura (None = a da estrutura; "keep" = não mexe). Retorna estatísticas."""
+    vão, e a capacidade de cada nível é calculada (recalc_capacities, com a folga `top_gap_cm` gravada na estante).
+    `clear_manual` apaga os limites manuais dessas estantes. `first_level_cm` = altura do 1º nível nessas estantes,
+    quando foram montadas diferente da estrutura (None = a da estrutura; "keep" = não mexe). Retorna estatísticas."""
     from services.layout_service import level_order_key as natural_key  # níveis: ordem física
 
     stats = {"bays": 0, "levels_created": 0, "levels": 0, "caps": 0, "extra_levels": 0}
-    bin_types = [bt for bt in db.scalars(select(BinType)) if type_ids is None or bt.id in type_ids]
     vaos = st.vaos()
-    per_level = bool(st.level_heights)
-    caps_n = {n: capacities_for(st, bin_types, top_gap_cm, n=n) for n in range(1, st.levels + 1)} \
-        if set_caps and per_level else {}
-    caps = capacities_for(st, bin_types, top_gap_cm) if set_caps and not per_level else {}
-    idx_of: dict[tuple, int] = {}  # nível -> posição de baixo para cima na estante
     all_keys = []
     by_bay = defaultdict(list)
     for b, w, a, bay in bays:
@@ -107,12 +183,14 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
         link = db.scalar(_scope(select(BayStructure), BayStructure, b, w).where(BayStructure.aisle == a,
                                                                                 BayStructure.bay == bay))
         if link is None:
-            db.add(BayStructure(branch_id=b, warehouse_id=w, aisle=a, bay=bay, structure_type_id=st.id,
-                                first_level_cm=None if first_level_cm == "keep" else first_level_cm))
+            link = BayStructure(branch_id=b, warehouse_id=w, aisle=a, bay=bay, structure_type_id=st.id,
+                                first_level_cm=None if first_level_cm == "keep" else first_level_cm)
+            db.add(link)
         else:
             link.structure_type_id = st.id
             if first_level_cm != "keep":
                 link.first_level_cm = first_level_cm
+        link.cap_params = {**(link.cap_params or {}), "top_gap": float(top_gap_cm)}
         stats["bays"] += 1
         keys = list(by_bay.get(bk, []))
         if create_levels:
@@ -128,38 +206,33 @@ def apply_structure(db: Session, bays: list[BayKey], st: StructureType, *, creat
         all_keys += keys
         keys.sort(key=lambda k: natural_key(k[4]))
         for i, k in enumerate(keys):
-            idx_of[k] = min(i + 1, st.levels)
             sl = ensure_level(db, k)
             if set_heights:
                 sl.height_cm = Decimal(str(vaos[min(i, len(vaos) - 1)]))
             if not sl.notes:
                 sl.notes = _("Estrutura {code}", code=st.code)
     db.flush()
-    if set_caps and all_keys:
-        groups = {}
-        for k in all_keys:  # níveis com a mesma capacidade (com vão por nível, por posição na estante)
-            groups.setdefault(idx_of.get(k, 1) if per_level else 0, []).append(k)
-        for g_n, g_keys in groups.items():
-            cp = caps_n.get(g_n, {}) if per_level else caps
-            for bt in bin_types:
-                if bt.is_fraction:
-                    continue
-                n = cp.get(bt.id)
-                if n or replace_caps:
-                    set_capacity(db, g_keys, bt.id, n or None)
-                    stats["caps"] += len(g_keys) if n else 0
-    db.flush()
     stats["fit"] = fit_structure(db, all_keys) if all_keys else []
-    stats["spill"] = spill_overflow(db, {k[:4] for k in all_keys}) if set_caps and all_keys else []
+    recalc_capacities(db, bays, clear_manual=clear_manual)
+    stats["caps"] = db.scalar(select(func.count()).select_from(LevelCapacity).where(
+        LevelCapacity.shelf_level_id.in_([ensure_level(db, k).id for k in all_keys]),
+        LevelCapacity.calc_bins.is_not(None))) if all_keys else 0
+    stats["spill"] = spill_overflow(db, {k[:4] for k in all_keys}) if all_keys else []
     return stats
 
 
 def remove_structure(db: Session, bays: list[BayKey]) -> int:
+    """Tira a estrutura das estantes. A capacidade que valia nos níveis fica, agora como limite manual (sem a
+    estrutura não há como recalculá-la)."""
     n = 0
     for b, w, a, bay in bays:
         link = db.scalar(_scope(select(BayStructure), BayStructure, b, w).where(BayStructure.aisle == a,
                                                                                 BayStructure.bay == bay))
         if link is not None:
+            ids = [lv["shelf_level_id"] for lv in bay_levels(db, b, w, a, bay) if lv["shelf_level_id"]]
+            for c in db.scalars(select(LevelCapacity).where(LevelCapacity.shelf_level_id.in_(ids),
+                                                            LevelCapacity.calc_bins.is_not(None))):
+                c.manual_bins, c.calc_bins = c.max_bins, None
             db.delete(link)
             n += 1
     db.flush()

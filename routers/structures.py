@@ -158,8 +158,15 @@ def update_structure(sid: int, request: Request, form: FormData = Depends(form_d
         return render(request, "structures/form.html", status_code=422, item=st, data=data, errors=errors, kinds=_kinds(db))
     for k, v in data.items():
         setattr(st, k, v)
+    db.flush()
+    from services.structure_service import recalc_capacities
+
+    n = recalc_capacities(db, structure_ids=[st.id])  # medidas novas: a capacidade das estantes acompanha
     db.commit()
-    return redirect("/structures", _("Estrutura {code} atualizada.", code=st.code))
+    msg = _("Estrutura {code} atualizada.", code=st.code)
+    if n:
+        msg += " " + _("Capacidade dos níveis recalculada nas estantes com esta estrutura ({n} alteração(ões)).", n=n)
+    return redirect("/structures", msg)
 
 
 @router.post("/{sid}/delete")

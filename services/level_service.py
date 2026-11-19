@@ -100,7 +100,9 @@ def bay_levels(db: Session, branch_id: int, warehouse_id: Optional[int], aisle: 
 class LevelUsage:
     key: LevelKey
     shelf_level_id: Optional[int] = None
-    capacity: dict[int, int] = field(default_factory=dict)  # tipo -> máx. bins
+    capacity: dict[int, int] = field(default_factory=dict)  # tipo -> máx. bins (a que vale)
+    calc: dict[int, int] = field(default_factory=dict)  # tipo -> calculada pela estrutura da estante
+    manual: dict[int, int] = field(default_factory=dict)  # tipo -> limite manual
     used: dict[int, int] = field(default_factory=dict)  # tipo -> bins no nível (próprias + emprestadas)
     borrowed: dict[int, int] = field(default_factory=dict)  # tipo -> bins de endereços de OUTROS níveis
     lent: int = 0  # bins de endereços deste nível que estão em outros níveis
@@ -109,6 +111,16 @@ class LevelUsage:
     @property
     def has_capacity(self) -> bool:
         return bool(self.capacity)
+
+    @property
+    def structured(self) -> bool:
+        """Capacidade calculada pela estrutura da estante: tipo ausente = não cabe no nível."""
+        return bool(self.calc)
+
+    @property
+    def limited(self) -> list[int]:
+        """Tipos em que o limite manual vale (menor que o calculado, ou sem cálculo)."""
+        return [t for t, m in self.manual.items() if m and (t not in self.calc or m < self.calc[t])]
 
     @property
     def unknown_types(self) -> list[int]:
@@ -152,12 +164,17 @@ def usage_for(db: Session, keys: Iterable[LevelKey]) -> dict[LevelKey, LevelUsag
                 res[k].shelf_level_id = sl.id
                 res[k].height = float(sl.height_cm) if sl.height_cm is not None else None
         if id_to_key:
-            for lid, tid, mx in db.execute(select(LevelCapacity.shelf_level_id, LevelCapacity.bin_type_id,
-                                                  LevelCapacity.max_bins)
-                                           .where(LevelCapacity.shelf_level_id.in_(list(id_to_key)))):
+            for lid, tid, mx, calc, manual in db.execute(
+                    select(LevelCapacity.shelf_level_id, LevelCapacity.bin_type_id, LevelCapacity.max_bins,
+                           LevelCapacity.calc_bins, LevelCapacity.manual_bins)
+                    .where(LevelCapacity.shelf_level_id.in_(list(id_to_key)))):
                 k = id_to_key[lid]
                 if k in res:
                     res[k].capacity[tid] = mx
+                    if calc:
+                        res[k].calc[tid] = calc
+                    if manual:
+                        res[k].manual[tid] = manual
         # bins dos endereços desta estante (próprias e enviadas a outros níveis) + bins recebidas
         rows = db.execute(
             _scope(select(StorageLocation.level, LocationBin.bin_type_id, LocationBin.quantity, LocationBin.shelf_level_id,
@@ -264,6 +281,7 @@ def fit_structure(db: Session, keys: Optional[Iterable[LevelKey]] = None) -> lis
 
     only = set(keys) if keys is not None else None
     changes = []
+    bays: set[tuple] = set()
     for k, h in tallest_bins(db).items():
         if only is not None and k not in only:
             continue
@@ -272,8 +290,12 @@ def fit_structure(db: Session, keys: Optional[Iterable[LevelKey]] = None) -> lis
             continue  # sem vão cadastrado: o nível já usa a altura das bins
         changes.append(("-".join(k[2:]), float(sl.height_cm), h))
         sl.height_cm = Decimal(str(h))
+        bays.add(k[:4])
     if changes:
         db.flush()
+        from services.structure_service import recalc_capacities
+
+        recalc_capacities(db, bays)  # vão novo: a capacidade calculada acompanha
     return changes
 
 
@@ -325,23 +347,51 @@ def set_height(db: Session, keys: list[LevelKey], height_cm) -> int:
     return len(keys)
 
 
+def effective_capacity(calc: Optional[int], manual: Optional[int]) -> Optional[int]:
+    """A capacidade que vale: o menor entre a calculada pela estrutura e o limite manual (os que existirem)."""
+    vals = [v for v in (calc, manual) if v]
+    return min(vals) if vals else None
+
+
+def set_manual(db: Session, shelf_level_id: int, bin_type_id: int, max_bins: Optional[int]) -> Optional[int]:
+    """Limite manual de um tipo no nível (None/0 = remove o limite). Com a capacidade calculada pela estrutura, vale
+    o menor dos dois; um limite igual ou acima do calculado não limita nada e é descartado. Sem cálculo, o limite é a
+    capacidade (removê-lo deixa o nível sem capacidade para o tipo). Retorna a capacidade que passou a valer."""
+    cap = db.scalar(select(LevelCapacity).where(LevelCapacity.shelf_level_id == shelf_level_id,
+                                                LevelCapacity.bin_type_id == bin_type_id))
+    calc = cap.calc_bins if cap is not None else None
+    manual = max_bins or None
+    if manual and calc and manual >= calc:
+        manual = None
+    eff = effective_capacity(calc, manual)
+    if eff is None:
+        if cap is not None:
+            db.delete(cap)
+        return None
+    if cap is None:
+        db.add(LevelCapacity(shelf_level_id=shelf_level_id, bin_type_id=bin_type_id, max_bins=eff, manual_bins=manual))
+    else:
+        cap.manual_bins, cap.max_bins = manual, eff
+    return eff
+
+
 def set_capacity(db: Session, keys: list[LevelKey], bin_type_id: int, max_bins: Optional[int]) -> int:
-    """Define (ou remove, se max_bins for None/0) a capacidade de um tipo nos níveis."""
+    """Define (ou remove, se max_bins for None/0) o limite manual de um tipo nos níveis (ver set_manual)."""
     n = 0
     for k in keys:
-        lvl = ensure_level(db, k)
-        cap = db.scalar(select(LevelCapacity).where(LevelCapacity.shelf_level_id == lvl.id,
-                                                    LevelCapacity.bin_type_id == bin_type_id))
-        if max_bins:
-            if cap is None:
-                db.add(LevelCapacity(shelf_level_id=lvl.id, bin_type_id=bin_type_id, max_bins=max_bins))
-            else:
-                cap.max_bins = max_bins
-        elif cap is not None:
-            db.delete(cap)
+        set_manual(db, ensure_level(db, k).id, bin_type_id, max_bins)
         n += 1
     db.flush()
     return n
+
+
+def copy_capacities(db: Session, src_id: int, dst_id: int) -> None:
+    """O nível `dst` recebe as capacidades do nível `src` (calculada, limite e a que vale)."""
+    db.query(LevelCapacity).filter(LevelCapacity.shelf_level_id == dst_id).delete()
+    for c in list(db.scalars(select(LevelCapacity).where(LevelCapacity.shelf_level_id == src_id))):
+        db.add(LevelCapacity(shelf_level_id=dst_id, bin_type_id=c.bin_type_id, max_bins=c.max_bins,
+                             calc_bins=c.calc_bins, manual_bins=c.manual_bins))
+    db.flush()
 
 
 def normalize_level_key(branch_id: int, warehouse_id: Optional[int], aisle: str, bay: str, level: str) -> LevelKey:
@@ -503,8 +553,12 @@ def spill_overflow(db: Session, bays: Optional[Iterable[tuple]] = None) -> list[
                     sl_new.notes = f"{DEDICATED_NOTE} {address}"
                     if own_sl is not None and own_sl.height_cm is not None:
                         sl_new.height_cm = own_sl.height_cm
-                    for t, m in cap.items():
-                        set_capacity(db, [dst], t, m)
+                    db.flush()
+                    if own_sl is not None:
+                        copy_capacities(db, own_sl.id, sl_new.id)
+                    else:
+                        for t, m in cap.items():
+                            set_capacity(db, [dst], t, m)
                     keys.insert(last_idx + 1, dst)
                     caps[dst] = dict(cap)
                 sl = ensure_level(db, dst)

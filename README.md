@@ -103,7 +103,7 @@ flowchart LR
     H --> J[Conteúdo da Bin: SKUs]
 ```
 
-- **Níveis e Capacidade**: Níveis têm restrição de quantidade de Bins e vão livre. Excesso de Bins em um endereço aloca os itens no "nível dedicado" acima.
+- **Níveis e Capacidade**: Níveis têm restrição de quantidade de Bins e vão livre. Nas estantes com estrutura, a capacidade é calculada pelas medidas (ver 7.1). Excesso de Bins em um endereço aloca os itens no "nível dedicado" acima.
 - **Mapa (Layout)**: O sistema traça uma elevação frontal visual, em escala, dos corredores, com destaque por ocupação e links em 3D.
 - **Compartimentos**: Bins que são divisões de uma Bin maior (ex: 1/6 de uma caixa).
 
@@ -507,8 +507,9 @@ Obstáculos aparecem na planta e no 3D e **desviam o trajeto**. Remover a planta
 - **Resultados de otimização** (`/optimization/runs`): *Excluir selecionados* ou *Excluir todos do filtro* (modo, filial e busca).
 - **Históricos de saídas** (Importações → Histórico): marque as filiais e *Excluir selecionados* (só o histórico sai).
 - **Capacidade dos níveis**: marque os níveis da página e *Excluir selecionados*. Nível reservado (sem endereços)
-  some; nível com endereços perde só as capacidades cadastradas (os endereços continuam). Nível que guarda bins de
-  outros endereços não é excluído: mova as bins antes.
+  some; nível com endereços perde só as capacidades cadastradas (os endereços continuam) — numa estante com
+  estrutura, ele volta só com a capacidade calculada. Nível que guarda bins de outros endereços não é excluído: mova
+  as bins antes.
 - **Usuários** (só administradores): *Excluir selecionados* remove os usuários e as sessões deles. Você mesmo e o
   último administrador ativo nunca são excluídos (aparecem em vermelho na prévia, com o motivo). Para manter o
   histórico de acesso, prefira desativar.
@@ -535,7 +536,7 @@ O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída 
 - **Vão de cada nível (cm), de baixo para cima:** ex.: `60; 40; 35`. Os níveis sem vão informado usam o vão útil. A sobra da altura total (altura − 1º nível − soma dos vãos) vira a espessura das longarinas; o cadastro recusa quando o 1º nível + os vãos passam da altura. O desenho de frente do módulo mostra os níveis nas alturas reais.
 - **Paletes no piso:** estruturas de um tipo marcado com *Paletes no piso* (o tipo padrão "Palete no chão", ver 6.0.9) guardam paletes direto no piso, empilhados por nível (cada nível = uma camada), sem montantes nem longarinas.
 
-**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima) e a capacidade de cada nível pelo seu vão.
+**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima), e a capacidade de cada nível passa a ser calculada pelo seu vão (ver 7.1).
 
 **Onde vale:**
 - **3D** (projeto e filial): a base de cada nível sai da altura do 1º nível + vãos (+ longarinas); no palete no chão, um palete de madeira por camada e as bins em cima dele.
@@ -664,11 +665,11 @@ liberadas, a comprar e o custo) e, por estante, os níveis e os vãos antes e de
 
 **Aplicar** (todas ou as marcadas) grava:
 - a estrutura da estante;
-- o vão e a capacidade de cada nível;
+- o vão de cada nível (a capacidade é recalculada por ele; os limites manuais ficam);
 - os níveis novos (reservados, sem endereço);
 - a remoção dos níveis vazios de cima.
 
-**Desfazer a última recomposição**, em Capacidade dos níveis, volta a estrutura, os vãos e as capacidades e tira os
+**Desfazer a última recomposição**, em Capacidade dos níveis, volta a estrutura, os vãos e os limites manuais (a capacidade é recalculada) e tira os
 níveis criados.
 
 ## 6.0.10 Portas e condição de armazenagem
@@ -721,12 +722,38 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):
 
-- **Capacidade dos níveis → Aplicar estrutura**: escolha as estantes (corredor/estante, aceita faixas como `01-04`) e a estrutura. O sistema grava o vínculo, define o vão de cada nível e calcula quantas bins de cada tipo cabem por nível (frente × profundidade do módulo, altura da bin + folga). Opcionalmente cria os níveis que faltam e substitui as capacidades existentes. A tabela mostra a estrutura de cada estante.
+- **Capacidade dos níveis → Aplicar estrutura**: escolha as estantes (corredor/estante, aceita faixas como `01-04`) e a estrutura. O sistema grava o vínculo e a folga acima da bin, define o vão de cada nível e calcula quantas bins de cada tipo cabem por nível (ver 7.1). Opcionalmente cria os níveis que faltam e remove os limites manuais dessas estantes. A tabela mostra a estrutura de cada estante.
 - **Gerar endereços em lote**: as estantes geradas podem receber uma estrutura na hora.
 - **Mapa do estoque**: a estante mostra a estrutura (▤ código, com as medidas no tooltip). A largura do nível passa a ser a frente do módulo, e o vão da estrutura vale quando o nível não tem vão próprio.
 - **Projeto de filial nova → Gerar cadastro da filial**: cada estante criada já fica vinculada à estrutura do plano.
 - **Otimização por endereço e pool**: novo critério/objetivo **Menor custo de bins (R$)**, na heurística e na pesquisa operacional, que também pode entrar na ordem de prioridade.
 - Uma estrutura em uso por alguma estante não pode ser excluída.
+
+### 7.1 Capacidade calculada × limite manual
+
+Com a estrutura aplicada à estante, ninguém precisa digitar a capacidade dos níveis:
+- **Calculada** (`structure_service.recalc_capacities`): para cada tipo de bin inteiro com medidas, cabem
+  *bins lado a lado na frente* × *bins na profundidade*, se a altura da bin + a folga cabem no vão do nível (o vão
+  gravado no nível; sem ele, o da estrutura naquela posição). É a mesma conta do projeto de filial nova. Tipo que
+  não cabe fica sem capacidade no nível, e a otimização não o põe ali. Compartimentos valem a bin pai × as partes.
+- **Recalculada sozinha** quando muda a estrutura (medidas, vãos), o vão de um nível (na tela, na importação, quando
+  a estrutura sobe para acompanhar uma bin mais alta ou na recomposição) ou um tipo de bin (novo, medidas,
+  importação); também ao abrir a tela, antes de cada otimização e ao iniciar o app.
+- **Limite manual:** um número digitado na tabela, definido em lote ou importado. Vale o **menor** entre ele e o
+  calculado, e serve para o que o cadastro não vê (pilar, sprinkler, regra de peso). Na tabela, aparece em amarelo
+  com o calculado embaixo; apagar o número volta ao calculado; um limite igual ou acima do calculado não limita e é
+  descartado. O filtro *Com limite manual* lista os níveis que têm um.
+- **Sem estrutura:** o número digitado é a capacidade, como antes. Um tipo sem capacidade cadastrada no nível é
+  estimado pela largura dos outros tipos, mas só se a altura dele cabe no vão do nível.
+- **Folgas:** a folga acima da bin informada ao aplicar a estrutura fica gravada na estante. Na filial gerada por um
+  projeto, valem as folgas e o aproveitamento da frente do projeto, e todos os tipos que cabem (não só o do plano).
+- **Remover a estrutura** da estante mantém a capacidade que valia, agora como limite manual.
+- **Bancos antigos:** ao atualizar, as capacidades gravadas viram limites manuais e, nas estantes com estrutura, a
+  calculada é preenchida; os limites iguais ou acima dela são descartados. Os que ficarem abaixo aparecem no filtro
+  *Com limite manual*, para revisar.
+
+Vários tipos no mesmo nível continuam somando frações (2 de 6 CX-P + 1 de 3 CX-G = 67%); a soma das larguras, mais
+exata, não é usada.
 
 ---
 
@@ -799,4 +826,4 @@ Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `ne
 
 ## Importante: Atualizar para uma nova versão
 
-Substitua os arquivos do projeto e **mantenha o arquivo `neokioski.db`**. Ao iniciar, o sistema ajusta o banco sozinho: cria tabelas/colunas novas e reaplica as regras de consistência (ocupação dos endereços, endereço padrão dos produtos, níveis dedicados e vão dos níveis). Faça uma cópia de segurança do `.db` antes de prosseguir.
+Substitua os arquivos do projeto e **mantenha o arquivo `neokioski.db`**. Ao iniciar, o sistema ajusta o banco sozinho: cria tabelas/colunas novas e reaplica as regras de consistência (ocupação dos endereços, endereço padrão dos produtos, níveis dedicados, vão e capacidade calculada dos níveis). Faça uma cópia de segurança do `.db` antes de prosseguir.

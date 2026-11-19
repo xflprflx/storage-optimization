@@ -14,7 +14,6 @@ from models import (
     BayStructure,
     BinType,
     Branch,
-    LevelCapacity,
     LocationBin,
     Product,
     ShelfLevel,
@@ -782,9 +781,14 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
     # ---- estantes, níveis, endereços e bins ----
     new_ids: list[int] = []
     sku_locs: dict[str, list[tuple[int, int]]] = {}  # sku -> [(endereço, unidades planejadas)]
+    # folgas do projeto: a capacidade calculada dos níveis (recalc_capacities) é a mesma conta do plano
+    pp = plan.params or SiteParams()
+    cap_params = {"top_gap": pp.top_gap_cm, "side_gap": pp.side_gap_cm, "fill": pp.level_fill}
+    new_bays: set[tuple] = set()
     for m in plan.modules:
         db.add(BayStructure(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
-                            structure_type_id=m.struct.id))
+                            structure_type_id=m.struct.id, cap_params=cap_params))
+        new_bays.add((br.id, wh.id if wh else None, m.aisle, m.bay))
         stats["bays"] += 1
         for lv in m.levels:
             sl = ShelfLevel(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=m.aisle, bay=m.bay,
@@ -793,8 +797,6 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             db.add(sl)
             db.flush()
             stats["levels"] += 1
-            if lv.type_id is not None and lv.cap:
-                db.add(LevelCapacity(shelf_level_id=sl.id, bin_type_id=lv.type_id, max_bins=lv.cap))
             for p in lv.positions:
                 loc = StorageLocation(branch_id=br.id, warehouse_id=wh.id if wh else None, aisle=p.aisle, bay=p.bay,
                                       level=p.level, position=p.position, compartment="", address=p.address,
@@ -831,6 +833,9 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 pol.default_location_id = locs[0][0]
                 stats["defaults"] += 1
     db.flush()
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db, new_bays)  # capacidade de cada nível pela estrutura, com as folgas do projeto
     refresh_occupancy(db, new_ids)
     refresh_contents(db, new_ids)
     # planta da filial: a do plano (o simulador de trajeto, a caminhada da posição pela saída e o 3D usam os

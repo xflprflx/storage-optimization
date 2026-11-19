@@ -418,13 +418,16 @@ def _snapshot_bay(db: Session, branch_id: int, wid: Optional[int], aisle: str, b
     levels = []
     for lv in bay_levels(db, branch_id, wid, aisle, bay):
         sl = get_level(db, lv["key"])
-        caps = {}
+        caps, manual = {}, {}
         if sl is not None:
-            caps = {str(t): n for t, n in db.execute(select(LevelCapacity.bin_type_id, LevelCapacity.max_bins)
-                                                     .where(LevelCapacity.shelf_level_id == sl.id))}
+            for t, n, m in db.execute(select(LevelCapacity.bin_type_id, LevelCapacity.max_bins, LevelCapacity.manual_bins)
+                                      .where(LevelCapacity.shelf_level_id == sl.id)):
+                caps[str(t)] = n
+                if m:
+                    manual[str(t)] = m
         levels.append({"level": lv["level"], "exists": sl is not None,
                        "height": float(sl.height_cm) if sl is not None and sl.height_cm is not None else None,
-                       "notes": sl.notes if sl is not None else "", "caps": caps})
+                       "notes": sl.notes if sl is not None else "", "caps": caps, "manual": manual})
     return {"aisle": aisle, "bay": bay, "structure_id": link.structure_type_id if link else None, "levels": levels}
 
 
@@ -434,16 +437,15 @@ def apply(db: Session, res: dict, idx: Optional[list[int]] = None) -> dict:
     Guarda o estado anterior para desfazer. Retorna {bays, levels_created, levels_removed, log_id}."""
     from decimal import Decimal
 
-    from models import BayStructure, BinType, RecompositionLog, StructureType
-    from services.level_service import bay_levels, drop_unused_levels, ensure_level, set_capacity
-    from services.structure_service import _level_codes
+    from models import BayStructure, RecompositionLog, StructureType
+    from services.level_service import bay_levels, drop_unused_levels, ensure_level
+    from services.structure_service import _level_codes, recalc_capacities
 
     b_id, wid = res["branch_id"], res["warehouse_id"]
     chosen = [c for i, c in enumerate(res["changes"]) if idx is None or i in idx]
     snap = [_snapshot_bay(db, b_id, wid, c["aisle"], c["bay"]) for c in chosen]
-    ctx = _Ctx(db)
-    bins = [bt for bt in db.scalars(select(BinType)) if not bt.is_fraction and bt.id in ctx.spec]
     stats = {"bays": 0, "levels_created": 0, "levels_removed": 0}
+    touched: set[tuple] = set()
     created: dict[str, list[str]] = {}
     for c in chosen:
         st = db.get(StructureType, c["to_id"])
@@ -469,20 +471,18 @@ def apply(db: Session, res: dict, idx: Optional[list[int]] = None) -> dict:
                 keys.append(k)
                 created.setdefault(f"{c['aisle']}|{c['bay']}", []).append(code)
                 stats["levels_created"] += 1
-        spec = _spec(st, c["vaos_to"], c["base"])
         for i, k in enumerate(keys[:n]):
             sl = ensure_level(db, k)
             sl.height_cm = Decimal(str(c["vaos_to"][i]))
             if not sl.notes:
                 sl.notes = _("Estrutura {code}", code=st.code)
-            for bt in bins:
-                cap = _cap(ctx, spec, i + 1, bt.id)
-                set_capacity(db, [k], bt.id, cap or None)
+        touched.add((b_id, wid, c["aisle"], c["bay"]))
         if len(keys) > n:
             dropped, _kept = drop_unused_levels(db, keys[n:])
             stats["levels_removed"] += len(dropped)
         stats["bays"] += 1
     db.flush()
+    recalc_capacities(db, touched)  # capacidade de cada nível pelo vão novo (os limites manuais ficam)
     log = RecompositionLog(branch_id=b_id, warehouse_id=wid, data={"before": snap, "created": created,
                                                                    "summary": {**stats, "gain": sum(c["gain"] for c in chosen)}})
     db.add(log)
@@ -508,8 +508,10 @@ def undo(db: Session, log) -> int:
 
     from models import BayStructure, LevelCapacity
     from services.level_service import drop_unused_levels, ensure_level, get_level, set_capacity
+    from services.structure_service import recalc_capacities
 
     b_id, wid = log.branch_id, log.warehouse_id
+    touched: set[tuple] = set()
     for snap in log.data.get("before") or []:
         a, bay = snap["aisle"], snap["bay"]
         link = db.scalar(select(BayStructure).where(BayStructure.branch_id == b_id, BayStructure.aisle == a,
@@ -527,11 +529,16 @@ def undo(db: Session, log) -> int:
             sl.notes = lv["notes"]
             db.query(LevelCapacity).filter(LevelCapacity.shelf_level_id == sl.id).delete()
             db.flush()
-            for t, n in lv["caps"].items():
+            # limites manuais de antes (registros antigos, sem a separação: a capacidade inteira); a calculada vem
+            # do recálculo abaixo
+            for t, n in (lv["manual"] if "manual" in lv else lv["caps"]).items():
                 set_capacity(db, [k], int(t), n)
+        touched.add((b_id, wid, a, bay))
         for code in (log.data.get("created") or {}).get(f"{a}|{bay}", []):
             if get_level(db, (b_id, wid, a, bay, code)) is not None:
                 drop_unused_levels(db, [(b_id, wid, a, bay, code)])
+    db.flush()
+    recalc_capacities(db, touched, drop_redundant=True)
     log.undone = True
     db.commit()
     return len(log.data.get("before") or [])

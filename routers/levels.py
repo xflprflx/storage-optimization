@@ -15,7 +15,7 @@ from models import (BinType, Branch, LevelCapacity, LocationBin, ShelfLevel, Sto
 from routers.common import f_int, f_str, form_data, redirect, render, to_int
 from services.addressing import normalize_code
 from services.file_reader import parse_decimal
-from services.level_service import (ensure_level, fit_structure, matching_levels, set_capacity, set_height,
+from services.level_service import (ensure_level, fit_structure, matching_levels, set_capacity, set_height, set_manual,
                                    spill_message, spill_overflow, structure_message, usage_for)
 from services.i18n import N_, _
 
@@ -72,7 +72,7 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
     if status:
         def keep(k):
             u = usage_all[k]
-            return {"over": u.over, "nocap": not u.has_capacity, "extra": bool(u.borrowed) or u.lent > 0,
+            return {"over": u.over, "nocap": not u.has_capacity, "manual": bool(u.limited), "extra": bool(u.borrowed) or u.lent > 0,
                     "full": (u.fraction or 0) >= 0.999, "noheight": u.height is None, "free": u.fraction is not None and u.fraction < 0.999}.get(status, True)
         keys = [k for k in keys if keep(k)]
     total = len(keys)
@@ -80,6 +80,9 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
     page = min(max(1, page), pages)
     page_keys = keys[(page - 1) * PER_PAGE : page * PER_PAGE]
     levels = {k: ensure_level(db, k) for k in page_keys}
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db, {k[:4] for k in page_keys})  # níveis novos da estante (endereços criados depois)
     db.commit()
     usage = usage_for(db, page_keys)
     loc_counts = {}
@@ -109,9 +112,11 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
 
 @router.post("/save")
 def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
-    """Edição em tabela: campos cap_<nível>_<tipo> (vazio/0 = sem capacidade para o tipo)."""
-    changed = 0
+    """Edição em tabela: campos cap_<nível>_<tipo> = limite manual (vazio/0 = sem limite: nas estantes com estrutura
+    volta a valer a capacidade calculada; sem estrutura, o nível fica sem capacidade para o tipo)."""
+    changed = capped = 0
     errors = []
+    heights_bays: set[tuple] = set()
     for name, raw in form.multi_items():
         if not name.startswith("cap_"):
             continue
@@ -126,17 +131,14 @@ def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(g
             errors.append(_("Valor inválido: {raw}", raw=f"{raw!r}"))
             continue
         cap = db.scalar(select(LevelCapacity).where(LevelCapacity.shelf_level_id == lid, LevelCapacity.bin_type_id == tid))
-        if val:
-            if cap is None:
-                if db.get(ShelfLevel, lid) and db.get(BinType, tid):
-                    db.add(LevelCapacity(shelf_level_id=lid, bin_type_id=tid, max_bins=val))
-                    changed += 1
-            elif cap.max_bins != val:
-                cap.max_bins = val
-                changed += 1
-        elif cap is not None:
-            db.delete(cap)
-            changed += 1
+        if (cap.max_bins if cap is not None else 0) == (val or 0):
+            continue  # não mudou (a tela mostra a capacidade que vale)
+        if cap is None and not (db.get(ShelfLevel, lid) and db.get(BinType, tid)):
+            continue
+        if val and cap is not None and cap.calc_bins and val > cap.calc_bins:
+            capped += 1
+        set_manual(db, lid, tid, val or None)
+        changed += 1
     for name, raw in form.multi_items():
         if name.startswith("height_"):
             sl = db.get(ShelfLevel, to_int(name[7:]))
@@ -152,13 +154,20 @@ def save_capacities(form: FormData = Depends(form_data), db: Session = Depends(g
                 continue
             if sl.height_cm != val:
                 sl.height_cm = val
+                heights_bays.add((sl.branch_id, sl.warehouse_id, sl.aisle, sl.bay))
                 changed += 1
         if name.startswith("notes_"):
             sl = db.get(ShelfLevel, to_int(name[6:]))
             if sl and sl.notes != str(raw).strip()[:200]:
                 sl.notes = str(raw).strip()[:200]
     db.flush()
+    if heights_bays:
+        from services.structure_service import recalc_capacities
+
+        recalc_capacities(db, heights_bays)  # vão novo: a capacidade calculada acompanha
     adj = (spill_message(db, spill_overflow(db)) + " " + structure_message(fit_structure(db))).strip()
+    if capped:
+        adj = (adj + " " + _("{n} capacidade(s) acima do que a estrutura comporta: vale a calculada.", n=capped)).strip()
     db.commit()
     if errors:
         return redirect(_back(form), _("{changed} alteração(ões) salva(s). {adj} Ignorados: ", changed=changed, adj=adj) + "; ".join(errors[:5]), "warning")
@@ -198,10 +207,18 @@ def bulk_capacity(form: FormData = Depends(form_data), db: Session = Depends(get
     if tid:
         n = set_capacity(db, keys, tid, max_bins or None)
         code = db.get(BinType, tid).code
-        msgs.append(_("Capacidade de {max_bins}× {code} definida em {n} nível(is).", max_bins=max_bins, code=code, n=n) if max_bins
-                    else _("Capacidade de {code} removida de {n} nível(is).", code=code, n=n))
+        msgs.append(_("Limite de {max_bins}× {code} definido em {n} nível(is).", max_bins=max_bins, code=code, n=n) if max_bins
+                    else _("Limite de {code} removido de {n} nível(is) (nas estantes com estrutura vale a capacidade calculada).", code=code, n=n))
+        if max_bins:
+            u = usage_for(db, keys)
+            over = sum(1 for k in keys if u[k].calc.get(tid) and u[k].calc[tid] < max_bins)
+            if over:
+                msgs.append(_("{n} capacidade(s) acima do que a estrutura comporta: vale a calculada.", n=over))
     if height is not None or clear_h:
         n = set_height(db, keys, height)
+        from services.structure_service import recalc_capacities
+
+        recalc_capacities(db, {k[:4] for k in keys})
         msgs.append(_("Altura do vão de {height} cm definida em {n} nível(is).", height=f"{height:g}", n=n) if height is not None
                     else _("Altura do vão removida de {n} nível(is).", n=n))
         adj = structure_message(fit_structure(db, keys))
@@ -251,7 +268,14 @@ def delete_level(level_id: int, form: FormData = Depends(form_data), db: Session
         StorageLocation.level == sl.level,
         StorageLocation.warehouse_id.is_(None) if sl.warehouse_id is None else StorageLocation.warehouse_id == sl.warehouse_id))
     code = sl.code
+    bay = (sl.branch_id, sl.warehouse_id, sl.aisle, sl.bay)
     db.delete(sl)
+    db.flush()
+    from services.structure_service import recalc_capacities
+
+    if n_locs and recalc_capacities(db, [bay]):
+        db.commit()
+        return redirect(_back(form), _("Limites e vão do nível {code} removidos: vale a capacidade calculada pela estrutura da estante.", code=code))
     db.commit()
     if n_locs:
         return redirect(_back(form), _("Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).", code=code))
@@ -277,7 +301,7 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
     if sid == "remove":
         n = remove_structure(db, bays)
         db.commit()
-        return redirect(_back(form), _("Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos.", n=n))
+        return redirect(_back(form), _("Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).", n=n))
     st = db.get(StructureType, int(sid)) if str(sid).isdigit() else None
     if st is None:
         return redirect(_back(form), _("Escolha a estrutura de armazenagem."), "danger")
@@ -293,13 +317,12 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
     if fl is not None and fl < 0:
         return redirect(_back(form), _("Altura do 1º nível não pode ser negativa."), "danger")
     stats = apply_structure(db, bays, st, create_levels=on("create_levels"), set_heights=on("set_heights"),
-                            set_caps=on("set_caps"), replace_caps=on("replace_caps"), top_gap_cm=gap,
-                            first_level_cm=fl)
+                            clear_manual=on("clear_manual"), top_gap_cm=gap, first_level_cm=fl)
     msgs = [_("Estrutura {code} aplicada a {bays} estante(s) ({levels} níveis", code=st.code, bays=stats['bays'], levels=stats['levels'])
-            + (f", {stats['levels_created']} criados" if stats["levels_created"] else "") + ")"
+            + (_(", {n} criados", n=stats["levels_created"]) if stats["levels_created"] else "") + ")"
             + (_(", 1º nível a {fl} cm do piso nessas estantes", fl=f"{fl:g}") if fl is not None else "") + "."]
-    if on("set_caps"):
-        msgs.append(_("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins."))
+    msgs.append(_("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins; elas se atualizam sozinhas quando a estrutura, o vão ou os tipos de bin mudam.")
+                + (" " + _("Limites manuais removidos.") if on("clear_manual") else ""))
     if fl is not None and float(fl) + sum(st.vaos()) > float(st.height) + 1e-6:
         msgs.append(_("Atenção: 1º nível a {fl} cm + vãos ({sum} cm) passam da altura da estrutura ({float} cm).", fl=f"{fl:g}", sum=f"{sum(st.vaos()):g}", float=f"{float(st.height):g}"))
     if stats["extra_levels"]:

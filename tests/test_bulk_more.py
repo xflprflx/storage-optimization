@@ -53,8 +53,11 @@ def test_bulk_delete_histories_and_levels(client, db, seeded):
     assert "(reservado)" in prev.text
     client.post("/bulk-delete/levels/run", data={"ids": [str(rid), str(uid)], "back": "/levels"})
     db.expire_all()
-    assert db.get(ShelfLevel, rid) is None and db.get(ShelfLevel, uid) is None
-    assert db.query(LevelCapacity).filter_by(shelf_level_id=uid).count() == 0
+    assert db.query(ShelfLevel).filter_by(branch_id=bid, aisle="A", bay="01", level="9").count() == 0  # reservado sai
+    # o nível com endereços perde o limite manual; a estante tem estrutura: ele volta só com a capacidade calculada
+    back = db.query(ShelfLevel).filter_by(branch_id=bid, aisle="A", bay="01", level="1").one_or_none()
+    caps = db.query(LevelCapacity).filter_by(shelf_level_id=back.id).all() if back else []
+    assert all(c.manual_bins is None and c.calc_bins == c.max_bins for c in caps)
     assert db.query(StorageLocation).filter_by(branch_id=bid, aisle="A", bay="01", level="1").count() == 1  # endereço fica
 
 

@@ -39,15 +39,21 @@ def bin_cost(bt: BinType) -> Optional[float]:
     return None
 
 
-def derive_caps(caps: dict[int, int], types: dict[int, BinSpec]) -> tuple[dict[int, int], set]:
-    """Tipos sem capacidade cadastrada no nível: estima pela largura útil do nível
-    (a maior largura entre os tipos cadastrados: cabem 8× CX-P de 20 cm = 160 cm -> cabem 4× de 40 cm)."""
+def derive_caps(caps: dict[int, int], types: dict[int, BinSpec],
+                height: Optional[float] = None) -> tuple[dict[int, int], set]:
+    """Tipos sem capacidade cadastrada no nível (estante sem estrutura): estima pela largura útil do nível
+    (a maior largura entre os tipos cadastrados: cabem 8× CX-P de 20 cm = 160 cm -> cabem 4× de 40 cm).
+    Com o vão do nível (`height`), um tipo mais alto que ele não é estimado (não cabe).
+    Nas estantes com estrutura não se usa: a capacidade é calculada para todo tipo com medidas, e o tipo que falta
+    é o que não cabe."""
     widths = [n * types[t].fw for t, n in caps.items() if t in types and types[t].fw]
     if not widths:
         return dict(caps), set()
     usable = max(widths)
     out, derived = dict(caps), set()
     for t, spec in types.items():
+        if height is not None and spec.h and spec.h > height + 1e-9:
+            continue
         if t not in out and spec.fw:
             n = int(usable // spec.fw + 1e-9)
             if n > 0:
@@ -136,10 +142,16 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
         keys.sort(key=lambda k: natural_key(k[4]))
         bay_keys[(b, w, a_, bay)] = keys
         all_keys += keys
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db, bays)  # capacidade calculada em dia (níveis novos, medidas alteradas)
     usage = usage_for(db, all_keys) if all_keys else {}
     slots = {}
     for k, u in usage.items():
-        caps, derived = derive_caps(dict(u.capacity), types or {}) if u.capacity else ({}, set())
+        if u.structured:  # estrutura: o tipo sem capacidade não cabe no nível
+            caps, derived = dict(u.capacity), set()
+        else:
+            caps, derived = derive_caps(dict(u.capacity), types or {}, u.height) if u.capacity else ({}, set())
         slots[k] = LevelSlot(k, "-".join(k[2:]), caps or None, u.height, derived)
     ledger = LevelLedger(slots, {k: dict(u.used) for k, u in usage.items()})
     addresses = [out[i] for i in location_ids if i in out]

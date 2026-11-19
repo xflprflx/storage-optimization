@@ -310,8 +310,14 @@ def _impact_levels(db, ids):
 
 
 def _run_levels(db, ids, cascade):
+    bays = {(b, w, a, bay) for b, w, a, bay in db.execute(
+        select(ShelfLevel.branch_id, ShelfLevel.warehouse_id, ShelfLevel.aisle, ShelfLevel.bay).where(ShelfLevel.id.in_(ids)))}
     db.execute(delete(LevelCapacity).where(LevelCapacity.shelf_level_id.in_(ids)))
     db.execute(delete(ShelfLevel).where(ShelfLevel.id.in_(ids)))
+    db.flush()
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db, bays)  # nível com endereços numa estante com estrutura volta à capacidade calculada
 
 
 def _impact_users(db, ids):

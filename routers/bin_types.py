@@ -145,6 +145,10 @@ def create_bin_type(request: Request, form: FormData = Depends(form_data), db: S
         data.pop(k, None)
     bt = BinType(**data)
     db.add(bt)
+    db.flush()
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db)  # o tipo novo ganha a capacidade calculada nas estantes com estrutura
     db.commit()
     return redirect("/bin-types", _("Tipo de bin {code} criado.", code=bt.code))
 
@@ -185,6 +189,9 @@ def update_bin_type(bin_type_id: int, request: Request, form: FormData = Depends
     refresh_children(db, bt)
     db.flush()
     adj = structure_message(fit_structure(db))
+    from services.structure_service import recalc_capacities
+
+    recalc_capacities(db)  # medidas novas: a capacidade calculada acompanha
     db.commit()
     return redirect("/bin-types", _("Tipo de bin {code} atualizado. {adj}", code=bt.code, adj=adj).strip())
 

@@ -300,6 +300,12 @@ class LevelCapacity(TimestampMixin, Base):
 
     Vários tipos no mesmo nível são ALTERNATIVAS: o uso do nível é a soma das frações
     Σ (bins do tipo ÷ capacidade do tipo); 100% = nível cheio.
+
+    `max_bins` é a capacidade que vale (lida por todo o sistema). Ela sai de duas fontes:
+    - `calc_bins`: calculada pela estrutura da estante (vão do nível, frente, profundidade e medidas da bin),
+      recalculada sozinha quando a estrutura, o vão ou o tipo de bin mudam (structure_service.recalc_capacities);
+    - `manual_bins`: limite informado pelo usuário (tela ou importação).
+    Vale o menor dos dois; estante sem estrutura usa só o limite manual.
     """
 
     __tablename__ = "level_capacities"
@@ -311,6 +317,8 @@ class LevelCapacity(TimestampMixin, Base):
     )
     bin_type_id: Mapped[int] = mapped_column(ForeignKey("bin_types.id", ondelete="CASCADE"), nullable=False, index=True)
     max_bins: Mapped[int] = mapped_column(Integer, nullable=False)
+    calc_bins: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    manual_bins: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     shelf_level: Mapped[ShelfLevel] = relationship(back_populates="capacities")
     bin_type: Mapped[BinType] = relationship()
@@ -626,6 +634,9 @@ class BayStructure(TimestampMixin, Base):
     )
     # altura do 1º nível nesta estante (cm), quando ela foi montada diferente da estrutura (vazio = a da estrutura)
     first_level_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    # folgas usadas no cálculo da capacidade dos níveis: {"top_gap": cm, "side_gap": cm, "fill": 0–1}
+    # (vazio = 5 cm acima da bin, sem folga lateral, frente inteira)
+    cap_params: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
 
     structure_type: Mapped[StructureType] = relationship()
 

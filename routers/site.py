@@ -207,7 +207,7 @@ def _save_site_run(db: Session, pr: SiteProject, cfg: dict, plan) -> Optional[in
         import logging
 
         db.rollback()
-        logging.getLogger("neokioski").exception(_("Não foi possível guardar o resultado do projeto"))
+        logging.getLogger("slotta").exception(_("Não foi possível guardar o resultado do projeto"))
         return None
 
 

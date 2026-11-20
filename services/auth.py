@@ -3,7 +3,7 @@
 - Senha: guardada só como hash "pbkdf2_sha256$<iterações>$<sal>$<hash>" (base64); a comparação é em tempo constante.
 - Sessão: o cookie nk_session leva um token aleatório; o banco guarda só o SHA-256 dele, com validade de
   SESSION_DAYS dias (renovada com o uso). Sair, trocar a senha ou desativar o usuário encerra as sessões.
-- Primeiro uso: sem nenhum usuário, cria o administrador "admin". A senha inicial vem de NEOKIOSKI_ADMIN_PASSWORD
+- Primeiro uso: sem nenhum usuário, cria o administrador "admin". A senha inicial vem de SLOTTA_ADMIN_PASSWORD (ou NEOKIOSKI_ADMIN_PASSWORD)
   ou, sem ela, é a senha de instalação (só o hash fica no código) e precisa ser trocada no primeiro acesso.
 - Tentativas erradas: depois de MAX_FAILS seguidas, o usuário fica bloqueado por LOCK_MINUTES minutos.
 """
@@ -73,7 +73,7 @@ def ensure_admin(db: Session) -> None:
 
     if db.scalar(select(func.count()).select_from(User)):
         return
-    env = os.getenv("NEOKIOSKI_ADMIN_PASSWORD")
+    env = os.getenv("SLOTTA_ADMIN_PASSWORD") or os.getenv("NEOKIOSKI_ADMIN_PASSWORD")  # nome antigo também vale
     db.add(User(username=ADMIN_USERNAME, name="Administrador", is_admin=True, active=True,
                 password_hash=hash_password(env) if env else INSTALL_ADMIN_HASH, must_change_password=not env))
     db.commit()

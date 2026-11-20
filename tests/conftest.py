@@ -7,9 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
-_TMP = tempfile.mkdtemp(prefix="neokioski-tests-")
-os.environ["NEOKIOSKI_DB_URL"] = f"sqlite:///{_TMP}/test.db"  # antes de importar a aplicação
-os.environ["NEOKIOSKI_ADMIN_PASSWORD"] = ADMIN_PASSWORD = "senha-de-teste-123"  # administrador criado no 1º uso
+_TMP = tempfile.mkdtemp(prefix="slotta-tests-")
+os.environ["SLOTTA_DB_URL"] = f"sqlite:///{_TMP}/test.db"  # antes de importar a aplicação
+os.environ["SLOTTA_ADMIN_PASSWORD"] = ADMIN_PASSWORD = "senha-de-teste-123"  # administrador criado no 1º uso
 
 import pytest  # noqa: E402
 

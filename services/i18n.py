@@ -621,7 +621,7 @@ def units_in_html(html: str) -> str:
     return "".join(parts)
 
 
-# fontes com chinês para embutir no PDF (a 1ª encontrada); NEOKIOSKI_CJK_FONT aponta outra (.ttf/.ttc)
+# fontes com chinês para embutir no PDF (a 1ª encontrada); SLOTTA_CJK_FONT (ou NEOKIOSKI_CJK_FONT) aponta outra (.ttf/.ttc)
 _CJK_FONTS = (
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
@@ -632,7 +632,7 @@ _CJK_FONTS = (
 
 def pdf_fonts() -> tuple[str, str]:
     """Fontes dos PDFs (normal, negrito). Helvetica não tem os caracteres chineses: em zh-CN embute uma fonte
-    do sistema com chinês (lista acima ou NEOKIOSKI_CJK_FONT) ou, sem nenhuma, usa a fonte CID STSong-Light
+    do sistema com chinês (lista acima ou SLOTTA_CJK_FONT) ou, sem nenhuma, usa a fonte CID STSong-Light
     do reportlab (não embutida: o leitor de PDF precisa ter fontes chinesas)."""
     if get_lang() != "zh-CN":
         return "Helvetica", "Helvetica-Bold"
@@ -644,7 +644,7 @@ def pdf_fonts() -> tuple[str, str]:
 
     if "NK-CJK" in pdfmetrics.getRegisteredFontNames():
         return "NK-CJK", "NK-CJK"
-    for path in filter(None, (os.environ.get("NEOKIOSKI_CJK_FONT"), *_CJK_FONTS)):
+    for path in filter(None, (os.environ.get("SLOTTA_CJK_FONT"), os.environ.get("NEOKIOSKI_CJK_FONT"), *_CJK_FONTS)):
         if Path(path).is_file():
             try:
                 pdfmetrics.registerFont(TTFont("NK-CJK", path, subfontIndex=0))

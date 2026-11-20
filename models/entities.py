@@ -1,5 +1,5 @@
 """
-Modelos de dados do Neokioski (SQLAlchemy 2.x, estilo declarativo tipado).
+Modelos de dados do Slotta (SQLAlchemy 2.x, estilo declarativo tipado).
 
 Relacionamentos:
     Branch  N <-> N  Warehouse                (tabela associativa branch_warehouse)

@@ -379,7 +379,7 @@ def _save_run(db: Session, request: Request, kind: str, filters: dict, kpis: lis
         import logging
 
         db.rollback()
-        logging.getLogger("neokioski").exception(_("Não foi possível guardar o resultado da otimização"))
+        logging.getLogger("slotta").exception(_("Não foi possível guardar o resultado da otimização"))
         return None
 
 

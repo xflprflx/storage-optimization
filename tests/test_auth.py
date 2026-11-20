@@ -27,7 +27,7 @@ def test_password_hash_and_admin_bootstrap(db):
     assert h.startswith("pbkdf2_sha256$1000$") and "abc12345" not in h
     assert auth.verify_password("abc12345", h) and not auth.verify_password("abc1234", h)
     admin = db.query(User).filter_by(username="admin").one()
-    assert admin.is_admin and admin.active and not admin.must_change_password  # senha veio de NEOKIOSKI_ADMIN_PASSWORD
+    assert admin.is_admin and admin.active and not admin.must_change_password  # senha veio de SLOTTA_ADMIN_PASSWORD
     assert auth.INSTALL_ADMIN_HASH.startswith("pbkdf2_sha256$600000$")
 
 

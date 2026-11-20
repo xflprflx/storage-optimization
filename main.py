@@ -1,5 +1,5 @@
 """
-Neokioski - Sistema de Gestão de Estoque
+Slotta - gestão e otimização de armazenagem
 Entrypoint FastAPI (sem autenticação nesta versão).
 
 Execução:  uvicorn main:app --host 127.0.0.1 --port 8000
@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 
 if sys.version_info < (3, 11):  # pragma: no cover - checagem para quem roda sem o start.bat/start.sh
-    raise SystemExit(f"Neokioski requer Python 3.11 ou superior (este é o {sys.version.split()[0]}). "
+    raise SystemExit(f"Slotta requer Python 3.11 ou superior (este é o {sys.version.split()[0]}). "
                      "Use start.bat (Windows) ou start.sh (Linux/macOS), que escolhem um Python compatível.")
 
 import logging
@@ -55,7 +55,7 @@ from routers.common import render
 from services.file_reader import cleanup_old_uploads
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-log = logging.getLogger("neokioski")
+log = logging.getLogger("slotta")
 
 
 @asynccontextmanager
@@ -77,11 +77,11 @@ async def lifespan(_app: FastAPI):
             log.info("Pedidos reimportados com data nos projetos de exemplo: %s", ", ".join(names))
     except Exception:  # noqa: BLE001 — não impede o app de subir
         log.exception("Falha ao reimportar os pedidos dos projetos de exemplo")
-    log.info("Neokioski iniciado - banco de dados pronto.")
+    log.info("Slotta iniciado - banco de dados pronto.")
     yield
 
 
-app = FastAPI(title="Neokioski", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Slotta", version="1.0.0", lifespan=lifespan)
 
 
 class LanguageMiddleware:
@@ -230,6 +230,15 @@ def i18n_script(lang: str):
     body = "window.NK_T=" + json.dumps(i18n.catalog(code), ensure_ascii=False, separators=(",", ":")) + ";"
     return Response(body, media_type="application/javascript; charset=utf-8",
                     headers={"Cache-Control": "public, max-age=86400"})
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Ícone do Slotta para os navegadores que pedem /favicon.ico."""
+    from fastapi.responses import FileResponse
+
+    return FileResponse(Path(__file__).resolve().parent / "static" / "brand" / "slotta-icon-180.png", media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent / "static"), name="static")
 
 

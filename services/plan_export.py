@@ -189,7 +189,7 @@ def to_pdf(plan: ActionPlan) -> bytes:
     buf = io.BytesIO()
     page = landscape(A4)
     doc = SimpleDocTemplate(buf, pagesize=page, leftMargin=12 * mm, rightMargin=12 * mm, topMargin=12 * mm,
-                            bottomMargin=12 * mm, title=plan.title, author="Neokioski")
+                            bottomMargin=12 * mm, title=plan.title, author="Slotta")
     width = page[0] - 24 * mm
 
     def footer(canvas, d):

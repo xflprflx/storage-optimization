@@ -49,7 +49,7 @@ def test_guide_page_and_tours_json(client, db):
     finally:
         client.cookies.delete("nk_lang")
     intro = next(t for t in en if t["id"] == "intro")
-    assert intro["t"] == "Getting to know Neokioski"
+    assert intro["t"] == "Getting to know Slotta"
     # o menu Guia está em todas as telas
     assert 'id="nkGuideMenu"' in client.get("/settings").text
 

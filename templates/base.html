@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Neokioski{% endblock %} · Neokioski</title>
+  <title>{% block title %}Slotta{% endblock %} · Slotta</title>
+  <link rel="icon" href="/static/brand/slotta-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/brand/slotta-icon-180.png">
+  <meta name="theme-color" content="#0f2a2a">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
@@ -140,7 +143,7 @@
     <button type="button" class="btn btn-link text-white px-2 d-xl-none" data-bs-toggle="offcanvas" data-bs-target="#nkSide" aria-controls="nkSide" title="{{ _("Menu") }}"><i class="bi bi-list fs-5"></i></button>
     <button type="button" class="btn btn-link text-white px-2 d-none d-xl-inline-block" id="nkSideBtn" aria-controls="nkSide"
       data-t-full="{{ _("Menu: recolher para só os ícones") }}" data-t-mini="{{ _("Menu: ocultar") }}" data-t-hide="{{ _("Menu: mostrar") }}"><i class="bi bi-list fs-5"></i></button>
-    <a class="navbar-brand ms-1" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
+    <a class="navbar-brand ms-1 d-flex align-items-center gap-2" href="/" title="{{ _("Cada item no lugar certo. Cada passo contado.") }}"><img src="/static/brand/slotta-icon.svg" width="28" height="28" alt=""> Slotta</a>
   </div>
   <div class="d-flex align-items-center ms-auto">
       {% set nk_next = (request.url.path ~ ('?' ~ request.url.query if request.url.query else ''))|urlencode %}
@@ -190,7 +193,7 @@
 <div class="nk-shell">
   <aside class="offcanvas-xl offcanvas-start nk-side" tabindex="-1" id="nkSide" aria-label="{{ _("Menu") }}">
     <div class="offcanvas-header d-xl-none nk-top">
-      <a class="navbar-brand text-white" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
+      <a class="navbar-brand text-white d-flex align-items-center gap-2" href="/"><img src="/static/brand/slotta-icon.svg" width="28" height="28" alt=""> Slotta</a>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#nkSide" aria-label="{{ _("Fechar") }}"></button>
     </div>
     <nav class="nk-side-body">

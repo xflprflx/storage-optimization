@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# Neokioski - inicia o servidor web local (http://127.0.0.1:8000) no Linux/macOS
+# Slotta - inicia o servidor web local (http://127.0.0.1:8000) no Linux/macOS
 #
 # Funciona com qualquer Python 3.11 ou mais novo instalado:
 #   - sem .venv: cria o ambiente virtual com o Python mais novo encontrado (python3.X, python3, python);
@@ -58,5 +58,5 @@ if ! cmp -s requirements.txt "$STAMP"; then
   cp requirements.txt "$STAMP"
 fi
 
-echo "Neokioski com Python $("$VENV_PY" -c 'import platform; print(platform.python_version())') em http://127.0.0.1:$PORT  (Ctrl+C para encerrar)"
+echo "Slotta com Python $("$VENV_PY" -c 'import platform; print(platform.python_version())') em http://127.0.0.1:$PORT  (Ctrl+C para encerrar)"
 exec "$VENV_PY" -m uvicorn main:app --host 127.0.0.1 --port "$PORT"

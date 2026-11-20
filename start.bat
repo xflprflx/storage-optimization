@@ -1,6 +1,6 @@
 @echo off
 REM ---------------------------------------------------------------------------
-REM Neokioski - inicia o servidor web local (http://127.0.0.1:8000)
+REM Slotta - inicia o servidor web local (http://127.0.0.1:8000)
 REM
 REM Funciona com qualquer Python 3.11 ou mais novo instalado:
 REM   - sem .venv: cria o ambiente virtual com o Python mais novo encontrado
@@ -63,7 +63,7 @@ if errorlevel 1 (
 )
 
 for /f "delims=" %%V in ('call %VENV_PY% -c "import platform; print(platform.python_version())"') do set "PY_VER=%%V"
-echo Neokioski com Python !PY_VER! em http://127.0.0.1:%NK_PORT%  ^(Ctrl+C para encerrar^)
+echo Slotta com Python !PY_VER! em http://127.0.0.1:%NK_PORT%  ^(Ctrl+C para encerrar^)
 "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port %NK_PORT%
 pause
 exit /b 0

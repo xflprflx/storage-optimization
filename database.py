@@ -19,7 +19,11 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
 BASE_DIR = Path(__file__).resolve().parent
-DATABASE_URL = os.getenv("NEOKIOSKI_DB_URL", f"sqlite:///{(BASE_DIR / 'neokioski.db').as_posix()}")
+# banco: SLOTTA_DB_URL (ou NEOKIOSKI_DB_URL, o nome antigo); sem ela, slotta.db na pasta do app — ou neokioski.db, se
+# existir (instalação de antes da troca do nome: o banco continua o mesmo)
+_DB_FILE = BASE_DIR / ("neokioski.db" if (BASE_DIR / "neokioski.db").exists() and not (BASE_DIR / "slotta.db").exists()
+                       else "slotta.db")
+DATABASE_URL = os.getenv("SLOTTA_DB_URL") or os.getenv("NEOKIOSKI_DB_URL") or f"sqlite:///{_DB_FILE.as_posix()}"
 
 engine = create_engine(
     DATABASE_URL,

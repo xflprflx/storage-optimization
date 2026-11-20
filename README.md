@@ -1,4 +1,8 @@
-# Neokioski — Gestão e otimização de armazenagem
+<p align="center"><img src="static/brand/slotta-logo.svg" alt="Slotta" height="72"></p>
+
+<p align="center"><b>Cada item no lugar certo. Cada passo contado.</b></p>
+
+# Slotta — Gestão e otimização de armazenagem
 
 Sistema web local para gestão física de depósitos, mapa visual do estoque e otimização de armazenagem em bins: escolha das bins de cada endereço (Por endereço e Pool), posição dos produtos pela saída, projeto de filiais novas, planta desenhada, simulador de trajeto e vista 3D. Desenvolvido com FastAPI, Jinja2, SQLite e OR-Tools (CP-SAT).
 
@@ -16,7 +20,7 @@ start.bat
 ./start.sh
 ```
 
-*Acesse `http://127.0.0.1:8000`. O banco `neokioski.db` será criado automaticamente.*
+*Acesse `http://127.0.0.1:8000`. O banco `slotta.db` será criado automaticamente (instalações anteriores à troca do nome continuam usando o `neokioski.db` que já existe).*
 
 O script faz o resto sozinho:
 - **Sem `.venv`**: cria o ambiente virtual com o Python mais novo instalado que seja 3.11 ou superior. No Windows procura `py -3` e depois `python`/`python3` do PATH; no Linux/macOS, `python3.X`, `python3` e `python`.
@@ -39,7 +43,7 @@ Todas as telas exigem login. No primeiro uso (banco sem usuários) o sistema cri
 
 - sem configuração, ele entra com a **senha de instalação** (entregue à parte; no código fica só o hash) e é obrigado
   a definir uma senha nova no primeiro acesso;
-- para outra senha inicial, defina a variável `NEOKIOSKI_ADMIN_PASSWORD` antes do primeiro início.
+- para outra senha inicial, defina a variável `SLOTTA_ADMIN_PASSWORD` antes do primeiro início.
 
 Administradores criam usuários em **menu do usuário → Usuários** (senha provisória, perfil, ativar/desativar). Cada
 pessoa troca a própria senha em **Minha conta**. Detalhes:
@@ -804,7 +808,7 @@ demais), *Métrico* ou *Imperial*. O banco guarda sempre o métrico; a conversã
   qualquer um dos 6 idiomas: um modelo baixado em inglês ou chinês volta a ser lido igual.
 
 PDF em chinês: embute uma fonte do sistema com chinês (WenQuanYi, Noto CJK, Microsoft YaHei...; ou o arquivo
-indicado em `NEOKIOSKI_CJK_FONT`). Sem nenhuma, usa a fonte STSong-Light do reportlab, que depende do leitor de PDF.
+indicado em `SLOTTA_CJK_FONT`). Sem nenhuma, usa a fonte STSong-Light do reportlab, que depende do leitor de PDF.
 
 Para desenvolvedores:
 - textos ficam em português no código e são marcados com `_("Texto {x}", x=...)` (Python/telas),
@@ -840,7 +844,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests
 ```
 
-Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `neokioski.db`), e entram como administrador (`tests/conftest.py`). Além das regras de negócio, eles conferem que todo texto está traduzido (`test_i18n.py`), que todo campo tem ajuda (`test_field_help.py`) e que todo seletor dos tours existe na tela (`test_onboarding.py`).
+Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no banco do app), e entram como administrador (`tests/conftest.py`). Além das regras de negócio, eles conferem que todo texto está traduzido (`test_i18n.py`), que todo campo tem ajuda (`test_field_help.py`) e que todo seletor dos tours existe na tela (`test_onboarding.py`).
 
 ## Estrutura do Projeto
 
@@ -855,4 +859,14 @@ Os testes usam um banco SQLite próprio, em pasta temporária (não tocam no `ne
 
 ## Importante: Atualizar para uma nova versão
 
-Substitua os arquivos do projeto e **mantenha o arquivo `neokioski.db`**. Ao iniciar, o sistema ajusta o banco sozinho: cria tabelas/colunas novas e reaplica as regras de consistência (ocupação dos endereços, endereço padrão dos produtos, níveis dedicados, vão e capacidade calculada dos níveis). Faça uma cópia de segurança do `.db` antes de prosseguir.
+**Troca do nome (Neokioski → Slotta):** nada precisa ser feito. Com o `neokioski.db` na pasta do app (e sem um
+`slotta.db`), o app continua usando esse banco; para passar ao nome novo, renomeie o arquivo para `slotta.db` com o app
+parado. As variáveis de ambiente antigas (`NEOKIOSKI_DB_URL`, `NEOKIOSKI_ADMIN_PASSWORD`, `NEOKIOSKI_CJK_FONT`) continuam
+valendo; as novas são `SLOTTA_DB_URL`, `SLOTTA_ADMIN_PASSWORD` e `SLOTTA_CJK_FONT`.
+
+**Marca:** o logo (um "S" feito com as longarinas e os montantes de uma estante, com uma bin no nível do meio) fica em
+`static/brand/`: `slotta-icon.svg` (ícone e favicon), `slotta-logo.svg` (ícone + nome, para fundo claro),
+`slotta-logo-light.svg` (para fundo escuro) e os PNGs de 180 e 512 px.
+
+
+Substitua os arquivos do projeto e **mantenha o arquivo do banco** (`slotta.db` ou, em instalações de antes da troca do nome, `neokioski.db`). Ao iniciar, o sistema ajusta o banco sozinho: cria tabelas/colunas novas e reaplica as regras de consistência (ocupação dos endereços, endereço padrão dos produtos, níveis dedicados, vão e capacidade calculada dos níveis). Faça uma cópia de segurança do `.db` antes de prosseguir.

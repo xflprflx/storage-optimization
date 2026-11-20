@@ -24,8 +24,8 @@ def S(sel, title: str, desc: str, concept: Optional[str] = None, cond: bool = Fa
 SAVE = '[data-tour="form-save"]'
 
 TOURS: dict[str, dict] = {
-    "intro": {"p": r"^/$", "u": "/", "t": N_("Conhecendo o Neokioski"), "s": [
-        S(None, N_("Bem-vindo ao Neokioski"),
+    "intro": {"p": r"^/$", "u": "/", "t": N_("Conhecendo o Slotta"), "s": [
+        S(None, N_("Bem-vindo ao Slotta"),
           N_("O sistema responde a três perguntas do estoque: quais bins usar em cada endereço, onde guardar cada produto e quanto o separador anda para montar os pedidos. Avance pelos botões ou pelas setas do teclado; Esc fecha."),
           N_("Otimizar é escolher, entre milhares de combinações possíveis, a que dá o melhor resultado numa meta (ex.: menos bins) sem quebrar as regras (ex.: o saldo tem de caber). O sistema faz essa busca; você só descreve o estoque e escolhe a meta.")),
         S('[data-tour="nav-cadastros"]', N_("Cadastros"),

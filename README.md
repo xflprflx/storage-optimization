@@ -64,8 +64,9 @@ pessoa troca a própria senha em **Minha conta**. Detalhes:
   - *Sistema*: Configurações.
 
   O grupo da tela aberta já vem expandido, com o item em destaque. Em tela larga, o botão ☰ ao lado da marca
-  **oculta ou mostra** o menu (a tela passa a usar a largura toda), e *Só os ícones*, no pé do menu, recolhe para
-  os ícones; as duas escolhas ficam lembradas no navegador. Em telas estreitas, o menu abre e fecha pelo ☰.
+  alterna entre **expandido → só os ícones → oculto** (a tela passa a usar a largura toda) e volta ao expandido; o
+  texto do botão diz o que o próximo clique faz, e a escolha fica lembrada no navegador. Em telas estreitas, o menu
+  abre e fecha pelo ☰.
 - **Simulador** (`/simulator`): a porta de entrada da simulação. Lista as filiais (histórico de pedidos — pedidos,
   dias e se tem o horário de liberação — e se a planta está desenhada) e os projetos de filial nova (aba Pedidos),
   com os atalhos para o **simulador de trajeto**, a **caminhada em 3D** e o **relatório de SKUs**. O que falta para

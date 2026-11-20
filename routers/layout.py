@@ -571,8 +571,45 @@ def combined_result(token: str, request: Request, db: Session = Depends(get_db))
     res = j["res"]
     if j["error"] or not res or res.get("error"):
         return redirect(back, j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
+    svgs, cur_svg, sel = _combined_svgs(db, br.id, wid, res)
     return render(request, "layout/combined.html", res=res, branch=br, wid=wid, wlabel=wlabel, token=token, back=back,
-                  stale=stale_reason(db, br.id, wid, res.get("stamp"), "combined"))
+                  stale=stale_reason(db, br.id, wid, res.get("stamp"), "combined"), svgs=svgs, cur_svg=cur_svg,
+                  sel=sel)
+
+
+MARK_RECOMP, MARK_MOVED, MARK_BOTH = "#f4a259", "#8ec5ff", "#c39bd3"
+
+
+def _combined_svgs(db: Session, bid: int, wid: Optional[int], res: dict) -> tuple[list, str, int]:
+    """Desenho de cada opção da proposta combinada, com as estantes a recompor e as que mudam de lugar pintadas;
+    a planta atual; e a opção mostrada de início (melhor trajeto, senão mais bins, senão a primeira)."""
+    from services.branch_layout import build, get_layout, scope_bays, svg as layout_svg
+
+    bays = scope_bays(db, bid, wid)
+    lay = get_layout(db, bid, wid)
+    try:
+        g_cur = build(next((o["variant"]["data"] for o in res["options"] if o["variant"].get("current")), None)
+                      or lay.data, bays)
+    except Exception:  # noqa: BLE001 — planta apagada ou inválida: sem desenhos
+        return [], "", 0
+    pos = {(p.bay.aisle, p.bay.bay): (round(p.x), round(p.y)) for p in g_cur.placed.values()}
+    out = []
+    for o in res["options"]:
+        v = o["variant"]
+        g = g_cur if v.get("current") else build(v["data"], bays)
+        recomp = {(c["aisle"], c["bay"]) for c in o["recomp"].get("changes") or []}
+        moved = {(p.bay.aisle, p.bay.bay) for p in g.placed.values()
+                 if pos.get((p.bay.aisle, p.bay.bay)) not in (None, (round(p.x), round(p.y)))}
+        mark = {}
+        for k in recomp | moved:
+            both = k in recomp and k in moved
+            mark[k] = (MARK_BOTH if both else MARK_RECOMP if k in recomp else MARK_MOVED,
+                       _("recompor e mudar de lugar") if both else _("recompor") if k in recomp else _("muda de lugar"))
+        out.append({"svg": layout_svg(g, 560, mark), "recomp": len(recomp), "moved": len(moved)})
+    sel = next((i for i, o in enumerate(res["options"]) if o["best_walk"]), None)
+    if sel is None:
+        sel = next((i for i, o in enumerate(res["options"]) if o["best_gain"]), 0)
+    return out, layout_svg(g_cur, 560), sel
 
 
 @router.post("/layout/plan/combined/apply")

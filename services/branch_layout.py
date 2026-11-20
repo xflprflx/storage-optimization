@@ -585,9 +585,10 @@ def walk_m(g: Geometry, node: Node) -> float:
     return dist(g.ref_node(), node) / 100.0
 
 
-def svg(g: Geometry, width_px: int = 1000) -> str:
+def svg(g: Geometry, width_px: int = 1000, mark: Optional[dict] = None) -> str:
     """Planta (vista de cima) em cm no viewBox: fileiras com as estantes, corredores, obstáculos e a referência.
-    Quem desenha por cima (rotas) usa as mesmas coordenadas em cm."""
+    Quem desenha por cima (rotas) usa as mesmas coordenadas em cm. `mark` = {(corredor, estante): (cor, nota)}: pinta
+    essas estantes (propostas: estantes recompostas, mudadas de lugar)."""
     d = g.data
     L, W = d["L"], d["W"]
     fs = max(L, W) / 70
@@ -608,10 +609,12 @@ def svg(g: Geometry, width_px: int = 1000) -> str:
                f'<rect width="{fs * 0.6:.0f}" height="{fs * 0.35:.0f}" fill="#b8864b" fill-opacity=".6"/></pattern></defs>')
     for p in g.placed.values():
         fl = p.bay.struct is not None and is_floor(p.bay.struct.kind)  # palete no chão: tábuas do palete
+        mk = (mark or {}).get((p.bay.aisle, p.bay.bay))
+        fill = mk[0] if mk else ("url(#nkPalletB)" if fl else "#cfd8df")
         out.append(f'<rect x="{p.x:.0f}" y="{p.y:.0f}" width="{p.w:.0f}" height="{p.d:.0f}" '
-                   f'fill="{"url(#nkPalletB)" if fl else "#cfd8df"}" stroke="#7b8a95" '
+                   f'fill="{fill}" stroke="#7b8a95" '
                    f'stroke-width="{fs / 12:.1f}"><title>{_esc(p.bay.aisle)}-{_esc(p.bay.bay)}'
-                   f'{_(" · palete no chão") if fl else ""}</title></rect>')
+                   f'{_(" · palete no chão") if fl else ""}{(" · " + _esc(mk[1])) if mk and mk[1] else ""}</title></rect>')
     rows = d["rows"]
     for dr in g.doors:  # área de abertura das portas de giro (vermelha quando bate em algo)
         col = "#d62728" if dr["hit"] else "#7b3fb5"

@@ -746,8 +746,11 @@ planta (com a escolha das peças: existentes ou ilimitadas) e **Gerar proposta c
 corredores), roda a recomposição calculada **nessa** planta: as laterais compartilhadas seguem as estantes vizinhas
 da variação (uma passagem que separa estantes pede laterais a mais, que entram no saldo das peças). A tabela mostra o
 trajeto por pedido, a diferença para a atual, as estantes a recompor, as bins a mais e as peças a comprar; opções que
-não cabem nas peças existentes ficam marcadas e sem botão. Um único **Aplicar** grava a planta da variação e a
-recomposição; para voltar, **Desfazer rearranjo** (na planta) e **Desfazer a última recomposição**.
+não cabem nas peças existentes ficam marcadas e sem botão. Embaixo, a planta **antes** (atual) e **depois** (a opção
+selecionada: começa pela de melhor trajeto; clicar numa linha ou no olho troca o desenho), com as estantes pintadas:
+laranja = a recompor, azul = muda de lugar, lilás = as duas coisas (passe o mouse para ver a estante). Um único
+**Aplicar** grava a planta da variação e a recomposição; para voltar, **Desfazer rearranjo** (na planta) e
+**Desfazer a última recomposição**.
 
 **Proposta desatualizada:** cada proposta guarda o estado da planta e da última recomposição de quando foi gerada.
 Se a outra proposta for aplicada ou desfeita depois (ou a planta for editada), a tela da proposta avisa e oferece

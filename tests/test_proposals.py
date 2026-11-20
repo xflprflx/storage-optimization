@@ -48,6 +48,12 @@ def test_combined_proposal_applies_plan_and_recomposition(db):
     assert cur["gain"] > 0 and any(p["code"] == "PCB-COLB" for p in cur["bought"])
     idx = next((i for i, o in enumerate(res["options"]) if not o["variant"].get("current") and o["feasible"]),
                res["options"].index(cur))
+    from routers.layout import MARK_RECOMP, _combined_svgs
+
+    svgs, cur_svg, sel = _combined_svgs(db, bid, None, res)  # antes e depois, com as estantes a recompor pintadas
+    assert len(svgs) == len(res["options"]) and cur_svg.startswith("<svg") and MARK_RECOMP not in cur_svg
+    assert svgs[res["options"].index(cur)]["recomp"] == 6 and MARK_RECOMP in svgs[res["options"].index(cur)]["svg"]
+    assert 0 <= sel < len(svgs)
     msg, level = apply_combined(db, res, idx)
     assert level == "success", msg
     assert db.query(RecompositionLog).filter_by(branch_id=bid).count() == 1

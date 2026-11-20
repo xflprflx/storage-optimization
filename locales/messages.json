@@ -213,7 +213,7 @@
  },
  " · palete no chão": {
   "src": [
-   "services/branch_layout.py:614"
+   "services/branch_layout.py:617"
   ]
  },
  " · plano informativo (não pode ser aplicado)": {
@@ -254,8 +254,8 @@
  },
  " ímp.": {
   "src": [
-   "services/branch_layout.py:626",
-   "services/branch_layout.py:941"
+   "services/branch_layout.py:629",
+   "services/branch_layout.py:944"
   ]
  },
  " — na posição dos SKUs": {
@@ -275,7 +275,7 @@
  },
  "\" fill=\"#2f6db5\" opacity=\".75\"><title>Mão única</title></polygon>": {
   "src": [
-   "services/branch_layout.py:679"
+   "services/branch_layout.py:682"
   ]
  },
  "\"Neste nível cabem X bins do tipo Y\". Tipos diferentes são alternativas: o uso soma as frações (3/6 CX-P + 1/3 CX-M = 83%).": {
@@ -1864,7 +1864,7 @@
  "A proposta expirou: gere de novo.": {
   "src": [
    "routers/layout.py:487",
-   "routers/layout.py:588",
+   "routers/layout.py:625",
    "routers/levels.py:437",
    "services/proposals.py:101"
   ]
@@ -2606,6 +2606,11 @@
   ],
   "lazy": true
  },
+ "Antes: planta atual": {
+  "src": [
+   "templates/layout/combined.html:72"
+  ]
+ },
  "Antigos {v}": {
   "src": [
    "templates/locations/batch.html:170"
@@ -2723,7 +2728,7 @@
  "Aplicar": {
   "src": [
    "services/onboarding.py:210",
-   "templates/layout/combined.html:59",
+   "templates/layout/combined.html:61",
    "templates/levels/index.html:94",
    "templates/locations/list.html:122",
    "templates/products/list.html:87",
@@ -2757,7 +2762,7 @@
  },
  "Aplicar as duas": {
   "src": [
-   "templates/layout/combined.html:59"
+   "templates/layout/combined.html:61"
   ]
  },
  "Aplicar as marcadas": {
@@ -2773,7 +2778,7 @@
  },
  "Aplicar esta opção: a planta da variação e a recomposição das estruturas calculada nela?": {
   "src": [
-   "templates/layout/combined.html:57"
+   "templates/layout/combined.html:59"
   ],
   "js": true
  },
@@ -3745,7 +3750,7 @@
  },
  "Bins a mais": {
   "src": [
-   "templates/layout/combined.html:32",
+   "templates/layout/combined.html:33",
    "templates/levels/recompose.html:24",
    "templates/optimization/pool.html:151"
   ]
@@ -4070,7 +4075,7 @@
  },
  "Busca cancelada: a tabela tem só as opções testadas até ali.": {
   "src": [
-   "templates/layout/combined.html:22"
+   "templates/layout/combined.html:23"
   ]
  },
  "Busca cancelada: a tabela tem só as variações testadas até ali.": {
@@ -4301,9 +4306,9 @@
   ],
   "lazy": true
  },
- "Cada linha é uma variação da planta (a atual, passagens transversais, troca de corredores) com a recomposição das estruturas calculada NELA: as laterais compartilhadas seguem as estantes vizinhas daquela planta (uma passagem que separa estantes pede laterais a mais). Aplicar grava as duas coisas; para voltar, Desfazer rearranjo (na planta) e Desfazer a última recomposição (em Capacidade dos níveis).": {
+ "Cada linha é uma variação da planta (a atual, passagens transversais, troca de corredores) com a recomposição das estruturas calculada NELA: as laterais compartilhadas seguem as estantes vizinhas daquela planta (uma passagem que separa estantes pede laterais a mais). Clique numa linha para ver a planta dela ao lado da atual. Aplicar grava as duas coisas; para voltar, Desfazer rearranjo (na planta) e Desfazer a última recomposição (em Capacidade dos níveis).": {
   "src": [
-   "templates/layout/combined.html:24"
+   "templates/layout/combined.html:25"
   ]
  },
  "Cada nível da estante recebe bins de um só tipo.": {
@@ -6831,6 +6836,11 @@
   ],
   "html": true
  },
+ "Depois:": {
+  "src": [
+   "templates/layout/combined.html:75"
+  ]
+ },
  "Desalojado e realocado": {
   "src": [
    "routers/optimization.py:164"
@@ -8634,7 +8644,7 @@
  },
  "Esta proposta pode estar desatualizada: {why} depois que ela foi gerada.": {
   "src": [
-   "templates/layout/combined.html:16",
+   "templates/layout/combined.html:17",
    "templates/layout/rearrange.html:15",
    "templates/levels/recompose.html:14"
   ],
@@ -8698,7 +8708,7 @@
  },
  "Estante sem estrutura cadastrada": {
   "src": [
-   "services/branch_layout.py:841"
+   "services/branch_layout.py:844"
   ]
  },
  "Estante {bay}": {
@@ -8731,7 +8741,7 @@
  },
  "Estantes a recompor": {
   "src": [
-   "templates/layout/combined.html:31",
+   "templates/layout/combined.html:32",
    "templates/levels/recompose.html:24"
   ]
  },
@@ -10680,7 +10690,7 @@
  },
  "Gerar de novo": {
   "src": [
-   "templates/layout/combined.html:21",
+   "templates/layout/combined.html:22",
    "templates/layout/rearrange.html:19",
    "templates/levels/recompose.html:18"
   ]
@@ -14571,7 +14581,7 @@
  },
  "Não cabe nas peças existentes (laterais a mais ou peças da recomposição): gere com peças ilimitadas.": {
   "src": [
-   "templates/layout/combined.html:42"
+   "templates/layout/combined.html:43"
   ]
  },
  "Não cabe neste nível (pela estrutura e pelo vão)": {
@@ -15585,7 +15595,7 @@
  },
  "Obstáculo": {
   "src": [
-   "services/branch_layout.py:1010",
+   "services/branch_layout.py:1013",
    "services/branch_layout.py:257",
    "templates/layout/plan.html:60",
    "templates/layout/plan.html:433",
@@ -16904,7 +16914,7 @@
  },
  "Peças a comprar": {
   "src": [
-   "templates/layout/combined.html:33"
+   "templates/layout/combined.html:34"
   ]
  },
  "Peças atualizadas": {
@@ -17115,7 +17125,7 @@
  },
  "Planta": {
   "src": [
-   "templates/layout/combined.html:28",
+   "templates/layout/combined.html:29",
    "templates/simulator/index.html:17"
   ]
  },
@@ -18074,7 +18084,7 @@
  "Proposta combinada: rearranjo + recomposição": {
   "src": [
    "routers/layout.py:544",
-   "templates/layout/combined.html:7"
+   "templates/layout/combined.html:8"
   ]
  },
  "Proposta de disposição": {
@@ -18848,7 +18858,7 @@
  },
  "Reespaçar os níveis": {
   "src": [
-   "templates/layout/combined.html:4",
+   "templates/layout/combined.html:5",
    "templates/levels/recompose.html:4"
   ]
  },
@@ -18875,7 +18885,7 @@
  },
  "Referência: {label}": {
   "src": [
-   "services/branch_layout.py:634",
+   "services/branch_layout.py:637",
    "templates/site/view3d.html:269"
   ],
   "js": true
@@ -19498,13 +19508,13 @@
  },
  "SKUs onde a proposta do otimizador os põe": {
   "src": [
-   "templates/layout/combined.html:9",
+   "templates/layout/combined.html:10",
    "templates/layout/rearrange.html:9"
   ]
  },
  "SKUs onde estão hoje": {
   "src": [
-   "templates/layout/combined.html:9",
+   "templates/layout/combined.html:10",
    "templates/layout/rearrange.html:9"
   ]
  },
@@ -20025,7 +20035,7 @@
  },
  "Sem estrutura": {
   "src": [
-   "services/branch_layout.py:841"
+   "services/branch_layout.py:844"
   ]
  },
  "Sem estrutura, o sistema estima tudo pelo endereço. Com ela, sabe a altura real de cada nível (para a zona de ouro), a frente real de cada estante (para a caminhada) e o espaço disponível para as bins.": {
@@ -21794,7 +21804,7 @@
  },
  "Trajeto por pedido (m)": {
   "src": [
-   "templates/layout/combined.html:29",
+   "templates/layout/combined.html:30",
    "templates/layout/rearrange.html:31",
    "templates/site/layout_proposal.html:32"
   ]
@@ -21844,7 +21854,7 @@
  },
  "Trocar a estrutura": {
   "src": [
-   "templates/layout/combined.html:4",
+   "templates/layout/combined.html:5",
    "templates/levels/recompose.html:4"
   ]
  },
@@ -22100,7 +22110,7 @@
  },
  "Uma opção desta proposta já foi aplicada.": {
   "src": [
-   "templates/layout/combined.html:14"
+   "templates/layout/combined.html:15"
   ]
  },
  "Uma posição do armazém identificada por Corredor-Estante-Nível-Posição, ex.: A-01-2-1. O nível conta de baixo para cima. Cada endereço tem bins, e cada bin guarda um SKU.": {
@@ -22524,6 +22534,11 @@
    "templates/site/project.html:489"
   ]
  },
+ "Ver na planta": {
+  "src": [
+   "templates/layout/combined.html:57"
+  ]
+ },
  "Ver no mapa": {
   "src": [
    "templates/levels/index.html:72",
@@ -22700,7 +22715,7 @@
   "src": [
    "routers/layout.py:244",
    "routers/layout.py:413",
-   "templates/layout/combined.html:12",
+   "templates/layout/combined.html:13",
    "templates/layout/rearrange.html:11"
   ]
  },
@@ -23505,6 +23520,11 @@
   ],
   "lazy": true
  },
+ "as duas coisas": {
+  "src": [
+   "templates/layout/combined.html:79"
+  ]
+ },
  "as duas iguais": {
   "src": [
    "static/field_help.js:248"
@@ -23537,7 +23557,7 @@
  },
  "atual": {
   "src": [
-   "templates/layout/combined.html:38",
+   "templates/layout/combined.html:39",
    "templates/layout/rearrange.html:38",
    "templates/site/layout_proposal.html:43"
   ]
@@ -24113,6 +24133,11 @@
   ],
   "js": true
  },
+ "estante a recompor": {
+  "src": [
+   "templates/layout/combined.html:77"
+  ]
+ },
  "estante vista de frente": {
   "src": [
    "static/field_help.js:51"
@@ -24188,7 +24213,7 @@
   "src": [
    "services/branch_layout.py:212",
    "services/branch_layout.py:261",
-   "services/branch_layout.py:1014",
+   "services/branch_layout.py:1017",
    "templates/layout/plan.html:598",
    "static/field_help.js:170",
    "static/field_help.js:319"
@@ -24417,7 +24442,7 @@
  },
  "ilimitadas (comprar o que faltar)": {
   "src": [
-   "templates/layout/combined.html:10",
+   "templates/layout/combined.html:11",
    "templates/levels/recompose.html:8",
    "templates/optimization/page.html:431"
   ]
@@ -24627,7 +24652,7 @@
  },
  "mais bins": {
   "src": [
-   "templates/layout/combined.html:40"
+   "templates/layout/combined.html:41"
   ]
  },
  "mais de": {
@@ -24692,7 +24717,7 @@
  },
  "melhor trajeto": {
   "src": [
-   "templates/layout/combined.html:39",
+   "templates/layout/combined.html:40",
    "templates/layout/rearrange.html:38",
    "templates/site/layout_proposal.html:43"
   ]
@@ -24729,6 +24754,12 @@
  "movimentações": {
   "src": [
    "templates/optimization/page.html:173"
+  ]
+ },
+ "muda de lugar": {
+  "src": [
+   "routers/layout.py:607",
+   "templates/layout/combined.html:78"
   ]
  },
  "mudanças": {
@@ -24803,7 +24834,7 @@
  },
  "nenhuma": {
   "src": [
-   "templates/layout/combined.html:54"
+   "templates/layout/combined.html:55"
   ]
  },
  "nenhuma bin": {
@@ -25368,7 +25399,7 @@
  },
  "peças:": {
   "src": [
-   "templates/layout/combined.html:10",
+   "templates/layout/combined.html:11",
    "templates/levels/recompose.html:8"
   ]
  },
@@ -25539,6 +25570,16 @@
  "rearranjados nas bins que ficam no endereço deles, ou em bins que sobraram": {
   "src": [
    "templates/optimization/page.html:142"
+  ]
+ },
+ "recompor": {
+  "src": [
+   "routers/layout.py:607"
+  ]
+ },
+ "recompor e mudar de lugar": {
+  "src": [
+   "routers/layout.py:607"
   ]
  },
  "recomposição em {bays} estante(s) ({created} nível(is) criado(s), {removed} removido(s))": {
@@ -25892,7 +25933,7 @@
  },
  "só as das estruturas existentes": {
   "src": [
-   "templates/layout/combined.html:10",
+   "templates/layout/combined.html:11",
    "templates/levels/recompose.html:8",
    "templates/optimization/page.html:431"
   ]
@@ -26094,7 +26135,7 @@
  },
  "trajeto de {n} pedidos do histórico (rota otimizada)": {
   "src": [
-   "templates/layout/combined.html:8",
+   "templates/layout/combined.html:9",
    "templates/layout/rearrange.html:9"
   ],
   "html": true
@@ -26271,7 +26312,7 @@
  },
  "vs. atual": {
   "src": [
-   "templates/layout/combined.html:30",
+   "templates/layout/combined.html:31",
    "templates/layout/rearrange.html:33",
    "templates/site/layout_proposal.html:34"
   ]
@@ -26371,7 +26412,7 @@
  },
  "{a} → {b} níveis": {
   "src": [
-   "templates/layout/combined.html:47"
+   "templates/layout/combined.html:48"
   ],
   "html": true
  },
@@ -27046,7 +27087,7 @@
  },
  "{n} estante(s) a recompor": {
   "src": [
-   "templates/layout/combined.html:43"
+   "templates/layout/combined.html:44"
   ],
   "html": true
  },
@@ -27259,6 +27300,12 @@
    "templates/site/_plan_editor.html:269"
   ],
   "js": true
+ },
+ "{r} a recompor, {m} mudam de lugar": {
+  "src": [
+   "templates/layout/combined.html:83"
+  ],
+  "html": true
  },
  "{sem_dados} endereço(s) com SKU sem dimensões — ficam como estão.": {
   "src": [
@@ -28089,7 +28136,7 @@
  },
  "… e mais {n}": {
   "src": [
-   "templates/layout/combined.html:48"
+   "templates/layout/combined.html:49"
   ],
   "html": true
  },

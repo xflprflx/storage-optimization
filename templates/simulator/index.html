@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Simulador") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-person-walking"></i> {{ _("Simulador de separação") }}</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-sm btn-outline-secondary" href="/imports/history"><i class="bi bi-clock-history"></i> {{ _("Enviar histórico de pedidos") }}</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/settings#simulacao"><i class="bi bi-stopwatch"></i> {{ _("Tempos padrão") }}</a>
+  </div>
+</div>
+<p class="text-muted small mb-3">{{ _("Escolha onde simular. O simulador de trajeto percorre os pedidos da amostra (lista, serpentina, otimizada e lote, por pedido ou pelo dia inteiro, com o horário de liberação); a caminhada em 3D mostra os separadores andando e grava em vídeo. Filiais existentes precisam do histórico de pedidos; a caminhada em 3D e a distância pelos corredores reais, da planta desenhada.") }}</p>
+
+<div class="card mb-3" data-tour="sim-branches">
+  <div class="card-header bg-white fw-semibold"><i class="bi bi-building"></i> {{ _("Filiais existentes") }}</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead><tr><th>{{ _("Filial") }}</th><th>{{ _("Pedidos") }}</th><th>{{ _("Planta") }}</th><th class="text-end">{{ _("Simular") }}</th></tr></thead>
+      <tbody>
+      {% for r in branches %}{% set b = r.b %}{% set h = r.hist %}
+        <tr>
+          <td><span class="mono fw-semibold">{{ b.code }}</span> · {{ b.name }}</td>
+          <td class="small">
+            {% if h and h.sample %}
+              {{ _h("{orders} pedidos · amostra de {sample}", orders=(h.orders|num), sample=(h.sample|num)) }}{% if h.days %} · {{ _h("{n} dia(s)", n=h.days) }}{% endif %}
+              {% if h.release %}<span class="badge text-bg-light border ms-1" title="{{ _("O histórico tem o horário de liberação dos pedidos") }}"><i class="bi bi-clock-history"></i> {{ _("liberação") }}</span>{% endif %}
+            {% else %}<span class="text-muted">{{ _("sem histórico de pedidos") }}</span> · <a href="/imports/history">{{ _("enviar") }}</a>{% endif %}
+          </td>
+          <td class="small">{% if r.plan %}<a href="/layout/plan?branch_id={{ b.id }}"><i class="bi bi-check-circle text-success"></i> {{ _("desenhada") }}</a>
+            {% else %}<span class="text-muted">{{ _("sem planta") }}</span> · <a href="/layout/plan?branch_id={{ b.id }}">{{ _("desenhar") }}</a>{% endif %}</td>
+          <td class="text-end text-nowrap">
+            {% set ok = h and h.sample %}
+            <a class="btn btn-sm btn-accent{{ '' if ok else ' disabled' }}" href="/optimization/slotting/routes?branch_id={{ b.id }}" {% if not ok %}aria-disabled="true" title="{{ _("Envie o histórico de pedidos da filial") }}"{% endif %}><i class="bi bi-signpost-split"></i> {{ _("Simulador de trajeto") }}</a>
+            <a class="btn btn-sm btn-outline-success{{ '' if ok and r.plan else ' disabled' }}" href="/layout/plan/3d?branch_id={{ b.id }}&walk=1" {% if not (ok and r.plan) %}aria-disabled="true" title="{{ _("Precisa do histórico de pedidos e da planta desenhada") }}"{% endif %}><i class="bi bi-person-walking"></i> {{ _("Caminhada em 3D") }}</a>
+            <a class="btn btn-sm btn-outline-secondary{{ '' if ok else ' disabled' }}" href="/optimization/slotting/skus?branch_id={{ b.id }}" title="{{ _("Relatório de SKUs: popularidade e afinidade") }}"><i class="bi bi-bar-chart"></i></a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-muted text-center py-3">{{ _h("Nenhuma filial cadastrada. <a href=\"/branches/new\">Cadastrar</a> ou criar uma a partir de um projeto de filial nova.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" data-tour="sim-projects">
+  <div class="card-header bg-white fw-semibold"><i class="bi bi-rulers"></i> {{ _("Projetos de filial nova") }}</div>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0 align-middle">
+      <thead><tr><th>{{ _("Projeto") }}</th><th>{{ _("Pedidos") }}</th><th class="text-end">{{ _("Simular") }}</th></tr></thead>
+      <tbody>
+      {% for r in projects %}{% set p = r.p %}{% set o = r.orders %}
+        <tr>
+          <td><a href="/optimization/site/{{ p.id }}">{{ p.name }}</a></td>
+          <td class="small">
+            {% if o.sample %}{{ _h("{orders} pedidos · amostra de {sample}", orders=(o.orders|num), sample=(o.sample|num)) }}{% if o.days %} · {{ _h("{n} dia(s)", n=o.days) }}{% endif %}
+              {% if o.release %}<span class="badge text-bg-light border ms-1"><i class="bi bi-clock-history"></i> {{ _("liberação") }}</span>{% endif %}
+            {% else %}<span class="text-muted">{{ _("sem aba Pedidos") }}</span>{% endif %}
+          </td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-accent{{ '' if o.sample else ' disabled' }}" href="/optimization/site/{{ p.id }}/routes" {% if not o.sample %}aria-disabled="true" title="{{ _("Importe a planilha do projeto com a aba Pedidos") }}"{% endif %}><i class="bi bi-signpost-split"></i> {{ _("Simulador de trajeto") }}</a>
+            <a class="btn btn-sm btn-outline-success{{ '' if o.sample else ' disabled' }}" href="/optimization/site/{{ p.id }}/3d?walk=1"><i class="bi bi-person-walking"></i> {{ _("Caminhada em 3D") }}</a>
+            <a class="btn btn-sm btn-outline-secondary{{ '' if o.sample else ' disabled' }}" href="/optimization/site/{{ p.id }}/skus" title="{{ _("Relatório de SKUs: popularidade e afinidade") }}"><i class="bi bi-bar-chart"></i></a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="text-muted text-center py-3">{{ _h("Nenhum projeto. <a href=\"/optimization/site\">Criar um a partir de um exemplo</a> — todos trazem um mês de pedidos.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -26,7 +26,7 @@
   const visible = el => {
     if (!el || el.closest('.nk-tour-card')) return false;
     if (el.closest('.nk-step-hidden')) return true;  // a etapa do passo a passo é aberta ao chegar nela
-    if (el.closest('.navbar-collapse:not(.show)') && getComputedStyle(el.closest('.navbar-collapse')).display === 'none') return true;  // menu recolhido (celular)
+    if (el.closest('#nkSide') && window.innerWidth < 1200) return true;  // menu lateral fechado (tela estreita): abre no tour
     const r = el.getBoundingClientRect();
     return (r.width > 0 || r.height > 0) && getComputedStyle(el).visibility !== 'hidden';
   };
@@ -42,10 +42,13 @@
       const root = hidden.closest('[data-stepper]');
       if (root && root.nkShowStep) root.nkShowStep(hidden);
     }
-    // celular: o item está no menu recolhido da barra; abre o menu enquanto o tour durar
-    const nav = el.closest('.navbar-collapse');
-    document.querySelectorAll('.navbar-collapse.nk-tour-open').forEach(n => { if (n !== nav) n.classList.remove('show', 'nk-tour-open'); });
-    if (nav && !nav.classList.contains('show') && getComputedStyle(nav).display === 'none') nav.classList.add('show', 'nk-tour-open');
+    // tela estreita: o item está no menu lateral fechado; abre o menu enquanto o tour durar
+    const side = el.closest('#nkSide');
+    if (side && window.innerWidth < 1200 && !side.classList.contains('show')) {
+      side.classList.add('show', 'nk-tour-open');
+    } else if (!side) {
+      document.querySelectorAll('#nkSide.nk-tour-open').forEach(n => n.classList.remove('show', 'nk-tour-open'));
+    }
     // campos dentro de um rótulo/form-check: destaca o bloco inteiro do campo
     const box = el.matches('input[type=checkbox], input[type=radio]') ? (el.closest('.form-check') || el) : el;
     return box;
@@ -152,7 +155,7 @@
     if (!cur) return;
     const id = cur.tour.id;
     cur.ui.hole.remove(); cur.ui.card.remove();
-    document.querySelectorAll('.navbar-collapse.nk-tour-open').forEach(n => n.classList.remove('show', 'nk-tour-open'));
+    document.querySelectorAll('#nkSide.nk-tour-open').forEach(n => n.classList.remove('show', 'nk-tour-open'));
     window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true);
     document.removeEventListener('keydown', key, true);
     cur = null;

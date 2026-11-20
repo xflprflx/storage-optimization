@@ -87,6 +87,15 @@ def to_date(value: Any):
 
 templates.env.filters["todate"] = to_date
 templates.env.filters["dec_input"] = dec_input
+
+
+def _num(value: Any) -> str:
+    from services.i18n import fmt_num
+
+    return fmt_num(value, 0)
+
+
+templates.env.filters["num"] = _num  # inteiro com separador de milhar do idioma
 templates.env.globals["url_with"] = url_with
 
 

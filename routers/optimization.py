@@ -1183,7 +1183,7 @@ def branch_route_simulator(request: Request, db: Session = Depends(get_db)):
     bid = to_int(qp.get("branch_id"))
     br = db.get(Branch, bid) if bid else None
     if br is None:
-        return redirect("/optimization", _("Escolha a filial para simular os trajetos."), "warning")
+        return redirect("/simulator", _("Escolha a filial para simular os trajetos."), "warning")
     q = urlencode([(k, v) for k, v in qp.multi_items()])
     ctx = dict(title=f"Filial {br.code} - {br.name}", back=f"/optimization/pool?{q}", svg="", rows=[], sel=None, link="",
                ref_label="", how="", dist_note=_("Distância estimada pelo endereço (corredores × distância entre corredores + "

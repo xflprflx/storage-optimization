@@ -37,6 +37,8 @@ TOURS: dict[str, dict] = {
           N_("Mostra a ocupação de cada corredor, estante e nível. Dali você desenha a planta da filial, que permite medir a caminhada real pelos corredores, e abre a vista 3D.")),
         S('[data-tour="nav-opt"]', N_("Otimização de bins"),
           N_("Quatro ferramentas: Por endereço (troca as bins de cada endereço), Pool (mantém as bins e muda os produtos de lugar), Projeto de filial nova (dimensiona um armazém do zero) e Resultados salvos.")),
+        S('[data-tour="nav-sim"]', N_("Simulador"),
+          N_("Simule a separação dos pedidos: o simulador de trajeto (por pedido ou pelo dia inteiro) e a caminhada em 3D, nas filiais existentes e nos projetos de filial nova. A primeira tela mostra onde dá para simular e o que falta (histórico de pedidos ou planta).")),
         S('[data-tour="nav-stock"]', N_("Saldos"),
           N_("Quanto de cada produto há em cada endereço hoje. É o ponto de partida que a otimização compara com a proposta (antes × depois).")),
         S('[data-tour="dash-cards"]', N_("Painel"), N_("Os números gerais do cadastro. Clique num cartão para abrir a lista; \"Pendências de cadastro\" mostra o que ainda falta.")),
@@ -228,6 +230,13 @@ TOURS: dict[str, dict] = {
         S('[data-tour="site-branch"]', N_("Gerar a filial"),
           N_("Cria o cadastro da filial a partir do plano: endereços, estruturas, bins, produtos e, se houver, o histórico de pedidos."), cond=True),
     ]},
+    "simulator": {"p": r"^/simulator$", "u": "/simulator", "t": N_("Simulador"), "s": [
+        S('[data-tour="sim-branches"]', N_("Filiais existentes"),
+          N_("Cada filial com o que tem para simular: o histórico de pedidos (pedidos, dias e se tem o horário de liberação) e a planta desenhada. O simulador de trajeto precisa do histórico; a caminhada em 3D, também da planta."),
+          N_("Sem planta, a caminhada é estimada pelo endereço; com a planta, é medida pelos corredores reais, contornando estantes e obstáculos.")),
+        S('[data-tour="sim-projects"]', N_("Projetos de filial nova"),
+          N_("Os projetos com a aba Pedidos: simule a separação na filial que ainda não existe e compare disposições antes de montar.")),
+    ]},
     "runs": {"p": r"^/optimization/runs$", "u": "/optimization/runs", "t": N_("Resultados salvos"), "s": [
         S('[data-tour="runs-list"]', N_("Histórico de resultados"),
           N_("Toda análise fica guardada com os parâmetros e os indicadores. Use para testar cenários: rode com objetivos ou restrições diferentes e compare.")),
@@ -299,7 +308,7 @@ TRACKS: list[dict] = [
     {"id": "explore", "t": N_("Explorar com dados de exemplo"), "icon": "bi-rocket-takeoff",
      "d": N_("O caminho mais rápido para ver o sistema funcionando: cria uma filial completa a partir de um exemplo, sem preparar planilhas."),
      "steps": [
-         {"id": "intro", "t": N_("Conheça as telas"), "d": N_("Um tour rápido pela barra de navegação e pelo painel."),
+         {"id": "intro", "t": N_("Conheça as telas"), "d": N_("Um tour rápido pelo menu e pelo painel."),
           "href": "/", "tour": "intro", "done": "tour"},
          {"id": "example", "t": N_("Crie um projeto a partir de um exemplo"),
           "d": N_("Em Projeto de filial nova, escolha um dos exemplos prontos e clique em Criar projeto."),

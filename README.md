@@ -53,6 +53,23 @@ pessoa troca a própria senha em **Minha conta**. Detalhes:
 - Esqueceu a senha do único administrador? Pare o app e rode
   `python -c "from database import *; from models import User; from services.auth import hash_password as h; db=SessionLocal(); u=db.query(User).filter_by(username='admin').one(); u.password_hash=h('NovaSenha123'); u.must_change_password=True; db.commit()"`.
 
+## 🧭 Navegação
+
+- **Barra do topo:** a marca (volta ao Painel), o idioma e as unidades, o **Guia**, o usuário e a **ajuda nos campos**.
+- **Menu lateral** (sidenav), por assunto:
+  - *Estoque*: Mapa do estoque, Planta da filial e Saldos;
+  - *Planejamento*: **Otimização de bins** (Por endereço, Pool, Projeto de filial nova, Resultados salvos) e
+    **Simulador** (Simular trajeto e 3D, Histórico de pedidos, Tempos padrão);
+  - *Dados*: Cadastros e Importações;
+  - *Sistema*: Configurações.
+
+  O grupo da tela aberta já vem expandido, com o item em destaque. Em tela larga, o botão ao lado da marca recolhe o
+  menu para só os ícones (a escolha fica lembrada no navegador); em telas estreitas, o menu abre pelo botão ☰.
+- **Simulador** (`/simulator`): a porta de entrada da simulação. Lista as filiais (histórico de pedidos — pedidos,
+  dias e se tem o horário de liberação — e se a planta está desenhada) e os projetos de filial nova (aba Pedidos),
+  com os atalhos para o **simulador de trajeto**, a **caminhada em 3D** e o **relatório de SKUs**. O que falta para
+  simular aparece na linha (enviar o histórico, desenhar a planta).
+
 ## 1. Fluxo de Importação de Dados
 
 A base do sistema exige a inserção correta de dados para mapear a realidade do armazém. O processo de importação segue uma hierarquia estrita para evitar erros de dependência.
@@ -769,7 +786,7 @@ exata, não é usada.
 
 ## Idiomas e unidades de medida
 
-Seletor no menu superior (ícone de tradução): **Português (Brasil)**, **English**, **Español**, **中文（简体）**,
+Seletor na barra do topo (ícone de tradução): **Português (Brasil)**, **English**, **Español**, **中文（简体）**,
 **Deutsch** e **Français**. Muda tudo: telas, mensagens, ajuda dos campos, gráficos/3D, relatórios em Excel e PDF.
 Na primeira visita vale o idioma do navegador; a escolha fica no cookie `nk_lang`. Datas, números e moeda seguem o
 idioma (1.234,5 / 1,234.5; R$, $, €, ¥ — só o símbolo: os custos são digitados na moeda de cada um, sem câmbio).

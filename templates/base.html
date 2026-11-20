@@ -12,8 +12,33 @@
     .navbar-brand { font-weight: 700; letter-spacing: .5px; }
     .navbar { background: #0f2a2a !important; }
     .navbar .nav-link, .navbar .navbar-brand { white-space: nowrap; }
-    .navbar .navbar-nav .nav-link { padding-left: .55rem; padding-right: .55rem; }
-    @media (max-width: 1399.98px) { .navbar .navbar-nav .nav-link { padding-left: .4rem; padding-right: .4rem; font-size: .95rem; } .navbar-brand { margin-right: .5rem; } }
+    /* topo (marca, idioma, guia, usuário, ajuda) + menu lateral (sidenav) */
+    .nk-top { position: sticky; top: 0; z-index: 1030; min-height: 52px; flex-wrap: nowrap; background: #0f2a2a; }
+    .nk-top .nav-item { list-style: none; }
+    .nk-shell { display: flex; align-items: flex-start; }
+    .nk-main { flex: 1 1 auto; min-width: 0; }
+    .nk-side { --bs-offcanvas-width: 260px; background: #fff; }
+    .nk-side-body { padding: .35rem 0 1.5rem; }
+    @media (min-width: 1200px) {
+      .nk-side { position: sticky; top: 52px; height: calc(100vh - 52px); width: 232px; flex: 0 0 232px; overflow-y: auto;
+        border-right: 1px solid #e1e6ea; transition: width .15s ease, flex-basis .15s ease; }
+      body.nk-mini .nk-side { width: 58px; flex-basis: 58px; overflow-x: hidden; }
+      body.nk-mini .nk-side .nk-label, body.nk-mini .nk-side .nk-chev, body.nk-mini .nk-side .nk-grp { display: none !important; }
+      body.nk-mini .nk-side .nk-sec { font-size: 0; padding: .45rem 0 0; margin: 0 .7rem; border-top: 1px solid #e6ebef; }
+      body.nk-mini .nk-side .collapse { display: block !important; height: auto !important; }
+      body.nk-mini .nk-side .nk-item.nk-sub { padding-left: .9rem; }
+    }
+    .nk-sec { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: #7a8790; padding: .85rem .95rem .25rem; }
+    .nk-item { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .36rem .9rem; color: #24323a; text-decoration: none;
+      font-size: .9rem; border: 0; border-left: 3px solid transparent; background: none; text-align: left; white-space: nowrap; }
+    .nk-item > .bi:first-child { font-size: 1.05rem; width: 1.2rem; text-align: center; color: #4d5c66; }
+    .nk-item:hover { background: #f1f5f6; color: #0f2a2a; }
+    .nk-item.active { background: #e8f4f3; color: #0f766e; border-left-color: var(--nk-accent); font-weight: 600; }
+    .nk-item.active > .bi:first-child { color: #0f766e; }
+    .nk-item.nk-sub { padding-left: 2.35rem; font-size: .86rem; }
+    .nk-grp .nk-chev { margin-left: auto; font-size: .75rem; transition: transform .15s ease; }
+    .nk-grp[aria-expanded="false"] .nk-chev { transform: rotate(-90deg); }
+    .nk-label { overflow: hidden; text-overflow: ellipsis; }
     .card { border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
     .table thead th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #5b6770; background: #f8fafb; }
     .table td { vertical-align: middle; }
@@ -100,54 +125,24 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-<nav class="navbar navbar-expand-xl navbar-dark mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
-    <div class="collapse navbar-collapse" id="nav">
-      {% set p = request.url.path %}
-      <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link {% if p == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> {{ _("Painel") }}</a></li>
-        <li class="nav-item dropdown">
-          <a data-tour="nav-cadastros" class="nav-link dropdown-toggle {% if p.startswith('/branches') or p.startswith('/warehouses') or p.startswith('/locations') or p.startswith('/bin-types') or p.startswith('/levels') or p.startswith('/structure') or p.startswith('/products') or p.startswith('/settings') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-database"></i> {{ _("Cadastros") }}</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/branches"><i class="bi bi-building"></i> {{ _("Filiais") }}</a></li>
-            <li><a class="dropdown-item" href="/warehouses"><i class="bi bi-house-gear"></i> {{ _("Armazéns") }}</a></li>
-            <li><a class="dropdown-item" href="/locations"><i class="bi bi-grid-3x3-gap"></i> {{ _("Endereços") }}</a></li>
-            <li><a class="dropdown-item" href="/locations/batch"><i class="bi bi-magic"></i> {{ _("Gerar endereços em lote") }}</a></li>
-            <li><a class="dropdown-item" href="/bin-types"><i class="bi bi-inboxes"></i> {{ _("Tipos de Bin") }}</a></li>
-            <li><a class="dropdown-item" href="/levels"><i class="bi bi-layers"></i> {{ _("Capacidade dos níveis") }}</a></li>
-            <li><a class="dropdown-item" href="/structures"><i class="bi bi-bookshelf"></i> {{ _("Estruturas de armazenagem") }}</a></li>
-            <li><a class="dropdown-item" href="/structure-kinds"><i class="bi bi-diagram-3"></i> {{ _("Tipos de estrutura") }}</a></li>
-            <li><a class="dropdown-item" href="/structure-pieces"><i class="bi bi-nut"></i> {{ _("Peças de estrutura") }}</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/products"><i class="bi bi-tag"></i> {{ _("Produtos") }}</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear"></i> {{ _("Configurações") }}</a></li>
-          </ul>
-        </li>
-        <li class="nav-item" data-tour="nav-map"><a class="nav-link {% if p.startswith('/layout') %}active{% endif %}" href="/layout"><i class="bi bi-bricks"></i> {{ _("Mapa do estoque") }}</a></li>
-        <li class="nav-item" data-tour="nav-opt"><a class="nav-link {% if p.startswith('/optimization') %}active{% endif %}" href="/optimization"><i class="bi bi-sliders"></i> {{ _("Otimização de bins") }}</a></li>
-        <li class="nav-item" data-tour="nav-stock"><a class="nav-link {% if p.startswith('/stock') %}active{% endif %}" href="/stock"><i class="bi bi-boxes"></i> {{ _("Saldos") }}</a></li>
-        <li class="nav-item dropdown">
-          <a data-tour="nav-imports" class="nav-link dropdown-toggle {% if p.startswith('/imports') %}active{% endif %}" href="#" data-bs-toggle="dropdown"><i class="bi bi-upload"></i> {{ _("Importações") }}</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/imports"><i class="bi bi-list-ol"></i> {{ _("Todas as importações") }}</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/imports/branches"><i class="bi bi-building"></i> {{ _("Filiais") }}</a></li>
-            <li><a class="dropdown-item" href="/imports/warehouses"><i class="bi bi-house-gear"></i> {{ _("Armazéns") }}</a></li>
-            <li><a class="dropdown-item" href="/imports/bin_types"><i class="bi bi-inboxes"></i> {{ _("Tipos de bin") }}</a></li>
-            <li><a class="dropdown-item" href="/imports/locations"><i class="bi bi-grid-3x3-gap"></i> {{ _("Endereços") }}</a></li>
-            <li><a class="dropdown-item" href="/imports/levels"><i class="bi bi-layers"></i> {{ _("Capacidade dos níveis") }}</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/imports/products"><i class="bi bi-tag"></i> {{ _("Produtos (CSV/Excel)") }}</a></li>
-            <li><a class="dropdown-item" href="/imports/stock"><i class="bi bi-boxes"></i> {{ _("Saldos de estoque (CSV/Excel)") }}</a></li>
-          </ul>
-        </li>
-      </ul>
+<script>try { if (localStorage.getItem('nk-side-mini') === '1') document.body.classList.add('nk-mini'); } catch (e) { /* sem armazenamento */ }</script>
+{% set p = request.url.path %}
+{% macro nk_item(href, icon, label, on=False, sub=False, tour=None) -%}
+<a class="nk-item{% if sub %} nk-sub{% endif %}{% if on %} active{% endif %}" href="{{ href }}"{% if tour %} data-tour="{{ tour }}"{% endif %} title="{{ label }}"{% if on %} aria-current="page"{% endif %}><i class="bi {{ icon }}"></i><span class="nk-label">{{ label }}</span></a>
+{%- endmacro %}
+{% macro nk_group(id, icon, label, open, tour) -%}
+<button type="button" class="nk-item nk-grp{% if open %} nk-open{% endif %}" data-bs-toggle="collapse" data-bs-target="#{{ id }}" aria-expanded="{{ 'true' if open else 'false' }}" aria-controls="{{ id }}" data-tour="{{ tour }}" title="{{ label }}"><i class="bi {{ icon }}"></i><span class="nk-label">{{ label }}</span><i class="bi bi-chevron-down nk-chev"></i></button>
+{%- endmacro %}
+<header class="navbar navbar-dark nk-top px-2">
+  <div class="d-flex align-items-center">
+    <button type="button" class="btn btn-link text-white px-2 d-xl-none" data-bs-toggle="offcanvas" data-bs-target="#nkSide" aria-controls="nkSide" title="{{ _("Menu") }}"><i class="bi bi-list fs-5"></i></button>
+    <button type="button" class="btn btn-link text-white px-2 d-none d-xl-inline-block" id="nkSideMini" title="{{ _("Recolher / expandir o menu") }}"><i class="bi bi-layout-sidebar-inset"></i></button>
+    <a class="navbar-brand ms-1" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
+  </div>
+  <div class="d-flex align-items-center ms-auto">
       {% set nk_next = (request.url.path ~ ('?' ~ request.url.query if request.url.query else ''))|urlencode %}
       <div class="nav-item dropdown me-1">
-        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkLangMenu" title="{{ _("Idioma e unidades de medida") }}: {{ LANGUAGES[get_lang()][0] }} · {{ unit_label('cm') }}/{{ unit_label('kg') }}"><i class="bi bi-translate"></i> {{ get_lang().split('-')[0]|upper }} <span class="opacity-75 small">· {{ unit_label('cm') }}</span></a>
+        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkLangMenu" title="{{ _("Idioma e unidades de medida") }}: {{ LANGUAGES[get_lang()][0] }} · {{ unit_label('cm') }}/{{ unit_label('kg') }}"><i class="bi bi-translate"></i><span class="d-none d-sm-inline"> {{ get_lang().split('-')[0]|upper }} <span class="opacity-75 small">· {{ unit_label('cm') }}</span></span></a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><h6 class="dropdown-header">{{ _("Idioma") }}</h6></li>
           {% for code, lang in LANGUAGES.items() %}<li><a class="dropdown-item{% if code == get_lang() %} active{% endif %}" lang="{{ code }}" href="/lang/{{ code }}?next={{ nk_next }}">{{ lang[0] }}</a></li>{% endfor %}
@@ -159,7 +154,7 @@
         </ul>
       </div>
       <div class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle text-white px-2 {% if p.startswith('/onboarding') %}active{% endif %}" href="#" data-bs-toggle="dropdown" id="nkGuideMenu" title="{{ _("Guia: tour desta tela e passo a passo") }}"><i class="bi bi-signpost-split"></i> {{ _("Guia") }}<span id="nkGuideDot" hidden></span></a>
+        <a class="nav-link dropdown-toggle text-white px-2 {% if p.startswith('/onboarding') %}active{% endif %}" href="#" data-bs-toggle="dropdown" id="nkGuideMenu" title="{{ _("Guia: tour desta tela e passo a passo") }}"><i class="bi bi-signpost-split"></i><span class="d-none d-sm-inline"> {{ _("Guia") }}</span><span id="nkGuideDot" hidden></span></a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="#" id="nkTourHere"><i class="bi bi-cursor"></i> {{ _("Tour desta tela") }} <span class="small text-muted nk-tour-name"></span></a></li>
           <li><a class="dropdown-item" href="/onboarding"><i class="bi bi-list-check"></i> {{ _("Guia passo a passo") }}</a></li>
@@ -171,7 +166,7 @@
       </div>
       {% set me = current_user() %}{% if me %}
       <div class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkUserMenu" title="{{ me.name }}"><i class="bi bi-person-circle"></i> <span class="d-xl-none d-xxl-inline">{{ me.username }}</span></a>
+        <a class="nav-link dropdown-toggle text-white px-2" href="#" data-bs-toggle="dropdown" id="nkUserMenu" title="{{ me.name }}"><i class="bi bi-person-circle"></i> <span class="d-none d-md-inline">{{ me.username }}</span></a>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><h6 class="dropdown-header">{{ me.name }}{% if me.is_admin %} · {{ _("administrador") }}{% endif %}</h6></li>
           <li><a class="dropdown-item" href="/account"><i class="bi bi-key"></i> {{ _("Minha conta e senha") }}</a></li>
@@ -182,11 +177,69 @@
       </div>
       {% endif %}
       <a href="#" class="nav-link text-white px-2" id="nkHelpToggle" role="button" title="{{ _("Ajuda nos campos") }}"><i class="bi bi-question-circle"></i><span class="visually-hidden"> {{ _("Ajuda nos campos") }}</span></a>
-    </div>
   </div>
-</nav>
-
-<main class="container-fluid px-4 pb-5">
+</header>
+{% set is_sim = p.startswith('/simulator') or p in ('/optimization/slotting/routes', '/optimization/slotting/skus') or (p.startswith('/optimization/site/') and (p.endswith('/routes') or p.endswith('/skus'))) %}
+{% set cad_paths = ('/branches', '/warehouses', '/locations', '/bin-types', '/levels', '/structure', '/products') %}
+{% set is_cad = p.startswith(cad_paths) %}
+{% set is_opt = p.startswith('/optimization') and not is_sim %}
+{% set is_imp = p.startswith('/imports') and not p.startswith('/imports/history') %}
+<div class="nk-shell">
+  <aside class="offcanvas-xl offcanvas-start nk-side" tabindex="-1" id="nkSide" aria-label="{{ _("Menu") }}">
+    <div class="offcanvas-header d-xl-none nk-top">
+      <a class="navbar-brand text-white" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#nkSide" aria-label="{{ _("Fechar") }}"></button>
+    </div>
+    <nav class="nk-side-body">
+      {{ nk_item("/", "bi-speedometer2", _("Painel"), p == '/') }}
+      <div class="nk-sec">{{ _("Estoque") }}</div>
+      {{ nk_item("/layout", "bi-bricks", _("Mapa do estoque"), p == '/layout', tour="nav-map") }}
+      {{ nk_item("/layout/plan", "bi-map", _("Planta da filial"), p.startswith('/layout/plan')) }}
+      {{ nk_item("/stock", "bi-boxes", _("Saldos"), p.startswith('/stock'), tour="nav-stock") }}
+      <div class="nk-sec">{{ _("Planejamento") }}</div>
+      {{ nk_group("nkGrpOpt", "bi-sliders", _("Otimização de bins"), is_opt, "nav-opt") }}
+      <div class="collapse{% if is_opt %} show{% endif %}" id="nkGrpOpt">
+        {{ nk_item("/optimization", "bi-arrow-left-right", _("Por endereço"), p == '/optimization', sub=True) }}
+        {{ nk_item("/optimization/pool", "bi-shuffle", _("Pool de bins"), p.startswith('/optimization/pool'), sub=True) }}
+        {{ nk_item("/optimization/site", "bi-rulers", _("Projeto de filial nova"), p.startswith('/optimization/site') and not is_sim, sub=True) }}
+        {{ nk_item("/optimization/runs", "bi-collection", _("Resultados salvos"), p.startswith('/optimization/runs'), sub=True) }}
+      </div>
+      {{ nk_group("nkGrpSim", "bi-person-walking", _("Simulador"), is_sim or p.startswith('/imports/history'), "nav-sim") }}
+      <div class="collapse{% if is_sim or p.startswith('/imports/history') %} show{% endif %}" id="nkGrpSim">
+        {{ nk_item("/simulator", "bi-signpost-split", _("Simular trajeto e 3D"), is_sim, sub=True) }}
+        {{ nk_item("/imports/history", "bi-clock-history", _("Histórico de pedidos"), p.startswith('/imports/history'), sub=True) }}
+        {{ nk_item("/settings#simulacao", "bi-stopwatch", _("Tempos padrão"), sub=True) }}
+      </div>
+      <div class="nk-sec">{{ _("Dados") }}</div>
+      {{ nk_group("nkGrpCad", "bi-database", _("Cadastros"), is_cad, "nav-cadastros") }}
+      <div class="collapse{% if is_cad %} show{% endif %}" id="nkGrpCad">
+        {{ nk_item("/branches", "bi-building", _("Filiais"), p.startswith('/branches'), sub=True) }}
+        {{ nk_item("/warehouses", "bi-house-gear", _("Armazéns"), p.startswith('/warehouses'), sub=True) }}
+        {{ nk_item("/locations", "bi-grid-3x3-gap", _("Endereços"), p.startswith('/locations') and p != '/locations/batch', sub=True) }}
+        {{ nk_item("/locations/batch", "bi-magic", _("Gerar endereços em lote"), p == '/locations/batch', sub=True) }}
+        {{ nk_item("/bin-types", "bi-inboxes", _("Tipos de Bin"), p.startswith('/bin-types'), sub=True) }}
+        {{ nk_item("/levels", "bi-layers", _("Capacidade dos níveis"), p.startswith('/levels'), sub=True) }}
+        {{ nk_item("/structures", "bi-bookshelf", _("Estruturas de armazenagem"), p.startswith('/structures'), sub=True) }}
+        {{ nk_item("/structure-kinds", "bi-diagram-3", _("Tipos de estrutura"), p.startswith('/structure-kinds'), sub=True) }}
+        {{ nk_item("/structure-pieces", "bi-nut", _("Peças de estrutura"), p.startswith('/structure-pieces'), sub=True) }}
+        {{ nk_item("/products", "bi-tag", _("Produtos"), p.startswith('/products'), sub=True) }}
+      </div>
+      {{ nk_group("nkGrpImp", "bi-upload", _("Importações"), is_imp, "nav-imports") }}
+      <div class="collapse{% if is_imp %} show{% endif %}" id="nkGrpImp">
+        {{ nk_item("/imports", "bi-list-ol", _("Todas as importações"), p == '/imports', sub=True) }}
+        {{ nk_item("/imports/branches", "bi-building", _("Filiais"), p == '/imports/branches', sub=True) }}
+        {{ nk_item("/imports/warehouses", "bi-house-gear", _("Armazéns"), p == '/imports/warehouses', sub=True) }}
+        {{ nk_item("/imports/bin_types", "bi-inboxes", _("Tipos de bin"), p == '/imports/bin_types', sub=True) }}
+        {{ nk_item("/imports/locations", "bi-grid-3x3-gap", _("Endereços"), p == '/imports/locations', sub=True) }}
+        {{ nk_item("/imports/levels", "bi-layers", _("Capacidade dos níveis"), p == '/imports/levels', sub=True) }}
+        {{ nk_item("/imports/products", "bi-tag", _("Produtos (CSV/Excel)"), p == '/imports/products', sub=True) }}
+        {{ nk_item("/imports/stock", "bi-boxes", _("Saldos de estoque (CSV/Excel)"), p == '/imports/stock', sub=True) }}
+      </div>
+      <div class="nk-sec">{{ _("Sistema") }}</div>
+      {{ nk_item("/settings", "bi-gear", _("Configurações"), p.startswith('/settings')) }}
+    </nav>
+  </aside>
+  <main class="nk-main container-fluid px-4 pt-4 pb-5">
   {% if flash_msg %}
   <div class="alert alert-{{ flash_level if flash_level in ['success','danger','warning','info'] else 'info' }} alert-dismissible fade show" role="alert">
     {{ flash_msg }}
@@ -195,8 +248,21 @@
   {% endif %}
   {% block content %}{% endblock %}
 </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ---------- Menu lateral: recolher para só os ícones (tela larga); a escolha fica lembrada no navegador ---------- */
+(() => {
+  const btn = document.getElementById('nkSideMini');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const on = document.body.classList.toggle('nk-mini');
+    try { localStorage.setItem('nk-side-mini', on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+    window.dispatchEvent(new Event('resize'));  // telas com canvas (3D, plantas) se ajustam à largura nova
+  });
+})();
+</script>
 <script>
 /* ---------- Filtro de armazéns pela filial selecionada ----------
    <select data-filter-by="branch_id"> cujas <option data-branches="1,2"> */

@@ -10,6 +10,12 @@
   <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Capacidade dos níveis") }}</a>
 </div>
 {% if res.applied %}<div class="alert alert-success py-2"><i class="bi bi-check2-circle"></i> {{ _("Esta proposta já foi aplicada.") }}</div>{% endif %}
+{% if stale and not res.applied %}<div class="alert alert-warning py-2 d-flex flex-wrap gap-2 align-items-center"><i class="bi bi-exclamation-triangle"></i>
+  <span>{{ _h("Esta proposta pode estar desatualizada: {why} depois que ela foi gerada.", why=stale) }}</span>
+  <form method="post" action="/levels/recompose" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+    <input type="hidden" name="branch_id" value="{{ res.branch_id }}"><input type="hidden" name="warehouse_id" value="{{ res.warehouse_id or 'none' }}">
+    <input type="hidden" name="pieces" value="{{ res.pieces_mode }}"><input type="hidden" name="min_gain" value="{{ res.min_gain }}">
+    <button class="btn btn-sm btn-warning"><i class="bi bi-arrow-repeat"></i> {{ _("Gerar de novo") }}</button></form></div>{% endif %}
 <div class="alert alert-light border small">
   {{ _("Para cada estante com estrutura, o otimizador compara: manter; reespaçar os níveis da própria estrutura (cada nível com o menor vão que ainda guarda as bins dele e, com a altura que sobra, níveis novos no vão da bin mais comum da estante); e trocar por outra estrutura cadastrada de mesma frente, profundidade até a atual e altura até a maior do depósito. O que está guardado não muda de nível (os endereços continuam valendo); só saem níveis de cima sem endereço nem bins. A base de cada nível respeita a espessura do nível e o passo da furação do tipo de estrutura.") }}
   {{ _("Escolha: maior ganho de bins; depois menor custo das peças a comprar; depois menos estantes mexidas.") }}

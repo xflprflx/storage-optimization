@@ -465,12 +465,19 @@
         <div class="border rounded p-2 mt-2 d-flex flex-wrap gap-2 align-items-center" id="rearrBox">
           <strong><i class="bi bi-arrows-move"></i> {{ _("Proposta de rearranjo das estantes") }}</strong>
           {% if rc and rc.cmp %}
-          <span class="text-muted">{{ _("Passagens transversais e troca de corredores na planta desenhada, com os SKUs onde a proposta os põe, medidas pelos pedidos do histórico.") }}</span>
+          <span class="text-muted">{{ _("Passagens transversais e troca de corredores na planta desenhada, com os SKUs onde a proposta os põe, medidas pelos pedidos do histórico.") }}{% if rc.error %} {{ _("Sem saldo: o rearranjo usa só a proposta.") }}{% endif %}</span>
           <form method="post" action="/layout/plan/rearrange" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
             <input type="hidden" name="branch_id" value="{{ rc.branch_id }}"><input type="hidden" name="warehouse_id" value="{{ rc.warehouse_id }}">
             <input type="hidden" name="cmp" value="{{ rc.cmp }}">
             <button class="btn btn-sm btn-primary"><i class="bi bi-lightbulb"></i> {{ _("Gerar proposta de rearranjo") }}</button>
           </form>
+          {% if params.recomp %}
+          <form method="post" action="/layout/plan/combined" class="m-0" onsubmit="document.body.style.cursor = 'progress'">
+            <input type="hidden" name="branch_id" value="{{ rc.branch_id }}"><input type="hidden" name="warehouse_id" value="{{ rc.warehouse_id }}">
+            <input type="hidden" name="cmp" value="{{ rc.cmp }}"><input type="hidden" name="pieces" value="{{ params.recomp_pieces }}">
+            <input type="hidden" name="min_gain" value="{{ params.recomp_min }}"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}">
+            <button class="btn btn-sm btn-outline-primary" title="{{ _("Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.") }}"><i class="bi bi-intersect"></i> {{ _("Gerar proposta combinada (com a recomposição)") }}</button>
+          </form>{% endif %}
           {% elif rc and rc.error %}<span class="text-muted">{{ rc.error }}</span>
           {% elif not slot.info.get('layouts') %}<span class="text-muted">{{ _("A filial não tem planta desenhada.") }}</span>
           {% else %}<span class="text-muted">{{ _("Precisa da amostra de pedidos do histórico (aba Pedidos): reenvie o histórico com ela.") }}</span>{% endif %}

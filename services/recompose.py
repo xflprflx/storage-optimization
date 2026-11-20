@@ -205,8 +205,11 @@ def _bays(db: Session, branch_id: int, wid: Optional[int]) -> list[dict]:
 
 def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "existing", min_gain: int = 1,
             allow_swap: bool = True, time_s: float = 20.0, progress: Optional[Callable] = None,
-            cancelled: Optional[Callable] = None) -> dict:
-    """Proposta de recomposição das estruturas do depósito (filial + armazém)."""
+            cancelled: Optional[Callable] = None, geo=None, geo_have=None) -> dict:
+    """Proposta de recomposição das estruturas do depósito (filial + armazém). `geo` = a planta em que a proposta vale
+    (vizinhança das laterais e abertura das portas; None = a planta desenhada atual) e `geo_have` = a planta das peças
+    de hoje (None = a mesma): na proposta combinada com o rearranjo, as laterais de hoje são as da planta atual e as da
+    proposta, as da variação."""
     from ortools.sat.python import cp_model
 
     from services.structure_kinds import own_pieces, side_pieces
@@ -226,10 +229,14 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     scope_ref = max((t for t in count_all if ctx.height(t)), key=lambda t: count_all[t], default=None)
     from services.branch_layout import door_hits, geometry
 
-    try:
-        geo = geometry(db, branch_id, wid)  # planta desenhada: confere a abertura das portas de giro na troca
-    except Exception:  # noqa: BLE001  (sem planta válida: a porta não é conferida)
-        geo = None
+    geo_now = None
+    if geo is None or geo_have is None:
+        try:
+            geo_now = geometry(db, branch_id, wid)  # planta desenhada: confere a abertura das portas de giro na troca
+        except Exception:  # noqa: BLE001  (sem planta válida: a porta não é conferida)
+            geo_now = None
+    geo = geo if geo is not None else geo_now
+    geo_have = geo_have if geo_have is not None else geo_now
     door_blocked = 0
     prog(1, 4, _("Montando as opções de cada estante"))
 
@@ -298,8 +305,12 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     from services.structure_service import bay_neighbors
 
     idx = {(it["bay"]["aisle"], it["bay"]["bay"]): i for i, it in enumerate(items)}
+    def known(prs):
+        return [(a_, b_) for a_, b_ in prs if (a_ in idx or a_ in fixed) and (b_ in idx or b_ in fixed)]
+
     pairs_all, nb_source = bay_neighbors(db, branch_id, wid, geo)
-    pairs = [(a_, b_) for a_, b_ in pairs_all if (a_ in idx or a_ in fixed) and (b_ in idx or b_ in fixed)]
+    pairs = known(pairs_all)  # vizinhas na planta da proposta
+    pairs_have = pairs if geo_have is geo else known(bay_neighbors(db, branch_id, wid, geo_have)[0])  # nas de hoje
 
     def share(c1: dict, c2: dict) -> bool:
         return c1["sk"] is not None and c1["sk"] == c2["sk"] and abs(c1["depth"] - c2["depth"]) < 1.0
@@ -307,13 +318,13 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     def opts(key):  # opções da estante (as fixas têm uma só)
         return list(enumerate(items[idx[key]]["cands"])) if key in idx else [(0, fixed[key])]
 
-    def attributed(pick: list[int]) -> list[dict]:
+    def attributed(pick: list[int], prs=None) -> list[dict]:
         """Peças de cada estante com a escolha `pick`: as próprias + as laterais (uma lateral compartilhada conta
         meia para cada vizinha)."""
         cand = {k: items[i]["cands"][pick[i]] for k, i in idx.items()}
         cand.update(fixed)
         nshared = defaultdict(int)
-        for a_, b_ in pairs:
+        for a_, b_ in (pairs if prs is None else prs):
             if share(cand[a_], cand[b_]):
                 nshared[a_] += 1
                 nshared[b_] += 1
@@ -339,7 +350,7 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     prog(2, 4, _("Escolhendo as recomposições (maior ganho)"))
     all_pieces = sorted({p for it in items for c in it["cands"] for p in (*c["own"], *c["side"])}
                         | {p for c in fixed.values() for p in (*c["own"], *c["side"])})
-    base_att, base_extra = attributed([0] * len(items))
+    base_att, base_extra = attributed([0] * len(items), pairs_have)
     have = {p: sum(a.get(p, 0.0) for a in base_att) + base_extra.get(p, 0.0) for p in all_pieces}
     from models import StructurePiece
 

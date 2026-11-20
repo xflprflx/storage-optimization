@@ -144,6 +144,13 @@
         <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
         <button class="btn btn-sm btn-outline-primary"><i class="bi bi-lightbulb"></i> {{ _("Propor rearranjo") }}</button>
       </form>
+      <form method="post" action="/layout/plan/combined" class="d-inline-flex gap-1 align-items-center" onsubmit="document.body.style.cursor = 'progress'"
+            title="{{ _("Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.") }}">
+        <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
+        <select class="form-select form-select-sm" name="pieces" id="combPieces" style="width:auto">
+          <option value="existing">{{ _("peças existentes") }}</option><option value="unlimited">{{ _("peças ilimitadas") }}</option></select>
+        <button class="btn btn-sm btn-outline-primary"><i class="bi bi-intersect"></i> {{ _("Rearranjo + recomposição") }}</button>
+      </form>
       {% if has_prev %}<form method="post" action="/layout/plan/rearrange/undo" class="d-inline" onsubmit="return confirm(_t('Voltar à planta de antes do rearranjo?'))">
         <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
         <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i> {{ _("Desfazer rearranjo") }}</button>

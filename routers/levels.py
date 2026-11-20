@@ -375,8 +375,12 @@ def recompose_start(request: Request, form: FormData = Depends(form_data), db: S
     bid = br.id
 
     def fn(progress, cancelled):
+        from services.proposals import stamp
+
         with SessionLocal() as s:
-            return propose(s, bid, wid, pieces=pieces, min_gain=min_gain, progress=progress, cancelled=cancelled)
+            st0 = stamp(s, bid, wid)
+            res = propose(s, bid, wid, pieces=pieces, min_gain=min_gain, progress=progress, cancelled=cancelled)
+            return {**res, "stamp": st0} if not res.get("error") else res
 
     token = jobs.start(_recomp_owner(bid, wid), fn)
     back = str(form.get("back") or "")
@@ -417,8 +421,10 @@ def recompose_result(token: str, request: Request, db: Session = Depends(get_db)
     res = j["res"]
     if j["error"] or not res or res.get("error"):
         return redirect(back, j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
+    from services.proposals import stale_reason
+
     return render(request, "levels/recompose.html", res=res, token=token, scope=_scope_label(db, bid, wid), back=back,
-                  last=last_log(db, bid, wid))
+                  last=last_log(db, bid, wid), stale=stale_reason(db, bid, wid, res.get("stamp"), "recompose"))
 
 
 @router.post("/recompose/apply")

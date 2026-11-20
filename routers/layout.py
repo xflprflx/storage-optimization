@@ -395,9 +395,15 @@ async def rearrange_start(request: Request, db: Session = Depends(get_db)):
     assign = stored.get("after") if stored and stored.get("branch_id") == br.id else None
     bid = br.id
 
+    cmp = str(form.get("cmp") or "") if assign is not None else ""
+
     def fn(progress, cancelled):
+        from services.proposals import stamp
+
         with SessionLocal() as s:
-            return propose_branch(s, bid, wid, assign=assign, progress=progress, cancelled=cancelled)
+            st0 = stamp(s, bid, wid)
+            res = propose_branch(s, bid, wid, assign=assign, progress=progress, cancelled=cancelled)
+            return {**res, "stamp": st0, "cmp": cmp} if not res.get("error") else res
 
     token = jobs.start(_rearr_owner(br, wid), fn)
     back = f"/layout/plan?{_plan_qs(br, wid)}"
@@ -457,8 +463,10 @@ def rearrange_result(token: str, request: Request, db: Session = Depends(get_db)
             svgs.append((_("Atual") if v.get("current") else _("Melhor trajeto: {label}", label=v["label"]),
                          layout_svg(build(v["data"], bays), 560)))
     svgs.sort(key=lambda t: 0 if t[0] == _("Atual") else 1)
+    from services.proposals import stale_reason
+
     return render(request, "layout/rearrange.html", res=res, branch=br, wid=wid, wlabel=wlabel, qs=_plan_qs(br, wid),
-                  token=token, svgs=svgs, back=back)
+                  token=token, svgs=svgs, back=back, stale=stale_reason(db, br.id, wid, res.get("stamp"), "rearrange"))
 
 
 @router.post("/layout/plan/rearrange/apply")
@@ -497,3 +505,92 @@ async def rearrange_undo(request: Request, db: Session = Depends(get_db)):
     lay.data = clean(lay.data["_prev"])
     db.commit()
     return redirect(back, _("Rearranjo desfeito: a planta voltou a ser a anterior."), "secondary")
+
+
+# --------------------------------------------------------------------------- #
+# Proposta combinada: rearranjo da planta + recomposição das estruturas em cada variação
+# --------------------------------------------------------------------------- #
+@router.post("/layout/plan/combined")
+async def combined_start(request: Request, db: Session = Depends(get_db)):
+    """Para cada variação da planta (passagens, troca de corredores), a recomposição das estruturas calculada nela
+    (em segundo plano). Com `cmp` (token da otimização), os SKUs ficam onde a proposta os põe."""
+    from database import SessionLocal
+    from routers.common import redirect
+    from services import jobs, route_compare
+    from services.proposals import propose_combined
+
+    form = await request.form()
+    br, wid, wlabel = _plan_scope(db, form.get("branch_id"), form.get("warehouse_id"))
+    if br is None:
+        return redirect("/layout", _("Filial não encontrada."), "danger")
+    stored = route_compare.load(str(form.get("cmp") or ""))
+    assign = stored.get("after") if stored and stored.get("branch_id") == br.id else None
+    pieces = "unlimited" if form.get("pieces") == "unlimited" else "existing"
+    try:
+        min_gain = max(1, int(form.get("min_gain") or 1))
+    except ValueError:
+        min_gain = 1
+    bid, cmp = br.id, (str(form.get("cmp") or "") if assign is not None else "")
+
+    def fn(progress, cancelled):
+        with SessionLocal() as s:
+            res = propose_combined(s, bid, wid, assign=assign, pieces=pieces, min_gain=min_gain, progress=progress,
+                                   cancelled=cancelled)
+            return {**res, "cmp": cmp} if not res.get("error") else res
+
+    token = jobs.start(_rearr_owner(br, wid), fn)
+    back = str(form.get("back") or "")
+    return render(request, "site/running.html", project={"id": 0, "name": f"{br.code} - {br.name} · {wlabel}"}, token=token,
+                  title=_("Proposta combinada: rearranjo + recomposição"), icon="bi-intersect",
+                  job_base=f"/layout/plan/combined/job/{token}",
+                  back_url=back if back.startswith("/") else f"/layout/plan?{_plan_qs(br, wid)}", back_label=_("Voltar"),
+                  intro=_("O sistema testa as variações da planta (passagens transversais e troca de corredores) e, em cada "
+                          "uma, a recomposição das estruturas com as estantes vizinhas daquela planta. Leva mais que as "
+                          "propostas separadas: uma recomposição por variação."))
+
+
+@router.get("/layout/plan/combined/job/{token}/status")
+def combined_status(token: str, db: Session = Depends(get_db)):
+    return rearrange_status(token, db)
+
+
+@router.post("/layout/plan/combined/job/{token}/cancel")
+def combined_cancel(token: str, db: Session = Depends(get_db)):
+    return rearrange_cancel(token, db)
+
+
+@router.get("/layout/plan/combined/job/{token}/result")
+def combined_result(token: str, request: Request, db: Session = Depends(get_db)):
+    from routers.common import redirect
+    from services.proposals import stale_reason
+
+    br, wid, wlabel, j = _rearr_job(db, token)
+    back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
+    if j is None or not j["done"]:
+        return redirect(back, _("A busca expirou ou ainda não terminou: rode de novo."), "warning")
+    res = j["res"]
+    if j["error"] or not res or res.get("error"):
+        return redirect(back, j["error"] or (res or {}).get("error") or _("Busca sem resultado."), "danger")
+    return render(request, "layout/combined.html", res=res, branch=br, wid=wid, wlabel=wlabel, token=token, back=back,
+                  stale=stale_reason(db, br.id, wid, res.get("stamp"), "combined"))
+
+
+@router.post("/layout/plan/combined/apply")
+async def combined_apply(request: Request, db: Session = Depends(get_db)):
+    """Grava a opção escolhida: a planta da variação e a recomposição calculada nela."""
+    from routers.common import redirect
+    from services.proposals import apply_combined
+
+    form = await request.form()
+    br, wid, _wl, j = _rearr_job(db, str(form.get("token") or ""))
+    back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
+    if j is None or not j.get("res") or "options" not in j["res"]:
+        return redirect(back, _("A proposta expirou: gere de novo."), "warning")
+    try:
+        idx = int(form.get("idx"))
+    except (TypeError, ValueError):
+        idx = -1
+    msg, level = apply_combined(db, j["res"], idx)
+    if level == "success":
+        j["res"]["applied"] = True
+    return redirect(back, msg, level)

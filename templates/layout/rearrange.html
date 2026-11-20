@@ -11,6 +11,12 @@
   <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar à planta") }}</a>
 </div>
 {% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> {{ _("Busca cancelada: a tabela tem só as variações testadas até ali.") }}</div>{% endif %}
+{% if stale %}<div class="alert alert-warning py-2 d-flex flex-wrap gap-2 align-items-center"><i class="bi bi-exclamation-triangle"></i>
+  <span>{{ _h("Esta proposta pode estar desatualizada: {why} depois que ela foi gerada.", why=stale) }}</span>
+  <form method="post" action="/layout/plan/rearrange" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+    <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
+    <input type="hidden" name="cmp" value="{{ res.cmp or '' }}">
+    <button class="btn btn-sm btn-warning"><i class="bi bi-arrow-repeat"></i> {{ _("Gerar de novo") }}</button></form></div>{% endif %}
 <div class="alert alert-light border small">
   {{ _("As variações usam as mesmas estantes da planta salva. Passagem transversal: um vão atravessando as fileiras paralelas; as estantes depois do vão andam para a frente — só aparece quando cabe no imóvel sem bater em outra fileira, obstáculo ou na referência. Troca de corredores: as estantes mudam de lugar com o que está nelas (os corredores com mais saídas vão para mais perto da referência), só entre corredores do mesmo formato. Os endereços não mudam.") }}
 </div>

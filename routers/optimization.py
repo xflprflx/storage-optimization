@@ -251,7 +251,17 @@ def _route_compare(db: Session, sl: dict, before: dict, after: dict, raw: dict, 
     if not sample or not sl.get("geo"):
         return None
     if not any(before.values()):
-        return {"error": _("Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.")}
+        out = {"error": _("Sem saldo nos endereços do escopo: não há situação atual para comparar com a proposta.")}
+        if any(after.values()) and any(g.node is not None for g in sl["geo"].values()):
+            # planta desenhada: o rearranjo ainda pode ser proposto com os SKUs onde a proposta os põe
+            from routers.layout import _plan_scope
+            from services import route_compare
+
+            br, wid, _w = _plan_scope(db, h.branch_id, (filters or {}).get("warehouse_id"))
+            if br is not None:
+                out.update(cmp=route_compare.save({"branch_id": br.id, "warehouse_id": wid, "before": before, "after": after}),
+                           branch_id=br.id, warehouse_id=wid or "none")
+        return out
     tq = {"t_v": raw.get("slot_v") or "", "t_gold": raw.get("slot_gold_s") or "", "t_batch": raw.get("slot_batch") or "",
           "t_bwait": raw.get("slot_bwait") or ""}
     tq.update({k: qp.get(k) for k in ("t_v", "t_stop", "t_piece", "t_gold", "t_gold_piece", "t_batch", "t_bwait") if qp.get(k)})

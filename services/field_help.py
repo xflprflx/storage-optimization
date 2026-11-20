@@ -89,6 +89,7 @@ R(PROUTES, "#ordFilter", "Filtrar pedidos", "Mostra na tabela só os pedidos cuj
 
 # =========================================================================== planta da filial (editor)
 PPLAN = r"/layout/plan"
+R(PPLAN, "pieces", "Peças da proposta combinada", "Rearranjo + recomposição: só as peças das estruturas existentes (as liberadas por uma estante servem para outra; uma passagem que separa estantes vizinhas pede laterais a mais) ou ilimitadas (o que faltar é comprado, pelo custo da peça).", "rack:levels")
 R(PPLAN, "#bL", "Comprimento do imóvel (m)", "Tamanho do imóvel no eixo X. Também dá para arrastar a alça da borda direita no desenho.", "plan:L")
 R(PPLAN, "#bW", "Largura do imóvel (m)", "Tamanho do imóvel no eixo Y. Também dá para arrastar a alça da borda de baixo no desenho.", "plan:W")
 R(PPLAN, "#refLabel", "Nome da referência", "Nome do ponto de onde a separação sai e para onde volta (ex.: expedição). A posição é marcada com o botão Referência.", "plan:ref")

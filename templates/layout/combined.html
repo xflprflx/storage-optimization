@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ _h("Proposta combinada — {code}", code=(branch.code)) }}{% endblock %}
+{% block content %}
+{% set ACT = {'respace': _('Reespaçar os níveis'), 'swap': _('Trocar a estrutura')} %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-intersect"></i> {{ _("Proposta combinada: rearranjo + recomposição") }}</h1>
+    <div class="small text-muted">{{ branch.code }} - {{ branch.name }} · {{ wlabel }} · {{ _h("trajeto de {n} pedidos do histórico (rota otimizada)", n=(res.orders|dec(0))) }} ·
+      {% if res.basis == 'proposal' %}{{ _("SKUs onde a proposta do otimizador os põe") }}{% else %}{{ _("SKUs onde estão hoje") }}{% endif %} ·
+      {{ _("peças:") }} <b>{{ _("só as das estruturas existentes") if res.pieces_mode == 'existing' else _("ilimitadas (comprar o que faltar)") }}</b></div>
+  </div>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar à planta") }}</a>
+</div>
+{% if res.applied %}<div class="alert alert-success py-2"><i class="bi bi-check2-circle"></i> {{ _("Uma opção desta proposta já foi aplicada.") }}</div>{% endif %}
+{% if stale and not res.applied %}<div class="alert alert-warning py-2 d-flex flex-wrap gap-2 align-items-center"><i class="bi bi-exclamation-triangle"></i>
+  <span>{{ _h("Esta proposta pode estar desatualizada: {why} depois que ela foi gerada.", why=stale) }}</span>
+  <form method="post" action="/layout/plan/combined" class="ms-auto m-0" onsubmit="document.body.style.cursor = 'progress'">
+    <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
+    <input type="hidden" name="cmp" value="{{ res.cmp or '' }}"><input type="hidden" name="pieces" value="{{ res.pieces_mode }}">
+    <input type="hidden" name="min_gain" value="{{ res.min_gain }}">
+    <button class="btn btn-sm btn-warning"><i class="bi bi-arrow-repeat"></i> {{ _("Gerar de novo") }}</button></form></div>{% endif %}
+{% if res.partial %}<div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> {{ _("Busca cancelada: a tabela tem só as opções testadas até ali.") }}</div>{% endif %}
+<div class="alert alert-light border small">
+  {{ _("Cada linha é uma variação da planta (a atual, passagens transversais, troca de corredores) com a recomposição das estruturas calculada NELA: as laterais compartilhadas seguem as estantes vizinhas daquela planta (uma passagem que separa estantes pede laterais a mais). Aplicar grava as duas coisas; para voltar, Desfazer rearranjo (na planta) e Desfazer a última recomposição (em Capacidade dos níveis).") }}
+</div>
+<div class="card mb-3"><div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+  <thead class="table-light"><tr>
+    <th>{{ _("Planta") }}</th>
+    <th class="text-end">{{ _("Trajeto por pedido (m)") }}</th>
+    <th class="text-end">{{ _("vs. atual") }}</th>
+    <th class="text-end">{{ _("Estantes a recompor") }}</th>
+    <th class="text-end">{{ _("Bins a mais") }}</th>
+    <th>{{ _("Peças a comprar") }}</th>
+    <th></th></tr></thead>
+  <tbody>
+  {% for o in res.options %}{% set v = o.variant %}{% set rc = o.recomp %}
+  <tr class="{{ 'table-success' if (o.best_walk or o.best_gain) else ('table-light' if v.current else '') }}">
+    <td>{{ v.label }}{% if v.current %} <span class="badge text-bg-secondary">{{ _("atual") }}</span>{% endif %}
+      {% if o.best_walk %} <span class="badge text-bg-success">{{ _("melhor trajeto") }}</span>{% endif %}
+      {% if o.best_gain %} <span class="badge text-bg-primary">{{ _("mais bins") }}</span>{% endif %}
+      {% for w in v.what or [] %}<div class="small text-muted">{{ w }}</div>{% endfor %}
+      {% if not o.feasible %}<div class="small text-danger">{{ _("Não cabe nas peças existentes (laterais a mais ou peças da recomposição): gere com peças ilimitadas.") }}</div>{% endif %}
+      {% if rc.changes %}<details class="small mt-1"><summary>{{ _h("{n} estante(s) a recompor", n=rc.changes|length) }}</summary>
+        <table class="table table-sm mb-0 mt-1"><tbody>
+        {% for c in rc.changes[:40] %}<tr><td class="mono">{{ c.aisle }}-{{ c.bay }}</td><td>{{ ACT.get(c.kind, c.kind) }}</td>
+          <td class="mono">{{ c.from_code }}{% if c.to_code != c.from_code %} → {{ c.to_code }}{% endif %}</td>
+          <td>{{ _h("{a} → {b} níveis", a=c.levels_from, b=c.levels_to) }}</td><td class="text-end">+{{ c.gain }}</td></tr>{% endfor %}
+        {% if rc.changes|length > 40 %}<tr><td colspan="5" class="text-muted">{{ _h("… e mais {n}", n=rc.changes|length - 40) }}</td></tr>{% endif %}
+        </tbody></table></details>{% endif %}</td>
+    <td class="text-end">{{ v.get('opt_avg')|dec(1) if v.get('opt_avg') is not none else '—' }}</td>
+    <td class="text-end">{% if v.get('delta_pct') is not none and not v.current %}<span class="{{ 'text-muted' if v.get('delta_pct')|abs < 0.05 else ('text-success' if v.get('delta_pct') < 0 else 'text-danger') }}">{{ '+' if v.get('delta_pct') > 0 }}{{ v.get('delta_pct')|dec(1) }}%</span>{% else %}—{% endif %}</td>
+    <td class="text-end">{{ rc.changes|length }}</td>
+    <td class="text-end">{{ o.gain|dec(0) }}</td>
+    <td class="small">{% for p in o.bought %}{{ p.bought|dec(1) }}× {{ p.code }}{% if not loop.last %}, {% endif %}{% else %}<span class="text-muted">{{ _("nenhuma") }}</span>{% endfor %}
+      {% if rc.cost %}<div class="fw-semibold">{{ fmt_money(rc.cost) }}</div>{% endif %}</td>
+    <td class="text-end">{% if o.feasible and (not v.current or rc.changes) %}
+      <form method="post" action="/layout/plan/combined/apply" class="m-0" onsubmit="return confirm(_t('Aplicar esta opção: a planta da variação e a recomposição das estruturas calculada nela?'))">
+        <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="idx" value="{{ loop.index0 }}">
+        <button class="btn btn-sm {{ 'btn-success' if (o.best_walk or o.best_gain) else 'btn-outline-primary' }}"><i class="bi bi-check-lg"></i> {{ _("Aplicar as duas") if not v.current and rc.changes else _("Aplicar") }}</button>
+      </form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  {% for v in res.skipped %}
+  <tr class="text-muted"><td>{{ v.label }}<div class="small">{{ v.error }}</div></td><td colspan="6"></td></tr>
+  {% endfor %}
+  </tbody>
+</table></div></div>
+{% endblock %}

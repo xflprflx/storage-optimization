@@ -619,6 +619,9 @@ pelo **trajeto dos pedidos** do histórico (`services/rearrange.py`). Nada muda 
   - as duas juntas (a troca + a melhor passagem).
   **Aplicar à planta** grava a variação como a planta da filial e guarda a anterior: **Desfazer rearranjo** (na
   planta) volta a ela. Salvar a planta pelo editor descarta a anterior guardada.
+- **Sem saldo nos endereços** (filial nova no sistema, com os produtos atribuídos mas sem estoque lançado): o resultado
+  da otimização não tem situação atual para comparar, mas os botões de rearranjo continuam lá, usando só a proposta
+  do otimizador (o aviso *Sem saldo: o rearranjo usa só a proposta.* aparece no cartão).
 
 ## 6.0.8 Aparência 3D de bins e estruturas
 
@@ -736,6 +739,20 @@ liberadas, a comprar e o custo) e, por estante, os níveis e os vãos antes e de
 
 **Desfazer a última recomposição**, em Capacidade dos níveis, volta a estrutura, os vãos e os limites manuais (a capacidade é recalculada) e tira os
 níveis criados.
+
+**Proposta combinada (rearranjo + recomposição)** (`services/proposals.py`): botão **Rearranjo + recomposição** na
+planta (com a escolha das peças: existentes ou ilimitadas) e **Gerar proposta combinada** no resultado da otimização
+(quando a recomposição está ligada). Para cada variação da planta (a atual, passagens transversais, troca de
+corredores), roda a recomposição calculada **nessa** planta: as laterais compartilhadas seguem as estantes vizinhas
+da variação (uma passagem que separa estantes pede laterais a mais, que entram no saldo das peças). A tabela mostra o
+trajeto por pedido, a diferença para a atual, as estantes a recompor, as bins a mais e as peças a comprar; opções que
+não cabem nas peças existentes ficam marcadas e sem botão. Um único **Aplicar** grava a planta da variação e a
+recomposição; para voltar, **Desfazer rearranjo** (na planta) e **Desfazer a última recomposição**.
+
+**Proposta desatualizada:** cada proposta guarda o estado da planta e da última recomposição de quando foi gerada.
+Se a outra proposta for aplicada ou desfeita depois (ou a planta for editada), a tela da proposta avisa e oferece
+**Gerar de novo**, com os mesmos parâmetros. A recomposição depende da planta (vizinhas das laterais); o rearranjo
+depende das estruturas (laterais a mais ou a menos); a combinada, das duas.
 
 ## 6.0.10 Portas e condição de armazenagem
 

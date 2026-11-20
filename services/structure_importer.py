@@ -124,6 +124,8 @@ def import_pieces(db: Session, path: Path, mapping: dict, opts: MasterOptions) -
 KIND_FIELDS = {
     "name": (N_("Tipo de estrutura"), True, ("tipodeestrutura", "tipo", "nome", "nomedotipo", "name", "kind")),
     "floor": (N_("Paletes no piso (sim/não)"), False, ("paletesnopiso", "nopiso", "blocado", "floor")),
+    "shared_sides": (N_("Vizinhos compartilham a lateral (sim/não)"), False,
+                     ("vizinhoscompartilhamalateral", "compartilhaalateral", "lateralcompartilhada", "sharedsides")),
     "pitch_cm": (N_("Passo da furação (cm)"), False, ("passodafuracao", "passodafuraçao", "passo", "furacao", "pitch")),
     "beam_cm": (N_("Espessura do nível (cm)"), False, ("espessuradonivel", "espessura", "beam")),
     "condition": (N_("Condição de armazenagem"), False, ("condicaodearmazenagem", "condicao", "condição", "temperatura", "condition")),
@@ -135,7 +137,7 @@ KIND_FIELDS = {
     "look": (N_("Modelo 3D"), False, ("modelo3d", "modelo", "aparencia", "aparência", "look")),
     "piece": (N_("Peça (código)"), False, ("peca", "peça", "codigodapeca", "piece")),
     "qty": (N_("Qtd da peça"), False, ("qtd", "quantidade", "qtddapeca", "qty")),
-    "per": (N_("Por (módulo / nível)"), False, ("por", "pormodulonivel", "per")),
+    "per": (N_("Por (módulo / lateral / nível)"), False, ("por", "pormodulonivel", "pormodulolateralnivel", "per")),
     "color": (N_("Cor no 3D (#rrggbb)"), False, ("cor", "cor3d", "corno3d", "cordapeca", "color")),
 }
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -182,6 +184,9 @@ def import_kinds(db: Session, path: Path, mapping: dict, opts: MasterOptions) ->
         fl = _yes(row, mapping, "floor")
         if fl is not None:
             vals["floor"] = fl
+        sh = _yes(row, mapping, "shared_sides")
+        if sh is not None:
+            vals["shared_sides"] = sh
         for k in ("pitch_cm", "beam_cm"):
             v = _dec(row, mapping, k, labels[k], allow_zero=False)
             if v is not None:
@@ -218,7 +223,9 @@ def import_kinds(db: Session, path: Path, mapping: dict, opts: MasterOptions) ->
             qty = _dec(row, mapping, "qty", labels["qty"], allow_zero=False)
             if qty is None:
                 raise ValueError(_("Informe a quantidade da peça {code}.", code=pcode))
-            per = "level" if _plain(get_cell(row, mapping.get("per"))).startswith(("niv", "lev", "ebe", "nive", "层")) else "module"
+            pt = _plain(get_cell(row, mapping.get("per")))
+            per = ("level" if pt.startswith(("niv", "lev", "ebe", "nive", "层"))
+                   else "side" if pt.startswith(("lat", "side", "col", "seit", "cot", "侧")) else "module")
             color = str(get_cell(row, mapping.get("color")) or "").strip() or None
             if color and not HEX.match(color):
                 raise ValueError(_("Cor no 3D inválida: {raw} (use #rrggbb).", raw=f"{color!r}"))
@@ -481,14 +488,17 @@ STRUCTURE_KINDS = {
         "back": ("/structure-kinds", "tipos de estrutura"), "scope": False, "bins_option": False,
         "help": [N_("Uma linha por tipo, ou várias linhas do mesmo tipo para a composição: cada linha com Peça + Qtd + Por "
                  "(módulo ou nível) acrescenta a peça. Com peças no arquivo, a composição do tipo passa a ser a do arquivo."),
+                 N_("Vizinhos compartilham a lateral = sim: módulos encostados do mesmo tipo usam uma lateral só entre eles "
+                 "(N módulos = N + 1 laterais). As peças da lateral (colunas, quadro de montantes) vão com Por = lateral."),
                  N_("Condição: ambiente, refrigerado, congelado ou controlado. Porta: sem, de giro ou de correr; folhas 1 ou 2; "
                  "dobradiça esquerda ou direita; abertura 90 ou 180°; tempo para abrir e fechar (s)."),
                  N_("Modelo 3D: automático, simples ou um da biblioteca (rack, shelving, cantilever, flow, cold_room ou o nome). "
                  "Peças que não existem são cadastradas com o código. Campos vazios não apagam dados.")],
-        "sample": "Tipo de estrutura;Paletes no piso;Condicao;Porta;Folhas;Abertura;Tempo da porta (s);Modelo 3D;Peca;Qtd;Por;Cor no 3D\n"
-                  "Porta-palete;nao;;;;;;rack;MONT-PP;2;modulo;#1f4e8c\nPorta-palete;;;;;;;;LONG-PP;2;nivel;#f28c28\n"
-                  "Estante;nao;;;;;;shelving;COL-EST;4;modulo;#8a96a0\nEstante;;;;;;;;PRAT-EST;1;nivel;#c9d1d6\n"
-                  "Camara refrigerada;nao;refrigerado;de giro;2;90;6;cold_room;COL-EST;4;modulo;\n"},
+        "sample": "Tipo de estrutura;Paletes no piso;Vizinhos compartilham a lateral;Condicao;Porta;Folhas;Abertura;"
+                  "Tempo da porta (s);Modelo 3D;Peca;Qtd;Por;Cor no 3D\n"
+                  "Porta-palete;nao;sim;;;;;;rack;MONT-PP;1;lateral;#1f4e8c\nPorta-palete;;;;;;;;;LONG-PP;2;nivel;#f28c28\n"
+                  "Estante;nao;sim;;;;;;shelving;COL-EST;2;lateral;#8a96a0\nEstante;;;;;;;;;PRAT-EST;1;nivel;#c9d1d6\n"
+                  "Camara refrigerada;nao;nao;refrigerado;de giro;2;90;6;cold_room;COL-EST;4;modulo;\n"},
     "structures": {
         "title": N_("Importação de Estruturas de armazenagem"), "fields": STRUCT_FIELDS, "run": import_structures,
         "back": ("/structures", "estruturas"), "scope": False, "bins_option": False,

@@ -397,6 +397,59 @@ def _corridor_demand(g, nodes: dict, sample: list, start) -> tuple[dict, dict]:
     return demand, dist_of
 
 
+def _lateral_info(db, branch_id: int, wid: Optional[int]):
+    """Para comparar as laterais: {(corredor, estante): (peças de UMA lateral, tipo que compartilha, profundidade)} e
+    as peças (código, nome, custo)."""
+    from sqlalchemy import select
+
+    from models import BayStructure, StructureKind, StructurePiece, StructureType
+    from services.structure_kinds import composition, side_pieces
+
+    kinds = {k.id: k for k in db.scalars(select(StructureKind))}
+    info = {}
+    for link, st in db.execute(select(BayStructure, StructureType).join(StructureType, StructureType.id == BayStructure.structure_type_id)
+                               .where(BayStructure.branch_id == branch_id,
+                                      BayStructure.warehouse_id.is_(None) if wid is None else BayStructure.warehouse_id == wid)):
+        k = kinds.get(st.kind_id)
+        side = side_pieces(composition(k)) if k is not None else {}
+        if k is not None and k.shared_sides and side:
+            info[(link.aisle, link.bay)] = (side, k.id, float(st.depth))
+    return info, {p.id: p for p in db.scalars(select(StructurePiece))}
+
+
+def lateral_delta(db, branch_id: int, wid: Optional[int], g_before, g_after, info=None) -> Optional[dict]:
+    """Laterais (colunas / quadros de montantes) a mais ou a menos na variação: estantes vizinhas que compartilhavam a
+    lateral e deixam de ser vizinhas (passagem no meio) precisam de uma lateral a mais; as que passam a ser vizinhas
+    devolvem uma. None = nada muda (ou nenhum tipo compartilha a lateral)."""
+    from services.structure_service import bay_neighbors
+
+    info, pieces = info or _lateral_info(db, branch_id, wid)
+    if not info:
+        return None
+
+    def shared(pairs) -> set:
+        out = set()
+        for a, b in pairs:
+            if a in info and b in info and info[a][1] == info[b][1] and abs(info[a][2] - info[b][2]) < 1.0:
+                out.add(tuple(sorted((a, b))))
+        return out
+
+    before = shared(bay_neighbors(db, branch_id, wid, g_before)[0])
+    after = shared(bay_neighbors(db, branch_id, wid, g_after)[0])
+    lost, gained = before - after, after - before
+    if not lost and not gained:
+        return None
+    qty: dict[int, float] = {}
+    for pair, sign in [(p, 1) for p in lost] + [(p, -1) for p in gained]:
+        for pid, q in info[pair[0]][0].items():
+            qty[pid] = qty.get(pid, 0.0) + sign * q
+    rows = [{"code": pieces[p].code if p in pieces else str(p), "name": pieces[p].name if p in pieces else "", "qty": q,
+             "cost": q * float(pieces[p].cost) if p in pieces and pieces[p].cost is not None else None}
+            for p, q in sorted(qty.items()) if abs(q) > 1e-9]
+    costs = [r["cost"] for r in rows if r["cost"] is not None]
+    return {"sides": len(lost) - len(gained), "pieces": rows, "cost": sum(costs) if costs else None}
+
+
 def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict] = None, gap: float = PASSAGE_CM,
                    progress: Optional[Callable] = None, cancelled: Optional[Callable] = None) -> dict:
     """Variações da planta desenhada (passagens transversais, troca de corredores e as duas) medidas pelos pedidos do
@@ -442,6 +495,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
     if not w0:
         return {"error": _("Nenhum pedido da amostra tem SKUs em estantes da planta.")}
     variants = [{"label": _("Planta atual"), "current": True, "data": data, **w0, "what": []}]
+    lat_info = _lateral_info(db, branch_id, wid)  # laterais compartilhadas entre estantes vizinhas (peças)
     tried: list[tuple] = []
     orients = sorted({r["orient"] for r in data["rows"]})
     for orient in orients:
@@ -506,6 +560,9 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
             variants.append({"label": _("Troca de corredores"), "error": _("nenhuma troca ajuda: os corredores de mesmo "
                                                                            "formato já estão na ordem das saídas, ou não há "
                                                                            "corredores de mesmo formato")})
+    for v in variants:  # passagem no meio de estantes que compartilham a lateral: laterais a mais (peças)
+        if v.get("data") is not None and not v.get("current") and not v.get("error"):
+            v["laterals"] = lateral_delta(db, branch_id, wid, g, build(v["data"], bays), lat_info)
     rank(variants, "opt_avg")
     prog(steps, steps, _("Pronto"))
     return {"variants": variants, "key": "opt_avg", "orders": len(sample), "basis": "proposal" if assign else "stock",

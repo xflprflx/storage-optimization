@@ -519,6 +519,9 @@ class StructureKind(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     floor: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")  # paletes no piso
     pitch_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # passo da furação (cm)
+    # módulos vizinhos (encostados, do mesmo tipo e profundidade) compartilham a lateral (colunas / quadro de
+    # montantes): N módulos seguidos usam N + 1 laterais em vez de 2N (peças "por lateral" da composição)
+    shared_sides: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     beam_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # espessura do nível (cm)
     look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
     appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

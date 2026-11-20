@@ -644,7 +644,7 @@ def apply_piece_colors(look: Optional[dict], comp: list) -> Optional[dict]:
     if look is None:
         return None
     by_code = {str(c).upper(): col for c, _per, col in comp if col}
-    frame = next((col for _c, per, col in comp if col and per == "module"), None)
+    frame = next((col for _c, per, col in comp if col and per in ("side", "module")), None)
     level = next((col for _c, per, col in comp if col and per == "level"), None)
     parts = []
     for p in look["parts"]:

@@ -169,6 +169,8 @@ def _add_missing_columns(conn) -> None:
         conn.execute(text("ALTER TABLE bay_structures ADD COLUMN first_level_cm BIGINT"))
     if "bay_structures" in tables and "cap_params" not in {c["name"] for c in insp.get_columns("bay_structures")}:
         conn.execute(text("ALTER TABLE bay_structures ADD COLUMN cap_params JSON"))
+    if "structure_kinds" in tables and "shared_sides" not in {c["name"] for c in insp.get_columns("structure_kinds")}:
+        conn.execute(text("ALTER TABLE structure_kinds ADD COLUMN shared_sides BOOLEAN NOT NULL DEFAULT 0"))
     lccols = {c["name"] for c in insp.get_columns("level_capacities")} if "level_capacities" in tables else set()
     if "level_capacities" in tables and "calc_bins" not in lccols:
         # capacidade calculada × limite manual: o que estava gravado vira limite manual; na inicialização, as

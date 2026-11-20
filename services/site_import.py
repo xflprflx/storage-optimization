@@ -79,6 +79,9 @@ def _kind_extras(db, st, row, cm) -> None:
     ang = _cell(row, cm.get("door_angle")).replace("°", "").strip()
     if ang in ("90", "180"):
         k.door_angle = int(ang)
+    sh = normalize_header(_cell(row, cm.get("shared")))
+    if sh:  # módulos vizinhos compartilham a lateral (colunas / quadro de montantes)
+        k.shared_sides = sh in {"sim", "s", "1", "x", "true", "yes", "y", "si", "oui", "ja"}
     tm = _cell(row, cm.get("door_time")).replace(",", ".").strip()
     if tm:
         try:
@@ -149,6 +152,8 @@ STRUCT_COLS = {
     "door_leaves": ["folhas", "folhasdaporta", "nfolhas"],
     "door_angle": ["abertura", "aberturadaporta", "aberturagraus", "aberturamaxima"],
     "door_time": ["tempodaporta", "tempodaportas", "tempoporta", "tempodaportasegundos"],
+    "shared": ["vizinhoscompartilhamalateral", "vizinhoscompartilhamalateralsimnao", "compartilhaalateral",
+               "lateralcompartilhada", "sharedsides"],
 }
 BIN_COLS = {
     "code": ["codigo", "cod", "code"],
@@ -272,7 +277,7 @@ FIELD_LABELS = {
                    "first_level": N_("Altura do 1º nível (cm)"), "level_heights": N_("Vãos por nível (cm, ex.: 45; 40; 35)"),
                    "condition": N_("Condição de armazenagem"), "door": N_("Porta (sem, de giro, de correr)"),
                    "door_leaves": N_("Folhas da porta"), "door_angle": N_("Abertura da porta (°)"),
-                   "door_time": N_("Tempo da porta (s)")},
+                   "door_time": N_("Tempo da porta (s)"), "shared": N_("Vizinhos compartilham a lateral (sim/não)")},
     "bins": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
              "length": N_("Comprimento (cm)"), "max_weight": N_("Peso máx. (kg)"), "max_volume": "Volume (L)",
              "cost": N_("Custo por bin (R$)"), "open_top": N_("Aberta em cima (sim/não)"),

@@ -671,8 +671,8 @@ e custo por peça (opcional).
 
 **Cadastros → Tipos de estrutura** (`/structure-kinds`): os tipos que aparecem no cadastro de estrutura. Cada tipo
 tem:
-- **composição de peças**: quantas peças por **módulo** (montantes, colunas) e por **nível** (longarinas,
-  prateleiras). Uma estrutura de N níveis usa as peças por módulo + N × as por nível. A mesma peça pode estar em vários
+- **composição de peças**: quantas peças por **módulo**, por **lateral** (colunas, quadro de montantes) e por
+  **nível** (longarinas, prateleiras). Uma estrutura de N níveis usa as peças por módulo + N × as por nível. A mesma peça pode estar em vários
   tipos;
 - **paletes no piso** (blocado): desenhado e calculado como o antigo "Palete no chão";
 - **passo da furação** e **espessura do nível** (opcionais), usados para reespaçar os níveis;
@@ -687,6 +687,22 @@ tem:
 No cadastro de **estrutura**, o tipo vem dos tipos cadastrados; as medidas e os níveis continuam ali. Bancos antigos
 ganham os tipos e as peças padrão (sem custo) ao iniciar. As estruturas são ligadas ao tipo pelo nome, e a aparência
 que estava na estrutura passa para o tipo. Importações que trazem um tipo novo criam o tipo.
+
+**Laterais compartilhadas** (tipo de estrutura → *Módulos vizinhos compartilham a lateral*): na composição, as peças
+de cada lado do módulo (colunas, quadro de montantes) vão **por lateral**. Um módulo sozinho usa 2 laterais; o vizinho
+encostado, do mesmo tipo e da mesma profundidade, só mais 1 — N módulos seguidos usam N + 1 laterais. Os tipos padrão
+(estante, porta-palete, flow rack, cantilever) já vêm assim; os de versões anteriores com a composição padrão intacta
+são convertidos ao iniciar. As estantes vizinhas saem da planta desenhada (encostadas na mesma fileira) ou, sem planta,
+da numeração (uma letra por corredor: a vizinha é o nº + 2; com uma letra por rua, desenhe a planta).
+- **Recomposição:** as laterais contam pelas fronteiras entre vizinhas; trocar a estrutura de uma estante no meio da
+  sequência por outro tipo separa as laterais (mais peças). Com as peças existentes isso pode impedir a troca; com
+  peças ilimitadas, entra no custo. A proposta diz de onde veio a vizinhança e quantos pares compartilham a lateral.
+- **Rearranjo da planta:** a passagem transversal que corta uma sequência de estantes que compartilham a lateral
+  pede uma lateral a mais em cada corte (e a troca de corredores pode juntar ou separar sequências); cada variação
+  mostra as laterais a mais ou a menos, as peças e o custo.
+- **Importação e exemplos:** coluna *Vizinhos compartilham a lateral (sim/não)* e *Por* = lateral na importação de
+  tipos de estrutura; a mesma coluna na aba Estruturas da planilha do projeto e nas planilhas de exemplo (estante e
+  porta-palete: sim; câmara refrigerada: não).
 
 **Recomposição das estruturas** (`services/recompose.py`): flag **Propor recomposição das estruturas** na otimização
 (Por endereço e Pool, cartão Restrições → Estruturas) ou o botão em **Capacidade dos níveis**. Para cada estante com

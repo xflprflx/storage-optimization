@@ -22,6 +22,11 @@
         <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="floor" value="1" id="floor" {% if data.get('floor') %}checked{% endif %}>
           <label class="form-check-label" for="floor">{{ _h("<b>Paletes no piso</b> (blocado): sem montantes nem longarinas — os níveis são camadas de paletes empilhados") }}</label></div>
       </div>
+      <div class="col-12">
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="shared_sides" value="1" id="shared_sides" {% if data.get('shared_sides') %}checked{% endif %}>
+          <label class="form-check-label" for="shared_sides">{{ _h("<b>Módulos vizinhos compartilham a lateral</b> (colunas / quadro de montantes)") }}</label></div>
+        <div class="form-text">{{ _("Um módulo sozinho usa 2 laterais; o vizinho encostado, do mesmo tipo e profundidade, só mais 1 (N módulos seguidos = N + 1 laterais). Na composição, marque essas peças como \"por lateral\". A recomposição das estruturas e o rearranjo da planta contam as peças assim.") }}</div>
+      </div>
     </div>
     <div class="row g-3 mt-1">
       <div class="col-md-5">

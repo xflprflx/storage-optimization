@@ -123,7 +123,8 @@ def _kind_validate(db: Session, form: FormData, kid: int | None):
 
     errors = FormErrors()
     data = {"name": f_str(form, "name", 40), "notes": f_str(form, "notes", 200),
-            "floor": str(form.get("floor") or "") in ("1", "on", "true")}
+            "floor": str(form.get("floor") or "") in ("1", "on", "true"),
+            "shared_sides": str(form.get("shared_sides") or "") in ("1", "on", "true")}
     if not data["name"]:
         errors.add("name", _("Nome é obrigatório."))
     else:
@@ -234,7 +235,7 @@ def edit_kind(kid: int, request: Request, db: Session = Depends(get_db)):
     k = db.get(StructureKind, kid)
     if not k:
         return redirect("/structure-kinds", _("Tipo de estrutura não encontrado."), "danger")
-    data = {key: getattr(k, key) for key in ("name", "floor", "pitch_cm", "beam_cm", "notes", "look_model", "condition",
+    data = {key: getattr(k, key) for key in ("name", "floor", "shared_sides", "pitch_cm", "beam_cm", "notes", "look_model", "condition",
                                               "door_type", "door_leaves", "door_hinge", "door_angle", "door_time_s")}
     data["composition"] = [(p.piece_id, p.qty, p.per, p.color) for p in k.pieces]
     data["look_code"] = code_text(k.appearance)

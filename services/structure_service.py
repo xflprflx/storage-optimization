@@ -154,6 +154,48 @@ def recalc_capacities(db: Session, bays: Optional[Iterable[BayKey]] = None, *, s
     return changed
 
 
+def bay_neighbors(db: Session, branch_id: int, warehouse_id: Optional[int], geo=None) -> tuple[list[tuple], str]:
+    """Pares de estantes vizinhas (encostadas lado a lado), [((corredor, estante), (corredor, estante))], e a origem:
+    "plan" = pela planta desenhada (mesma fileira, encostadas); "numbering" = estimado pela numeração do corredor (sem
+    planta, uma letra por corredor: ímpares de um lado e pares do outro, a vizinha é o nº + 2); "" = nenhum."""
+    import re
+
+    if geo is None:
+        from services.branch_layout import geometry
+
+        try:
+            geo = geometry(db, branch_id, warehouse_id)
+        except Exception:  # noqa: BLE001  (planta inválida: estima pela numeração)
+            geo = None
+    if geo is not None and geo.placed:
+        rows = geo.data.get("rows") or []
+        by_row: dict[int, list] = defaultdict(list)
+        for key, pb in geo.placed.items():
+            by_row[pb.row].append((key, pb))
+        out = []
+        for ri, lst in by_row.items():
+            vert = ri < len(rows) and rows[ri].get("orient") == "v"
+            ln = (lambda pb: pb.d) if vert else (lambda pb: pb.w)  # comprimento ao longo da fileira
+            lst.sort(key=lambda kp: kp[1].along)
+            for (k1, p1), (k2, p2) in zip(lst, lst[1:]):
+                if abs((p2.along - p1.along) - (ln(p1) + ln(p2)) / 2) < 1.0:  # encostadas (sem vão entre elas)
+                    out.append((k1, k2))
+        return out, "plan"
+    keys = sorted({(a, b) for a, b in db.execute(_scope(select(BayStructure.aisle, BayStructure.bay), BayStructure,
+                                                        branch_id, warehouse_id))})
+    by_aisle: dict[str, list[tuple[int, str]]] = defaultdict(list)
+    for a, b in keys:
+        if re.fullmatch(r"\d+", b or ""):
+            by_aisle[a].append((int(b), b))
+    out = []
+    for a, lst in by_aisle.items():  # ímpares de um lado e pares do outro (uma letra por corredor): vizinha = nº + 2
+        num = {n: b for n, b in lst}
+        for n, b in sorted(lst):
+            if n + 2 in num:
+                out.append(((a, b), (a, num[n + 2])))
+    return out, ("numbering" if out else "")
+
+
 def _level_codes(existing: list[str], n: int) -> list[str]:
     """Códigos 1..n no padrão da estante (ex.: '01'..'05' se os níveis atuais têm 2 dígitos)."""
     digits = [c for c in existing if c.isdigit()]

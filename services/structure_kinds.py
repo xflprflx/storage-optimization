@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from models import StructureKind, StructureKindPiece, StructurePiece, StructureType
 from services.i18n import N_, _
 
-PER = {"module": N_("por módulo"), "level": N_("por nível")}
+PER = {"module": N_("por módulo"), "side": N_("por lateral"), "level": N_("por nível")}
 CONDITIONS = {"": N_("Ambiente"), "refrigerado": N_("Refrigerado"), "congelado": N_("Congelado"),
               "controlado": N_("Controlado (seguro)")}
 DOOR_TYPES = {"": N_("Sem porta"), "swing": N_("De giro (abre para o corredor)"), "sliding": N_("De correr")}
@@ -30,15 +30,21 @@ DEFAULT_PIECES = (("MONT-PP", N_("Quadro de montantes (porta-palete)")), ("LONG-
                   ("COL-EST", N_("Coluna de estante")), ("PRAT-EST", N_("Prateleira de estante")),
                   ("COL-CANT", N_("Coluna de cantilever")), ("BRACO-CANT", N_("Braço de cantilever")),
                   ("PISTA-ROL", N_("Pista de roletes (flow rack)")))
-DEFAULT_KINDS = (  # nome, paletes no piso, [(peça, qtd, por)]
-    (N_("Estante"), False, [("COL-EST", 4, "module"), ("PRAT-EST", 1, "level")]),
-    ("Porta-palete", False, [("MONT-PP", 2, "module"), ("LONG-PP", 2, "level")]),
+DEFAULT_KINDS = (  # nome, paletes no piso, [(peça, qtd, por)] — "side" = por lateral (vizinhos compartilham)
+    (N_("Estante"), False, [("COL-EST", 2, "side"), ("PRAT-EST", 1, "level")]),
+    ("Porta-palete", False, [("MONT-PP", 1, "side"), ("LONG-PP", 2, "level")]),
     (N_("Palete no chão"), True, []),
-    (N_("Flow rack"), False, [("COL-EST", 4, "module"), ("PISTA-ROL", 1, "level")]),
-    (N_("Cantilever"), False, [("COL-CANT", 2, "module"), ("BRACO-CANT", 2, "level")]),
+    (N_("Flow rack"), False, [("COL-EST", 2, "side"), ("PISTA-ROL", 1, "level")]),
+    (N_("Cantilever"), False, [("COL-CANT", 1, "side"), ("BRACO-CANT", 2, "level")]),
     (N_("Mezanino"), False, []),
     (N_("Outro"), False, []),
 )
+SHARED_DEFAULT = {"Estante", "Porta-palete", "Flow rack", "Cantilever"}  # tipos padrão com a lateral compartilhada
+# composição padrão de versões anteriores (lateral contada por módulo): migrada para "por lateral" se não foi mexida
+OLD_DEFAULTS = {(("COL-EST", 4.0, "module"), ("PRAT-EST", 1.0, "level")): ("COL-EST", 2),
+                (("MONT-PP", 2.0, "module"), ("LONG-PP", 2.0, "level")): ("MONT-PP", 1),
+                (("COL-EST", 4.0, "module"), ("PISTA-ROL", 1.0, "level")): ("COL-EST", 2),
+                (("COL-CANT", 2.0, "module"), ("BRACO-CANT", 2.0, "level")): ("COL-CANT", 1)}
 
 
 def refresh_floor(db: Session) -> None:
@@ -62,12 +68,12 @@ def ensure_kinds(db: Session) -> None:
                 db.flush()
             pieces[code] = pc
         for name, floor, comp in DEFAULT_KINDS:
-            k = StructureKind(name=_(name), floor=floor, notes="")
+            k = StructureKind(name=_(name), floor=floor, notes="", shared_sides=name in SHARED_DEFAULT)
             k.pieces = [StructureKindPiece(piece_id=pieces[c].id, qty=Decimal(q), per=per) for c, q, per in comp]
             db.add(k)
         db.flush()
     by_name = {k.name.strip().casefold(): k for k in db.scalars(select(StructureKind))}
-    changed = False
+    changed = _migrate_sides(db)
     for st in db.scalars(select(StructureType)):
         key = (st.kind or "").strip().casefold()
         if not key:
@@ -87,6 +93,23 @@ def ensure_kinds(db: Session) -> None:
     if changed or db.new:
         db.commit()
     refresh_floor(db)
+
+
+def _migrate_sides(db: Session) -> bool:
+    """Tipos padrão de versões anteriores, com a composição intacta: as colunas / quadros de montantes passam a ser
+    "por lateral" (metade da quantidade por módulo) e os vizinhos compartilham a lateral."""
+    codes = {p.id: p.code for p in db.scalars(select(StructurePiece))}
+    changed = False
+    for k in db.scalars(select(StructureKind).where(StructureKind.shared_sides.is_(False))):
+        sig = tuple(sorted((codes.get(p.piece_id, ""), float(p.qty), p.per) for p in k.pieces))
+        hit = next((v for old, v in OLD_DEFAULTS.items() if tuple(sorted(old)) == sig), None)
+        if hit is None:
+            continue
+        for p in k.pieces:
+            if codes.get(p.piece_id) == hit[0] and p.per == "module":
+                p.per, p.qty = "side", Decimal(hit[1])
+        k.shared_sides = changed = True
+    return changed
 
 
 def attach_kind(db: Session, st: StructureType) -> None:
@@ -119,16 +142,28 @@ def kind_of(db: Session, st: StructureType) -> Optional[StructureKind]:
 
 
 def composition(kind: Optional[StructureKind]) -> list[tuple[int, float, str]]:
-    """[(peça, qtd, "module"|"level")] do tipo."""
+    """[(peça, qtd, "module"|"side"|"level")] do tipo."""
     return [(p.piece_id, float(p.qty), p.per) for p in (kind.pieces if kind is not None else [])]
 
 
-def pieces_for(comp: list[tuple[int, float, str]], levels: int, modules: int = 1) -> dict[int, float]:
-    """Peças de `modules` módulos com `levels` níveis."""
+def pieces_for(comp: list[tuple[int, float, str]], levels: int, modules: int = 1, sides: Optional[int] = None) -> dict[int, float]:
+    """Peças de `modules` módulos com `levels` níveis. As peças "por lateral" contam `sides` laterais (padrão: 2 por
+    módulo, sem vizinho; numa sequência de módulos encostados que compartilham a lateral, módulos + 1)."""
     out: dict[int, float] = defaultdict(float)
+    sides = 2 * modules if sides is None else sides
     for pid, q, per in comp:
-        out[pid] += q * modules * (levels if per == "level" else 1)
+        out[pid] += q * (levels * modules if per == "level" else sides if per == "side" else modules)
     return dict(out)
+
+
+def side_pieces(comp: list[tuple[int, float, str]], sides: float = 1) -> dict[int, float]:
+    """Só as peças "por lateral" de `sides` laterais."""
+    return {pid: q * sides for pid, q, per in comp if per == "side"}
+
+
+def own_pieces(comp: list[tuple[int, float, str]], levels: int) -> dict[int, float]:
+    """As peças de um módulo sem as laterais (por módulo + por nível)."""
+    return {pid: v for pid, v in pieces_for([c for c in comp if c[2] != "side"], levels).items()}
 
 
 def location_conditions(db: Session, location_ids) -> dict[int, str]:

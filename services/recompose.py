@@ -14,9 +14,11 @@ o passo da furação dos montantes.
 
 Ganho = bins a mais que cabem (do tipo de referência de cada estante), contando o espaço livre de cada nível.
 
-Peças: a composição do tipo de estrutura (por módulo e por nível). Com `pieces="existing"`, só as peças das
-estruturas do escopo (as liberadas por uma estante servem para outra); com "unlimited", o que faltar é comprado
-(custo pelo custo da peça, quando informado).
+Peças: a composição do tipo de estrutura (por módulo, por lateral e por nível). Com `pieces="existing"`, só as peças
+das estruturas do escopo (as liberadas por uma estante servem para outra); com "unlimited", o que faltar é comprado
+(custo pelo custo da peça, quando informado). Laterais: estantes vizinhas (encostadas, pela planta desenhada ou pela
+numeração) do mesmo tipo com "vizinhos compartilham a lateral" e da mesma profundidade usam uma lateral só entre
+elas; trocar a estrutura de uma estante no meio da sequência separa as laterais (mais peças).
 
 Escolha (OR-Tools CP-SAT), lexicográfica: 1º maior ganho; 2º menor custo (ou menos peças compradas, sem custos);
 3º menos estantes mexidas.
@@ -207,7 +209,7 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     """Proposta de recomposição das estruturas do depósito (filial + armazém)."""
     from ortools.sat.python import cp_model
 
-    from services.structure_kinds import pieces_for
+    from services.structure_kinds import own_pieces, side_pieces
 
     prog = progress or (lambda *_a: None)
     stop = cancelled or (lambda: False)
@@ -230,14 +232,20 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
         geo = None
     door_blocked = 0
     prog(1, 4, _("Montando as opções de cada estante"))
-    items = []  # por estante: {bay, cands: [{st, vaos, gain, pieces, label}]}
+
+    def parts(t, nlev: int) -> dict:
+        """Peças da opção: as próprias (por módulo e por nível), as de UMA lateral e o tipo que compartilha a lateral."""
+        k, comp = ctx.kind.get(t.id), ctx.comp[t.id]
+        return {"own": own_pieces(comp, nlev), "side": side_pieces(comp), "depth": float(t.depth),
+                "sk": k.id if k is not None and getattr(k, "shared_sides", False) else None}
+
+    items = []  # por estante: {bay, cands: [{st, vaos, gain, own, side, sk, depth}]}
+    fixed = {}  # estantes que não entram na escolha (palete no chão, sem níveis): só a vizinhança das laterais
     for b in bays:
         st = b["st"]
-        if ctx.floor(st):
-            skipped["floor"] += 1
-            continue
-        if not b["levels"]:
-            skipped["no_levels"] += 1
+        if ctx.floor(st) or not b["levels"]:
+            skipped["floor" if ctx.floor(st) else "no_levels"] += 1
+            fixed[(b["aisle"], b["bay"])] = parts(st, len(b["vaos"]))
             continue
         cnt: dict[int, int] = defaultdict(int)
         for c in b["content"]:
@@ -247,8 +255,7 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
         cur_free = _evaluate(ctx, st, b["vaos"], b["base"], b["content"], ref)
         if cur_free is None:  # o que está guardado já não cabe (vão menor que a bin): mede assim mesmo, sem conteúdo
             cur_free = _evaluate(ctx, st, b["vaos"], b["base"], [], ref) or 0
-        keep = {"st": st, "vaos": b["vaos"], "base": b["base"], "gain": 0, "kind": "keep",
-                "pieces": pieces_for(ctx.comp[st.id], len(b["vaos"]))}
+        keep = {"st": st, "vaos": b["vaos"], "base": b["base"], "gain": 0, "kind": "keep", **parts(st, len(b["vaos"]))}
         cands = [keep]
         seen = {(st.id, tuple(b["vaos"]))}
         targets = [(st, b["base"])]
@@ -283,15 +290,57 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
                 if free is None or free - cur_free < min_gain:
                     continue
                 cands.append({"st": t, "vaos": vaos, "base": base, "gain": free - cur_free,
-                              "kind": "respace" if t.id == st.id else "swap",
-                              "pieces": pieces_for(ctx.comp[t.id], len(vaos))})
+                              "kind": "respace" if t.id == st.id else "swap", **parts(t, len(vaos))})
         items.append({"bay": b, "ref": ref, "cands": cands})
     if stop():
         return {"error": _("Busca cancelada.")}
+    # ---- vizinhança das laterais
+    from services.structure_service import bay_neighbors
+
+    idx = {(it["bay"]["aisle"], it["bay"]["bay"]): i for i, it in enumerate(items)}
+    pairs_all, nb_source = bay_neighbors(db, branch_id, wid, geo)
+    pairs = [(a_, b_) for a_, b_ in pairs_all if (a_ in idx or a_ in fixed) and (b_ in idx or b_ in fixed)]
+
+    def share(c1: dict, c2: dict) -> bool:
+        return c1["sk"] is not None and c1["sk"] == c2["sk"] and abs(c1["depth"] - c2["depth"]) < 1.0
+
+    def opts(key):  # opções da estante (as fixas têm uma só)
+        return list(enumerate(items[idx[key]]["cands"])) if key in idx else [(0, fixed[key])]
+
+    def attributed(pick: list[int]) -> list[dict]:
+        """Peças de cada estante com a escolha `pick`: as próprias + as laterais (uma lateral compartilhada conta
+        meia para cada vizinha)."""
+        cand = {k: items[i]["cands"][pick[i]] for k, i in idx.items()}
+        cand.update(fixed)
+        nshared = defaultdict(int)
+        for a_, b_ in pairs:
+            if share(cand[a_], cand[b_]):
+                nshared[a_] += 1
+                nshared[b_] += 1
+        out = []
+        for i, it in enumerate(items):
+            k = (it["bay"]["aisle"], it["bay"]["bay"])
+            c = cand[k]
+            sides = 2 - 0.5 * nshared[k]
+            d = dict(c["own"])
+            for p_, q_ in c["side"].items():
+                d[p_] = d.get(p_, 0.0) + q_ * sides
+            out.append(d)
+        extra = defaultdict(float)  # peças das estantes fixas (entram no "hoje" e na proposta iguais)
+        for k, c in fixed.items():
+            sides = 2 - 0.5 * nshared[k]
+            for p_, q_ in c["own"].items():
+                extra[p_] += q_
+            for p_, q_ in c["side"].items():
+                extra[p_] += q_ * sides
+        return out, extra
+
     # ---- escolha
     prog(2, 4, _("Escolhendo as recomposições (maior ganho)"))
-    all_pieces = sorted({p for it in items for c in it["cands"] for p in c["pieces"]})
-    have = {p: sum(it["cands"][0]["pieces"].get(p, 0.0) for it in items) for p in all_pieces}
+    all_pieces = sorted({p for it in items for c in it["cands"] for p in (*c["own"], *c["side"])}
+                        | {p for c in fixed.values() for p in (*c["own"], *c["side"])})
+    base_att, base_extra = attributed([0] * len(items))
+    have = {p: sum(a.get(p, 0.0) for a in base_att) + base_extra.get(p, 0.0) for p in all_pieces}
     from models import StructurePiece
 
     pc = {p.id: p for p in db.scalars(select(StructurePiece))}
@@ -304,8 +353,28 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
         for j, v in enumerate(vs):
             x[i, j] = v
     S = 100  # peças em centésimos (composição com frações)
-    need = {p: sum(int(round(c["pieces"].get(p, 0.0) * S)) * x[i, j] for i, it in enumerate(items)
-                   for j, c in enumerate(it["cands"])) for p in all_pieces}
+    # cada estante com as 2 laterais; cada fronteira compartilhada devolve uma lateral (a da estante da esquerda)
+    need = {p: sum(int(round((c["own"].get(p, 0.0) + 2 * c["side"].get(p, 0.0)) * S)) * x[i, j]
+                   for i, it in enumerate(items) for j, c in enumerate(it["cands"]))
+            + int(round(sum(c["own"].get(p, 0.0) + 2 * c["side"].get(p, 0.0) for c in fixed.values()) * S))
+            for p in all_pieces}
+    for a_, b_ in pairs:
+        for ja, ca in opts(a_):
+            for jb, cb in opts(b_):
+                if not share(ca, cb) or not ca["side"]:
+                    continue
+                if a_ in idx and b_ in idx:  # as duas mudam: y = (escolha da esquerda) E (escolha da direita)
+                    y = m.NewBoolVar("")
+                    xa, xb = x[idx[a_], ja], x[idx[b_], jb]
+                    m.Add(y <= xa)
+                    m.Add(y <= xb)
+                    m.Add(y >= xa + xb - 1)
+                elif a_ in idx or b_ in idx:
+                    y = x[idx[a_], ja] if a_ in idx else x[idx[b_], jb]
+                else:
+                    y = 1
+                for p_, q_ in ca["side"].items():
+                    need[p_] = need[p_] - int(round(q_ * S)) * y
     buy = {}
     for p in all_pieces:
         hv = int(round(have[p] * S))
@@ -353,14 +422,17 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     types = ctx.types
     changes = []
     used_p: dict[int, float] = defaultdict(float)
+    final_att, final_extra = attributed(pick)
+    for p, q in final_extra.items():
+        used_p[p] += q
     for i, it in enumerate(items):
         c = it["cands"][pick[i]]
-        for p, q in c["pieces"].items():
+        for p, q in final_att[i].items():
             used_p[p] += q
         if pick[i] == 0:
-            continue
+            continue  # mantida (se uma vizinha trocou, a diferença das laterais entra no saldo das peças)
         b, k = it["bay"], it["cands"][0]
-        delta = {p: c["pieces"].get(p, 0.0) - k["pieces"].get(p, 0.0) for p in set(c["pieces"]) | set(k["pieces"])}
+        delta = {p: final_att[i].get(p, 0.0) - base_att[i].get(p, 0.0) for p in set(final_att[i]) | set(base_att[i])}
         changes.append({"aisle": b["aisle"], "bay": b["bay"], "kind": c["kind"], "from_id": b["st"].id,
                         "from_code": b["st"].code, "to_id": c["st"].id, "to_code": c["st"].code,
                         "levels_from": len(k["vaos"]), "levels_to": len(c["vaos"]), "vaos_from": [round(v, 1) for v in k["vaos"]],
@@ -380,13 +452,15 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
                           "have": hv, "need": nd, "freed": max(0.0, hv - nd), "bought": bought,
                           "unit": cost_of[p], "cost": cst})
     changes.sort(key=lambda c: (-c["gain"], c["aisle"], c["bay"]))
+    final = {k: items[i]["cands"][pick[i]] for k, i in idx.items()} | fixed
     prog(4, 4, _("Pronto"))
     return {"branch_id": branch_id, "warehouse_id": wid, "pieces_mode": pieces, "min_gain": min_gain,
             "bays": len(items), "skipped": skipped, "changes": changes, "gain": sum(c["gain"] for c in changes),
             "levels_added": sum(c["levels_to"] - c["levels_from"] for c in changes), "pieces": plist,
             "cost": total_cost if any(p["bought"] for p in plist) else (0.0 if any_cost else None),
             "status": status if ok else "infeasible", "no_structure": _count_no_structure(db, branch_id, wid),
-            "door_blocked": door_blocked, "door_checked": geo is not None}
+            "door_blocked": door_blocked, "door_checked": geo is not None,
+            "neighbors": nb_source, "shared_pairs": sum(1 for a_, b_ in pairs if share(final[a_], final[b_]))}
 
 
 def _count_no_structure(db: Session, branch_id: int, wid: Optional[int]) -> int:

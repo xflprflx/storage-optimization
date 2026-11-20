@@ -28,6 +28,8 @@ STRUCTURES = {
 }
 # do tipo de estrutura (colunas opcionais): condição de armazenagem, porta, folhas, abertura (°), tempo da porta (s)
 KIND_EXTRA = {"CAM-120-70": ("Refrigerado", "De giro", 2, 90, 6)}
+# módulos vizinhos compartilham a lateral (colunas / quadro de montantes), pelo tipo; a câmara tem paredes próprias
+SHARED_SIDES = {"Estante": "sim", "Porta-palete": "sim", "Câmara refrigerada": "não"}
 # zona de ouro (cm do piso) das estantes: entre a cintura e o ombro
 GOLDEN = {"EST-100-40": (75, 150), "EST-100-60": (75, 150), "EST-120-60": (75, 150),
           "PP-270-110": (0, 160)}  # porta-palete: a separação boa é no nível do chão
@@ -325,9 +327,10 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
           ["Código", "Nome", "Tipo", "Frente (cm)", "Profundidade (cm)", "Altura (cm)", "Níveis", "Vão útil (cm)",
            "Carga por nível (kg)", "Custo por módulo (R$)", "Modo", "Qtd fixa", "Mín.", "Máx.",
            "Zona de ouro início (cm)", "Zona de ouro fim (cm)", "Condição de armazenagem", "Porta", "Folhas",
-           "Abertura (°)", "Tempo da porta (s)"],
-          [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None)), *KIND_EXTRA.get(code, (None,) * 5))
-           for code, mode in ex["structures"].items()], {2: 36, 17: 22})
+           "Abertura (°)", "Tempo da porta (s)", "Vizinhos compartilham a lateral (sim/não)"],
+          [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None)), *KIND_EXTRA.get(code, (None,) * 5),
+            SHARED_SIDES.get(STRUCTURES[code][1]))
+           for code, mode in ex["structures"].items()], {2: 36, 17: 22, 22: 22})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)"],

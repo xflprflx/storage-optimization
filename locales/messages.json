@@ -346,13 +346,13 @@
  },
  "(TODAS)": {
   "src": [
-   "services/master_importer.py:32"
+   "services/master_importer.py:33"
   ],
   "lazy": true
  },
  "(TODOS)": {
   "src": [
-   "services/master_importer.py:32"
+   "services/master_importer.py:33"
   ],
   "lazy": true
  },
@@ -642,7 +642,7 @@
  },
  ", {len} fora da planilha marcada(s) como \"Não usar\".": {
   "src": [
-   "services/site_import.py:565"
+   "services/site_import.py:562"
   ]
  },
  ", {n} criados": {
@@ -781,11 +781,16 @@
  },
  "1º nível": {
   "src": [
-   "services/site_import.py:532",
+   "services/site_import.py:529",
    "templates/levels/index.html:111",
    "static/field_help.js:76"
   ],
   "js": true
+ },
+ "1º nível + vãos (= {v} cm) passam da altura total ({height} cm).": {
+  "src": [
+   "services/structure_importer.py:348"
+  ]
  },
  "1º nível a {base} cm + {what} (= {v} cm) passam da altura total ({height} cm).": {
   "src": [
@@ -818,9 +823,9 @@
  },
  "2 zonas": {
   "src": [
-   "services/site_examples.py:148",
-   "services/site_examples.py:167",
-   "services/site_examples.py:191"
+   "services/site_examples.py:150",
+   "services/site_examples.py:169",
+   "services/site_examples.py:193"
   ],
   "lazy": true
  },
@@ -914,7 +919,7 @@
  },
  "5 zonas X/Y": {
   "src": [
-   "services/site_examples.py:126"
+   "services/site_examples.py:128"
   ],
   "lazy": true
  },
@@ -925,12 +930,12 @@
  },
  "6. Produtos": {
   "src": [
-   "templates/imports/index.html:28"
+   "templates/imports/index.html:43"
   ]
  },
  "7. Saldos de estoque": {
   "src": [
-   "templates/imports/index.html:36"
+   "templates/imports/index.html:51"
   ]
  },
  "70% da frente": {
@@ -946,7 +951,7 @@
  },
  "8. Histórico de pedidos (saídas)": {
   "src": [
-   "templates/imports/index.html:44"
+   "templates/imports/index.html:59"
   ]
  },
  "80% das saídas": {
@@ -1010,7 +1015,7 @@
  },
  "; {neg} quantidade(s) negativa(s) ignorada(s) — marque a conversão para valor absoluto.": {
   "src": [
-   "services/site_import.py:799"
+   "services/site_import.py:796"
   ]
  },
  "<a href=\"/locations?bin_type_id=none\">{without_bins}</a> endereço(s) sem bin": {
@@ -1610,6 +1615,12 @@
   ],
   "lazy": true
  },
+ "A capacidade dos níveis das estantes com a estrutura é recalculada pelas medidas novas.": {
+  "src": [
+   "services/structure_importer.py:498"
+  ],
+  "lazy": true
+ },
  "A capacidade dos níveis é sempre respeitada (<a href=\"/levels\" target=\"_blank\">cadastro</a>; considera as bins dos outros endereços do nível). Tipos sem capacidade cadastrada no nível têm a capacidade estimada pela largura do nível.": {
   "src": [
    "templates/optimization/index.html:137"
@@ -1996,9 +2007,15 @@
  },
  "Aberta em cima (sim/não)": {
   "src": [
-   "services/master_importer.py:53",
+   "services/master_importer.py:54",
    "services/site_import.py:278",
-   "services/site_import.py:954"
+   "services/site_import.py:951"
+  ],
+  "lazy": true
+ },
+ "Aberta em cima (sim/não): palete, bandeja, caixa sem tampa — a carga pode passar da borda, até o vão do nível ou até o Máximo acima da borda (cm). Informar só o máximo marca a bin como aberta.": {
+  "src": [
+   "services/master_importer.py:591"
   ],
   "lazy": true
  },
@@ -2009,9 +2026,15 @@
  },
  "Abertura da porta (°)": {
   "src": [
-   "services/site_import.py:274"
+   "services/site_import.py:274",
+   "services/structure_importer.py:133"
   ],
   "lazy": true
+ },
+ "Abertura da porta: 90 ou 180°.": {
+  "src": [
+   "services/structure_importer.py:206"
+  ]
  },
  "Abertura máxima": {
   "src": [
@@ -2300,11 +2323,11 @@
  "Altura (cm)": {
   "src": [
    "services/field_help.py:463",
-   "services/master_importer.py:47",
+   "services/master_importer.py:48",
    "services/site_import.py:276",
    "services/site_import.py:280",
-   "services/site_import.py:948",
-   "services/site_import.py:953"
+   "services/site_import.py:945",
+   "services/site_import.py:950"
   ],
   "help": true,
   "lazy": true
@@ -2346,8 +2369,9 @@
    "services/field_help.py:386",
    "services/field_help.py:420",
    "services/site_import.py:272",
-   "services/site_import.py:950",
-   "templates/structures/form.html:64"
+   "services/site_import.py:947",
+   "services/structure_importer.py:284",
+   "services/structure_importer.py:392"
   ],
   "help": true,
   "lazy": true
@@ -2537,7 +2561,7 @@
  },
  "Anterior": {
   "src": [
-   "templates/base.html:487",
+   "templates/base.html:491",
    "static/onboarding.js:73"
   ],
   "js": true
@@ -2580,7 +2604,7 @@
  },
  "Ao enviar a aba SKUs, o projeto passa a usar o arquivo como fonte da demanda (substitui a lista anterior).": {
   "src": [
-   "services/site_import.py:894"
+   "services/site_import.py:891"
   ]
  },
  "Ao final": {
@@ -2753,6 +2777,12 @@
    "templates/site/growth.html:22"
   ],
   "html": true
+ },
+ "Aplicar grava o vão de cada nível e a capacidade passa a ser calculada pelas medidas (com a folga acima da bin informada; vazio = 5 cm). Os limites manuais ficam, a não ser com Remover limites manuais = sim.": {
+  "src": [
+   "services/structure_importer.py:508"
+  ],
+  "lazy": true
  },
  "Aplicar limites e otimizar": {
   "src": [
@@ -2957,7 +2987,8 @@
  },
  "Armazém {w_code} não cadastrado": {
   "src": [
-   "services/master_importer.py:511"
+   "services/master_importer.py:512",
+   "services/structure_importer.py:424"
   ]
  },
  "Armazém(ns)": {
@@ -2978,17 +3009,17 @@
  },
  "Armazéns atualizados": {
   "src": [
-   "services/master_importer.py:212",
-   "services/master_importer.py:242"
+   "services/master_importer.py:213",
+   "services/master_importer.py:243"
   ],
   "lazy": true
  },
  "Armazéns criados": {
   "src": [
-   "services/master_importer.py:417",
-   "services/master_importer.py:212",
-   "services/master_importer.py:237",
-   "services/master_importer.py:361",
+   "services/master_importer.py:418",
+   "services/master_importer.py:213",
+   "services/master_importer.py:238",
+   "services/master_importer.py:362",
    "templates/imports/result.html:26",
    "templates/imports/result.html:32"
   ],
@@ -3138,7 +3169,7 @@
  },
  "Arraste para ajustar a largura · duplo clique: automático": {
   "src": [
-   "templates/base.html:427"
+   "templates/base.html:431"
   ],
   "js": true
  },
@@ -3554,8 +3585,9 @@
  "Baixar modelo CSV": {
   "src": [
    "templates/imports/index.html:20",
-   "templates/imports/index.html:31",
-   "templates/imports/index.html:39",
+   "templates/imports/index.html:35",
+   "templates/imports/index.html:46",
+   "templates/imports/index.html:54",
    "templates/imports/upload.html:8"
   ]
  },
@@ -3641,7 +3673,7 @@
  "Bin pai": {
   "src": [
    "services/field_help.py:471",
-   "services/master_importer.py:55",
+   "services/master_importer.py:56",
    "templates/bin_types/form.html:33"
   ],
   "help": true,
@@ -3649,17 +3681,17 @@
  },
  "Bin pai e divisão (ou fração) precisam ser informadas juntas": {
   "src": [
-   "services/master_importer.py:303"
+   "services/master_importer.py:304"
   ]
  },
  "Bin pai {pcode} não cadastrada (cadastre-a antes ou numa linha anterior)": {
   "src": [
-   "services/master_importer.py:299"
+   "services/master_importer.py:300"
   ]
  },
  "Bin pai {pcode} é um compartimento": {
   "src": [
-   "services/master_importer.py:301"
+   "services/master_importer.py:302"
   ]
  },
  "Bin vazia.": {
@@ -3841,7 +3873,7 @@
  },
  "Bins linha {i} ({code}): informe altura, largura e comprimento válidos.": {
   "src": [
-   "services/site_import.py:478"
+   "services/site_import.py:475"
   ]
  },
  "Bins necessárias": {
@@ -3965,7 +3997,7 @@
  },
  "Bins: medidas internas em cm, peso máx. em kg, volume em litros (vazio = calculado), custo em R$ por bin. Códigos já cadastrados mantêm as medidas; só o custo é atualizado.": {
   "src": [
-   "services/site_import.py:890"
+   "services/site_import.py:887"
   ]
  },
  "Bins: todas": {
@@ -3975,7 +4007,7 @@
  },
  "Bins: {created} tipo(s) cadastrado(s), {kept} já existente(s) mantido(s)": {
   "src": [
-   "services/site_import.py:486"
+   "services/site_import.py:483"
   ]
  },
  "Bloqueados (ocupados)": {
@@ -4092,7 +4124,7 @@
  },
  "CD com porta-paletes e picking": {
   "src": [
-   "services/site_examples.py:162"
+   "services/site_examples.py:164"
   ],
   "lazy": true
  },
@@ -4121,7 +4153,7 @@
  },
  "Cabeceiras (sim/não)": {
   "src": [
-   "services/site_import.py:912"
+   "services/site_import.py:909"
   ]
  },
  "Cabeceiras: módulos girados 90° nas pontas das fileiras": {
@@ -4137,7 +4169,7 @@
  },
  "Cabem (máx. bins)": {
   "src": [
-   "services/master_importer.py:81"
+   "services/master_importer.py:82"
   ],
   "lazy": true
  },
@@ -4224,7 +4256,13 @@
  },
  "Cada linha aplica capacidade e/ou vão a um conjunto de níveis: Corredor (obrigatório), Estante e Nível aceitam valor único, lista (01,03) ou faixa (01-04); vazio ou \"(todas)\" = todos.": {
   "src": [
-   "services/master_importer.py:609"
+   "services/master_importer.py:612"
+  ],
+  "lazy": true
+ },
+ "Cada linha aplica uma estrutura às estantes: Corredor (obrigatório) e Estante aceitam valor, lista (01,03) ou faixa (01-04); vazio = todas. \"remover\" na coluna Estrutura tira a estrutura das estantes.": {
+  "src": [
+   "services/structure_importer.py:506"
   ],
   "lazy": true
  },
@@ -4258,7 +4296,7 @@
  },
  "Cadastra/atualiza produtos por SKU (nome e dimensões) e define o endereço padrão. Filiais e armazéns informados são criados automaticamente pelos códigos.": {
   "src": [
-   "templates/imports/index.html:29"
+   "templates/imports/index.html:44"
   ]
  },
  "Cadastrar": {
@@ -4507,7 +4545,7 @@
  },
  "Campo": {
   "src": [
-   "services/site_import.py:909"
+   "services/site_import.py:906"
   ]
  },
  "Campo (nome do parâmetro)": {
@@ -4645,6 +4683,11 @@
    "routers/structures.py:168"
   ]
  },
+ "Capacidade dos níveis recalculada nas estantes com estas estruturas ({n} alteração(ões)).": {
+  "src": [
+   "services/structure_importer.py:377"
+  ]
+ },
  "Capacidade dos níveis, largura/altura máximas e \"remover bins de vazios\" não se aplicam ao pool: as bins não mudam de lugar nem de tipo.": {
   "src": [
    "templates/optimization/page.html:313"
@@ -4718,7 +4761,8 @@
  "Carga por nível (kg)": {
   "src": [
    "services/site_import.py:269",
-   "services/site_import.py:949"
+   "services/site_import.py:946",
+   "services/structure_importer.py:285"
   ],
   "lazy": true
  },
@@ -4776,7 +4820,7 @@
  },
  "Centro de distribuição de 60 × 36 m: zona de porta-paletes junto às docas, com corredor de empilhadeira de 3,2 m, e zona de picking em estantes com corredor de 1,2 m e um transversal, separadas por uma avenida de 3,5 m. Itens volumosos vão em palete; os pequenos, em bins. Recebimento (60 m²) e expedição (45 m²) posicionados pelo sistema junto às docas.": {
   "src": [
-   "services/site_examples.py:163"
+   "services/site_examples.py:165"
   ],
   "lazy": true
  },
@@ -4872,7 +4916,7 @@
  },
  "Coluna Filiais: uma ou mais filiais separadas por vírgula (01, 02). Filiais inexistentes são criadas com o código; as associações existentes são mantidas (só acrescenta).": {
   "src": [
-   "services/master_importer.py:583"
+   "services/master_importer.py:584"
   ],
   "lazy": true
  },
@@ -5301,7 +5345,7 @@
    "services/batch_generator.py:52",
    "services/batch_generator.py:55",
    "services/field_help.py:34",
-   "services/master_importer.py:69",
+   "services/master_importer.py:70",
    "templates/locations/form.html:31"
   ],
   "lazy": true
@@ -5335,13 +5379,13 @@
  },
  "Compartimentos: Bin pai (código de uma bin inteira, cadastrada antes ou em linha anterior) + Divisões na largura × no comprimento (ex.: 2 e 3 = 6 compartimentos). Alternativa: Fração (1/2…) + Divisão (largura ou comprimento). Sem dimensões, elas vêm da bin pai.": {
   "src": [
-   "services/master_importer.py:590"
+   "services/master_importer.py:593"
   ],
   "lazy": true
  },
  "Completas": {
   "src": [
-   "templates/base.html:522"
+   "templates/base.html:526"
   ],
   "js": true
  },
@@ -5392,11 +5436,11 @@
  "Comprimento (cm)": {
   "src": [
    "services/field_help.py:465",
-   "services/master_importer.py:49",
+   "services/master_importer.py:50",
    "services/site_import.py:277",
    "services/site_import.py:281",
-   "services/site_import.py:953",
-   "services/site_import.py:960"
+   "services/site_import.py:950",
+   "services/site_import.py:957"
   ],
   "help": true,
   "lazy": true
@@ -5456,9 +5500,9 @@
    "services/site_import.py:284",
    "services/site_import.py:287",
    "services/site_import.py:291",
-   "services/site_import.py:920",
-   "services/site_import.py:928",
-   "services/site_import.py:934"
+   "services/site_import.py:917",
+   "services/site_import.py:925",
+   "services/site_import.py:931"
   ],
   "lazy": true
  },
@@ -5492,6 +5536,12 @@
   "help": true,
   "lazy": true
  },
+ "Condição: ambiente, refrigerado, congelado ou controlado. Porta: sem, de giro ou de correr; folhas 1 ou 2; dobradiça esquerda ou direita; abertura 90 ou 180°; tempo para abrir e fechar (s).": {
+  "src": [
+   "services/structure_importer.py:484"
+  ],
+  "lazy": true
+ },
  "Confere se as unidades cabem na bin pelas medidas, não só pelo volume.": {
   "src": [
    "services/field_help.py:283"
@@ -5518,7 +5568,7 @@
   "src": [
    "routers/settings.py:13",
    "services/onboarding.py:271",
-   "templates/base.html:245",
+   "templates/base.html:249",
    "templates/settings.html:2",
    "templates/settings.html:4"
   ],
@@ -5734,6 +5784,17 @@
   ],
   "help": true
  },
+ "Cor no 3D (#rrggbb)": {
+  "src": [
+   "services/structure_importer.py:139"
+  ],
+  "lazy": true
+ },
+ "Cor no 3D inválida: {raw} (use #rrggbb).": {
+  "src": [
+   "services/structure_importer.py:224"
+  ]
+ },
  "Cores identificadas pela IA nas peças: {v}.": {
   "src": [
    "templates/_look.html:99"
@@ -5747,7 +5808,7 @@
    "services/field_help.py:371",
    "services/field_help.py:30",
    "services/level_service.py:330",
-   "services/master_importer.py:65"
+   "services/master_importer.py:66"
   ],
   "lazy": true,
   "help": true,
@@ -5773,7 +5834,8 @@
  },
  "Corredor (ex.: A ou A,B ou A-C)": {
   "src": [
-   "services/master_importer.py:77"
+   "services/master_importer.py:78",
+   "services/structure_importer.py:388"
   ],
   "lazy": true
  },
@@ -5836,8 +5898,9 @@
  },
  "Corredor vazio": {
   "src": [
-   "services/master_importer.py:515",
-   "services/master_importer.py:383"
+   "services/master_importer.py:516",
+   "services/master_importer.py:384",
+   "services/structure_importer.py:428"
   ]
  },
  "Corredor {aisle}": {
@@ -5897,7 +5960,7 @@
  "Corredores transversais": {
   "src": [
    "services/site_import.py:285",
-   "services/site_import.py:921",
+   "services/site_import.py:918",
    "services/site_report.py:107"
   ],
   "lazy": true
@@ -5923,7 +5986,7 @@
  },
  "Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores": {
   "src": [
-   "templates/base.html:533"
+   "templates/base.html:537"
   ],
   "js": true
  },
@@ -5935,13 +5998,13 @@
  },
  "Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)": {
   "src": [
-   "templates/base.html:534"
+   "templates/base.html:538"
   ],
   "js": true
  },
  "Cotas encadeadas em volta da planta (bordas de cima e da esquerda)": {
   "src": [
-   "templates/base.html:533"
+   "templates/base.html:537"
   ],
   "js": true
  },
@@ -6017,6 +6080,12 @@
    "services/field_help.py:389"
   ],
   "help": true
+ },
+ "Criar níveis que faltam (sim/não)": {
+  "src": [
+   "services/structure_importer.py:393"
+  ],
+  "lazy": true
  },
  "Criar ou importar": {
   "src": [
@@ -6140,9 +6209,9 @@
  "Custo por bin (R$)": {
   "src": [
    "services/field_help.py:470",
-   "services/master_importer.py:52",
+   "services/master_importer.py:53",
    "services/site_import.py:278",
-   "services/site_import.py:954",
+   "services/site_import.py:951",
    "templates/bin_types/form.html:81"
   ],
   "help": true,
@@ -6158,7 +6227,8 @@
   "src": [
    "services/field_help.py:423",
    "services/site_import.py:269",
-   "services/site_import.py:949",
+   "services/site_import.py:946",
+   "services/structure_importer.py:286",
    "templates/structures/form.html:81"
   ],
   "help": true,
@@ -6173,9 +6243,11 @@
  },
  "Custo por peça (R$)": {
   "src": [
+   "services/structure_importer.py:64",
    "templates/structure_kinds/piece_form.html:25",
    "templates/structure_kinds/pieces.html:27"
-  ]
+  ],
+  "lazy": true
  },
  "Custo total": {
   "src": [
@@ -6228,8 +6300,8 @@
   "src": [
    "services/site_import.py:267",
    "services/site_import.py:276",
-   "services/site_import.py:948",
-   "services/site_import.py:953",
+   "services/site_import.py:945",
+   "services/site_import.py:950",
    "services/site_report.py:316",
    "services/site_report.py:563"
   ],
@@ -6262,9 +6334,11 @@
  },
  "Código com mais de 30 caracteres": {
   "src": [
-   "services/master_importer.py:176",
-   "services/master_importer.py:224",
-   "services/master_importer.py:281"
+   "services/master_importer.py:177",
+   "services/master_importer.py:225",
+   "services/master_importer.py:282",
+   "services/structure_importer.py:79",
+   "services/structure_importer.py:306"
   ]
  },
  "Código da Filial": {
@@ -6288,14 +6362,16 @@
  },
  "Código da estrutura": {
   "src": [
-   "services/field_help.py:411"
+   "services/field_help.py:411",
+   "services/structure_importer.py:275"
   ],
-  "help": true
+  "help": true,
+  "lazy": true
  },
  "Código da filial": {
   "src": [
    "services/field_help.py:517",
-   "services/master_importer.py:36",
+   "services/master_importer.py:37",
    "services/onboarding.py:53"
   ],
   "help": true,
@@ -6320,9 +6396,11 @@
  },
  "Código da peça": {
   "src": [
-   "services/field_help.py:455"
+   "services/field_help.py:455",
+   "services/structure_importer.py:62"
   ],
-  "help": true
+  "help": true,
+  "lazy": true
  },
  "Código de armazém muito longo: {code}": {
   "src": [
@@ -6353,7 +6431,7 @@
   "src": [
    "services/field_help.py:205",
    "services/field_help.py:521",
-   "services/master_importer.py:40",
+   "services/master_importer.py:41",
    "services/onboarding.py:61"
   ],
   "help": true,
@@ -6367,7 +6445,7 @@
  },
  "Código do tipo": {
   "src": [
-   "services/master_importer.py:45"
+   "services/master_importer.py:46"
   ],
   "lazy": true
  },
@@ -6398,9 +6476,11 @@
  },
  "Código vazio": {
   "src": [
-   "services/master_importer.py:174",
-   "services/master_importer.py:222",
-   "services/master_importer.py:279"
+   "services/master_importer.py:175",
+   "services/master_importer.py:223",
+   "services/master_importer.py:280",
+   "services/structure_importer.py:77",
+   "services/structure_importer.py:304"
   ]
  },
  "Código é obrigatório.": {
@@ -6424,14 +6504,24 @@
   ],
   "help": true
  },
+ "Código, nome e custo por peça (montantes, longarinas, prateleiras…).": {
+  "src": [
+   "templates/imports/index.html:26"
+  ]
+ },
  "Código, nome e filiais (lista \"01, 02\"). Cria filiais inexistentes e as associações.": {
   "src": [
    "templates/imports/index.html:11"
   ]
  },
- "Código, nome, dimensões (cm), peso máximo (kg) e volume (L).": {
+ "Código, nome, dimensões (cm), peso máximo (kg), volume (L) e se é aberta em cima.": {
   "src": [
    "templates/imports/index.html:12"
+  ]
+ },
+ "Código, tipo, frente, profundidade, altura, níveis, vãos (também por nível), 1º nível, carga, custo e zona de ouro.": {
+  "src": [
+   "templates/imports/index.html:28"
   ]
  },
  "Códigos com no máximo 20 caracteres.": {
@@ -6499,7 +6589,7 @@
  "Data": {
   "src": [
    "services/site_import.py:292",
-   "services/site_import.py:966",
+   "services/site_import.py:963",
    "templates/optimization/page.html:554",
    "templates/slotting/routes.html:201",
    "static/field_help.js:193"
@@ -6685,7 +6775,7 @@
  },
  "Depois de gravar as bins são aplicadas as regras de níveis (níveis dedicados e vão).": {
   "src": [
-   "services/master_importer.py:604"
+   "services/master_importer.py:607"
   ],
   "lazy": true
  },
@@ -7200,7 +7290,7 @@
  },
  "Divisão (largura/comprimento)": {
   "src": [
-   "services/master_importer.py:59"
+   "services/master_importer.py:60"
   ],
   "lazy": true
  },
@@ -7213,7 +7303,7 @@
  "Divisões na largura": {
   "src": [
    "services/field_help.py:472",
-   "services/master_importer.py:56"
+   "services/master_importer.py:57"
   ],
   "help": true,
   "lazy": true
@@ -7221,7 +7311,7 @@
  "Divisões no comprimento": {
   "src": [
    "services/field_help.py:473",
-   "services/master_importer.py:57"
+   "services/master_importer.py:58"
   ],
   "help": true,
   "lazy": true
@@ -7253,6 +7343,12 @@
    "services/field_help.py:439"
   ],
   "help": true
+ },
+ "Dobradiça (esquerda / direita)": {
+  "src": [
+   "services/structure_importer.py:132"
+  ],
+  "lazy": true
  },
  "Dobradiça (vista de frente)": {
   "src": [
@@ -7664,7 +7760,7 @@
  },
  "Endereçamento (corredor/rua)": {
   "src": [
-   "services/site_import.py:914"
+   "services/site_import.py:911"
   ]
  },
  "Endereço": {
@@ -7702,7 +7798,7 @@
  },
  "Endereço completo (A-01-02-03)": {
   "src": [
-   "services/master_importer.py:64"
+   "services/master_importer.py:65"
   ],
   "lazy": true
  },
@@ -7919,8 +8015,8 @@
  },
  "Endereços com bins gravadas": {
   "src": [
-   "services/master_importer.py:459",
-   "services/master_importer.py:360"
+   "services/master_importer.py:460",
+   "services/master_importer.py:361"
   ],
   "lazy": true
  },
@@ -7931,8 +8027,8 @@
  },
  "Endereços criados": {
   "src": [
-   "services/master_importer.py:360",
-   "services/master_importer.py:434",
+   "services/master_importer.py:361",
+   "services/master_importer.py:435",
    "templates/imports/result.html:27",
    "templates/imports/result.html:31"
   ],
@@ -7969,8 +8065,8 @@
  },
  "Endereços já existentes": {
   "src": [
-   "services/master_importer.py:360",
-   "services/master_importer.py:438"
+   "services/master_importer.py:361",
+   "services/master_importer.py:439"
   ],
   "lazy": true
  },
@@ -8469,9 +8565,11 @@
  },
  "Espessura do nível (cm)": {
   "src": [
+   "services/structure_importer.py:128",
    "templates/structure_kinds/form.html:85",
    "templates/structure_kinds/list.html:28"
-  ]
+  ],
+  "lazy": true
  },
  "Esta filial ainda não tem planta desenhada.": {
   "src": [
@@ -8502,7 +8600,7 @@
    "services/field_help.py:372",
    "services/field_help.py:31",
    "services/level_service.py:330",
-   "services/master_importer.py:66"
+   "services/master_importer.py:67"
   ],
   "lazy": true,
   "help": true,
@@ -8528,7 +8626,8 @@
  },
  "Estante (vazio = todas; 01-04)": {
   "src": [
-   "services/master_importer.py:78"
+   "services/master_importer.py:79",
+   "services/structure_importer.py:389"
   ],
   "lazy": true
  },
@@ -8599,6 +8698,13 @@
    "templates/levels/recompose.html:18"
   ]
  },
+ "Estantes com estrutura": {
+  "src": [
+   "services/structure_importer.py:447",
+   "services/structure_importer.py:404"
+  ],
+  "lazy": true
+ },
  "Estantes da fileira": {
   "src": [
    "services/field_help.py:96"
@@ -8615,6 +8721,13 @@
    "services/field_help.py:383"
   ],
   "help": true
+ },
+ "Estantes sem estrutura": {
+  "src": [
+   "services/structure_importer.py:404",
+   "services/structure_importer.py:436"
+  ],
+  "lazy": true
  },
  "Estantes ímpares e pares costumam ficar em lados opostos do corredor; a numeração importa para estimar a caminhada quando não há planta desenhada.": {
   "src": [
@@ -8679,6 +8792,12 @@
   "lazy": true,
   "help": true
  },
+ "Estrutura (código; \"remover\" tira a estrutura)": {
+  "src": [
+   "services/structure_importer.py:390"
+  ],
+  "lazy": true
+ },
  "Estrutura ajustada à altura das bins — vão subiu em {len} nível(is): {v}{more}.": {
   "src": [
    "services/level_service.py:307"
@@ -8698,7 +8817,9 @@
  "Estrutura das estantes": {
   "src": [
    "services/field_help.py:339",
-   "services/onboarding.py:140"
+   "services/onboarding.py:140",
+   "templates/base.html:244",
+   "templates/imports/index.html:29"
   ],
   "help": true,
   "lazy": true
@@ -8719,6 +8840,22 @@
    "templates/locations/batch.html:84"
   ],
   "html": true
+ },
+ "Estrutura nova: código, tipo, frente, profundidade, altura (cm), nº de níveis e vão útil. Existentes são atualizadas só nos campos preenchidos.": {
+  "src": [
+   "services/structure_importer.py:495"
+  ],
+  "lazy": true
+ },
+ "Estrutura nova: informe o tipo de estrutura.": {
+  "src": [
+   "services/structure_importer.py:329"
+  ]
+ },
+ "Estrutura nova: informe {v}.": {
+  "src": [
+   "services/structure_importer.py:327"
+  ]
  },
  "Estrutura não encontrada.": {
   "src": [
@@ -8774,6 +8911,11 @@
    "routers/structures.py:185"
   ]
  },
+ "Estrutura {code} não cadastrada": {
+  "src": [
+   "services/structure_importer.py:440"
+  ]
+ },
  "Estrutura: o mínimo é maior que o máximo.": {
   "src": [
    "services/site_service.py:294"
@@ -8784,9 +8926,16 @@
    "routers/runs.py:97",
    "services/onboarding.py:222",
    "services/site_import.py:263",
-   "services/site_import.py:947",
+   "services/site_import.py:944",
    "services/site_report.py:130",
    "templates/optimization/page.html:328"
+  ],
+  "lazy": true
+ },
+ "Estruturas atualizadas": {
+  "src": [
+   "services/structure_importer.py:296",
+   "services/structure_importer.py:367"
   ],
   "lazy": true
  },
@@ -8795,41 +8944,48 @@
    "services/site_planner.py:608"
   ]
  },
+ "Estruturas criadas": {
+  "src": [
+   "services/structure_importer.py:296",
+   "services/structure_importer.py:355"
+  ],
+  "lazy": true
+ },
  "Estruturas de armazenagem": {
   "src": [
    "routers/structures.py:15",
    "services/onboarding.py:331",
    "templates/base.html:228",
-   "templates/site/project.html:235",
-   "templates/structures/list.html:3",
-   "templates/structures/list.html:6"
+   "templates/base.html:243",
+   "templates/imports/index.html:28",
+   "templates/site/project.html:235"
   ],
   "lazy": true
  },
  "Estruturas linha {i} ({code}): 1º nível + vãos ({total} cm) passam da altura total ({float} cm) — altura do 1º nível e vãos por nível não foram gravados.": {
   "src": [
-   "services/site_import.py:547"
+   "services/site_import.py:544"
   ]
  },
  "Estruturas linha {i} ({code}): informe frente, profundidade, altura, níveis e vão.": {
   "src": [
-   "services/site_import.py:511"
+   "services/site_import.py:508"
   ]
  },
  "Estruturas linha {i} ({code}): vãos por nível inválidos (use 45; 40; 35).": {
   "src": [
-   "services/site_import.py:539"
+   "services/site_import.py:536"
   ]
  },
  "Estruturas linha {i} ({code}): zona de ouro precisa de início e fim (fim maior).": {
   "src": [
-   "services/site_import.py:530"
+   "services/site_import.py:527"
   ]
  },
  "Estruturas permitidas (códigos)": {
   "src": [
    "services/site_import.py:285",
-   "services/site_import.py:921"
+   "services/site_import.py:918"
   ],
   "lazy": true
  },
@@ -8839,6 +8995,11 @@
   ],
   "help": true
  },
+ "Estruturas — importe nesta ordem (a estrutura das estantes depois dos endereços)": {
+  "src": [
+   "templates/imports/index.html:24"
+  ]
+ },
  "Estruturas — quantidades": {
   "src": [
    "templates/site/project.html:615"
@@ -8846,17 +9007,17 @@
  },
  "Estruturas: coluna Código não encontrada.": {
   "src": [
-   "services/site_import.py:494"
+   "services/site_import.py:491"
   ]
  },
  "Estruturas: medidas em cm. Modo: Otimizar (o sistema decide a quantidade, com Mín./Máx. opcionais), Fixa (usa exatamente Qtd fixa) ou Não usar. Códigos existentes são atualizados.": {
   "src": [
-   "services/site_import.py:888"
+   "services/site_import.py:885"
   ]
  },
  "Estruturas: {created} cadastrada(s), {updated} atualizada(s)": {
   "src": [
-   "services/site_import.py:564"
+   "services/site_import.py:561"
   ]
  },
  "Estruturas: {leg}": {
@@ -8871,7 +9032,7 @@
  },
  "Etapa {i}": {
   "src": [
-   "templates/base.html:474"
+   "templates/base.html:478"
   ],
   "js": true
  },
@@ -9029,13 +9190,19 @@
  },
  "Exclui as filiais que não estão no arquivo. Filial com endereços ou níveis é mantida.": {
   "src": [
-   "services/master_importer.py:575"
+   "services/master_importer.py:576"
+  ],
+  "lazy": true
+ },
+ "Exclui as peças que não estão no arquivo. Peça que está na composição de algum tipo de estrutura é mantida.": {
+  "src": [
+   "services/structure_importer.py:472"
   ],
   "lazy": true
  },
  "Exclui os armazéns que não estão no arquivo; com a coluna Filiais mapeada, as associações filial×armazém ficam iguais às do arquivo. Armazém (ou associação) com endereços ou níveis é mantido.": {
   "src": [
-   "services/master_importer.py:580"
+   "services/master_importer.py:581"
   ],
   "lazy": true
  },
@@ -9047,7 +9214,7 @@
  },
  "Exclui os tipos de bin que não estão no arquivo (com as capacidades de nível deles). Tipo usado em algum endereço, ou bin pai de um compartimento que fica, é mantido.": {
   "src": [
-   "services/master_importer.py:586"
+   "services/master_importer.py:587"
   ],
   "lazy": true
  },
@@ -9607,7 +9774,7 @@
  },
  "Fileiras nas paredes + escritório no canto": {
   "src": [
-   "services/site_examples.py:122"
+   "services/site_examples.py:124"
   ],
   "lazy": true
  },
@@ -9629,7 +9796,7 @@
  },
  "Filiais (lista: 01, 02)": {
   "src": [
-   "services/master_importer.py:42"
+   "services/master_importer.py:43"
   ],
   "lazy": true
  },
@@ -9640,19 +9807,19 @@
  },
  "Filiais atualizadas": {
   "src": [
-   "services/master_importer.py:166",
-   "services/master_importer.py:193"
+   "services/master_importer.py:167",
+   "services/master_importer.py:194"
   ],
   "lazy": true
  },
  "Filiais criadas": {
   "src": [
-   "services/master_importer.py:228",
-   "services/master_importer.py:416",
-   "services/master_importer.py:166",
-   "services/master_importer.py:188",
-   "services/master_importer.py:212",
-   "services/master_importer.py:361"
+   "services/master_importer.py:229",
+   "services/master_importer.py:417",
+   "services/master_importer.py:167",
+   "services/master_importer.py:189",
+   "services/master_importer.py:213",
+   "services/master_importer.py:362"
   ],
   "lazy": true
  },
@@ -9669,7 +9836,7 @@
  },
  "Filiais e armazéns inexistentes são criados com o código. Endereços existentes não são duplicados; conflitos de hierarquia (posição genérica × compartimentos) são recusados por linha.": {
   "src": [
-   "services/master_importer.py:601"
+   "services/master_importer.py:604"
   ],
   "lazy": true
  },
@@ -9682,7 +9849,7 @@
  },
  "Filiais existentes (mesmo código) têm o nome atualizado, se a opção estiver marcada.": {
   "src": [
-   "services/master_importer.py:578"
+   "services/master_importer.py:579"
   ],
   "lazy": true
  },
@@ -9703,9 +9870,15 @@
    "templates/imports/upload.html:43"
   ]
  },
+ "Filiais, armazéns, endereços e estruturas precisam existir (importe os endereços e as estruturas antes).": {
+  "src": [
+   "services/structure_importer.py:510"
+  ],
+  "lazy": true
+ },
  "Filiais, armazéns, tipos de bin e endereços precisam existir (gere os endereços antes).": {
   "src": [
-   "services/master_importer.py:613"
+   "services/master_importer.py:616"
   ],
   "lazy": true
  },
@@ -9848,13 +10021,15 @@
  },
  "Filial vazia (mapeie a coluna ou informe a filial padrão)": {
   "src": [
-   "services/master_importer.py:407",
-   "services/master_importer.py:504"
+   "services/master_importer.py:408",
+   "services/master_importer.py:505",
+   "services/structure_importer.py:418"
   ]
  },
  "Filial {b_code} não cadastrada": {
   "src": [
-   "services/master_importer.py:506"
+   "services/master_importer.py:507",
+   "services/structure_importer.py:420"
   ]
  },
  "Filial {code} - {name} · {filename}": {
@@ -9905,8 +10080,8 @@
  },
  "Filial×Armazém associados": {
   "src": [
-   "services/master_importer.py:245",
-   "services/master_importer.py:213",
+   "services/master_importer.py:246",
+   "services/master_importer.py:214",
    "templates/imports/result.html:27",
    "templates/imports/result.html:33"
   ],
@@ -10028,7 +10203,7 @@
  },
  "Fixa": {
   "src": [
-   "services/site_import.py:938",
+   "services/site_import.py:935",
    "templates/site/project.html:241"
   ]
  },
@@ -10066,9 +10241,11 @@
   "src": [
    "services/field_help.py:186",
    "services/field_help.py:385",
+   "services/structure_importer.py:391",
    "templates/site/project.html:337"
   ],
-  "help": true
+  "help": true,
+  "lazy": true
  },
  "Folga acima da bin (cm) para tirá-la do nível": {
   "src": [
@@ -10122,9 +10299,15 @@
  },
  "Folhas da porta": {
   "src": [
-   "services/site_import.py:274"
+   "services/site_import.py:274",
+   "services/structure_importer.py:131"
   ],
   "lazy": true
+ },
+ "Folhas da porta: 1 ou 2.": {
+  "src": [
+   "services/structure_importer.py:198"
+  ]
  },
  "Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs).": {
   "src": [
@@ -10199,7 +10382,8 @@
  },
  "Foram informados {len} vãos para {levels} níveis.": {
   "src": [
-   "routers/structures.py:92"
+   "routers/structures.py:92",
+   "services/structure_importer.py:336"
   ]
  },
  "Formato '{v}' não suportado. Use CSV, TXT ou XLSX (arquivos .xls antigos devem ser salvos como .xlsx).": {
@@ -10238,7 +10422,7 @@
  },
  "Fração (ex.: 1/2) — alternativa às divisões": {
   "src": [
-   "services/master_importer.py:58"
+   "services/master_importer.py:59"
   ],
   "lazy": true
  },
@@ -10258,8 +10442,9 @@
  "Frente (cm)": {
   "src": [
    "services/site_import.py:267",
-   "services/site_import.py:948",
-   "services/site_report.py:332"
+   "services/site_import.py:945",
+   "services/site_report.py:332",
+   "services/structure_importer.py:278"
   ],
   "lazy": true
  },
@@ -10339,13 +10524,13 @@
  },
  "Galpão de 48 × 30 m com docas na frente, um corredor transversal e estantes de 3 tamanhos (porta-palete desligado). Zona única, orientação automática.": {
   "src": [
-   "services/site_examples.py:107"
+   "services/site_examples.py:109"
   ],
   "lazy": true
  },
  "Galpão médio de picking": {
   "src": [
-   "services/site_examples.py:106"
+   "services/site_examples.py:108"
   ],
   "lazy": true
  },
@@ -10380,7 +10565,7 @@
  },
  "Genérico (sim/não)": {
   "src": [
-   "services/master_importer.py:70"
+   "services/master_importer.py:71"
   ],
   "lazy": true
  },
@@ -10650,7 +10835,7 @@
  },
  "Hierarquia incompleta: um nível foi preenchido sem o anterior": {
   "src": [
-   "services/master_importer.py:386"
+   "services/master_importer.py:387"
   ]
  },
  "Histórico de pedidos": {
@@ -10885,9 +11070,9 @@
    "templates/bin_types/list.html:7",
    "templates/branches/list.html:7",
    "templates/imports/index.html:19",
+   "templates/imports/index.html:34",
    "templates/levels/index.html:15",
-   "templates/locations/list.html:11",
-   "templates/products/list.html:8"
+   "templates/locations/list.html:11"
   ]
  },
  "Importar dados da filial nova": {
@@ -10897,20 +11082,20 @@
  },
  "Importar histórico": {
   "src": [
-   "templates/imports/index.html:46",
+   "templates/imports/index.html:61",
    "templates/imports/mapping_history.html:42"
   ]
  },
  "Importar produtos": {
   "src": [
    "templates/dashboard.html:8",
-   "templates/imports/index.html:30"
+   "templates/imports/index.html:45"
   ]
  },
  "Importar saldos": {
   "src": [
    "templates/dashboard.html:9",
-   "templates/imports/index.html:38",
+   "templates/imports/index.html:53",
    "templates/stock/list.html:8"
   ]
  },
@@ -10919,27 +11104,45 @@
    "routers/site.py:849"
   ]
  },
+ "Importação da Estrutura das estantes": {
+  "src": [
+   "services/structure_importer.py:504"
+  ],
+  "lazy": true
+ },
  "Importação de Armazéns": {
   "src": [
-   "services/master_importer.py:580"
+   "services/master_importer.py:581"
   ],
   "lazy": true
  },
  "Importação de Capacidade dos Níveis": {
   "src": [
-   "services/master_importer.py:607"
+   "services/master_importer.py:610"
   ],
   "lazy": true
  },
  "Importação de Endereços": {
   "src": [
-   "services/master_importer.py:597"
+   "services/master_importer.py:600"
+  ],
+  "lazy": true
+ },
+ "Importação de Estruturas de armazenagem": {
+  "src": [
+   "services/structure_importer.py:493"
   ],
   "lazy": true
  },
  "Importação de Filiais": {
   "src": [
-   "services/master_importer.py:575"
+   "services/master_importer.py:576"
+  ],
+  "lazy": true
+ },
+ "Importação de Peças de estrutura": {
+  "src": [
+   "services/structure_importer.py:473"
   ],
   "lazy": true
  },
@@ -10957,7 +11160,13 @@
  },
  "Importação de Tipos de Bin": {
   "src": [
-   "services/master_importer.py:586"
+   "services/master_importer.py:587"
+  ],
+  "lazy": true
+ },
+ "Importação de Tipos de estrutura": {
+  "src": [
+   "services/structure_importer.py:480"
   ],
   "lazy": true
  },
@@ -11011,7 +11220,7 @@
   "src": [
    "services/onboarding.py:220",
    "services/site_import.py:263",
-   "services/site_import.py:909",
+   "services/site_import.py:906",
    "services/site_report.py:104",
    "templates/layout/plan.html:53",
    "templates/site/index.html:53"
@@ -11020,7 +11229,7 @@
  },
  "Imóvel de 24 × 26 m com zonas posicionadas por X/Y: fileiras perpendiculares encostadas nas paredes da esquerda e da direita (esta abaixo do escritório), fileiras horizontais no meio (mais curtas no alto), uma fileira curta perpendicular junto ao escritório e circulação entre as zonas.": {
   "src": [
-   "services/site_examples.py:123"
+   "services/site_examples.py:125"
   ],
   "lazy": true
  },
@@ -11033,7 +11242,7 @@
  },
  "Imóvel estreito com avenida no fundo": {
   "src": [
-   "services/site_examples.py:144"
+   "services/site_examples.py:146"
   ],
   "lazy": true
  },
@@ -11044,7 +11253,7 @@
  },
  "Imóvel: medidas em metros. Orientação: automática, comprimento ou largura.": {
   "src": [
-   "services/site_import.py:887"
+   "services/site_import.py:884"
   ]
  },
  "Imóvel: valor inválido para {cell} ({val}).": {
@@ -11097,6 +11306,16 @@
    "routers/bin_types.py:72"
   ]
  },
+ "Informe a estrutura (ou \"remover\").": {
+  "src": [
+   "services/structure_importer.py:431"
+  ]
+ },
+ "Informe a quantidade da peça {code}.": {
+  "src": [
+   "services/structure_importer.py:220"
+  ]
+ },
  "Informe ao menos uma medida (altura, largura, comprimento ou peso) ou um produto modelo.": {
   "src": [
    "routers/products.py:205"
@@ -11136,18 +11355,18 @@
  },
  "Informe o endereço completo (A-01-02-03) OU as colunas Corredor, Estante, Nível, Posição e Compartimento (só o corredor é obrigatório). Se as duas formas forem mapeadas, valem as colunas separadas.": {
   "src": [
-   "services/master_importer.py:599"
+   "services/master_importer.py:602"
   ],
   "lazy": true
  },
  "Informe o tipo de bin com a quantidade e/ou o vão": {
   "src": [
-   "services/master_importer.py:522"
+   "services/master_importer.py:523"
   ]
  },
  "Informe quantas bins cabem (0 remove a capacidade do tipo)": {
   "src": [
-   "services/master_importer.py:534"
+   "services/master_importer.py:535"
   ]
  },
  "Informe só a <b>área necessária</b>: o sistema testa faixas junto às paredes e cantos em várias proporções e escolhe o lugar que deixa mais posições de estrutura (empate: o mais perto das docas). Lado mínimo evita setores estreitos demais. A preferência restringe onde procurar; \"Posição fixa\" usa X/Y/comprimento/largura (como um obstáculo, inclusive desenhado com o mouse). A posição escolhida aparece na planta (com \"Mostrar fileiras\"), no resultado, no PDF e no 3D.": {
@@ -11180,7 +11399,7 @@
  },
  "Instruções": {
   "src": [
-   "services/site_import.py:882"
+   "services/site_import.py:879"
   ]
  },
  "Inverter": {
@@ -11374,7 +11593,7 @@
   "src": [
    "services/field_help.py:163",
    "services/site_import.py:289",
-   "services/site_import.py:933"
+   "services/site_import.py:930"
   ],
   "help": true,
   "lazy": true
@@ -11442,11 +11661,11 @@
  "Largura (cm)": {
   "src": [
    "services/field_help.py:464",
-   "services/master_importer.py:48",
+   "services/master_importer.py:49",
    "services/site_import.py:276",
    "services/site_import.py:280",
-   "services/site_import.py:953",
-   "services/site_import.py:960"
+   "services/site_import.py:950",
+   "services/site_import.py:957"
   ],
   "help": true,
   "lazy": true
@@ -11568,9 +11787,9 @@
    "services/site_import.py:286",
    "services/site_import.py:288",
    "services/site_import.py:291",
-   "services/site_import.py:920",
-   "services/site_import.py:928",
-   "services/site_import.py:934"
+   "services/site_import.py:917",
+   "services/site_import.py:925",
+   "services/site_import.py:931"
   ],
   "lazy": true
  },
@@ -11653,7 +11872,7 @@
  },
  "Liberação": {
   "src": [
-   "services/site_import.py:966"
+   "services/site_import.py:963"
   ]
  },
  "Liberação (horário)": {
@@ -11871,8 +12090,8 @@
  },
  "Linhas aplicadas": {
   "src": [
-   "services/master_importer.py:548",
-   "services/master_importer.py:488"
+   "services/master_importer.py:549",
+   "services/master_importer.py:489"
   ],
   "lazy": true
  },
@@ -11984,19 +12203,19 @@
  },
  "Loja com câmaras refrigeradas": {
   "src": [
-   "services/site_examples.py:186"
+   "services/site_examples.py:188"
   ],
   "lazy": true
  },
  "Loja/depósito de 14 × 3,2 m onde só cabe um corredor. Em vez de o corredor terminar na parede (o colaborador vai até o fundo e volta), uma zona no fundo com fileira perpendicular de frente para a avenida abre a circulação.": {
   "src": [
-   "services/site_examples.py:145"
+   "services/site_examples.py:147"
   ],
   "lazy": true
  },
  "Loja/depósito de 24 × 14 m: zona de seco em estantes (corredor de 1,2 m) e, no fundo, zona de câmaras refrigeradas de armazenagem com porta de giro de 2 folhas (corredor de 2 m: a folha de 60 cm abre e sobra a passagem). Laticínios e frios têm a condição Refrigerado e só vão para as câmaras; a porta soma 6 s no simulador a cada câmara aberta.": {
   "src": [
-   "services/site_examples.py:187"
+   "services/site_examples.py:189"
   ],
   "lazy": true
  },
@@ -12182,7 +12401,7 @@
  },
  "Mapeie a coluna Endereço completo ou, separadamente, Corredor (e Estante, Nível, Posição, Compartimento).": {
   "src": [
-   "services/master_importer.py:366"
+   "services/master_importer.py:367"
   ]
  },
  "Mapeie a coluna Filial ou informe uma filial padrão.": {
@@ -12417,7 +12636,7 @@
  },
  "Material": {
   "src": [
-   "services/site_import.py:960",
+   "services/site_import.py:957",
    "services/site_report.py:349",
    "templates/site/project.html:50",
    "templates/site/project.html:673"
@@ -12427,7 +12646,7 @@
   "src": [
    "routers/optimization.py:556",
    "services/site_import.py:282",
-   "services/site_import.py:961",
+   "services/site_import.py:958",
    "templates/optimization/index.html:95",
    "templates/optimization/page.html:149",
    "templates/optimization/pool.html:82"
@@ -12505,7 +12724,7 @@
  },
  "Medidas:": {
   "src": [
-   "templates/base.html:532"
+   "templates/base.html:536"
   ],
   "js": true
  },
@@ -12737,7 +12956,7 @@
   "src": [
    "routers/optimization.py:556",
    "services/site_import.py:281",
-   "services/site_import.py:961",
+   "services/site_import.py:958",
    "templates/optimization/index.html:95",
    "templates/optimization/page.html:149",
    "templates/optimization/pool.html:82"
@@ -12775,14 +12994,27 @@
    "services/field_help.py:427",
    "services/field_help.py:450",
    "services/field_help.py:474",
+   "services/structure_importer.py:135",
    "templates/_look.html:8",
    "templates/structure_kinds/list.html:29"
   ],
-  "help": true
+  "help": true,
+  "lazy": true
+ },
+ "Modelo 3D desconhecido: {raw} (use automático, simples ou: {keys})": {
+  "src": [
+   "services/structure_importer.py:159"
+  ]
+ },
+ "Modelo 3D: automático, simples ou um da biblioteca (rack, shelving, cantilever, flow, cold_room ou o nome). Peças que não existem são cadastradas com o código. Campos vazios não apagam dados.": {
+  "src": [
+   "services/structure_importer.py:486"
+  ],
+  "lazy": true
  },
  "Modelo de importação — Projeto de filial nova": {
   "src": [
-   "services/site_import.py:884"
+   "services/site_import.py:881"
   ]
  },
  "Modelo matemático (OR-Tools CP-SAT) resolvido para o escopo inteiro": {
@@ -12794,7 +13026,7 @@
   "src": [
    "services/field_help.py:222",
    "services/site_import.py:269",
-   "services/site_import.py:949",
+   "services/site_import.py:946",
    "templates/runs/list.html:18",
    "templates/runs/list.html:41",
    "templates/site/project.html:617"
@@ -13115,7 +13347,7 @@
  },
  "Máx.": {
   "src": [
-   "services/site_import.py:949",
+   "services/site_import.py:946",
    "templates/site/project.html:241"
   ]
  },
@@ -13171,9 +13403,9 @@
  "Máximo acima da borda (cm)": {
   "src": [
    "services/field_help.py:469",
-   "services/master_importer.py:54",
+   "services/master_importer.py:55",
    "services/site_import.py:279",
-   "services/site_import.py:954",
+   "services/site_import.py:951",
    "templates/bin_types/form.html:96"
   ],
   "help": true,
@@ -13230,7 +13462,7 @@
  },
  "Mín.": {
   "src": [
-   "services/site_import.py:949",
+   "services/site_import.py:946",
    "templates/site/project.html:241"
   ]
  },
@@ -13406,7 +13638,7 @@
  },
  "Nas estantes com estrutura, a capacidade já é calculada pelas medidas: o número importado vira um limite manual e vale quando é menor que o calculado.": {
   "src": [
-   "services/master_importer.py:612"
+   "services/master_importer.py:615"
   ],
   "lazy": true
  },
@@ -13423,7 +13655,7 @@
  },
  "Nas filiais/armazéns que aparecem no arquivo, exclui os endereços que não estão nele. Endereço ocupado ou com item atrelado é mantido.": {
   "src": [
-   "services/master_importer.py:597"
+   "services/master_importer.py:600"
   ],
   "lazy": true
  },
@@ -13546,7 +13778,7 @@
  },
  "Nenhum nível corresponde a {aisle}/{v}/{v2} (gere os endereços antes)": {
   "src": [
-   "services/master_importer.py:525"
+   "services/master_importer.py:526"
   ]
  },
  "Nenhum nível corresponde às condições.": {
@@ -13629,7 +13861,7 @@
  },
  "Nenhum resultado": {
   "src": [
-   "templates/base.html:327"
+   "templates/base.html:331"
   ],
   "js": true
  },
@@ -13728,6 +13960,11 @@
  "Nenhuma combinação respeita as restrições": {
   "src": [
    "services/bin_optimizer.py:824"
+  ]
+ },
+ "Nenhuma estante corresponde a {aisle}/{v} (gere os endereços antes)": {
+  "src": [
+   "services/structure_importer.py:434"
   ]
  },
  "Nenhuma estante corresponde às condições.": {
@@ -13894,9 +14131,9 @@
    "routers/products.py:146",
    "services/field_help.py:39",
    "services/field_help.py:44",
-   "services/master_importer.py:37",
-   "services/master_importer.py:41",
-   "services/master_importer.py:46"
+   "services/master_importer.py:38",
+   "services/master_importer.py:42",
+   "services/master_importer.py:47"
   ],
   "lazy": true,
   "help": true,
@@ -14051,6 +14288,11 @@
   "help": true,
   "lazy": true
  },
+ "Nome do tipo com mais de 40 caracteres": {
+  "src": [
+   "services/structure_importer.py:180"
+  ]
+ },
  "Nome do tipo de bin": {
   "src": [
    "services/field_help.py:462"
@@ -14085,7 +14327,7 @@
  },
  "Nos níveis das filiais/armazéns do arquivo, remove os limites (nível × tipo de bin) que o arquivo não informa e — com a coluna Vão mapeada — o vão dos níveis que ele não informa. A capacidade calculada pela estrutura e os níveis dedicados (automáticos) ficam.": {
   "src": [
-   "services/master_importer.py:607"
+   "services/master_importer.py:610"
   ],
   "lazy": true
  },
@@ -14355,7 +14597,7 @@
  },
  "Não usar": {
   "src": [
-   "services/site_import.py:938",
+   "services/site_import.py:935",
    "services/site_planner.py:71"
   ],
   "lazy": true
@@ -14384,11 +14626,11 @@
  "Níveis": {
   "src": [
    "routers/site.py:190",
-   "services/site_import.py:948",
+   "services/site_import.py:945",
    "services/site_report.py:336",
    "services/site_report.py:333",
-   "templates/levels/recompose.html:62",
-   "templates/optimization/page.html:321"
+   "services/structure_importer.py:281",
+   "templates/levels/recompose.html:62"
   ],
   "lazy": true
  },
@@ -14411,8 +14653,8 @@
  },
  "Níveis com capacidade": {
   "src": [
-   "services/master_importer.py:488",
-   "services/master_importer.py:537"
+   "services/master_importer.py:489",
+   "services/master_importer.py:538"
   ],
   "lazy": true
  },
@@ -14424,8 +14666,8 @@
  },
  "Níveis com vão": {
   "src": [
-   "services/master_importer.py:488",
-   "services/master_importer.py:542"
+   "services/master_importer.py:489",
+   "services/master_importer.py:543"
   ],
   "lazy": true
  },
@@ -14478,7 +14720,7 @@
    "services/field_help.py:373",
    "services/field_help.py:32",
    "services/level_service.py:331",
-   "services/master_importer.py:67",
+   "services/master_importer.py:68",
    "services/site_report.py:337"
   ],
   "lazy": true,
@@ -14499,7 +14741,7 @@
  },
  "Nível (vazio = todos; 01,03)": {
   "src": [
-   "services/master_importer.py:79"
+   "services/master_importer.py:80"
   ],
   "lazy": true
  },
@@ -15225,9 +15467,11 @@
    "services/action_plan.py:305",
    "services/site_report.py:350",
    "services/site_report.py:604",
+   "services/structure_importer.py:65",
    "templates/levels/index.html:146",
    "templates/site/project.html:673"
-  ]
+  ],
+  "lazy": true
  },
  "Observação do nível": {
   "src": [
@@ -15276,29 +15520,29 @@
  },
  "Obstáculo {v}": {
   "src": [
-   "services/site_import.py:614"
+   "services/site_import.py:611"
   ]
  },
  "Obstáculos": {
   "src": [
    "services/site_import.py:264",
-   "services/site_import.py:927"
+   "services/site_import.py:924"
   ],
   "lazy": true
  },
  "Obstáculos (opcional): áreas bloqueadas (escritório, pilar, sala…) em metros a partir do canto superior esquerdo da planta: X ao longo do comprimento, Y ao longo da largura. As fileiras que passariam por elas são cortadas.": {
   "src": [
-   "services/site_import.py:900"
+   "services/site_import.py:897"
   ]
  },
  "Obstáculos linha {i}: informe X, Y, comprimento e largura válidos.": {
   "src": [
-   "services/site_import.py:611"
+   "services/site_import.py:608"
   ]
  },
  "Obstáculos: {len} área(s) bloqueada(s).": {
   "src": [
-   "services/site_import.py:617"
+   "services/site_import.py:614"
   ]
  },
  "Ociosidade alta num horário fixo é tempo para reposição ou inventário; fila num horário é sinal para liberar pedidos antes ou reforçar a equipe só naquela hora.": {
@@ -15329,7 +15573,7 @@
  },
  "Ocultar": {
   "src": [
-   "templates/base.html:522"
+   "templates/base.html:526"
   ],
   "js": true
  },
@@ -15476,7 +15720,7 @@
  "Onde (automático, docas, fundo, lateral, fixa)": {
   "src": [
    "services/site_import.py:290",
-   "services/site_import.py:933"
+   "services/site_import.py:930"
   ],
   "lazy": true
  },
@@ -15603,8 +15847,8 @@
   "src": [
    "services/field_help.py:141",
    "services/site_import.py:284",
-   "services/site_import.py:920",
-   "services/site_import.py:911",
+   "services/site_import.py:917",
+   "services/site_import.py:908",
    "templates/site/project.html:76",
    "templates/site/project.html:124"
   ],
@@ -15755,7 +15999,7 @@
  },
  "Otimizar": {
   "src": [
-   "services/site_import.py:938"
+   "services/site_import.py:935"
   ]
  },
  "Otimizar as bins": {
@@ -15917,6 +16161,17 @@
    "services/field_help.py:435"
   ],
   "help": true
+ },
+ "Paletes no piso (sim/não)": {
+  "src": [
+   "services/structure_importer.py:126"
+  ],
+  "lazy": true
+ },
+ "Paletes no piso, furação, condição de armazenagem, porta, modelo 3D e as peças por módulo e por nível.": {
+  "src": [
+   "templates/imports/index.html:27"
+  ]
  },
  "Para a espera": {
   "src": [
@@ -16135,8 +16390,10 @@
  },
  "Passo da furação (cm)": {
   "src": [
+   "services/structure_importer.py:127",
    "templates/structure_kinds/form.html:79"
-  ]
+  ],
+  "lazy": true
  },
  "Passos no plano: {n_steps}": {
   "src": [
@@ -16146,7 +16403,7 @@
  "Pedido": {
   "src": [
    "services/field_help.py:65",
-   "services/site_import.py:966",
+   "services/site_import.py:963",
    "templates/optimization/page.html:554",
    "templates/site/suggest.html:48",
    "templates/slotting/routes.html:201",
@@ -16199,7 +16456,7 @@
  },
  "Pedidos": {
   "src": [
-   "services/site_import.py:966",
+   "services/site_import.py:963",
    "services/slotting.py:576",
    "templates/optimization/page.html:540",
    "templates/simulator/index.html:17",
@@ -16228,7 +16485,7 @@
  },
  "Pedidos da filial (pedido, SKU, quantidade, data) ou a saída por SKU. Você confere a aba e as colunas antes de importar; fica só o resumo, usado na posição pela saída e no simulador de trajeto.": {
   "src": [
-   "templates/imports/index.html:45"
+   "templates/imports/index.html:60"
   ]
  },
  "Pedidos juntos": {
@@ -16268,12 +16525,12 @@
  },
  "Pedidos: a aba não tem linhas.": {
   "src": [
-   "services/site_import.py:756"
+   "services/site_import.py:753"
   ]
  },
  "Pedidos: nenhuma linha válida (pedido, SKU e quantidade)": {
   "src": [
-   "services/site_import.py:798"
+   "services/site_import.py:795"
   ]
  },
  "Pedidos: os {shown} de maior diferença, de {n}. Tempo = caminhada ÷ {v} m/s + {stop} s por parada + {piece} s por peça + {gold} s por item fora da zona de ouro. Cada SKU é buscado no endereço dele mais perto da referência; endereços do mesmo módulo são uma parada.": {
@@ -16284,7 +16541,7 @@
  },
  "Pedidos: {orders} pedido(s), {lines} linha(s), {skus} SKU(s), {pairs} par(es) que saem juntos.{neg}": {
   "src": [
-   "services/site_import.py:654"
+   "services/site_import.py:651"
   ]
  },
  "Pedir para trocar a senha no primeiro acesso": {
@@ -16403,7 +16660,7 @@
  },
  "Peso (kg)": {
   "src": [
-   "services/site_import.py:960",
+   "services/site_import.py:957",
    "services/site_report.py:344",
    "services/site_report.py:595",
    "templates/site/project.html:693"
@@ -16424,7 +16681,7 @@
  "Peso máx. (kg)": {
   "src": [
    "services/site_import.py:277",
-   "services/site_import.py:953"
+   "services/site_import.py:950"
   ],
   "lazy": true
  },
@@ -16437,7 +16694,7 @@
  "Peso máximo (kg)": {
   "src": [
    "services/field_help.py:466",
-   "services/master_importer.py:50",
+   "services/master_importer.py:51",
    "templates/bin_types/form.html:70"
   ],
   "help": true,
@@ -16499,6 +16756,12 @@
   ],
   "help": true
  },
+ "Peça (código)": {
+  "src": [
+   "services/structure_importer.py:136"
+  ],
+  "lazy": true
+ },
  "Peça não encontrada.": {
   "src": [
    "routers/structure_kinds.py:80",
@@ -16515,6 +16778,11 @@
  "Peça {code} atualizada.": {
   "src": [
    "routers/structure_kinds.py:96"
+  ]
+ },
+ "Peça {code} cadastrada com o código como nome.": {
+  "src": [
+   "services/structure_importer.py:250"
   ]
  },
  "Peça {code} criada.": {
@@ -16535,6 +16803,20 @@
    "templates/slotting/routes.html:159"
   ]
  },
+ "Peças atualizadas": {
+  "src": [
+   "services/structure_importer.py:70",
+   "services/structure_importer.py:98"
+  ],
+  "lazy": true
+ },
+ "Peças criadas": {
+  "src": [
+   "services/structure_importer.py:70",
+   "services/structure_importer.py:90"
+  ],
+  "lazy": true
+ },
  "Peças da recomposição": {
   "src": [
    "services/field_help.py:277",
@@ -16545,6 +16827,8 @@
  "Peças de estrutura": {
   "src": [
    "templates/base.html:230",
+   "templates/base.html:241",
+   "templates/imports/index.html:26",
    "templates/structure_kinds/list.html:8",
    "templates/structure_kinds/pieces.html:3",
    "templates/structure_kinds/pieces.html:6"
@@ -16555,10 +16839,29 @@
    "templates/levels/index.html:24"
   ]
  },
+ "Peças excluídas": {
+  "src": [
+   "services/structure_importer.py:113"
+  ],
+  "lazy": true
+ },
+ "Peças existentes (mesmo código) são atualizadas só nos campos preenchidos.": {
+  "src": [
+   "services/structure_importer.py:476"
+  ],
+  "lazy": true
+ },
  "Peças ilimitadas (comprar o que faltar)": {
   "src": [
    "templates/levels/index.html:26"
   ]
+ },
+ "Peças na composição": {
+  "src": [
+   "services/structure_importer.py:167",
+   "services/structure_importer.py:265"
+  ],
+  "lazy": true
  },
  "Peças:": {
   "src": [
@@ -16874,6 +17177,17 @@
   ],
   "help": true
  },
+ "Por (módulo / nível)": {
+  "src": [
+   "services/structure_importer.py:138"
+  ],
+  "lazy": true
+ },
+ "Por corredor/estante (aceita faixas): a estrutura de cada estante, a folga acima da bin e o 1º nível. A capacidade dos níveis passa a ser calculada.": {
+  "src": [
+   "templates/imports/index.html:29"
+  ]
+ },
  "Por corredor/estante/nível (aceita faixas): quantas bins de cada tipo cabem e o vão (cm).": {
   "src": [
    "templates/imports/index.html:14"
@@ -16881,7 +17195,7 @@
  },
  "Por dentro": {
   "src": [
-   "templates/base.html:534"
+   "templates/base.html:538"
   ],
   "js": true
  },
@@ -16936,7 +17250,7 @@
  },
  "Por fora": {
   "src": [
-   "templates/base.html:533"
+   "templates/base.html:537"
   ],
   "js": true
  },
@@ -16990,6 +17304,12 @@
   ],
   "lazy": true
  },
+ "Porta (sem / de giro / de correr)": {
+  "src": [
+   "services/structure_importer.py:130"
+  ],
+  "lazy": true
+ },
  "Porta (sem, de giro, de correr)": {
   "src": [
    "services/site_import.py:273"
@@ -17023,7 +17343,7 @@
   "src": [
    "services/batch_generator.py:54",
    "services/field_help.py:33",
-   "services/master_importer.py:68",
+   "services/master_importer.py:69",
    "templates/locations/form.html:31",
    "templates/locations/list.html:64",
    "static/field_help.js:35"
@@ -17045,7 +17365,7 @@
  },
  "Posição da cabeceira (encostada/borda)": {
   "src": [
-   "services/site_import.py:913"
+   "services/site_import.py:910"
   ]
  },
  "Posição da cabeceira na ponta final do trecho": {
@@ -17300,7 +17620,7 @@
   "src": [
    "routers/site.py:193",
    "services/site_import.py:280",
-   "services/site_import.py:960",
+   "services/site_import.py:957",
    "services/site_report.py:343",
    "services/site_report.py:349",
    "services/site_report.py:595"
@@ -17375,7 +17695,7 @@
  },
  "Produtos (CSV/Excel)": {
   "src": [
-   "templates/base.html:241"
+   "templates/base.html:245"
   ]
  },
  "Produtos atualizados": {
@@ -17396,7 +17716,7 @@
  },
  "Produtos e estoque": {
   "src": [
-   "templates/imports/index.html:24"
+   "templates/imports/index.html:39"
   ]
  },
  "Produtos excluídos": {
@@ -17435,8 +17755,9 @@
   "src": [
    "services/field_help.py:416",
    "services/site_import.py:267",
-   "services/site_import.py:948",
-   "services/site_report.py:332"
+   "services/site_import.py:945",
+   "services/site_report.py:332",
+   "services/structure_importer.py:279"
   ],
   "help": true,
   "lazy": true
@@ -17745,7 +18066,7 @@
  },
  "Próximo: {steps}": {
   "src": [
-   "templates/base.html:494"
+   "templates/base.html:498"
   ],
   "js": true
  },
@@ -17786,16 +18107,22 @@
   ],
   "js": true
  },
+ "Qtd da peça": {
+  "src": [
+   "services/structure_importer.py:137"
+  ],
+  "lazy": true
+ },
  "Qtd de bins": {
   "src": [
-   "services/master_importer.py:72"
+   "services/master_importer.py:73"
   ],
   "lazy": true
  },
  "Qtd fixa": {
   "src": [
    "services/site_import.py:270",
-   "services/site_import.py:949"
+   "services/site_import.py:946"
   ],
   "lazy": true
  },
@@ -18040,7 +18367,7 @@
  },
  "Quantidade de bins fora do intervalo: {q}": {
   "src": [
-   "services/master_importer.py:403"
+   "services/master_importer.py:404"
   ]
  },
  "Quantidade de bins inválida.": {
@@ -18050,7 +18377,7 @@
  },
  "Quantidade de bins inválida: {raw}": {
   "src": [
-   "services/master_importer.py:401"
+   "services/master_importer.py:402"
   ]
  },
  "Quantidade de corredores transversais só desta zona.": {
@@ -18102,12 +18429,12 @@
  },
  "Quantidade máxima fora do intervalo: {mx}": {
   "src": [
-   "services/master_importer.py:536"
+   "services/master_importer.py:537"
   ]
  },
  "Quantidade máxima inválida: {mx_raw}": {
   "src": [
-   "services/master_importer.py:532"
+   "services/master_importer.py:533"
   ]
  },
  "Quantidade mínima do produto na filial.": {
@@ -18558,6 +18885,12 @@
    "templates/site/project.html:309"
   ]
  },
+ "Remover limites manuais (sim/não)": {
+  "src": [
+   "services/structure_importer.py:394"
+  ],
+  "lazy": true
+ },
  "Remover o histórico da filial {code}?": {
   "src": [
    "templates/imports/history.html:49"
@@ -18720,7 +19053,7 @@
    "services/plan_export.py:49",
    "services/site_report.py:294",
    "services/slotting.py:575",
-   "templates/base.html:522"
+   "templates/base.html:526"
   ],
   "js": true
  },
@@ -18893,7 +19226,7 @@
  },
  "Ruas em serpentina (sim/não)": {
   "src": [
-   "services/site_import.py:915"
+   "services/site_import.py:912"
   ]
  },
  "SKU": {
@@ -19036,17 +19369,17 @@
  },
  "SKUs: a aba não tem linhas.": {
   "src": [
-   "services/site_import.py:659"
+   "services/site_import.py:656"
   ]
  },
  "SKUs: coluna SKU não encontrada.": {
   "src": [
-   "services/site_import.py:664"
+   "services/site_import.py:661"
   ]
  },
  "SKUs: dimensões em cm e peso em kg por unidade; Saldo, Min level e Max level em unidades da filial nova. Dimensões vazias são completadas pelo cadastro de produtos (se o SKU existir). SKU repetido soma as quantidades.": {
   "src": [
-   "services/site_import.py:892"
+   "services/site_import.py:889"
   ]
  },
  "SKUs: escolha ao menos uma coluna de quantidade (Saldo, Min level ou Max level).": {
@@ -19057,17 +19390,17 @@
  },
  "SKUs: informe ao menos uma coluna de quantidade (Saldo, Min level ou Max level).": {
   "src": [
-   "services/site_import.py:666"
+   "services/site_import.py:663"
   ]
  },
  "SKUs: limite de {MAX_ITEMS} SKUs atingido; o resto foi ignorado.": {
   "src": [
-   "services/site_import.py:697"
+   "services/site_import.py:694"
   ]
  },
  "SKUs: mais {v} linha(s) com erro.": {
   "src": [
-   "services/site_import.py:700"
+   "services/site_import.py:697"
   ]
  },
  "SKUs: popularidade e afinidade": {
@@ -19083,7 +19416,7 @@
  },
  "SKUs: {len} SKU(s) carregado(s) no projeto (fonte da demanda = arquivo).": {
   "src": [
-   "services/site_import.py:703"
+   "services/site_import.py:700"
   ]
  },
  "Sai junto com": {
@@ -19104,7 +19437,7 @@
  "Saldo": {
   "src": [
    "services/site_import.py:281",
-   "services/site_import.py:960",
+   "services/site_import.py:957",
    "templates/site/project.html:50"
   ],
   "lazy": true
@@ -19182,7 +19515,7 @@
  },
  "Saldos de estoque (CSV/Excel)": {
   "src": [
-   "templates/base.html:242"
+   "templates/base.html:246"
   ]
  },
  "Saldos gravados": {
@@ -19262,7 +19595,7 @@
  "Saída (linhas ou unid./período)": {
   "src": [
    "services/site_import.py:282",
-   "services/site_import.py:961"
+   "services/site_import.py:958"
   ],
   "lazy": true
  },
@@ -19317,7 +19650,7 @@
  },
  "Segmento muito longo (máx. 20): {p}": {
   "src": [
-   "services/master_importer.py:389"
+   "services/master_importer.py:390"
   ]
  },
  "Seguir o separador": {
@@ -19576,7 +19909,7 @@
  },
  "Sem medidas": {
   "src": [
-   "templates/base.html:533"
+   "templates/base.html:537"
   ],
   "js": true
  },
@@ -19877,13 +20210,13 @@
  },
  "Setor {v}": {
   "src": [
-   "services/site_import.py:639"
+   "services/site_import.py:636"
   ]
  },
  "Setores": {
   "src": [
    "services/site_import.py:264",
-   "services/site_import.py:932"
+   "services/site_import.py:929"
   ],
   "lazy": true
  },
@@ -19894,12 +20227,12 @@
  },
  "Setores linha {i}: informe a área (ou X, Y, comprimento e largura para posição fixa).": {
   "src": [
-   "services/site_import.py:637"
+   "services/site_import.py:634"
   ]
  },
  "Setores: {len} setor(es).": {
   "src": [
-   "services/site_import.py:643"
+   "services/site_import.py:640"
   ]
  },
  "Siga as trilhas na ordem que preferir. Em cada etapa, \"Mostrar como\" abre a tela certa e destaca o que preencher; as etapas ficam marcadas sozinhas conforme o cadastro avança.": {
@@ -20035,7 +20368,7 @@
  },
  "Sincroniza o saldo físico por Filial × Armazém × Posição × SKU. Várias colunas de quantidade podem ser somadas. Cria filiais, armazéns e posições inexistentes.": {
   "src": [
-   "templates/imports/index.html:37"
+   "templates/imports/index.html:52"
   ]
  },
  "Sincronizar (excluir o que não veio)": {
@@ -20063,7 +20396,7 @@
  },
  "Sistema": {
   "src": [
-   "templates/base.html:244"
+   "templates/base.html:248"
   ]
  },
  "Situação": {
@@ -20344,25 +20677,31 @@
  },
  "Só o código é obrigatório.": {
   "src": [
-   "services/master_importer.py:582"
+   "services/master_importer.py:583"
   ],
   "lazy": true
  },
  "Só o código é obrigatório. Dimensões internas em cm, peso máximo em kg, volume em litros (vazio = calculado pelas dimensões).": {
   "src": [
-   "services/master_importer.py:588"
+   "services/master_importer.py:589"
   ],
   "lazy": true
  },
  "Só o código é obrigatório; sem nome, o nome fica igual ao código.": {
   "src": [
-   "services/master_importer.py:577"
+   "services/master_importer.py:578"
+  ],
+  "lazy": true
+ },
+ "Só o código é obrigatório; sem nome, o nome fica igual ao código. Custo por peça opcional (usado na recomposição das estruturas).": {
+  "src": [
+   "services/structure_importer.py:475"
   ],
   "lazy": true
  },
  "Só o tamanho do imóvel (ex.: 40 × 25 m)": {
   "src": [
-   "templates/base.html:533"
+   "templates/base.html:537"
   ],
   "js": true
  },
@@ -20562,7 +20901,8 @@
  },
  "Tempo da porta (s)": {
   "src": [
-   "services/site_import.py:275"
+   "services/site_import.py:275",
+   "services/structure_importer.py:134"
   ],
   "lazy": true
  },
@@ -20844,7 +21184,7 @@
    "services/field_help.py:413",
    "services/field_help.py:414",
    "services/site_import.py:267",
-   "services/site_import.py:948",
+   "services/site_import.py:945",
    "templates/optimization/page.html:630",
    "templates/optimization/pool.html:165"
   ],
@@ -20869,21 +21209,21 @@
    "services/field_help.py:340",
    "services/field_help.py:350",
    "services/field_help.py:378",
-   "services/master_importer.py:71",
-   "services/master_importer.py:80"
+   "services/master_importer.py:72",
+   "services/master_importer.py:81"
   ],
   "lazy": true,
   "help": true
  },
  "Tipo de bin + Cabem = \"neste nível cabem X bins do tipo\" (0 remove a capacidade do tipo). Vão em cm.": {
   "src": [
-   "services/master_importer.py:611"
+   "services/master_importer.py:614"
   ],
   "lazy": true
  },
  "Tipo de bin + Qtd (vazio = 1): várias linhas do mesmo endereço somam. Os tipos de bin precisam estar cadastrados.": {
   "src": [
-   "services/master_importer.py:603"
+   "services/master_importer.py:606"
   ],
   "lazy": true
  },
@@ -20935,12 +21275,12 @@
  },
  "Tipo de bin {t_code} não cadastrado": {
   "src": [
-   "services/master_importer.py:528"
+   "services/master_importer.py:529"
   ]
  },
  "Tipo de bin {t_code} não cadastrado (importe os tipos de bin antes)": {
   "src": [
-   "services/master_importer.py:396"
+   "services/master_importer.py:397"
   ]
  },
  "Tipo de cadastro desconhecido.": {
@@ -20951,7 +21291,9 @@
  },
  "Tipo de estrutura": {
   "src": [
-   "services/onboarding.py:80"
+   "services/onboarding.py:80",
+   "services/structure_importer.py:125",
+   "services/structure_importer.py:277"
   ],
   "lazy": true
  },
@@ -20960,6 +21302,11 @@
    "routers/structure_kinds.py:236",
    "routers/structure_kinds.py:249",
    "routers/structure_kinds.py:262"
+  ]
+ },
+ "Tipo de estrutura vazio": {
+  "src": [
+   "services/structure_importer.py:178"
   ]
  },
  "Tipo de estrutura {name} atualizado.": {
@@ -21038,15 +21385,19 @@
  },
  "Tipos atualizados": {
   "src": [
-   "services/master_importer.py:270",
-   "services/master_importer.py:332"
+   "services/master_importer.py:271",
+   "services/master_importer.py:333",
+   "services/structure_importer.py:167",
+   "services/structure_importer.py:239"
   ],
   "lazy": true
  },
  "Tipos criados": {
   "src": [
-   "services/master_importer.py:270",
-   "services/master_importer.py:322"
+   "services/master_importer.py:271",
+   "services/master_importer.py:323",
+   "services/structure_importer.py:167",
+   "services/structure_importer.py:233"
   ],
   "lazy": true
  },
@@ -21093,10 +21444,16 @@
  "Tipos de estrutura": {
   "src": [
    "templates/base.html:229",
+   "templates/base.html:242",
    "templates/structure_kinds/list.html:3",
    "templates/structure_kinds/list.html:6",
    "templates/structure_kinds/pieces.html:8",
    "templates/structures/form.html:33"
+  ]
+ },
+ "Tipos de estrutura e composição": {
+  "src": [
+   "templates/imports/index.html:27"
   ]
  },
  "Tipos e peças de estrutura": {
@@ -21107,7 +21464,7 @@
  },
  "Tipos existentes são atualizados só nos campos preenchidos.": {
   "src": [
-   "services/master_importer.py:593"
+   "services/master_importer.py:596"
   ],
   "lazy": true
  },
@@ -21145,7 +21502,7 @@
  },
  "Todas as abas são opcionais: envie só o que quiser atualizar. Não renomeie as abas.": {
   "src": [
-   "services/site_import.py:886"
+   "services/site_import.py:883"
   ]
  },
  "Todas as bins dos endereços do escopo formam um único \"pool\" (por filial + armazém). Os SKUs desses endereços são redistribuídos entre essas bins; as bins não mudam de lugar.": {
@@ -21576,6 +21933,12 @@
   ],
   "lazy": true
  },
+ "Uma linha por tipo, ou várias linhas do mesmo tipo para a composição: cada linha com Peça + Qtd + Por (módulo ou nível) acrescenta a peça. Com peças no arquivo, a composição do tipo passa a ser a do arquivo.": {
+  "src": [
+   "services/structure_importer.py:482"
+  ],
+  "lazy": true
+ },
  "Uma posição do armazém identificada por Corredor-Estante-Nível-Posição, ex.: A-01-2-1. O nível conta de baixo para cima. Cada endereço tem bins, e cada bin guarda um SKU.": {
   "src": [
    "services/onboarding.py:280"
@@ -21849,7 +22212,7 @@
  "Valor": {
   "src": [
    "services/site_import.py:266",
-   "services/site_import.py:909",
+   "services/site_import.py:906",
    "templates/runs/detail.html:25"
   ],
   "lazy": true
@@ -21868,6 +22231,11 @@
  "Valor inválido: {raw}": {
   "src": [
    "routers/levels.py:131"
+  ]
+ },
+ "Valor sim/não inválido: {raw}": {
+  "src": [
+   "services/structure_importer.py:46"
   ]
  },
  "Valores iniciais do tempo de separação no simulador de trajeto, na caminhada em 3D (também a velocidade do vídeo e a câmera), no resultado das otimizações (hoje × proposta e objetivo \"Menor tempo\") e nos projetos novos. Em cada tela dá para mudar na hora, sem alterar o padrão.": {
@@ -22223,20 +22591,20 @@
  },
  "Vão": {
   "src": [
-   "services/master_importer.py:518",
+   "services/master_importer.py:519",
    "templates/structures/list.html:29"
   ]
  },
  "Vão (cm)": {
   "src": [
-   "services/master_importer.py:82",
+   "services/master_importer.py:83",
    "services/site_report.py:333"
   ],
   "lazy": true
  },
  "Vão acima de 5000 cm": {
   "src": [
-   "services/master_importer.py:520"
+   "services/master_importer.py:521"
   ]
  },
  "Vão de cada nível (cm)": {
@@ -22311,13 +22679,15 @@
  },
  "Vão por nível: os valores devem ser maiores que zero.": {
   "src": [
-   "routers/structures.py:88"
+   "routers/structures.py:88",
+   "services/structure_importer.py:321"
   ]
  },
  "Vão útil (cm)": {
   "src": [
    "services/site_import.py:268",
-   "services/site_import.py:948"
+   "services/site_import.py:945",
+   "services/structure_importer.py:282"
   ],
   "lazy": true
  },
@@ -22351,14 +22721,27 @@
  },
  "Vãos por nível (cm)": {
   "src": [
-   "services/site_import.py:950"
-  ]
+   "services/site_import.py:947",
+   "services/structure_importer.py:283"
+  ],
+  "lazy": true
+ },
+ "Vãos por nível (cm), de baixo para cima, separados por / (ex.: 60/40/35; numa planilha Excel também 60; 40; 35). Tipo inexistente é criado com o nome.": {
+  "src": [
+   "services/structure_importer.py:497"
+  ],
+  "lazy": true
  },
  "Vãos por nível (cm, ex.: 45; 40; 35)": {
   "src": [
    "services/site_import.py:272"
   ],
   "lazy": true
+ },
+ "Vãos por nível inválidos: {raw}": {
+  "src": [
+   "services/structure_importer.py:319"
+  ]
  },
  "Vãos removidos": {
   "src": [
@@ -22531,14 +22914,16 @@
  "Zona de ouro fim (cm)": {
   "src": [
    "services/site_import.py:271",
-   "services/site_import.py:950"
+   "services/site_import.py:947",
+   "services/structure_importer.py:288"
   ],
   "lazy": true
  },
  "Zona de ouro início (cm)": {
   "src": [
    "services/site_import.py:271",
-   "services/site_import.py:950"
+   "services/site_import.py:947",
+   "services/structure_importer.py:287"
   ],
   "lazy": true
  },
@@ -22562,7 +22947,8 @@
  },
  "Zona de ouro: informe início e fim (ou deixe os dois vazios).": {
   "src": [
-   "routers/structures.py:73"
+   "routers/structures.py:73",
+   "services/structure_importer.py:339"
   ]
  },
  "Zona de ouro: início (cm)": {
@@ -22573,7 +22959,8 @@
  },
  "Zona de ouro: o fim deve ser maior que o início.": {
   "src": [
-   "routers/structures.py:75"
+   "routers/structures.py:75",
+   "services/structure_importer.py:341"
   ]
  },
  "Zona de ouro: o fim passa da altura total ({height} cm).": {
@@ -22597,7 +22984,7 @@
  },
  "Zona {v}": {
   "src": [
-   "services/site_import.py:588",
+   "services/site_import.py:585",
    "services/site_planner.py:670",
    "services/site_planner.py:825",
    "templates/site/project.html:128"
@@ -22606,14 +22993,14 @@
  "Zonas": {
   "src": [
    "services/site_import.py:263",
-   "services/site_import.py:919",
+   "services/site_import.py:916",
    "services/site_report.py:113"
   ],
   "lazy": true
  },
  "Zonas (opcional): com X e Y, cada zona é um retângulo em qualquer lugar do imóvel (X, Y, comprimento em X e largura em Y; largura vazia = até a parede) e o espaço entre elas é a circulação. Sem X e Y, as zonas (ao menos duas) são faixas empilhadas a partir da frente, na ordem das linhas, separadas por avenidas (largura na aba Imóvel); comprimento vazio = o que sobrar. Orientação = 'ao longo do comprimento' ou 'perpendicular'; Corredor vazio = o do imóvel; Estruturas permitidas = códigos separados por vírgula (vazio = todas). Aba vazia = sem zonas.": {
   "src": [
-   "services/site_import.py:895"
+   "services/site_import.py:892"
   ]
  },
  "Zonas de ouro": {
@@ -22655,22 +23042,22 @@
  },
  "Zonas {x}": {
   "src": [
-   "services/site_import.py:581"
+   "services/site_import.py:578"
   ]
  },
  "Zonas: com zonas empilhadas (sem X/Y), informe ao menos duas; a zona foi ignorada.": {
   "src": [
-   "services/site_import.py:595"
+   "services/site_import.py:592"
   ]
  },
  "Zonas: nenhuma (planta de zona única).": {
   "src": [
-   "services/site_import.py:598"
+   "services/site_import.py:595"
   ]
  },
  "Zonas: {len} zona(s) definida(s).": {
   "src": [
-   "services/site_import.py:598"
+   "services/site_import.py:595"
   ]
  },
  "Zonas: {ori}, {n} transversal(is)": {
@@ -22902,8 +23289,8 @@
  },
  "ao longo do comprimento": {
   "src": [
-   "services/site_import.py:918",
-   "services/site_import.py:923"
+   "services/site_import.py:915",
+   "services/site_import.py:920"
   ]
  },
  "armazém ligado à filial": {
@@ -23007,20 +23394,20 @@
  },
  "automática": {
   "src": [
-   "services/site_import.py:908",
-   "services/site_import.py:911"
+   "services/site_import.py:905",
+   "services/site_import.py:908"
   ]
  },
  "automático": {
   "src": [
-   "services/site_import.py:931",
-   "services/site_import.py:935",
+   "services/site_import.py:928",
+   "services/site_import.py:932",
    "templates/site/project.html:409"
   ]
  },
  "avenida": {
   "src": [
-   "services/site_examples.py:148"
+   "services/site_examples.py:150"
   ],
   "lazy": true
  },
@@ -23088,7 +23475,7 @@
  },
  "cabeceiras": {
   "src": [
-   "services/site_examples.py:109"
+   "services/site_examples.py:111"
   ],
   "lazy": true
  },
@@ -23254,7 +23641,7 @@
  },
  "câmara refrigerada": {
   "src": [
-   "services/site_examples.py:191"
+   "services/site_examples.py:193"
   ],
   "lazy": true
  },
@@ -23829,7 +24216,7 @@
  "ignorada(s) (sem a conversão).": {
   "src": [
    "routers/imports.py:190",
-   "services/site_import.py:653"
+   "services/site_import.py:650"
   ]
  },
  "igual a": {
@@ -23958,7 +24345,7 @@
  },
  "linha {i}: estrutura(s) {v} não cadastrada(s)": {
   "src": [
-   "services/site_import.py:586"
+   "services/site_import.py:583"
   ]
  },
  "linha {line}: {label} inválido ({raw}).": {
@@ -24279,9 +24666,9 @@
  },
  "não": {
   "src": [
-   "services/site_import.py:957",
-   "services/site_import.py:912",
-   "services/site_import.py:915"
+   "services/site_import.py:954",
+   "services/site_import.py:909",
+   "services/site_import.py:912"
   ]
  },
  "não cabe na capacidade do(s) nível(is)": {
@@ -24503,7 +24890,7 @@
  },
  "obstáculo": {
   "src": [
-   "services/site_examples.py:126",
+   "services/site_examples.py:128",
    "static/field_help.js:148"
   ],
   "lazy": true,
@@ -24647,11 +25034,11 @@
  },
  "pedidos": {
   "src": [
-   "services/site_examples.py:109",
-   "services/site_examples.py:126",
-   "services/site_examples.py:148",
-   "services/site_examples.py:167",
-   "services/site_examples.py:191"
+   "services/site_examples.py:111",
+   "services/site_examples.py:128",
+   "services/site_examples.py:150",
+   "services/site_examples.py:169",
+   "services/site_examples.py:193"
   ],
   "lazy": true
  },
@@ -24841,13 +25228,13 @@
  },
  "porta-paletes": {
   "src": [
-   "services/site_examples.py:167"
+   "services/site_examples.py:169"
   ],
   "lazy": true
  },
  "portas": {
   "src": [
-   "services/site_examples.py:191"
+   "services/site_examples.py:193"
   ],
   "lazy": true
  },
@@ -25073,7 +25460,7 @@
  },
  "saída": {
   "src": [
-   "services/site_import.py:678"
+   "services/site_import.py:675"
   ]
  },
  "se": {
@@ -25236,13 +25623,13 @@
  },
  "setores": {
   "src": [
-   "services/site_examples.py:167"
+   "services/site_examples.py:169"
   ],
   "lazy": true
  },
  "sim": {
   "src": [
-   "services/site_import.py:957"
+   "services/site_import.py:954"
   ]
  },
  "simples": {
@@ -25703,7 +26090,7 @@
  },
  "zona única": {
   "src": [
-   "services/site_examples.py:109"
+   "services/site_examples.py:111"
   ],
   "lazy": true
  },
@@ -26023,12 +26410,12 @@
  },
  "{label} deve ser maior que zero: {raw}": {
   "src": [
-   "services/master_importer.py:138"
+   "services/master_importer.py:139"
   ]
  },
  "{label} inválido(a): {raw}": {
   "src": [
-   "services/master_importer.py:136"
+   "services/master_importer.py:137"
   ]
  },
  "{label}: deve ser maior que zero (ou deixe vazio).": {
@@ -26069,6 +26456,11 @@
  "{label}: informe o valor fixo.": {
   "src": [
    "services/batch_generator.py:123"
+  ]
+ },
+ "{label}: informe um número inteiro ({raw}).": {
+  "src": [
+   "services/structure_importer.py:54"
   ]
  },
  "{label}: informe um valor maior que zero (vazio = não muda).": {
@@ -26463,6 +26855,11 @@
    "templates/optimization/page.html:497"
   ],
   "html": true
+ },
+ "{n} peça(s) fora do arquivo mantida(s): estão na composição de algum tipo de estrutura.": {
+  "src": [
+   "services/structure_importer.py:115"
+  ]
  },
  "{n} resultado(s) excluído(s).": {
   "src": [
@@ -27133,7 +27530,7 @@
   "src": [
    "services/field_help.py:162",
    "services/site_import.py:289",
-   "services/site_import.py:933"
+   "services/site_import.py:930"
   ],
   "help": true,
   "lazy": true

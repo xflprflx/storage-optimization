@@ -38,8 +38,10 @@ BINS = {
     "BIN-7": ("Caixa bin nº 7", 18, 30, 38, 15, None, 24.90),
     "BIN-8": ("Caixa bin nº 8", 21, 40, 55, 25, None, 46.00),
     "CX-50": ("Caixa organizadora 50 L", 32, 38, 52, 30, 50, 58.00),
-    "PALETE": ("Palete PBR 120 × 100 (carga até 150 cm)", 150, 120, 100, 1000, None, 85.00),
+    "PALETE": ("Palete PBR 120 × 100 (aberto em cima, carga até 150 cm)", 15, 120, 100, 1000, None, 85.00),
 }
+# bins abertas em cima: máximo acima da borda (cm) — o palete de 15 cm leva a carga até 150 cm
+OPEN_BINS = {"PALETE": 135}
 # família, material, (alt, larg, comp) mín–máx (cm), peso (kg) mín–máx, giro (multiplicador de saldo)
 SMALL = [
     ("Parafuso sextavado", "Fixação", (2, 6), (2, 6), (4, 10), (0.05, 0.4), 3.0),
@@ -328,7 +330,8 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
            for code, mode in ex["structures"].items()], {2: 36, 17: 22})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
-           "Custo por bin (R$)"], [(code, *BINS[code]) for code in ex["bins"]], {2: 36})
+           "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)"],
+          [(code, *BINS[code], "sim" if code in OPEN_BINS else "não", OPEN_BINS.get(code)) for code in ex["bins"]], {2: 36})
     skus = ex["skus"](rng)
     cond = any(len(r) > 10 for r in skus)  # condição de armazenagem (só nos exemplos com refrigerados)
     sheet(wb.create_sheet("SKUs"),

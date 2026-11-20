@@ -601,7 +601,7 @@ def suggest_reduction(db: Session, cfg: dict, steps: int = 7, per_run_s: float =
     out = {"factor": f0, "shortage": base.shortage, "bins_needed": base.bins_needed, "plan": base, "fit_factor": None,
            "cuts": [], "top": [], "limits": []}
     # maiores consumidores (volume das bins de cada SKU)
-    vol = {t.spec.id: (t.spec.volume_cm3 or 0) / 1000.0 for t in base.types}
+    vol = {t.spec.id: (t.spec.unit_volume_cm3 or 0) / 1000.0 for t in base.types}
     total = sum(n * vol.get(t, 0) for d in base.demands for t, n in (d.bins or {}).items()) or 1
     top = sorted(((sum(n * vol.get(t, 0) for t, n in (d.bins or {}).items()), d) for d in base.demands if d.bins),
                  key=lambda x: -x[0])[:15]

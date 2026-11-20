@@ -103,6 +103,22 @@ flowchart TD
 
 As importações ficam em **Importações** (`/imports`), na mesma ordem. O histórico de pedidos só é preciso para a posição pela saída e o simulador de trajeto (ver 6.0.1 e 6.1). Estruturas, tipos de estrutura e peças são cadastrados na tela ou vêm na planilha do projeto de filial nova.
 
+**Estruturas** (Importações → Estruturas, depois dos endereços), cada uma com modelo CSV:
+- **Peças de estrutura:** código, nome e custo por peça.
+- **Tipos de estrutura e composição:** paletes no piso, passo da furação, espessura do nível, condição de armazenagem,
+  porta (sem / de giro / de correr, folhas, dobradiça, abertura e tempo) e modelo 3D (automático, simples ou da
+  biblioteca). Várias linhas do mesmo tipo com *Peça*, *Qtd*, *Por* (módulo ou nível) e *Cor no 3D* montam a
+  composição; com peças no arquivo, a composição do tipo passa a ser a do arquivo. Peça inexistente é cadastrada com o
+  código.
+- **Estruturas de armazenagem:** código, tipo (criado se não existir), frente, profundidade, altura, níveis, vão útil,
+  vãos por nível (60/40/35), 1º nível, carga, custo e zona de ouro. A capacidade das estantes com a estrutura é
+  recalculada.
+- **Estrutura das estantes:** filial, armazém, corredor e estante (aceitam lista e faixa), a estrutura (ou "remover"),
+  a folga acima da bin, o 1º nível e as opções criar níveis que faltam e remover limites manuais — o mesmo que
+  *Capacidade dos níveis → Aplicar estrutura*.
+
+Os tipos de bin também importam *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* (ver 6.0.11).
+
 *Nota: Ao sincronizar dados na importação, os registros que não constarem na nova planilha e que não estiverem em uso serão removidos automaticamente.*
 
 ---
@@ -268,7 +284,7 @@ flowchart TD
 - **Regras**: tipos de bin permitidos, enchimento máximo da bin, folga acima da bin e entre bins, aproveitamento da frente do nível, rotação, um tipo de bin por SKU e peso (da bin e da carga do nível). Cada nível recebe um único tipo de bin, e as bins maiores ficam nos níveis de baixo.
 - **Importar dados da filial nova**: no projeto, *Baixar modelo* gera um Excel já preenchido com os dados atuais. Ele tem as abas **Imóvel** (campo/valor, em metros), **Estruturas** (medidas em cm; modo *Otimizar*, *Fixa* ou *Não usar*; qtd. fixa, mínimo e máximo), **Bins** (os códigos novos são cadastrados) e **SKUs** (SKU, produto, material, dimensões, peso, **saldo, min level e max level da filial nova**). Todas as abas são opcionais e podem ter qualquer nome e colunas em qualquer ordem: ao enviar, abre a tela de **mapeamento**, onde você escolhe a aba de cada tipo de dado e a coluna de cada campo, com prévia das linhas. As sugestões vêm dos nomes das abas e colunas e do mapeamento usado na última importação do projeto. Um CSV é lido como uma aba só. Os SKUs ficam no projeto, sem alterar produtos ou saldos, e a fonte da demanda passa a ser *Arquivo importado*. Dimensões vazias vêm do cadastro de produtos quando o SKU existe, e SKUs repetidos têm as quantidades somadas. Assim não é preciso ter uma filial existente como referência.
 - **Custos**: estruturas têm *custo por módulo* e tipos de bin têm *custo por bin* (num compartimento sem custo próprio, vale o custo da bin pai ÷ compartimentos). O objetivo **Menor custo total (estruturas + bins)** deixa o solver escolher também as bins de cada SKU, entre as melhores opções, pesando o custo delas contra o das estruturas que ocupam. O plano mostra o custo das estruturas, o das bins e o total.
-- **Projetos de exemplo**: na tela de projetos há um catálogo de exemplos. Cada um mostra a planta antes de otimizar e tem os botões *Planilha* (download) e *Criar projeto*. Os exemplos são: *Galpão médio de picking*; *Fileiras nas paredes + escritório no canto* (5 zonas posicionadas por X/Y: fileiras perpendiculares nas paredes e junto ao escritório, fileiras horizontais no meio); *Imóvel estreito com avenida no fundo*; *CD com porta-paletes e picking* (zonas com corredores de 3,2 m e 1,2 m, itens volumosos em palete); *Loja com câmaras refrigeradas* (zona de seco e zona de câmaras de armazenagem com porta de giro de 2 folhas e corredor de 2 m; laticínios e frios com a condição Refrigerado, que só vão para as câmaras). Os dados ficam em `services/site_examples.py`, e as planilhas em `samples/exemplos/`, geradas por `python scripts/generate_site_seed.py` ou na hora, se faltarem. Ao importar uma planilha com a aba Estruturas, as estruturas que não estão nela ficam como "Não usar" no projeto.
+- **Projetos de exemplo**: na tela de projetos há um catálogo de exemplos. Cada um mostra a planta antes de otimizar e tem os botões *Planilha* (download) e *Criar projeto*. Os exemplos são: *Galpão médio de picking*; *Fileiras nas paredes + escritório no canto* (5 zonas posicionadas por X/Y: fileiras perpendiculares nas paredes e junto ao escritório, fileiras horizontais no meio); *Imóvel estreito com avenida no fundo*; *CD com porta-paletes e picking* (zonas com corredores de 3,2 m e 1,2 m, itens volumosos em palete — um palete de 15 cm aberto em cima, com a carga até 135 cm acima da borda); *Loja com câmaras refrigeradas* (zona de seco e zona de câmaras de armazenagem com porta de giro de 2 folhas e corredor de 2 m; laticínios e frios com a condição Refrigerado, que só vão para as câmaras). Os dados ficam em `services/site_examples.py`, e as planilhas em `samples/exemplos/`, geradas por `python scripts/generate_site_seed.py` ou na hora, se faltarem. Ao importar uma planilha com a aba Estruturas, as estruturas que não estão nela ficam como "Não usar" no projeto.
 - **Plano detalhado de implantação** (botão *Plano detalhado* no resultado, com download em **Excel** e **PDF**). Usa o mesmo plano aprovado na tela e traz:
   - cabeçalho com imóvel, demanda, regras e a ordem de prioridade dos critérios;
   - indicadores;

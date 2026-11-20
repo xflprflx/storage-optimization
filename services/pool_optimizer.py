@@ -338,7 +338,7 @@ def rebuild_pool_result(bins, demands, plans, types, prm: PoolParams, reserved_l
     """Recalcula os indicadores de um resultado com planos já montados."""
     reserved_locations = reserved_locations or set()
     pool = [b for b in bins if b.location_id not in reserved_locations and not b.locked]
-    vol = {t: (s.volume_cm3 or 0.0) for t, s in types.items()}
+    vol = {t: (s.unit_volume_cm3 or 0.0) for t, s in types.items()}
     wid = {t: (s.fw or 0.0) for t, s in types.items()}
     occupied_before = {l for d in demands for l, q in d.current.items() if q > 0}
     occupied_before |= {d.default_location_id for d in demands if d.default_location_id}
@@ -358,7 +358,7 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
     base_prm = prm.as_params()
     pool = [b for b in bins if b.location_id not in reserved_locations and not b.locked]
     pool_all = list(pool)
-    vol = {t: (s.volume_cm3 or 0.0) for t, s in types.items()}
+    vol = {t: (s.unit_volume_cm3 or 0.0) for t, s in types.items()}
     wid = {t: (s.fw or 0.0) for t, s in types.items()}
 
     # endereços/bins "usados antes": todo endereço com item ocupa todas as suas bins

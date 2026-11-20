@@ -118,7 +118,7 @@ def _pool_metrics(res, types: dict[int, BinSpec]) -> dict:
         used = {id(b): b for p in res.plans for b, _x in p.allocations}.values()
     used = list(used)
     return {"short": sum(p.shortage for p in res.plans), "bins": len(used),
-            "volume": round(sum((types[b.type_id].volume_cm3 or 0) for b in used) / 1000.0, 1),
+            "volume": round(sum((types[b.type_id].unit_volume_cm3 or 0) for b in used) / 1000.0, 1),
             "cost": round(sum((types[b.type_id].cost or 0) for b in used), 2),
             "width": round(sum((types[b.type_id].fw or 0) for b in used), 1),
             "changes": 0 if res.unlimited else round(sum(p.moved_units for p in res.plans), 1)}
@@ -151,7 +151,7 @@ def solve_pool(bins, demands, types: dict[int, BinSpec], prm, reserved_locations
 
     base_prm = prm.as_params()
     pool = [b for b in bins if b.location_id not in reserved_locations and not b.locked]
-    vol = {t: (s.volume_cm3 or 0.0) for t, s in types.items()}
+    vol = {t: (s.unit_volume_cm3 or 0.0) for t, s in types.items()}
     wid = {t: (s.fw or 0.0) for t, s in types.items()}
     cst = {t: (s.cost or 0.0) for t, s in types.items()}
     caps = {d.sku: {t: (capacity(d.unit, types[t], base_prm) if prm.allowed_types is None or t in prm.allowed_types else 0)

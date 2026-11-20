@@ -5,6 +5,7 @@ Importação dos cadastros-base via CSV/XLSX (mesmo fluxo das importações de p
   - Tipos de bin           (código, nome, dimensões, peso máx., volume)
   - Endereços              (filial, armazém, endereço OU corredor/estante/nível/posição/compartimento, tipo de bin, qtd)
   - Capacidade dos níveis  (filial, armazém, corredor, estante, nível — aceitam faixas —, tipo de bin, máx., vão)
+  - Estruturas (peças, tipos com composição, estruturas e estrutura das estantes): services/structure_importer
 
 Regras comuns: linhas com erro são listadas e não interrompem o arquivo; campos vazios não apagam dados
 existentes; códigos de filial/armazém são associados mesmo quando o Excel tira zeros (01 -> 1).
@@ -51,7 +52,7 @@ BIN_TYPE_FIELDS = {
     "max_volume": ("Volume (L)", False, ("volume", "volumel", "volumelitros", "maxvolume", "litros")),
     "cost": (N_("Custo por bin (R$)"), False, ("custo", "custor", "custobin", "custoporbin", "preco", "preço", "valor", "cost")),
     "open_top": (N_("Aberta em cima (sim/não)"), False, ("abertaemcima", "aberta", "opentop", "open", "semtampa")),
-    "over_cm": (N_("Máximo acima da borda (cm)"), False, ("maximoacimadaborda", "acimadaborda", "maxacima", "overhang", "sobreborda")),
+    "over_cm": (N_("Máximo acima da borda (cm)"), False, ("maximoacimadaborda", "maximoacimadabordacm", "acimadaborda", "maxacima", "overhang", "sobreborda")),
     "parent": (N_("Bin pai"), False, ("binpai", "pai", "parent", "tipopai", "bininteira")),
     "div_w": (N_("Divisões na largura"), False, ("divisoesnalargura", "divisoeslargura", "colunas", "nalargura", "divlargura", "divisoesl")),
     "div_l": (N_("Divisões no comprimento"), False, ("divisoesnocomprimento", "divisoescomprimento", "fileiras", "nocomprimento", "divcomprimento", "divisoesc")),
@@ -587,13 +588,15 @@ MASTER_KINDS = {
                   "back": ("/bin-types", "tipos de bin"), "scope": False, "bins_option": False,
                   "help": [N_("Só o código é obrigatório. Dimensões internas em cm, peso máximo em kg, volume em litros "
                            "(vazio = calculado pelas dimensões)."),
+                           N_("Aberta em cima (sim/não): palete, bandeja, caixa sem tampa — a carga pode passar da borda, até o vão do "
+                           "nível ou até o Máximo acima da borda (cm). Informar só o máximo marca a bin como aberta."),
                            N_("Compartimentos: Bin pai (código de uma bin inteira, cadastrada antes ou em linha anterior) + "
                            "Divisões na largura × no comprimento (ex.: 2 e 3 = 6 compartimentos). Alternativa: Fração (1/2…) + "
                            "Divisão (largura ou comprimento). Sem dimensões, elas vêm da bin pai."),
                            N_("Tipos existentes são atualizados só nos campos preenchidos.")],
-                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento\n"
-                            "CX-P;Caixa pequena;10;20;30;8;;;;\nCX-M;Caixa média;20;30;40;15;;;;\nPAL;Palete PBR;120;100;120;1000;;;;\n"
-                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3\n"},
+                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm)\n"
+                            "CX-P;Caixa pequena;10;20;30;8;;;;;nao;\nCX-M;Caixa média;20;30;40;15;;;;;nao;\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135\n"
+                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;\n"},
     "locations": {"sync_help": N_("Nas filiais/armazéns que aparecem no arquivo, exclui os endereços que não estão nele. Endereço ocupado ou com item atrelado é mantido."),"title": N_("Importação de Endereços"), "fields": LOCATION_FIELDS, "run": import_locations,
                   "back": ("/locations", "endereços"), "scope": True, "bins_option": True,
                   "help": [N_("Informe o endereço completo (A-01-02-03) OU as colunas Corredor, Estante, Nível, Posição e "
@@ -614,3 +617,9 @@ MASTER_KINDS = {
                "sample": "Filial;Armazem;Corredor;Estante;Nivel;Tipo de bin;Cabem;Vao (cm)\n"
                          "01;CD1;A;;;CX-P;8;25\n01;CD1;B;01-03;02-03;CX-M;3;30\n01;CD1;P;;;PAL;2;150\n"},
 }
+
+
+# estruturas (peças, tipos com composição, estruturas e estrutura das estantes): services/structure_importer
+from services.structure_importer import STRUCTURE_KINDS  # noqa: E402
+
+MASTER_KINDS.update(STRUCTURE_KINDS)

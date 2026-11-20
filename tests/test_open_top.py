@@ -127,3 +127,39 @@ def test_address_optimization_end_to_end_reads_the_level_vao(db):
     by = {r.id: r for r in results}
     assert by[ids["1"]].status != "inviavel" and by[ids["1"]].suggested.get(pal.id) == 1  # vão de 100: 8 cabem
     assert by[ids["2"]].status == "inviavel"  # vão de 30: o produto de 40 cm não cabe
+
+
+def test_cd_example_uses_an_open_pallet(client, db):
+    """Exemplo "CD com porta-paletes e picking": o palete é uma bin de 15 cm aberta em cima, com até 135 cm acima da
+    borda — a planilha cadastra o tipo assim e o projeto põe os itens volumosos em paletes no porta-palete."""
+    import copy
+    import re
+    from urllib.parse import unquote_plus, urlencode
+
+    from models import BinType, SiteProject
+    from services.file_reader import token_path
+    from services.site_import import auto_mapping, read_sheets
+    from services.site_service import merged, run_project
+
+    r = client.post("/optimization/site/new", data={"sample": "cd-paletes-picking", "name": "CD aberto"})
+    token = re.search(r'name="token" value="([^"]+)"', r.text).group(1)
+    action = re.search(r'action="(/optimization/site/(\d+)/upload/confirm)"', r.text)
+    mapping = auto_mapping(read_sheets(token_path(token)))
+    assert {"open_top", "over_cm"} <= set(mapping["bins"]["cols"])
+    fields = {"token": token, "orders_abs": "1"}
+    for kind, v in mapping.items():
+        fields[f"sheet_{kind}"] = v["sheet"]
+        for fld, i in v["cols"].items():
+            fields[f"col_{kind}_{fld}"] = "" if i is None else str(i)
+    r = client.post(action.group(1), content=urlencode(fields), headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    follow_redirects=False)
+    assert "level=danger" not in r.headers["location"], unquote_plus(r.headers["location"])
+    pal = db.query(BinType).filter_by(code="PALETE").one()
+    if float(pal.height) == 15:  # o banco dos testes pode já ter o palete antigo (150 cm, fechado): ele é mantido
+        assert pal.open_top and float(pal.over_cm) == 135
+    cfg = merged(copy.deepcopy(db.get(SiteProject, int(action.group(2))).config))
+    cfg["params"].update({"time_limit": "10"})
+    plan, errs = run_project(db, cfg)
+    assert not errs and not plan.errors
+    on_pallet = [p for p in plan.positions if p.type_id == pal.id]
+    assert on_pallet and all(p.struct_code.startswith("PP") for p in on_pallet)

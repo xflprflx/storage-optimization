@@ -1296,7 +1296,7 @@ def compute_bin_fill(plan: SitePlan, types: dict, demands: list) -> None:
     acc: dict = {"sku": {}, "type": {}, "all": [0.0, 0.0]}
     for pos in plan.positions:
         uv, spec = uvol.get(pos.sku), types.get(pos.type_id)
-        bv = spec.volume_cm3 if spec is not None else None
+        bv = spec.unit_volume_cm3 if spec is not None else None
         if not uv or not bv or not pos.bins:
             continue
         num, den = pos.units * uv, pos.bins * bv

@@ -399,8 +399,8 @@ def metrics(cfg: dict[int, int], types: dict[int, BinSpec]) -> Metrics:
             m.unknown_dims = True
             continue
         m.cost += (t.cost or 0.0) * n
-        if t.volume_cm3 is not None:
-            m.volume_l += t.volume_cm3 / 1000.0 * n
+        if t.unit_volume_cm3 is not None:  # bin aberta em cima: o espaço da carga (altura útil)
+            m.volume_l += t.unit_volume_cm3 / 1000.0 * n
         if t.fw is not None and t.h is not None:
             m.width_cm += t.fw * n
             m.height_cm = max(m.height_cm, t.h)
@@ -685,8 +685,8 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
     Pesquisa operacional: `collect` (dict) recebe as configurações candidatas que respeitam as restrições do próprio
     endereço (sem os níveis, que o modelo global trata) e a função retorna logo; `force` = (configuração, níveis)
     escolhida pelo modelo — o resultado (situação, observações) é montado como na heurística."""
-    cur_m = metrics(a.current, all_types)
     all_types = at_vao(all_types, a.vao)  # bins abertas em cima: a carga pode subir até o vão deste nível
+    cur_m = metrics(a.current, all_types)
     res = AddressResult(a.id, a.address, "ok", dict(a.current), cur_m)
     res.own_level, res.current_placement = a.own_level, {k: dict(v) for k, v in a.current_placement.items()}
     types = {t: b for t, b in all_types.items() if prm.allowed_types is None or t in prm.allowed_types}

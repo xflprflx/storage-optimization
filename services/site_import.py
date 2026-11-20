@@ -462,15 +462,12 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 over = _dec(row, cm.get("over_cm"), "over_cm", e, i) if cm.get("over_cm") is not None else None
                 opened = (normalize_header(o_raw) in {"sim", "s", "1", "x", "true", "yes", "y", "si", "oui", "ja", "是"}
                           if str(o_raw).strip() else (True if over else None))
-                if code in existing:  # tipo já cadastrado: dimensões mantidas; o custo e a abertura podem ser atualizados
+                if code in existing:  # tipo já cadastrado: dimensões e abertura mantidas; só o custo pode ser atualizado
                     kept += 1
                     bt = by_code.get(code)
                     if bt is not None and cost is not None and not e and bt.cost != Decimal(str(cost)):
                         bt.cost = Decimal(str(cost))
                         priced += 1
-                    if bt is not None and opened is not None and not e:
-                        bt.open_top = opened
-                        bt.over_cm = Decimal(str(over)) if (opened and over) else (bt.over_cm if opened else None)
                     continue
                 vals = {k: _dec(row, cm[k], k, e, i) for k in ("height", "width", "length", "max_weight", "max_volume")}
                 vals["cost"] = cost

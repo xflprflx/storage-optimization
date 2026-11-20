@@ -16,6 +16,11 @@
   #nkWalk.nk-collapsed { width: 260px; top: 3rem; bottom: auto; }  /* recolhido: no alto, logo abaixo dos botões */
   .nk3d-hud { left: 50%; top: .6rem; transform: translateX(-50%); display: none; min-width: 300px; font-size: .82rem; }
   .nk3d-hud .row-w { display: flex; gap: .5rem; align-items: center; white-space: nowrap; }
+  .nk3d-hud .nk-who { margin-top: .3rem; padding-top: .25rem; border-top: 1px solid #e6ebef; }
+  .nk3d-hud .nk-who .row-w { padding-left: 1.1rem; }
+  .nk3d-hud .nk-who .row-w.nk-name { padding-left: 0; }
+  .nk3d-hud .nk-lbl { color: #5b6770; min-width: 3.6rem; }
+  .nk3d-hud.nk-collapsed #nkHudBody, .nk3d-hud.nk-collapsed #nkHudSub { display: none; }
   .nk3d-stops { max-height: 160px; overflow: auto; font-size: .76rem; }
   .nk3d-stops .done { color: #8a96a0; text-decoration: line-through; }
   .nk3d-stops .now { font-weight: 700; }
@@ -81,7 +86,13 @@
     <button type="button" class="btn btn-sm btn-success{{ '' if v3.routes_url else ' d-none' }}" id="nkWalkBtn" title="{{ _("Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)") }}"><i class="bi bi-person-walking"></i> {{ _("Simular caminhada") }}</button>
     <button type="button" class="btn btn-sm btn-light border" id="nkFull" title="{{ _("Maximiza a vista 3D (Esc volta)") }}"><i class="bi bi-arrows-fullscreen"></i></button>
   </div>
-  <div class="nk3d-panel nk3d-hud" id="nkHud"></div>
+  <div class="nk3d-panel nk3d-hud" id="nkHud">
+    <div class="d-flex align-items-start gap-2">
+      <div class="flex-grow-1"><div class="fw-semibold" id="nkHudHead"></div><div id="nkHudSub"></div></div>
+      <button type="button" class="btn btn-sm btn-link p-0 text-secondary" id="nkHudToggle" title="{{ _("Recolher / expandir o painel dos separadores") }}"><i class="bi bi-chevron-up"></i></button>
+    </div>
+    <div id="nkHudBody"></div>
+  </div>
   <div class="nk3d-panel nk3d-clock" id="nkClock" title="{{ _("Hora do dia na simulação") }}"></div>
   <div class="nk3d-panel nk3d-walk" id="nkWalk">
     <div class="d-flex justify-content-between align-items-center mb-1 nk-keep gap-1"><b class="me-auto"><i class="bi bi-person-walking"></i> {{ _("Simulação de caminhada") }}</b>
@@ -137,6 +148,10 @@
       <span class="small text-muted" id="nkRecMsg"></span>
     </div>
     <div class="small" id="nkWalkInfo"></div>
+    <div class="d-flex align-items-center gap-1 mt-1 small" id="nkStopsWhoBox" style="display:none!important">
+      <label class="text-muted text-nowrap" for="nkStopsWho">{{ _("Paradas de") }}</label>
+      <select class="form-select form-select-sm" id="nkStopsWho"></select>
+    </div>
     <div class="nk3d-stops mt-1" id="nkStops"></div>
   </div>
   <div class="nk3d-msg" id="nkMsg">{{ _("Carregando…") }}</div>
@@ -755,13 +770,37 @@ function build() {
   if (RB) $('nkWalkInfo').insertAdjacentHTML('beforeend', `<div style="color:${RB.color}">` + (RB.orders
     ? _t('Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).', {orders: esc(RB.orders.join(', '))})
     : _t('Lote: {n} trajetos no dia, um depois do outro (saída e volta na referência a cada trajeto).', {n: (RB.trips || []).length})) + '<\/div>');
-  $('nkStops').innerHTML = '<div class="text-muted">' + _t('Paradas — {esc}:', {esc: esc(first.name)}) + '<\/div>' + (first.keys.map((k, j) =>
-    (many && (j === 0 || first.ord[j] !== first.ord[j - 1]) ? `<div class="fw-semibold mt-1">${esc(_t('Pedido {k} de {n}: {order} ({lines} linha(s))', {k: first.ord[j] + 1, n: d.orders.length, order: d.orders[first.ord[j]].order, lines: d.orders[first.ord[j]].lines}))}</div>` : '') +
-    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(((first.groups && first.groups[j]) || [k]).join(' + '))}</span> · ${String(first.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
-    (first.qty ? ' ' + _t('· <b>{fmt} pç<\/b>', {fmt: fmt(first.qty[j], 2)}) : '') + (first.out && first.out[j] ? ' ' + _t('· <span class="text-warning-emphasis">{out} fora do ouro<\/span>', {out: first.out[j]}) : '') +
-    ` (${fmt(stopT(first, j), 0)} s)</div>`).join('')) + ((d.has_qty ? '' : '<div class="text-warning-emphasis">' + _t('Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).') + '<\/div>'));
+  WK.ordLines = Object.fromEntries((d.orders || []).map(o => [o.order, o.lines]));
+  WK.stopsW = 0;
+  const who = $('nkStopsWho');
+  who.innerHTML = WK.walkers.map((w, i) => `<option value="${i}">${esc(w.R.name)}</option>`).join('');
+  $('nkStopsWhoBox').style.setProperty('display', WK.walkers.length > 1 ? 'flex' : 'none', 'important');
+  renderStops();
   WK.t = 0; update(); camMode(true);
   $('nkHud').style.display = 'block';
+}
+
+// lista de paradas de UM separador (escolhido quando há vários): com o dia inteiro, agrupada por pedido ou, no lote,
+// por trajeto (com os pedidos dele)
+function renderStops() {
+  const d = WK.data, w = WK.walkers[WK.stopsW] || WK.walkers[0];
+  if (!w) return;
+  const R = w.R, many = !!d.day;
+  const head = j => {
+    if (!many) return '';
+    if (R.trip) {
+      if (j > 0 && R.trip[j] === R.trip[j - 1]) return '';
+      const os = R.trips[R.trip[j]] || [];
+      return `<div class="fw-semibold mt-1">${esc(_t('Trajeto {k} de {n}: {orders} ({c} pedido(s), {lines} linha(s))', {k: R.trip[j] + 1, n: R.trips.length, orders: os.join(', '), c: os.length, lines: os.reduce((a, o) => a + (WK.ordLines[o] || 0), 0)}))}</div>`;
+    }
+    if (j > 0 && R.ord[j] === R.ord[j - 1]) return '';
+    const o = d.orders[R.ord[j]];
+    return `<div class="fw-semibold mt-1">${esc(_t('Pedido {k} de {n}: {order} ({lines} linha(s))', {k: R.ord[j] + 1, n: d.orders.length, order: o.order, lines: o.lines}))}</div>`;
+  };
+  $('nkStops').innerHTML = '<div class="text-muted">' + `<span class="nk3d-sw" style="background:${R.color}"></span>` + _t('Paradas — {esc}:', {esc: esc(R.name)}) + '<\/div>' + R.keys.map((k, j) => head(j) +
+    `<div data-j="${j}">${j + 1}. <span class="mono">${esc(grpOf(R, j))}</span> · ${String(R.skus[j] || '').split(', ').map(s => esc(s) + (data.skus[s] ? ' ' + esc(data.skus[s]) : '')).join('; ')}` +
+    (R.qty ? ' ' + _t('· <b>{fmt} pç<\/b>', {fmt: fmt(R.qty[j], 2)}) : '') + (R.out && R.out[j] ? ' ' + _t('· <span class="text-warning-emphasis">{out} fora do ouro<\/span>', {out: R.out[j]}) : '') +
+    ` (${fmt(stopT(R, j), 0)} s)</div>`).join('') + ((d.has_qty ? '' : '<div class="text-warning-emphasis">' + _t('Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).') + '<\/div>'));
 }
 
 function update() {
@@ -804,27 +843,65 @@ function update() {
   if (!WK.scrubbing) $('nkProg').value = WK.T ? Math.round(t / WK.T * 1000) : 0;
 }
 
-function hudLines() {
-  const d = WK.data;
+// painel dos separadores: o cabeçalho (o dia ou o pedido, a hora e o tempo da simulação) e, para cada separador, o que
+// ele separa AGORA (pedido ou trajeto do lote) e o que está fazendo, e o progresso NO DIA (ou no pedido/trajeto)
+const hhmm = sec => clockText(sec).slice(0, 5);
+function curStop(w) {  // parada em andamento ou a próxima (-1 = já passou da última)
+  return w.R.keys.findIndex((k, i) => w.arrS[i] + stopT(w.R, i) > WK.t + 1e-9);
+}
+function walkerState(w) {
+  const d = WK.data, R = w.R, t = WK.t, done = t >= w.T, s = curStop(w), last = R.keys.length - 1;
+  const at = s < 0 ? last : s;
+  let now = '';
+  if (d.day && R.trip && R.trips) {
+    const ti = R.trip[at], os = R.trips[ti] || [];
+    const shown = os.length > 3 ? os.slice(0, 3).join(', ') + ' ' + _t('+{n}', {n: os.length - 3}) : os.join(', ');
+    now = _t('trajeto {k} de {n} · {orders} ({c} pedido(s), {lines} linha(s))', {k: ti + 1, n: R.trips.length, orders: shown, c: os.length, lines: os.reduce((a, o) => a + (WK.ordLines[o] || 0), 0)});
+  } else if (d.day) {
+    const o = d.orders[R.ord[at]] || {};
+    now = _t('pedido {k} de {n} · {order} ({lines} linha(s))', {k: R.ord[at] + 1, n: d.orders.length, order: o.order, lines: o.lines});
+  } else if (R.orders && R.orders.length > 1) {
+    now = _t('trajeto com {orders}', {orders: R.orders.join(', ')});
+  }
+  const clk = x => (d.clock_s != null ? hhmm(d.clock_s + x) : mmss(x));
+  let status;
+  if (done) {
+    status = d.day && d.clock_s != null ? _t('✓ terminou às {h}', {h: clockText(d.clock_s + w.T)}) : _t('✓ terminou em {t}', {t: mmss(w.T)});
+  } else if (w.waiting && s >= 0) {
+    const h = R.rel ? clk(R.rel[s]) : '';
+    const why = R.trip_why ? R.trip_why[R.trip[s]] : (d.orders[R.ord[s]] || {}).order;
+    status = why === '' ? _t('aguardando completar o lote (sai às {h})', {h}) : _t('aguardando a liberação de {order} ({h})', {order: why, h});
+  } else if (w.pick != null) {
+    status = _t('pegando {grpOf} ({fmt} pç)', {grpOf: grpOf(R, w.pick), fmt: fmt(R.qty ? +R.qty[w.pick] || 0 : 1, 2)});
+  } else if (s >= 0) {
+    status = _t('andando para {key}', {key: grpOf(R, s)});
+  } else {
+    status = _t('voltando à referência');
+  }
+  const q = j => (R.qty ? +R.qty[j] || 0 : 1);
+  let got = 0, all = 0;  // peças já pegas: paradas concluídas (a do momento entra quando termina a pega)
+  R.keys.forEach((k, j) => { all += q(j); if (w.arrS[j] + stopT(R, j) <= t + 1e-9) got += q(j); });
+  const lbl = d.day ? _t('No dia') : (R.orders && R.orders.length > 1 ? _t('No trajeto') : _t('No pedido'));
+  const prog = _t('{fmt} de {fmt2} m · paradas {picked} de {keys} · peças {fmt3} de {fmt4}', {fmt: fmt(R.m * w.d / w.total), fmt2: fmt(R.m), picked: w.picked, keys: R.keys.length, fmt3: fmt(got, 2), fmt4: fmt(all, 2)});
+  return { color: R.color, name: R.name, now, status, lbl, prog };
+}
+function hudHead() {
+  const d = WK.data, el = mmss(Math.min(WK.t, WK.T));
   const pcs = d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '';
-  const out = [{ text: _t('Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs} · {mmss}', {order: d.order, lines: d.lines, stops: d.stops, pcs, mmss: mmss(Math.min(WK.t, WK.T))}), bold: true }];
-  if (d.day && d.clock_s != null) {  // relógio: hora do dia na simulação (também no vídeo)
-    const c = clockText(d.clock_s + Math.min(WK.t, WK.T));
-    out.splice(1, 0, { text: _t('Hora: {h}', {h: c}) + (d.clock_guess ? ' ' + _t('(início presumido às 08:00)') : ''), bold: true });
-  }
-  if (d.day) {  // dia inteiro: em que pedido o 1º separador está
-    const w0 = WK.walkers[0], R = w0.R;
-    let s = R.keys.findIndex((k, i) => w0.arrS[i] + stopT(R, i) > WK.t + 1e-9);
-    const oi = s < 0 ? d.orders.length - 1 : R.ord[s], o = d.orders[oi];
-    out[0] = { text: _t('Dia {day} · {n} pedidos · {lines} linha(s){pcs} · {mmss}', {day: fmtDay(d.day), n: d.orders.length, lines: d.lines, pcs, mmss: mmss(Math.min(WK.t, WK.T))}), bold: true };
-    out.splice(1, 0, { text: _t('Pedido {k} de {n}: {order} ({lines} linha(s))', {k: oi + 1, n: d.orders.length, order: o.order, lines: o.lines}) });
-  }
-  WK.walkers.forEach(w => {
-    const dm = w.R.m * w.d / w.total, done = WK.t >= w.T, q = s => (w.R.qty ? +w.R.qty[s] || 0 : 1);
-    // peças já pegas: paradas concluídas (a do momento entra quando termina a pega)
-    let got = 0, all = 0;
-    w.R.keys.forEach((k, s) => { all += q(s); if (w.arrS[s] + stopT(w.R, s) <= WK.t + 1e-9) got += q(s); });
-    out.push({ color: w.R.color, text: _t('{split}: {fmt} de {fmt2} m · paradas {picked}/{keys} · peças {fmt3}/{fmt4} · {done}', {split: w.R.name.split(' ')[0], fmt: fmt(dm), fmt2: fmt(w.R.m), picked: w.picked, keys: w.R.keys.length, fmt3: fmt(got, 2), fmt4: fmt(all, 2), done: (done ? `✓ ${mmss(w.T)}` : w.waiting ? _t('aguardando liberação') : w.pick != null ? _t('pegando {grpOf} ({fmt} pç)', {grpOf: grpOf(w.R, w.pick), fmt: fmt(q(w.pick), 2)}) : mmss(WK.t))}) });
+  const head = d.day ? _t('Dia {day} · {n} pedidos · {lines} linha(s){pcs}', {day: fmtDay(d.day), n: d.orders.length, lines: d.lines, pcs})
+    : _t('Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs}', {order: d.order, lines: d.lines, stops: d.stops, pcs});
+  const sub = d.day && d.clock_s != null
+    ? _t('Hora {h} · simulação {t}', {h: clockText(d.clock_s + Math.min(WK.t, WK.T)), t: el}) + (d.clock_guess ? ' ' + _t('(início presumido às 08:00)') : '')
+    : _t('Simulação {t}', {t: el});
+  return { head, sub };
+}
+// linhas do vídeo (sempre completas, mesmo com o painel recolhido): 2 por separador
+function hudLines() {
+  const { head, sub } = hudHead();
+  const out = [{ text: head, bold: true }, { text: sub }];
+  WK.walkers.map(walkerState).forEach(st => {
+    out.push({ color: st.color, bold: true, text: `${st.name} — ${_t('agora')}: ${st.now ? st.now + ' · ' : ''}${st.status}` });
+    out.push({ indent: true, text: `${st.lbl}: ${st.prog}` });
   });
   return out;
 }
@@ -837,12 +914,19 @@ function hud() {
     ck.style.display = 'block';
     ck.innerHTML = `<i class="bi bi-clock"></i> ${clockText(d.clock_s + Math.min(WK.t, WK.T))}<small>${esc(fmtDay(d.day))}${d.clock_guess ? ' · ' + esc(_t('início presumido às 08:00')) : ''}</small>`;
   } else ck.style.display = 'none';
-  $('nkHud').innerHTML = hudLines().map(l => `<div class="row-w">${l.color ? `<span class="nk3d-sw" style="background:${l.color}"></span>` : ''}` +
-    `<span${l.bold ? ' class="fw-semibold"' : ''}>${esc(l.text)}</span></div>`).join('');
-  const w0 = WK.walkers[0];
+  const { head, sub } = hudHead();
+  $('nkHudHead').textContent = head;
+  $('nkHudSub').textContent = sub;
+  if (!$('nkHud').classList.contains('nk-collapsed')) {
+    $('nkHudBody').innerHTML = WK.walkers.map(walkerState).map(st => '<div class="nk-who">' +
+      `<div class="row-w nk-name fw-semibold"><span class="nk3d-sw" style="background:${st.color}"></span>${esc(st.name)}</div>` +
+      `<div class="row-w"><span class="nk-lbl">${esc(_t('Agora'))}</span><span>${esc(st.now ? st.now + ' · ' + st.status : st.status)}</span></div>` +
+      `<div class="row-w"><span class="nk-lbl">${esc(st.lbl)}</span><span>${esc(st.prog)}</span></div></div>`).join('');
+  }
+  const ws = WK.walkers[WK.stopsW] || WK.walkers[0];
   document.querySelectorAll('#nkStops [data-j]').forEach(el => {
     const j = +el.dataset.j;
-    el.className = w0.arrS[j] + stopT(w0.R, j) <= WK.t + 1e-9 ? 'done' : w0.pick === j ? 'now' : '';
+    el.className = ws.arrS[j] + stopT(ws.R, j) <= WK.t + 1e-9 ? 'done' : ws.pick === j ? 'now' : '';
   });
 }
 
@@ -938,7 +1022,7 @@ function recFrame() {
     const y = pad * 1.5 + i * px * 1.45 + px * 0.8;
     if (l.color) { ctx.fillStyle = l.color; ctx.fillRect(pad * 2, y - px * 0.75, px * 0.8, px * 0.8); }
     ctx.fillStyle = '#1f2d33'; ctx.font = `${l.bold ? 700 : 500} ${px}px system-ui, sans-serif`;
-    ctx.fillText(l.text, pad * 2 + (l.color ? px * 1.2 : 0), y);
+    ctx.fillText(l.text, pad * 2 + (l.color || l.indent ? px * 1.2 : 0), y);
   });
   const foot = _t('{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×', {name: B.name || '', fmt: fmt(walkV()), fmt2: fmt(pickS(), 0), fmt3: fmt(pieceS(), 1), fmt4: fmt(goldS(), 1), fmt5: fmt(goldP(), 1), speed: speed()});
   ctx.font = `500 ${Math.round(px * 0.8)}px system-ui, sans-serif`;
@@ -987,6 +1071,16 @@ const walkCollapse = on => {
 };
 $('nkWalkToggle').addEventListener('click', () => walkCollapse(!$('nkWalk').classList.contains('nk-collapsed')));
 try { if (localStorage.getItem('nk-walk-collapsed') === '1') walkCollapse(true); } catch (e) { /* idem */ }
+// painel dos separadores recolhível (fica só o dia/pedido); o vídeo grava o painel completo
+const hudCollapse = on => {
+  $('nkHud').classList.toggle('nk-collapsed', on);
+  $('nkHudToggle').innerHTML = on ? '<i class="bi bi-chevron-down"><\/i>' : '<i class="bi bi-chevron-up"><\/i>';
+  try { localStorage.setItem('nk-hud-collapsed', on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+  if (WK.data) hud();
+};
+$('nkHudToggle').addEventListener('click', () => hudCollapse(!$('nkHud').classList.contains('nk-collapsed')));
+try { if (localStorage.getItem('nk-hud-collapsed') === '1') hudCollapse(true); } catch (e) { /* idem */ }
+$('nkStopsWho').addEventListener('change', e => { WK.stopsW = +e.target.value || 0; renderStops(); hud(); });
 $('nkRelease').addEventListener('change', () => {  // a ordem e os trajetos do dia mudam (vêm do servidor)
   if (WK.rec) stopRec(true);
   $('nkBWait').disabled = !$('nkRelease').checked;  // a espera para agrupar só existe com o horário de liberação

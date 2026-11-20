@@ -869,9 +869,13 @@ def day_payload(sample: list, nodes_of: dict, start: Node, ref: dict, day: str, 
             for f in ("keys", "groups", "skus", "qty", "out", "outq"):
                 m[f] += r[f]
             m["ord"] += [min(pos.get(o, 0) for o in t["orders"])] * len(r["keys"])
+            m.setdefault("trip", []).extend([len(m["trips"])] * len(r["keys"]))  # trajeto de cada parada
             if release:  # o trajeto só sai com todos os pedidos dele liberados (e depois da espera para completar o lote)
-                m.setdefault("rel", []).extend([max([rel0.get(o, 0) for o in t["orders"]] + [t.get("start_s") or 0])]
-                                               * len(r["keys"]))
+                last = max(t["orders"], key=lambda o: rel0.get(o, 0))
+                go = max(rel0.get(last, 0), t.get("start_s") or 0)
+                m.setdefault("rel", []).extend([go] * len(r["keys"]))
+                # por que o trajeto espera: o pedido liberado por último ou a espera para completar o lote
+                m.setdefault("trip_why", []).append("" if go > rel0.get(last, 0) + 1e-9 else last)
             m["m"] = round(m["m"] + r["m"], 2)
             m["trips"].append(t["orders"])
         if m is not None:

@@ -379,7 +379,17 @@ Cada pedido sai do ponto de referência, passa por um endereço de cada SKU (o m
 **Caminhada em 3D e vídeo** (botão *Ver caminhada em 3D / gravar vídeo* no simulador ou *Simular caminhada* no Arranjo 3D; dados em `/optimization/site/{id}/routes3d.json`):
 - **Separadores animados:** um boneco com carrinho anda pelos corredores, para em cada endereço e pega o produto. As bins do endereço se acendem na cor de quem pegou.
 - **Rotas:** uma rota (lista, serpentina, otimizada ou lote) ou **as quatro ao mesmo tempo**, lado a lado, para ver qual termina antes. O trajeto já percorrido fica em cor cheia; o restante, claro.
-- **Painel:** distância percorrida, paradas feitas, **peças pegas / total** e tempo de cada rota; no topo, linhas, paradas e peças do pedido. A lista de paradas risca as já feitas. O tempo de caminhada do vídeo usa a mesma distância da simulação (a do painel).
+- **Painel dos separadores** (no alto da vista, recolhível pela seta; a escolha fica lembrada no navegador):
+  - **cabeçalho:** o pedido (ou o dia: pedidos, linhas e peças), a hora do dia e o tempo de simulação, com rótulo;
+  - **um bloco por separador**, na cor dele:
+    - *Agora*: o que ele separa (o pedido "3 de 48" ou, no lote, o trajeto "4 de 42" com os pedidos dele) e o que
+      está fazendo: pegando um endereço, andando para o próximo, voltando à referência, aguardando a liberação de um
+      pedido (com o horário), aguardando completar o lote (com o horário de saída) ou terminou;
+    - *No dia* (ou *No pedido* / *No trajeto*): metros, paradas e peças feitos do total.
+  - O vídeo grava o painel completo, mesmo recolhido (2 linhas por separador).
+- **Lista de paradas:** de um separador, escolhido em *Paradas de* quando há vários; no dia inteiro, agrupada por
+  pedido ou, no lote, por trajeto. Risca as paradas já feitas. O tempo de caminhada do vídeo usa a mesma distância da
+  simulação (a do painel).
 - **Corredores:** o filtro *Corredor* do 3D aceita **vários corredores** (marque um ou mais; *Todos* limpa, *Inverter* troca a seleção).
 - **Tempo estimado:** caminhada (m/s) + tempo por parada (s) + **tempo por peça** (s) × peças + **fora do ouro** (s) × itens fora da zona de ouro da pega, todos editáveis. Cada parada (um módulo) dura o tempo fixo mais as peças e os itens fora do ouro dos endereços dela; a lista de paradas e o painel ("pegando …") mostram **todos os endereços** do módulo, as peças, os itens fora do ouro e o tempo de cada uma, e as bins de todos os endereços da parada se acendem. Também há o campo *Fora do ouro (s/peça)*.
 - **Controles:** tocar/pausar (barra de espaço), barra para avançar ou voltar e velocidade do vídeo (tempo real a 50×).

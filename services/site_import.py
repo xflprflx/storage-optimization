@@ -159,6 +159,8 @@ BIN_COLS = {
     "max_weight": ["peso", "pesomax", "pesomaximo", "pesomaxkg", "pesomaximokg", "capacidadepeso"],
     "max_volume": ["volume", "volumel", "volumelitros", "capacidadevolume"],
     "cost": ["custo", "custor", "custobin", "custoporbin", "preco", "valor"],
+    "open_top": ["abertaemcima", "abertaemcimasimnao", "aberta", "semtampa", "opentop"],
+    "over_cm": ["maximoacimadaborda", "maximoacimadabordacm", "acimadaborda", "maxacima", "overhang"],
 }
 BUILDING_KEYS = {
     "length_m": ["comprimento", "comprimentom"],
@@ -273,7 +275,8 @@ FIELD_LABELS = {
                    "door_time": N_("Tempo da porta (s)")},
     "bins": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
              "length": N_("Comprimento (cm)"), "max_weight": N_("Peso máx. (kg)"), "max_volume": "Volume (L)",
-             "cost": N_("Custo por bin (R$)")},
+             "cost": N_("Custo por bin (R$)"), "open_top": N_("Aberta em cima (sim/não)"),
+             "over_cm": N_("Máximo acima da borda (cm)")},
     "skus": {"sku": "SKU", "name": N_("Produto"), "material": N_("Tipo de material"), "h": N_("Altura (cm)"), "w": N_("Largura (cm)"),
              "l": N_("Comprimento (cm)"), "wt": N_("Peso unitário (kg)"), "stock": N_("Saldo"), "min": N_("Min level"),
              "max": N_("Max level"), "out": N_("Saída (linhas ou unid./período)"),
@@ -454,12 +457,20 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     continue
                 e: list[str] = []
                 cost = _dec(row, cm["cost"], "custo", e, i)
-                if code in existing:  # tipo já cadastrado: dimensões mantidas; só o custo pode ser atualizado
+                # aberta em cima (a carga pode passar da borda) e o máximo acima da borda: colunas opcionais
+                o_raw = _cell(row, cm.get("open_top")) if cm.get("open_top") is not None else ""
+                over = _dec(row, cm.get("over_cm"), "over_cm", e, i) if cm.get("over_cm") is not None else None
+                opened = (normalize_header(o_raw) in {"sim", "s", "1", "x", "true", "yes", "y", "si", "oui", "ja", "是"}
+                          if str(o_raw).strip() else (True if over else None))
+                if code in existing:  # tipo já cadastrado: dimensões mantidas; o custo e a abertura podem ser atualizados
                     kept += 1
                     bt = by_code.get(code)
                     if bt is not None and cost is not None and not e and bt.cost != Decimal(str(cost)):
                         bt.cost = Decimal(str(cost))
                         priced += 1
+                    if bt is not None and opened is not None and not e:
+                        bt.open_top = opened
+                        bt.over_cm = Decimal(str(over)) if (opened and over) else (bt.over_cm if opened else None)
                     continue
                 vals = {k: _dec(row, cm[k], k, e, i) for k in ("height", "width", "length", "max_weight", "max_volume")}
                 vals["cost"] = cost
@@ -467,7 +478,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                     errs.append(_("Bins linha {i} ({code}): informe altura, largura e comprimento válidos.", i=i, code=code))
                     continue
                 db.add(BinType(code=code[:30], name=(_cell(row, cm["name"]) or code)[:150],
-                               **{k: Decimal(str(v)) if v is not None else None for k, v in vals.items()}))
+                               **{k: Decimal(str(v)) if v is not None else None for k, v in vals.items()},
+                               open_top=bool(opened), over_cm=Decimal(str(over)) if (opened and over) else None))
                 existing.add(code)
                 created += 1
             db.flush()
@@ -939,9 +951,10 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
           rows, {2: 30})
     sheet(wb.create_sheet(N_("Bins")),
           [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso máx. (kg)"), "Volume (L)",
-           _("Custo por bin (R$)")],
+           _("Custo por bin (R$)"), _("Aberta em cima (sim/não)"), _("Máximo acima da borda (cm)")],
           [(bt.code, bt.name, *(float(v) if v is not None else None for v in
-                                (bt.height, bt.width, bt.length, bt.max_weight, bt.max_volume, bt.cost)))
+                                (bt.height, bt.width, bt.length, bt.max_weight, bt.max_volume, bt.cost)),
+            _("sim") if bt.open_top else _("não"), float(bt.over_cm) if bt.over_cm is not None else None)
            for bt in db.scalars(select(BinType).where(BinType.parent_id.is_(None)).order_by(BinType.code))], {2: 30})
     sheet(wb.create_sheet("SKUs"),
           ["SKU", N_("Produto"), _("Material"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso (kg)"), _("Saldo"),

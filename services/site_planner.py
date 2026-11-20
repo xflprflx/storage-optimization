@@ -853,7 +853,8 @@ def level_capacity(t: BinSpec, s: StructureSpec, prm: SiteParams, parent: Option
     if not t.has_dims:
         return 0
     vao = s.vao(n) if n else s.max_vao
-    if t.h + prm.top_gap_cm > vao + EPS or t.l > s.depth + EPS or t.w > s.width + EPS:
+    # bin aberta em cima com carga acima da borda (projeto): o nível precisa comportar a carga (altura útil)
+    if t.uh + prm.top_gap_cm > vao + EPS or t.l > s.depth + EPS or t.w > s.width + EPS:
         return 0
     usable = s.width * prm.level_fill
     per_row = int(math.floor((usable + prm.side_gap_cm) / (t.w + prm.side_gap_cm) + EPS))

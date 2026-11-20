@@ -738,6 +738,25 @@ dividida pelas folhas. A porta de giro varre, no corredor, um setor de círculo 
   pedido.
 - **3D**: o arco no piso e as folhas da porta, que abrem quando um separador para na estante.
 
+## 6.0.11 Bins abertas em cima (a carga passa da borda)
+
+No cadastro do **tipo de bin**, a opção **Aberta em cima** (palete, bandeja, caixa sem tampa) deixa a carga passar da
+altura da bin. O campo **Máximo acima da borda (cm)** limita quanto (estabilidade, segurança); vazio = até o vão do
+nível. Gaveta, caixa com tampa e bin empilhada ficam com a opção desligada: a altura útil é a da bin.
+
+A **altura útil** para os produtos (a do encaixe em grade e a do limite de volume) passa a ser a altura da bin + o que
+sobe acima da borda. A bin continua com as próprias medidas para o encaixe no nível, o volume de bins e o 3D.
+
+| Onde | Até onde a carga sobe |
+|---|---|
+| **Por endereço** | o vão do nível do endereço − 5 cm (folga para pegar), limitado ao máximo do tipo; nível sem vão cadastrado: só o máximo |
+| **Pool** | os SKUs mudam de endereço, então cada tipo usa a **menor** altura livre entre os níveis onde as bins dele estão no pool (cabe em qualquer uma); bins ilimitadas: só o máximo. O resultado avisa quais tipos usaram |
+| **Projeto de filial nova** | só com o máximo informado: a carga sobe até ele, e o tipo só vai para níveis cujo vão comporta a bin + o máximo + a folga. Sem o máximo, a carga fica na altura da bin (o resultado avisa) |
+| **Arranjo das unidades** (desenho da bin) | até o máximo; sem ele, as camadas que forem precisas. A borda aparece tracejada e a carga acima dela |
+
+Importação: as colunas opcionais *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* entram na importação de
+tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo marca a bin como aberta).
+
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 
 A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.

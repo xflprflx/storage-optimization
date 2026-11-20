@@ -80,6 +80,7 @@ class BinArrangement:
     approx: bool = False  # vários SKUs: divisão aproximada
     # compartimento (fração de uma bin pai): {"h","w","l" da pai, "x0","z0" do compartimento, "k", "axis", "label", "code"}
     parent: Optional[dict] = None
+    load_h: Optional[float] = None  # bin aberta em cima: altura da carga quando passa da borda (cm)
 
     @property
     def ok(self) -> bool:
@@ -87,7 +88,7 @@ class BinArrangement:
 
     def as_json(self) -> dict:
         h, w, l_ = self.dims or (0, 0, 0)
-        return {"code": self.code, "h": h, "w": w, "l": l_, "approx": self.approx, "parent": self.parent,
+        return {"code": self.code, "h": h, "w": w, "l": l_, "approx": self.approx, "parent": self.parent, "load_h": self.load_h,
                 "items": [{"sku": i.sku, "qty": i.qty, "color": i.color, "text": i.text, "boxes": i.boxes,
                            "layers": [list(x) for x in i.layers()], "real": i.real, "reserved": i.reserved,
                            "dims": i.dims, "oriented": i.oriented, "overflow": i.overflow} for i in self.items]}
@@ -126,9 +127,12 @@ def best_orientation(dims: tuple, box: tuple, rotation: str = "upright"):
     return o, vert, nx, nz, ny, total
 
 
-def arrange(bin_code: str, bin_dims: Optional[tuple], items: list[tuple], rotation: str = "upright") -> BinArrangement:
+def arrange(bin_code: str, bin_dims: Optional[tuple], items: list[tuple], rotation: str = "upright",
+            open_top: bool = False, top: Optional[float] = None) -> BinArrangement:
     """items = [(sku, qty, (altura, largura, comprimento) | None[, reserva])]. Calcula orientação e posições.
-    `reserva` = posições planejadas além das unidades físicas (desenhadas vazias)."""
+    `reserva` = posições planejadas além das unidades físicas (desenhadas vazias).
+    Bin aberta em cima (`open_top`): a carga pode passar da borda — até `top` (altura útil, cm) ou, sem ela, com as
+    camadas que forem precisas (o nível onde a bin fica não é conhecido aqui)."""
     out = []
     for i, it in enumerate(items):
         sku, q, d = it[:3]
@@ -139,14 +143,22 @@ def arrange(bin_code: str, bin_dims: Optional[tuple], items: list[tuple], rotati
     if not bin_dims or not all(bin_dims):
         return arr
     H, W, L = bin_dims
+    HU = max(H, top) if (open_top and top) else H  # altura útil para as unidades
+    free_top = open_top and not top  # aberta sem limite conhecido: sobe o quanto precisar
     # Um SKU após o outro ao longo do comprimento: cada um ocupa só as fileiras de que precisa
     z0 = 0.0
     for it in out:
         if None in it.dims or not all(it.dims):
             continue
         room = max(L - z0, 0.0)
-        o, vert, nx, nz, ny, total = best_orientation(it.dims, (H, W, room), rotation)
         want = it.qty + it.reserved
+        o, vert, nx, nz, ny, total = best_orientation(it.dims, (HU, W, room), rotation)
+        if free_top:
+            if total == 0:  # a unidade é mais alta que a bin: a carga passa da borda
+                o, vert, nx, nz, ny, total = best_orientation(it.dims, (H + max(it.dims), W, room), rotation)
+            if nx * nz and total < want:
+                ny = int(math.ceil(want / (nx * nz)))
+                total = nx * nz * ny
         if len(out) > 1 and nx * ny:
             rows = math.ceil(want / (nx * ny))
             nz = min(nz, rows)
@@ -168,6 +180,10 @@ def arrange(bin_code: str, bin_dims: Optional[tuple], items: list[tuple], rotati
                     it.boxes.append((round(ix * ow, 3), round(iy * oh, 3), round(z0 + iz * ol, 3), ow, oh, ol))
                     k += 1
         z0 = it.region[1] if len(out) > 1 else L
+    if open_top:
+        tops = [y + dy for it in out for (_x, y, _z, _dx, dy, _dz) in it.boxes]
+        if tops and max(tops) > H + EPS:
+            arr.load_h = round(max(tops), 3)
     return arr
 
 
@@ -180,8 +196,10 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
     pr = arr.parent
     PH, PW, PL = (pr["h"], pr["w"], pr["l"]) if pr else (H, W, L)
     ox, oz = (pr["x0"], pr["z0"]) if pr else (0.0, 0.0)
-    sc = size / max(PW, PL, PH)
-    tw, tl, th = PW * sc, PL * sc, PH * sc
+    LH = max(PH, arr.load_h or 0.0)  # bin aberta: a carga acima da borda entra no desenho
+    sc = size / max(PW, PL, LH)
+    tw, tl, th = PW * sc, PL * sc, LH * sc
+    rim = th - PH * sc  # distância do alto do desenho até a borda da bin (0 = sem carga acima da borda)
     fs = max(4.5, min(7.0 if size < 100 else 11.0, size / 10))
     num_w = fs * 1.6  # coluna dos números das camadas
     gap = 6
@@ -193,7 +211,11 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
     parts.append(f'<text x="1" y="{fs:.1f}" font-size="{fs:.1f}" fill="#6b7780">cima</text>'
                  f'<text x="{fx + 1:.1f}" y="{fs:.1f}" font-size="{fs:.1f}" fill="#6b7780">frente · camadas</text>')
     parts.append(f'<rect x="0.5" y="{oy + .5:.1f}" width="{tw:.1f}" height="{tl:.1f}" fill="#f7f9fa" stroke="#6c7a84" stroke-width=".8"/>')
-    parts.append(f'<rect x="{fx + .5:.1f}" y="{oy + .5:.1f}" width="{tw:.1f}" height="{th:.1f}" fill="#f7f9fa" stroke="#6c7a84" stroke-width=".8"/>')
+    parts.append(f'<rect x="{fx + .5:.1f}" y="{oy + .5 + rim:.1f}" width="{tw:.1f}" height="{th - rim:.1f}" fill="#f7f9fa" stroke="#6c7a84" stroke-width=".8"/>')
+    rim_line = ""
+    if rim > 0.5:  # bin aberta em cima: a borda tracejada (desenhada por cima da carga, no fim)
+        rim_line = (f'<line x1="{fx - 1:.1f}" y1="{oy + .5 + rim:.1f}" x2="{fx + tw + 2:.1f}" y2="{oy + .5 + rim:.1f}" stroke="#b45309" '
+                    f'stroke-width="1.6" stroke-dasharray="4 2"><title>{_("borda da bin: a carga passa {v} cm acima", v=_n(round((arr.load_h or 0) - PH, 1)))}</title></line>')
     if pr:
         # bin pai com a grade de divisórias; os outros compartimentos ficam em cinza (não pertencem a esta bin)
         nx, nz = pr.get("nx", 1), pr.get("nz", 1)
@@ -250,5 +272,6 @@ def svg_mini(arr: BinArrangement, size: int = 70) -> str:
             parts.append(f'<text x="{fx - 1.5:.1f}" y="{yy:.1f}" font-size="{min(fs, max(dy * sc, 3.5)):.1f}" text-anchor="end" '
                          f'dominant-baseline="central" fill="#1f2d33"><title>{_("Camada {n}: {cnt} un. de {sku}", n=n, cnt=cnt, sku=it.sku)}'
                          f'{_(" + {gh} de reserva", gh=gh) if gh else ""}</title>{n}</text>')
+    parts.append(rim_line)
     parts.append("</svg>")
     return "".join(parts)

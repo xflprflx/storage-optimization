@@ -154,7 +154,10 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
     results: list[PoolResult] = []
     groups = _split_by_condition(db, groups)
     for gk, grp in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or 0, kv[0][2:] if len(kv[0]) > 2 else ())):
-        r = optimize_pool(grp["bins"], list(grp["demands"].values()), types, prm, grp["reserved"], grp["no_dims"],
+        gtypes, open_note = _open_types(db, types, grp["bins"], prm.unlimited)
+        if open_note and open_note not in notes:
+            notes.append(open_note)
+        r = optimize_pool(grp["bins"], list(grp["demands"].values()), gtypes, prm, grp["reserved"], grp["no_dims"],
                           grp.get("secondary") if (focus is not None and prm.bin_source == "any") else None)
         r.fixed_pids = dict(grp.get("fixed", {}))
         if focus is not None:
@@ -164,6 +167,42 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
                        "fixed_skus": len(grp.get("fixed", {}))}
         results.append(r)
     return results, locs, types, notes
+
+
+def _open_types(db: Session, types: dict, bins: list, unlimited: bool) -> tuple[dict, str]:
+    """Bins abertas em cima no Pool: a carga pode passar da borda. Os SKUs mudam de endereço, então cada tipo usa a
+    MENOR altura útil entre os níveis onde as bins dele estão neste pool (cabe em qualquer uma). Com bins
+    ilimitadas (sem lugar definido), só o máximo acima da borda do tipo. Retorna (tipos, observação)."""
+    from dataclasses import replace
+
+    from services.bin_optimizer import EPS, open_height
+    from services.level_service import usage_for
+
+    opened = [t for t, b in types.items() if b.open_top and b.has_dims]
+    if not opened:
+        return types, ""
+    vao_of: dict[int, Optional[float]] = {}
+    if not unlimited:
+        loc = {lid: (b, w, a, bay, lv) for lid, b, w, a, bay, lv in db.execute(
+            select(StorageLocation.id, StorageLocation.branch_id, StorageLocation.warehouse_id, StorageLocation.aisle,
+                   StorageLocation.bay, StorageLocation.level)
+            .where(StorageLocation.id.in_({x.location_id for x in bins if x.type_id in opened})))}
+        keys = {x.id: loc[x.location_id][:4] + (x.level or loc[x.location_id][4],) for x in bins
+                if x.type_id in opened and x.location_id in loc and (x.level or loc[x.location_id][4])}
+        usage = usage_for(db, set(keys.values())) if keys else {}
+        vao_of = {bid: usage[k].height for bid, k in keys.items() if k in usage}
+    out, used = dict(types), []
+    for t in opened:
+        b = types[t]
+        hs = ([open_height(b, vao_of.get(x.id)) or b.h for x in bins if x.type_id == t]
+              if not unlimited else [])
+        uh = min(hs) if hs else (open_height(b, None) or b.h)
+        if uh > b.h + EPS:
+            out[t] = replace(b, unit_h=uh)
+            used.append(b.code)
+    note = (_("Bins abertas em cima ({codes}): a carga passa da borda até a menor altura livre entre os níveis onde as bins do tipo estão.",
+              codes=", ".join(sorted(used))) if used else "")
+    return out, note
 
 
 def _split_by_condition(db: Session, groups: dict) -> dict:

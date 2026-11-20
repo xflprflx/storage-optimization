@@ -50,6 +50,8 @@ BIN_TYPE_FIELDS = {
     "max_weight": (N_("Peso máximo (kg)"), False, ("pesomax", "pesomaxkg", "pesomaximo", "pesomaximokg", "maxweight", "capacidadekg", "peso")),
     "max_volume": ("Volume (L)", False, ("volume", "volumel", "volumelitros", "maxvolume", "litros")),
     "cost": (N_("Custo por bin (R$)"), False, ("custo", "custor", "custobin", "custoporbin", "preco", "preço", "valor", "cost")),
+    "open_top": (N_("Aberta em cima (sim/não)"), False, ("abertaemcima", "aberta", "opentop", "open", "semtampa")),
+    "over_cm": (N_("Máximo acima da borda (cm)"), False, ("maximoacimadaborda", "acimadaborda", "maxacima", "overhang", "sobreborda")),
     "parent": (N_("Bin pai"), False, ("binpai", "pai", "parent", "tipopai", "bininteira")),
     "div_w": (N_("Divisões na largura"), False, ("divisoesnalargura", "divisoeslargura", "colunas", "nalargura", "divlargura", "divisoesl")),
     "div_l": (N_("Divisões no comprimento"), False, ("divisoesnocomprimento", "divisoescomprimento", "fileiras", "nocomprimento", "divcomprimento", "divisoesc")),
@@ -279,6 +281,12 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
             raise ValueError(_("Código com mais de 30 caracteres"))
         vals = {k: _dec(row, mapping, k, labels[k], allow_zero=False) for k in ("height", "width", "length", "max_weight", "max_volume")}
         vals["cost"] = _dec(row, mapping, "cost", labels["cost"])
+        oraw = get_cell(row, mapping.get("open_top")) if mapping.get("open_top") is not None else None
+        if oraw is not None and str(oraw).strip():  # aberta em cima: a carga pode passar da borda
+            vals["open_top"] = str(oraw).strip().casefold() in {"s", "sim", "1", "x", "true", "verdadeiro", "yes", "y", "si", "oui", "ja", "是"}
+        vals["over_cm"] = _dec(row, mapping, "over_cm", labels["over_cm"], allow_zero=False)
+        if vals["over_cm"] is not None and vals.get("open_top") is None:
+            vals["open_top"] = True  # informou o máximo acima da borda: a bin é aberta em cima
         ax_txt = get_cell(row, mapping.get("split_axis")).strip().lower()
         axis = "length" if ax_txt.startswith(("comp", "prof", "len", "c")) else "width"
         frac, msg = parse_grid(get_cell(row, mapping.get("div_w")), get_cell(row, mapping.get("div_l")),
@@ -302,6 +310,8 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
                 for k in ("max_weight", "max_volume"):
                     if vals.get(k) is None:
                         vals[k] = d[k]
+        if vals.get("open_top") is None:
+            vals.pop("open_top", None)  # coluna vazia: não mexe (tipo novo: fechada)
         bt = by_code.get(code)
         seen.add(code)
         if bt is None:

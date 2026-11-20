@@ -68,6 +68,8 @@ TOURS: dict[str, dict] = {
           N_("Meça por dentro: altura, largura (a frente, virada para o corredor) e comprimento (a profundidade). Ex.: 15 × 20 × 40 cm."),
           N_("Quantas unidades cabem numa bin é o MENOR de três limites: o encaixe das unidades em grade (com rotação), o volume da bin × enchimento máximo ÷ volume da unidade e o peso máximo ÷ peso da unidade. Medidas externas superestimam a capacidade.")),
         S('[name="max_weight"]', N_("Peso máximo"), N_("Opcional, em kg. Com \"Respeitar peso máximo da bin\" ligado na otimização, produtos pesados param de encher a bin antes de faltar espaço.")),
+        S('[name="open_top"]', N_("Aberta em cima"),
+          N_("Palete, bandeja, caixa sem tampa. A altura útil para os produtos vai até o vão do nível (menos 5 cm para pegar) ou até o máximo acima da borda, o que for menor. Gaveta, caixa com tampa ou bin empilhada: deixe desligado.")),
         S("#gridPrev", N_("Divisões"), N_("Opcional, para frações: escolha a bin pai (a bin inteira) e em quantas partes ela é dividida na largura e no comprimento, ex.: 2 × 3. As medidas da fração saem da divisão; o desenho mostra como fica.")),
         S(SAVE, N_("Salvar"), N_("Grave o tipo.")),
     ]},

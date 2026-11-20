@@ -201,6 +201,10 @@ class BinType(TimestampMixin, Base):
     fraction_den: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     split_axis: Mapped[str] = mapped_column(String(10), nullable=False, default="width", server_default="width")
     dims_auto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    # bin aberta em cima (palete, bandeja, caixa sem tampa): a carga pode passar da borda, até o vão do nível
+    # (menos a folga para pegar) ou até `over_cm` acima da borda, o que for menor
+    open_top: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    over_cm: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     # aparência no 3D (services/appearance): "" = automática, "simple", modelo da biblioteca ou "custom" (código colado)
     look_model: Mapped[str] = mapped_column(String(20), nullable=False, default="", server_default="")
     appearance: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)

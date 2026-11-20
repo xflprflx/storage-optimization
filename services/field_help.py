@@ -465,6 +465,8 @@ R(PBT, "width", "Largura (cm)", "Largura da bin: o lado que fica ao longo da fre
 R(PBT, "length", "Comprimento (cm)", "Comprimento da bin: o lado que vai para o fundo da estante.", "bin:l")
 R(PBT, "max_weight", "Peso máximo (kg)", "Peso máximo que a bin suporta.", "bin:weight")
 R(PBT, "max_volume", "Volume (litros)", "Volume útil; vazio = calculado pelas medidas.", "bin:vol")
+R(PBT, "open_top", "Aberta em cima", "Palete, bandeja ou caixa sem tampa: a carga pode passar da altura da bin. Nas filiais, a altura útil vai até o vão do nível (menos 5 cm para pegar) ou até o máximo acima da borda, o que for menor; no Pool, a menor entre os níveis onde as bins do tipo estão; no projeto de filial nova, até o máximo informado (o nível precisa comportar a bin + esse máximo).", "bin:h")
+R(PBT, "over_cm", "Máximo acima da borda (cm)", "Quanto a carga pode subir acima da borda da bin (estabilidade, segurança). Vazio = até o vão do nível. No projeto de filial nova, só vale com o máximo informado.", "bin:h")
 R(PBT, "cost", "Custo por bin (R$)", "Usado nos objetivos de menor custo.", "bin:cost")
 R(PBT, "parent_id", "Bin pai", "Para frações (compartimentos): a bin inteira que foi dividida.", "bin:parent")
 R(PBT, "div_w", "Divisões na largura", "Em quantas partes a bin pai é dividida na largura.", "bin:divw")

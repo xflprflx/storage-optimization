@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import itertools
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Iterable, Optional
 from services.i18n import N_, _, fmt_num, seps
 
@@ -86,6 +86,22 @@ class BinSpec:
     max_weight: Optional[float] = None
     front_w: Optional[float] = None  # largura de frente (compartimento: fração da largura da bin pai)
     cost: Optional[float] = None  # custo de uma bin (R$); None = não informado (conta como 0)
+    open_top: bool = False  # aberta em cima: a carga pode passar da borda
+    over_cm: Optional[float] = None  # máximo acima da borda (cm); None = até o vão do nível
+    unit_h: Optional[float] = None  # altura útil para as unidades neste nível (bin aberta); None = a da bin
+
+    @property
+    def uh(self) -> Optional[float]:
+        """Altura útil para as unidades: a da bin ou, aberta em cima, até onde a carga pode subir no nível."""
+        return self.unit_h if self.unit_h is not None else self.h
+
+    @property
+    def unit_volume_cm3(self) -> Optional[float]:
+        """Volume útil para as unidades (com a carga acima da borda, a altura útil no lugar da altura da bin)."""
+        v = self.volume_cm3
+        if v is None or self.unit_h is None or not self.h:
+            return v
+        return v * self.unit_h / self.h
 
     @property
     def fw(self) -> Optional[float]:
@@ -114,6 +130,7 @@ class AddressIn:
     current_placement: dict = field(default_factory=dict)  # nível -> {tipo: qtd} (bins atuais por nível)
     bay_levels: list = field(default_factory=list)  # todos os níveis da estante (ordem natural)
     notes: list = field(default_factory=list)  # observações da carga (ex.: SKU sem max level -> usou saldo)
+    vao: Optional[float] = None  # vão do nível do endereço (cm): até onde a carga das bins abertas em cima pode subir
 
 
 @dataclass
@@ -310,10 +327,36 @@ def _orientations(p: ProductUnit, rotation: str) -> list[tuple[float, float, flo
     return list({(p.h, p.w, p.l), (p.h, p.l, p.w)})  # altura sempre na vertical
 
 
+# Bin aberta em cima: folga entre o topo da carga e o nível de cima, para pegar (cm)
+OPEN_TOP_GAP = 5.0
+
+
+def open_height(b: BinSpec, vao: Optional[float]) -> Optional[float]:
+    """Altura útil de uma bin aberta em cima num nível de vão `vao` (cm): a altura da bin + o que sobe acima da borda,
+    até o vão menos a folga e até o máximo do tipo. Sem o vão, só o máximo do tipo. None = não passa da borda."""
+    if not b.open_top or not b.has_dims:
+        return None
+    if vao is None:
+        extra = b.over_cm or 0.0
+    else:
+        room = max(0.0, vao - OPEN_TOP_GAP - b.h)
+        extra = room if b.over_cm is None else min(b.over_cm, room)
+    return b.h + extra if extra > EPS else None
+
+
+def at_vao(types: dict[int, BinSpec], vao: Optional[float]) -> dict[int, BinSpec]:
+    """Os tipos de bin vistos num nível de vão `vao`: as bins abertas em cima ganham a altura útil desse nível."""
+    out = {}
+    for t, b in types.items():
+        uh = open_height(b, vao)
+        out[t] = replace(b, unit_h=uh) if uh is not None else b
+    return out
+
+
 def _grid(p: ProductUnit, b: BinSpec, rotation: str) -> int:
     best = 0
     for oh, ow, ol in _orientations(p, rotation):
-        n = math.floor(b.h / oh + EPS) * math.floor(b.w / ow + EPS) * math.floor(b.l / ol + EPS)
+        n = math.floor(b.uh / oh + EPS) * math.floor(b.w / ow + EPS) * math.floor(b.l / ol + EPS)
         best = max(best, n)
     return best
 
@@ -332,7 +375,7 @@ def capacity(p: ProductUnit, b: BinSpec, prm: Params) -> int:
     limits = []
     if prm.use_geometry and b.has_dims:
         limits.append(_grid(p, b, prm.rotation))
-    bv = b.volume_cm3
+    bv = b.unit_volume_cm3
     if bv is not None:
         limits.append(math.floor(bv * prm.fill_limit / uv + EPS))
     if not limits:
@@ -509,7 +552,7 @@ def _fill_count(items: list[tuple[ProductUnit, int]], sequence, prm: Params) -> 
                     return None
                 if not unit_fits(p, cur, prm):
                     return None
-                rem_v = (cur.volume_cm3 or 0) * prm.fill_limit
+                rem_v = (cur.unit_volume_cm3 or 0) * prm.fill_limit
                 rem_w = cur.max_weight or math.inf
                 counts[cur.id] = counts.get(cur.id, 0) + 1
                 if uv > rem_v + EPS or (uw and cur.max_weight and uw > rem_w + EPS):
@@ -643,6 +686,7 @@ def optimize_address(a: AddressIn, all_types: dict[int, BinSpec], prm: Params,
     endereço (sem os níveis, que o modelo global trata) e a função retorna logo; `force` = (configuração, níveis)
     escolhida pelo modelo — o resultado (situação, observações) é montado como na heurística."""
     cur_m = metrics(a.current, all_types)
+    all_types = at_vao(all_types, a.vao)  # bins abertas em cima: a carga pode subir até o vão deste nível
     res = AddressResult(a.id, a.address, "ok", dict(a.current), cur_m)
     res.own_level, res.current_placement = a.own_level, {k: dict(v) for k, v in a.current_placement.items()}
     types = {t: b for t, b in all_types.items() if prm.allowed_types is None or t in prm.allowed_types}

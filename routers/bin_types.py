@@ -81,6 +81,11 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
 
     data.update(form_values(form, "bin", errors, (data.get("width"), data.get("height"), data.get("length"))))
     data["look_code"] = f_str(form, "look_code", 20000)
+    # aberta em cima: a carga pode passar da borda (até o vão do nível ou até o máximo informado)
+    data["open_top"] = str(form.get("open_top") or "").lower() in {"1", "on", "true"}
+    data["over_cm"] = f_dec(form, "over_cm", errors, _("Máximo acima da borda")) if data["open_top"] else None
+    if data["over_cm"] is not None and data["over_cm"] <= 0:
+        errors.add("over_cm", _("Máximo acima da borda: deve ser maior que zero (ou deixe vazio = até o vão do nível)."))
     data["dims_auto"] = False
     if parent is not None and grid and not errors.get("parent_id"):
         dims = derived_dims(parent, *grid)
@@ -161,7 +166,7 @@ def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_
     from services.appearance import code_text
 
     data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
-                                        "parent_id", "dims_auto", "look_model")}
+                                        "parent_id", "dims_auto", "look_model", "open_top", "over_cm")}
     data["look_code"] = code_text(bt.appearance)
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")
     if bt.dims_auto:  # dimensões vindas da bin pai: o formulário mostra vazio (continua automático)

@@ -84,6 +84,26 @@
           <div class="form-text">{{ _("Usado nos objetivos de menor custo. Num compartimento vazio = custo da bin pai ÷ compartimentos.") }}</div>
         </div>
       </div>
+      <div class="row g-3 mt-1">
+        <div class="col-md-8">
+          <div class="form-check form-switch mt-md-4">
+            <input class="form-check-input" type="checkbox" name="open_top" value="1" id="open_top" {% if data.get('open_top') %}checked{% endif %}>
+            <label class="form-check-label" for="open_top">{{ _("Aberta em cima: a carga pode passar da altura da bin") }}</label>
+          </div>
+          <div class="form-text">{{ _("Palete, bandeja, caixa sem tampa. A altura útil para os produtos vai até o vão do nível (menos 5 cm para pegar) ou até o máximo acima da borda, o que for menor. Gaveta, caixa com tampa ou bin empilhada: deixe desligado.") }}</div>
+        </div>
+        <div class="col-md-4" id="overBox">
+          <label class="form-label">{{ _("Máximo acima da borda (cm)") }}</label>
+          <input class="form-control text-end {{ invalid(errors, 'over_cm') }}" name="over_cm" id="over_cm" data-u="cm" inputmode="decimal" value="{{ data.get('over_cm')|dec_input }}" placeholder="{{ _("até o vão") }}">
+          {{ field_error(errors, 'over_cm') }}
+          <div class="form-text">{{ _("Vazio = até o vão do nível. No projeto de filial nova, vale só com o máximo informado.") }}</div>
+        </div>
+      </div>
+      <script>
+        (() => { const c = document.getElementById('open_top'), b = document.getElementById('overBox');
+          const f = () => { b.style.opacity = c.checked ? 1 : .45; document.getElementById('over_cm').disabled = !c.checked; };
+          c.addEventListener('change', f); f(); })();
+      </script>
       {{ look_section('bin', data, errors, look_choices('bin'), look_prompt('bin')) }}
       <div class="mt-4">
         <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>

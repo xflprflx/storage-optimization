@@ -41,7 +41,9 @@ def parent_info(bt, seq: Optional[int] = None) -> Optional[dict]:
 
 def _arrange_bt(bt, data, rotation, seq=None):
     bdims = (_f(bt.height), _f(bt.width), _f(bt.length)) if bt and None not in (bt.height, bt.width, bt.length) else None
-    arr = arrange(bt.code if bt else "?", bdims, data, rotation)
+    # bin aberta em cima: a carga pode passar da borda (até o máximo do tipo; sem ele, o quanto precisar)
+    top = (_f(bt.height) + _f(bt.over_cm)) if bt is not None and bt.open_top and bt.over_cm and bdims else None
+    arr = arrange(bt.code if bt else "?", bdims, data, rotation, open_top=bool(bt is not None and bt.open_top), top=top)
     arr.parent = parent_info(bt, seq)
     return arr
 
@@ -139,7 +141,7 @@ def case_url(title: str, rotation: str, bins: list[tuple]) -> str:
     return "/packing/case?" + urlencode(q)
 
 
-def bin_card(arranger: N_("Arranger"), type_id: int, label: str, items: list, seq: Optional[int] = None) -> dict:
+def bin_card(arranger: "Arranger", type_id: int, label: str, items: list, seq: Optional[int] = None) -> dict:
     """Uma bin da tela do caso: arranjo, desenho 2D e dados do 3D. items = [(SKU, qtd[, reserva])]."""
     items = [i for i in items if (i[1] or 0) > 0 or (len(i) > 2 and i[2])]
     bt = arranger.types.get(type_id)

@@ -25,7 +25,7 @@ def load_types(db: Session) -> dict[int, BinSpec]:
 
     return {
         bt.id: BinSpec(bt.id, bt.code, _f(bt.height), _f(bt.width), _f(bt.length), _f(bt.volume), _f(bt.max_weight),
-                       front_w=footprint_width(bt), cost=bin_cost(bt))
+                       front_w=footprint_width(bt), cost=bin_cost(bt), open_top=bool(bt.open_top), over_cm=_f(bt.over_cm))
         for bt in db.scalars(select(BinType))
     }
 
@@ -158,6 +158,8 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
     for a in addresses:
         if a.own_level is not None:
             a.bay_levels = bay_keys.get(a.own_level[:4], [])
+            u = usage.get(a.own_level)
+            a.vao = u.height if u is not None else None  # bins abertas em cima: a carga sobe até o vão do nível
     return addresses, ledger
 
 

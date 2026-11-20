@@ -341,6 +341,29 @@ def structure_specs(db: Session, modes: dict) -> list[StructureSpec]:
     return out
 
 
+def open_types_for_plan(types: dict[int, BinSpec]) -> tuple[dict[int, BinSpec], str]:
+    """Projeto de filial nova: os níveis ainda não existem, então a bin aberta em cima vale com o MÁXIMO acima da
+    borda do tipo — a carga sobe até ele e o nível precisa comportar a bin + esse máximo (+ a folga). Sem o máximo,
+    a carga fica na altura da bin. Retorna (tipos, observação)."""
+    from dataclasses import replace
+
+    out, used, no_max = dict(types), [], []
+    for t, b in types.items():
+        if not (b.open_top and b.has_dims):
+            continue
+        if b.over_cm:
+            out[t] = replace(b, unit_h=b.h + b.over_cm)
+            used.append(f"{b.code} +{b.over_cm:g} cm")
+        else:
+            no_max.append(b.code)
+    parts = []
+    if used:
+        parts.append(_("Bins abertas em cima: a carga passa da borda ({v}); os níveis comportam a bin + a carga.", v=", ".join(used)))
+    if no_max:
+        parts.append(_("Bins abertas sem máximo acima da borda ({v}): no projeto a carga fica na altura da bin (informe o máximo no cadastro do tipo).", v=", ".join(no_max)))
+    return out, " ".join(parts)
+
+
 def parents_of(db: Session, types: dict[int, BinSpec]) -> dict:
     out = {}
     for bt in db.scalars(select(BinType).where(BinType.parent_id.is_not(None))):
@@ -467,7 +490,7 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
     b, modes, prm, errors = parse_config(cfg)
     if errors:
         return None, errors
-    types = load_types(db)
+    types, open_note = open_types_for_plan(load_types(db))
     structs = structure_specs(db, modes)
     if cfg["demand"].get("source") == "upload":
         if not cfg.get("items"):
@@ -484,6 +507,8 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
     prm.slotting, slot_note = slotting_spec(cfg, demands)
     if slot_note:
         notes.append(slot_note)
+    if open_note:
+        notes.append(open_note)
     plan = plan_site(b, structs, types, demands, prm, parents_of(db, types))
     plan.notes = notes + plan.notes
     return plan, []

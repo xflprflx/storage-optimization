@@ -213,7 +213,10 @@ def _slot_setup(db: Session, filters: dict, raw: dict, location_ids: Optional[li
         return out
     h = db.scalar(select(PickHistory).where(PickHistory.branch_id == bid))
     if h is not None:
-        out.update(history=h, summary=summary_text(h.data))
+        data = h.data or {}
+        # horário de liberação: marcado no resumo ou presente na amostra de pedidos (históricos de versões anteriores)
+        out.update(history=h, summary=summary_text(data),
+                   has_release=bool(data.get("has_release") or any(len(e) > 4 for e in data.get("sample") or [])))
     from models import BranchLayout
 
     # plantas desenhadas da filial: com planta, a caminhada é medida nela (pelos corredores)

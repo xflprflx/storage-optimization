@@ -260,7 +260,7 @@
             <input class="form-control form-control-sm text-end" name="slot_gold_s" id="slot_gold_s" value="{{ params.slot_gold_s }}" inputmode="decimal"></div>
           <div class="col-6"><label class="form-label mb-0" for="slot_batch" title="{{ _("Separação em lote na simulação hoje × proposta: quantos pedidos por trajeto") }}">{{ _("Pedidos por trajeto (lote)") }}</label>
             <input class="form-control form-control-sm text-end" name="slot_batch" id="slot_batch" type="number" min="2" max="20" step="1" value="{{ params.slot_batch }}"></div>
-          {% set has_rel = slot_info.get('history') and (slot_info.history.data or {}).get('has_release') %}
+          {% set has_rel = slot_info.get('history') and slot_info.get('has_release') %}
           <div class="col-12"><div class="form-check form-switch" title="{{ _("Na simulação hoje × proposta, os pedidos só ficam disponíveis a partir do horário de liberação (pedido sem horário = início do dia).") if has_rel else _("O histórico não tem a coluna Liberação (horário de liberação do pedido). Reenvie o histórico com ela para usar esta opção.") }}">
             <input class="form-check-input" type="checkbox" name="slot_release" value="1" id="slot_release" {% if params.slot_release and has_rel %}checked{% endif %} {% if not has_rel %}disabled{% endif %}>
             <label class="form-check-label" for="slot_release">{{ _("Considerar o horário de liberação dos pedidos") }}{% if not has_rel %} <span class="text-muted">{{ _("(o histórico não tem a coluna Liberação)") }}</span>{% endif %}</label></div></div>
@@ -754,6 +754,16 @@
 
 {% block scripts %}
 <script>
+// Filial ou armazém trocados no escopo: recarrega a tela com o formulário preenchido (sem rodar), para o histórico de
+// saídas, a planta e as opções que dependem deles (horário de liberação, rearranjo) serem os da filial escolhida
+['branch_id', 'warehouse_id'].forEach(n => {
+  const el = document.querySelector(`#optForm [name="${n}"]`);
+  if (el) el.addEventListener('change', () => {
+    const q = new URLSearchParams(new FormData(document.getElementById('optForm')));
+    q.delete('run');
+    location.search = q.toString();
+  });
+});
 (function () {
   // prioridades: sem repetir critério; tempo limite só com pesquisa operacional
   const prios = [...document.querySelectorAll('.nk-prio')];

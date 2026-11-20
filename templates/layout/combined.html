@@ -40,6 +40,7 @@
       {% if o.best_walk %} <span class="badge text-bg-success">{{ _("melhor trajeto") }}</span>{% endif %}
       {% if o.best_gain %} <span class="badge text-bg-primary">{{ _("mais bins") }}</span>{% endif %}
       {% for w in v.what or [] %}<div class="small text-muted">{{ w }}</div>{% endfor %}
+      {% include "layout/_moves.html" %}
       {% if not o.feasible %}<div class="small text-danger">{{ _("Não cabe nas peças existentes (laterais a mais ou peças da recomposição): gere com peças ilimitadas.") }}</div>{% endif %}
       {% if rc.changes %}<details class="small mt-1"><summary>{{ _h("{n} estante(s) a recompor", n=rc.changes|length) }}</summary>
         <table class="table table-sm mb-0 mt-1"><tbody>

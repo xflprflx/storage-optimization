@@ -1,0 +1,3 @@
+{# lista recolhível das trocas de corredor de uma variação da planta (v.moves = [[de, para], ...]) #}
+{% if v.moves %}<details class="small text-muted"><summary>{{ _h("{n} troca(s) de corredor", n=v.moves|length) }}</summary>
+  <ul class="mb-1 ps-3">{% for a, b in v.moves %}<li>{{ _h("{a} vai para o lugar de {b}", a=a, b=b) }}</li>{% endfor %}</ul></details>{% endif %}

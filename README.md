@@ -615,7 +615,8 @@ pelo **trajeto dos pedidos** do histórico (`services/rearrange.py`). Nada muda 
     bater em outra fileira, obstáculo ou na referência (senão, a tabela diz o motivo);
   - **troca de corredores**: entre corredores do mesmo formato (orientação, nº de fileiras, comprimento, profundidade
     e nº de estantes), os de mais saídas vão para as posições mais perto da referência; as estantes mudam de lugar com
-    o que está nelas e os endereços não mudam;
+    o que está nelas e os endereços não mudam (a lista "A vai para o lugar de B" fica num item recolhível, na
+    proposta de rearranjo e na combinada);
   - as duas juntas (a troca + a melhor passagem).
   **Aplicar à planta** grava a variação como a planta da filial e guarda a anterior: **Desfazer rearranjo** (na
   planta) volta a ela. Salvar a planta pelo editor descarta a anterior guardada.

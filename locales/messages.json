@@ -1393,7 +1393,7 @@
  },
  "<b>{multi} objetos selecionados</b> — arraste qualquer um para mover todos; setas movem, Del apaga, R gira as fileiras. O painel abaixo é do último clicado. Shift+clique soma ou tira; Shift+arrastar o fundo seleciona por área.": {
   "src": [
-   "templates/layout/plan.html:413"
+   "templates/layout/plan.html:416"
   ],
   "js": true
  },
@@ -2315,7 +2315,7 @@
  },
  "Alterações não salvas": {
   "src": [
-   "templates/layout/plan.html:620"
+   "templates/layout/plan.html:623"
   ],
   "js": true
  },
@@ -2608,7 +2608,7 @@
  },
  "Antes: planta atual": {
   "src": [
-   "templates/layout/combined.html:72"
+   "templates/layout/combined.html:73"
   ]
  },
  "Antigos {v}": {
@@ -2684,7 +2684,7 @@
  },
  "Apagar os {all} objetos selecionados?": {
   "src": [
-   "templates/layout/plan.html:565"
+   "templates/layout/plan.html:568"
   ],
   "js": true
  },
@@ -2728,7 +2728,7 @@
  "Aplicar": {
   "src": [
    "services/onboarding.py:210",
-   "templates/layout/combined.html:61",
+   "templates/layout/combined.html:62",
    "templates/levels/index.html:94",
    "templates/locations/list.html:122",
    "templates/products/list.html:87",
@@ -2762,7 +2762,7 @@
  },
  "Aplicar as duas": {
   "src": [
-   "templates/layout/combined.html:61"
+   "templates/layout/combined.html:62"
   ]
  },
  "Aplicar as marcadas": {
@@ -2778,7 +2778,7 @@
  },
  "Aplicar esta opção: a planta da variação e a recomposição das estruturas calculada nela?": {
   "src": [
-   "templates/layout/combined.html:59"
+   "templates/layout/combined.html:60"
   ],
   "js": true
  },
@@ -2850,7 +2850,7 @@
  },
  "Aplicar à planta": {
   "src": [
-   "templates/layout/rearrange.html:50"
+   "templates/layout/rearrange.html:51"
   ]
  },
  "Aproveitam a sobra no fim de cada trecho de fileira (menor que um módulo), atravessando a fileira dupla (costas com costas), de frente para o corredor transversal ou para uma faixa reservada com pelo menos a largura de um corredor.": {
@@ -3509,7 +3509,7 @@
  },
  "Automático (a fileira mais perto que olha para esta)": {
   "src": [
-   "templates/layout/plan.html:445"
+   "templates/layout/plan.html:448"
   ],
   "js": true
  },
@@ -4239,7 +4239,7 @@
  },
  "Cada bin é pega pelo corredor do seu lado: as da frente pela face laranja cheia, as do fundo pela tracejada.": {
   "src": [
-   "templates/layout/plan.html:457"
+   "templates/layout/plan.html:460"
   ],
   "js": true
  },
@@ -6838,7 +6838,7 @@
  },
  "Depois:": {
   "src": [
-   "templates/layout/combined.html:75"
+   "templates/layout/combined.html:76"
   ]
  },
  "Desalojado e realocado": {
@@ -6982,7 +6982,7 @@
  },
  "Desfazer rearranjo": {
   "src": [
-   "templates/layout/plan.html:156"
+   "templates/layout/plan.html:159"
   ]
  },
  "Desligada ao abrir: a planta tem muitas peças ({n}).": {
@@ -7437,7 +7437,7 @@
  },
  "Dois sentidos (contra fluxo permitido)": {
   "src": [
-   "templates/layout/plan.html:452"
+   "templates/layout/plan.html:455"
   ],
   "js": true
  },
@@ -7581,7 +7581,7 @@
  },
  "Em mais de uma fileira (vale a primeira): {d}": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -8080,7 +8080,7 @@
  },
  "Endereços dessas estantes usam a caminhada estimada pelo endereço.": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -8628,7 +8628,7 @@
  },
  "Esta filial/armazém não tem endereços cadastrados.": {
   "src": [
-   "templates/layout/plan.html:656"
+   "templates/layout/plan.html:659"
   ],
   "js": true
  },
@@ -9596,7 +9596,7 @@
  },
  "Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -9790,7 +9790,7 @@
  },
  "Fileira {aisle} ({SIDE})": {
   "src": [
-   "templates/layout/plan.html:420"
+   "templates/layout/plan.html:423"
   ],
   "js": true
  },
@@ -10390,7 +10390,7 @@
  },
  "Fora da planta: {u}": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -10768,7 +10768,7 @@
  },
  "Gravar esta variação como a planta da filial? A planta atual fica guardada (Desfazer rearranjo).": {
   "src": [
-   "templates/layout/rearrange.html:48"
+   "templates/layout/rearrange.html:49"
   ],
   "js": true
  },
@@ -13534,7 +13534,7 @@
  },
  "Mão única {h}": {
   "src": [
-   "templates/layout/plan.html:452"
+   "templates/layout/plan.html:455"
   ],
   "js": true
  },
@@ -14010,7 +14010,7 @@
  },
  "Nenhum — fileira sozinha": {
   "src": [
-   "templates/layout/plan.html:445"
+   "templates/layout/plan.html:448"
   ],
   "js": true
  },
@@ -14067,7 +14067,7 @@
  },
  "Nenhuma estante deste corredor/lado nos endereços.": {
   "src": [
-   "templates/layout/plan.html:424"
+   "templates/layout/plan.html:427"
   ],
   "js": true
  },
@@ -14581,7 +14581,7 @@
  },
  "Não cabe nas peças existentes (laterais a mais ou peças da recomposição): gere com peças ilimitadas.": {
   "src": [
-   "templates/layout/combined.html:43"
+   "templates/layout/combined.html:44"
   ]
  },
  "Não cabe neste nível (pela estrutura e pelo vão)": {
@@ -15598,8 +15598,8 @@
    "services/branch_layout.py:1013",
    "services/branch_layout.py:257",
    "templates/layout/plan.html:60",
-   "templates/layout/plan.html:433",
-   "templates/layout/plan.html:538"
+   "templates/layout/plan.html:436",
+   "templates/layout/plan.html:541"
   ],
   "js": true
  },
@@ -16309,7 +16309,7 @@
  },
  "Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.": {
   "src": [
-   "templates/layout/plan.html:148",
+   "templates/layout/plan.html:150",
    "templates/optimization/page.html:479"
   ]
  },
@@ -16990,7 +16990,7 @@
  },
  "Pilar": {
   "src": [
-   "templates/layout/plan.html:594"
+   "templates/layout/plan.html:597"
   ],
   "js": true
  },
@@ -17170,7 +17170,7 @@
  },
  "Planta de um projeto de filial nova": {
   "src": [
-   "templates/layout/plan.html:162"
+   "templates/layout/plan.html:165"
   ]
  },
  "Planta e 3D": {
@@ -17187,7 +17187,7 @@
  },
  "Planta salva": {
   "src": [
-   "templates/layout/plan.html:621"
+   "templates/layout/plan.html:624"
   ],
   "js": true
  },
@@ -18013,10 +18013,15 @@
   "src": [
    "services/proposals.py:86",
    "services/rearrange.py:177",
-   "services/rearrange.py:567",
+   "services/rearrange.py:568",
    "services/recompose.py:467",
    "services/site_service.py:641",
    "services/site_service.py:700"
+  ]
+ },
+ "Propor": {
+  "src": [
+   "templates/layout/plan.html:154"
   ]
  },
  "Propor a melhor disposição": {
@@ -18066,7 +18071,7 @@
  },
  "Proposta automática (ainda não salva)": {
   "src": [
-   "templates/layout/plan.html:621"
+   "templates/layout/plan.html:624"
   ],
   "js": true
  },
@@ -18747,7 +18752,7 @@
  },
  "Rearranjo + recomposição": {
   "src": [
-   "templates/layout/plan.html:152"
+   "templates/layout/plan.html:149"
   ]
  },
  "Rearranjo + recomposição: só as peças das estruturas existentes (as liberadas por uma estante servem para outra; uma passagem que separa estantes vizinhas pede laterais a mais) ou ilimitadas (o que faltar é comprado, pelo custo da peça).": {
@@ -18987,13 +18992,13 @@
  },
  "Remover a planta desta filial? A caminhada volta a ser estimada pelo endereço.": {
   "src": [
-   "templates/layout/plan.html:169"
+   "templates/layout/plan.html:172"
   ],
   "js": true
  },
  "Remover a planta salva": {
   "src": [
-   "templates/layout/plan.html:171"
+   "templates/layout/plan.html:174"
   ]
  },
  "Remover a política": {
@@ -19357,7 +19362,7 @@
  },
  "Roxo tracejado = abertura das portas (vermelho: bate em algo).": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -20183,7 +20188,7 @@
  },
  "Sem vizinho de frente: o corredor fica a 1 m da face": {
   "src": [
-   "templates/layout/plan.html:450"
+   "templates/layout/plan.html:453"
   ],
   "js": true
  },
@@ -20286,7 +20291,7 @@
  },
  "Separar {pick} em nova fileira": {
   "src": [
-   "templates/layout/plan.html:429"
+   "templates/layout/plan.html:432"
   ],
   "js": true
  },
@@ -20659,13 +20664,13 @@
  },
  "Substituir a planta em edição pela do projeto?": {
   "src": [
-   "templates/layout/plan.html:642"
+   "templates/layout/plan.html:645"
   ],
   "js": true
  },
  "Substituir a planta em edição pela gerada automaticamente?": {
   "src": [
-   "templates/layout/plan.html:636"
+   "templates/layout/plan.html:639"
   ],
   "js": true
  },
@@ -21296,7 +21301,7 @@
  },
  "Testando troca de corredores + passagem": {
   "src": [
-   "services/rearrange.py:551"
+   "services/rearrange.py:552"
   ]
  },
  "Testando {v}% da demanda": {
@@ -21674,7 +21679,7 @@
  },
  "Todas as estantes estão na planta.": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -21833,18 +21838,18 @@
  },
  "Troca de corredores": {
   "src": [
-   "services/rearrange.py:560"
+   "services/rearrange.py:561"
   ]
  },
  "Troca de corredores ({n} mudança(s))": {
   "src": [
    "services/rearrange.py:543",
-   "services/rearrange.py:548"
+   "services/rearrange.py:549"
   ]
  },
  "Troca de corredores + {label}": {
   "src": [
-   "services/rearrange.py:557"
+   "services/rearrange.py:558"
   ]
  },
  "Troca o lado do corredor de acesso (F)": {
@@ -21863,7 +21868,7 @@
    "templates/account.html:12"
   ]
  },
- "Trocar as estantes de lugar (com o que está nelas), os corredores com mais saídas mais perto da referência: {moves}.": {
+ "Trocar as estantes de lugar (com o que está nelas), os corredores com mais saídas mais perto da referência.": {
   "src": [
    "services/rearrange.py:546"
   ]
@@ -22178,7 +22183,7 @@
  },
  "Usa as fileiras, as cabeceiras, os obstáculos e a referência do plano do projeto (os endereços precisam ter os mesmos códigos — é o caso da filial criada pelo projeto).": {
   "src": [
-   "templates/layout/plan.html:163"
+   "templates/layout/plan.html:166"
   ]
  },
  "Usa nível(is) extra(s) da estante: ": {
@@ -22243,7 +22248,7 @@
  },
  "Usar a planta do projeto": {
   "src": [
-   "templates/layout/plan.html:165"
+   "templates/layout/plan.html:168"
   ]
  },
  "Usar outros níveis da estante": {
@@ -22536,7 +22541,7 @@
  },
  "Ver na planta": {
   "src": [
-   "templates/layout/combined.html:57"
+   "templates/layout/combined.html:58"
   ]
  },
  "Ver no mapa": {
@@ -22721,7 +22726,7 @@
  },
  "Voltar à planta de antes do rearranjo?": {
   "src": [
-   "templates/layout/plan.html:154"
+   "templates/layout/plan.html:157"
   ],
   "js": true
  },
@@ -23356,7 +23361,7 @@
  },
  "a porta bate em {what} ao abrir": {
   "src": [
-   "templates/layout/plan.html:256"
+   "templates/layout/plan.html:259"
   ],
   "js": true
  },
@@ -23522,7 +23527,7 @@
  },
  "as duas coisas": {
   "src": [
-   "templates/layout/combined.html:79"
+   "templates/layout/combined.html:80"
   ]
  },
  "as duas iguais": {
@@ -24135,7 +24140,7 @@
  },
  "estante a recompor": {
   "src": [
-   "templates/layout/combined.html:77"
+   "templates/layout/combined.html:78"
   ]
  },
  "estante vista de frente": {
@@ -24214,7 +24219,7 @@
    "services/branch_layout.py:212",
    "services/branch_layout.py:261",
    "services/branch_layout.py:1017",
-   "templates/layout/plan.html:598",
+   "templates/layout/plan.html:601",
    "static/field_help.js:170",
    "static/field_help.js:319"
   ],
@@ -24759,7 +24764,7 @@
  "muda de lugar": {
   "src": [
    "routers/layout.py:607",
-   "templates/layout/combined.html:78"
+   "templates/layout/combined.html:79"
   ]
  },
  "mudanças": {
@@ -24834,7 +24839,7 @@
  },
  "nenhuma": {
   "src": [
-   "templates/layout/combined.html:55"
+   "templates/layout/combined.html:56"
   ]
  },
  "nenhuma bin": {
@@ -24860,7 +24865,7 @@
  },
  "nenhuma troca ajuda: os corredores de mesmo formato já estão na ordem das saídas, ou não há corredores de mesmo formato": {
   "src": [
-   "services/rearrange.py:560"
+   "services/rearrange.py:561"
   ]
  },
  "no 1º acesso": {
@@ -25377,7 +25382,7 @@
  },
  "peças existentes": {
   "src": [
-   "templates/layout/plan.html:151"
+   "templates/layout/plan.html:153"
   ]
  },
  "peças fora do ouro × s": {
@@ -25388,7 +25393,7 @@
  },
  "peças ilimitadas": {
   "src": [
-   "templates/layout/plan.html:151"
+   "templates/layout/plan.html:153"
   ]
  },
  "peças × tempo por peça (s)": {
@@ -25735,7 +25740,7 @@
  },
  "se": {
   "src": [
-   "templates/layout/plan.html:245"
+   "templates/layout/plan.html:248"
   ],
   "js": true
  },
@@ -26098,8 +26103,8 @@
  },
  "todas": {
   "src": [
-   "templates/layout/plan.html:419",
-   "templates/layout/plan.html:438"
+   "templates/layout/plan.html:422",
+   "templates/layout/plan.html:441"
   ],
   "js": true
  },
@@ -26407,12 +26412,13 @@
  },
  "{a} vai para o lugar de {b}": {
   "src": [
-   "services/rearrange.py:547"
-  ]
+   "templates/layout/_moves.html:3"
+  ],
+  "html": true
  },
  "{a} → {b} níveis": {
   "src": [
-   "templates/layout/combined.html:48"
+   "templates/layout/combined.html:49"
   ],
   "html": true
  },
@@ -27087,7 +27093,7 @@
  },
  "{n} estante(s) a recompor": {
   "src": [
-   "templates/layout/combined.html:44"
+   "templates/layout/combined.html:45"
   ],
   "html": true
  },
@@ -27099,7 +27105,7 @@
  },
  "{n} estante(s): {a} → {b} · {len} m": {
   "src": [
-   "templates/layout/plan.html:423"
+   "templates/layout/plan.html:426"
   ],
   "js": true
  },
@@ -27121,13 +27127,13 @@
  },
  "{n} lateral(is) a mais (estantes vizinhas que compartilhavam a lateral ficam separadas):": {
   "src": [
-   "templates/layout/rearrange.html:42"
+   "templates/layout/rearrange.html:43"
   ],
   "html": true
  },
  "{n} lateral(is) a menos (estantes passam a ser vizinhas):": {
   "src": [
-   "templates/layout/rearrange.html:42"
+   "templates/layout/rearrange.html:43"
   ],
   "html": true
  },
@@ -27188,6 +27194,12 @@
  "{n} trajeto(s)": {
   "src": [
    "templates/slotting/routes.html:170"
+  ],
+  "html": true
+ },
+ "{n} troca(s) de corredor": {
+  "src": [
+   "templates/layout/_moves.html:2"
   ],
   "html": true
  },
@@ -27274,7 +27286,7 @@
  },
  "{placed} estante(s) na planta · {corridors} corredor(es) de caminhada": {
   "src": [
-   "templates/layout/plan.html:627"
+   "templates/layout/plan.html:630"
   ],
   "js": true
  },
@@ -27303,7 +27315,7 @@
  },
  "{r} a recompor, {m} mudam de lugar": {
   "src": [
-   "templates/layout/combined.html:83"
+   "templates/layout/combined.html:84"
   ],
   "html": true
  },
@@ -27672,7 +27684,7 @@
  },
  "· lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)": {
   "src": [
-   "templates/layout/plan.html:424"
+   "templates/layout/plan.html:427"
   ],
   "js": true
  },
@@ -27931,15 +27943,15 @@
  },
  "ímp.": {
   "src": [
-   "templates/layout/plan.html:307"
+   "templates/layout/plan.html:310"
   ],
   "js": true
  },
  "ímpares": {
   "src": [
    "services/branch_layout.py:54",
-   "templates/layout/plan.html:419",
-   "templates/layout/plan.html:438"
+   "templates/layout/plan.html:422",
+   "templates/layout/plan.html:441"
   ],
   "lazy": true,
   "js": true
@@ -28136,7 +28148,7 @@
  },
  "… e mais {n}": {
   "src": [
-   "templates/layout/combined.html:49"
+   "templates/layout/combined.html:50"
   ],
   "html": true
  },

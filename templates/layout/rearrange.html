@@ -38,6 +38,7 @@
     <td>{{ v.label }}{% if v.current %} <span class="badge text-bg-secondary">{{ _("atual") }}</span>{% endif %}{% if v.best %} <span class="badge text-bg-success">{{ _("melhor trajeto") }}</span>{% endif %}
       {% if v.error %}<div class="small text-muted">{{ v.error }}</div>{% endif %}
       {% for w in v.what or [] %}<div class="small text-muted">{{ w }}</div>{% endfor %}
+      {% include "layout/_moves.html" %}
       {% if v.laterals %}{% set lt = v.laterals %}<div class="small {{ 'text-warning-emphasis' if lt.sides > 0 else 'text-success' }}"><i class="bi bi-layout-three-columns"></i>
         {% if lt.sides > 0 %}{{ _h("{n} lateral(is) a mais (estantes vizinhas que compartilhavam a lateral ficam separadas):", n=lt.sides) }}{% else %}{{ _h("{n} lateral(is) a menos (estantes passam a ser vizinhas):", n=-lt.sides) }}{% endif %}
         {% for p in lt.pieces %}{{ p.qty|dec(1) }}× {{ p.code }}{% if not loop.last %}, {% endif %}{% endfor %}{% if lt.cost is not none %} · {{ fmt_money(lt.cost) }}{% endif %}</div>{% endif %}</td>

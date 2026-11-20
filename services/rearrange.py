@@ -544,9 +544,10 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         elif new is not None:
             wv, _g = measure(new)
             what = [_("Trocar as estantes de lugar (com o que está nelas), os corredores com mais saídas mais perto da "
-                      "referência: {moves}.", moves="; ".join(_("{a} vai para o lugar de {b}", a=a, b=b) for a, b in moves))]
+                      "referência.")]
+            mv = [list(m) for m in moves]  # a tela mostra a lista recolhível: "A vai para o lugar de B"
             variants.append({"label": _("Troca de corredores ({n} mudança(s))", n=len(moves)), "data": new, **wv,
-                             "what": what, "swap": True})
+                             "what": what, "moves": mv, "swap": True})
             if best_pass is not None and not stop():
                 prog(5, steps, _("Testando troca de corredores + passagem"))
                 g_sw = build(new, bays)
@@ -555,7 +556,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
                 if both is not None and not door_block(build(both, bays)):
                     wb, _g = measure(both)
                     variants.append({"label": _("Troca de corredores + {label}", label=best_pass["label"]), "data": both,
-                                     **wb, "what": what + best_pass["what"]})
+                                     **wb, "what": what + best_pass["what"], "moves": mv})
         else:
             variants.append({"label": _("Troca de corredores"), "error": _("nenhuma troca ajuda: os corredores de mesmo "
                                                                            "formato já estão na ordem das saídas, ou não há "

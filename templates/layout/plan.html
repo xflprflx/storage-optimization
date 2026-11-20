@@ -140,20 +140,23 @@
     <div class="card mb-2" data-tour="plan-rearr"><div class="card-body py-2">
       <div class="fw-semibold mb-1"><i class="bi bi-arrows-move"></i> {{ _("Proposta de rearranjo") }}</div>
       <div class="text-muted mb-1">{{ _("Testa obras na planta salva — passagens transversais atravessando as fileiras e troca de corredores de lugar (os de mais saídas mais perto da referência) — e compara o trajeto dos pedidos do histórico, com os SKUs onde estão hoje.") }}</div>
-      <form method="post" action="/layout/plan/rearrange" class="d-inline" onsubmit="document.body.style.cursor = 'progress'">
+      <form method="post" action="/layout/plan/rearrange" class="mb-2" onsubmit="document.body.style.cursor = 'progress'">
         <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
-        <button class="btn btn-sm btn-outline-primary"><i class="bi bi-lightbulb"></i> {{ _("Propor rearranjo") }}</button>
+        <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightbulb"></i> {{ _("Propor rearranjo") }}</button>
       </form>
-      <form method="post" action="/layout/plan/combined" class="d-inline-flex gap-1 align-items-center" onsubmit="document.body.style.cursor = 'progress'"
-            title="{{ _("Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.") }}">
+      <form method="post" action="/layout/plan/combined" class="border-top pt-2 mb-2" onsubmit="document.body.style.cursor = 'progress'">
         <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
-        <select class="form-select form-select-sm" name="pieces" id="combPieces" style="width:auto">
-          <option value="existing">{{ _("peças existentes") }}</option><option value="unlimited">{{ _("peças ilimitadas") }}</option></select>
-        <button class="btn btn-sm btn-outline-primary"><i class="bi bi-intersect"></i> {{ _("Rearranjo + recomposição") }}</button>
+        <div class="fw-semibold small mb-1"><i class="bi bi-intersect"></i> {{ _("Rearranjo + recomposição") }}</div>
+        <div class="text-muted small mb-1">{{ _("Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.") }}</div>
+        <div class="input-group input-group-sm">
+          <select class="form-select" name="pieces" id="combPieces">
+            <option value="existing">{{ _("peças existentes") }}</option><option value="unlimited">{{ _("peças ilimitadas") }}</option></select>
+          <button class="btn btn-outline-primary"><i class="bi bi-lightbulb"></i> {{ _("Propor") }}</button>
+        </div>
       </form>
-      {% if has_prev %}<form method="post" action="/layout/plan/rearrange/undo" class="d-inline" onsubmit="return confirm(_t('Voltar à planta de antes do rearranjo?'))">
+      {% if has_prev %}<form method="post" action="/layout/plan/rearrange/undo" class="border-top pt-2" onsubmit="return confirm(_t('Voltar à planta de antes do rearranjo?'))">
         <input type="hidden" name="branch_id" value="{{ branch.id }}"><input type="hidden" name="warehouse_id" value="{{ wid or 'none' }}">
-        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i> {{ _("Desfazer rearranjo") }}</button>
+        <button class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-arrow-counterclockwise"></i> {{ _("Desfazer rearranjo") }}</button>
       </form>{% endif %}
     </div></div>
 

@@ -23,6 +23,11 @@
       .nk-side { position: sticky; top: 52px; height: calc(100vh - 52px); width: 232px; flex: 0 0 232px; overflow-y: auto;
         border-right: 1px solid #e1e6ea; transition: width .15s ease, flex-basis .15s ease; }
       body.nk-mini .nk-side { width: 58px; flex-basis: 58px; overflow-x: hidden; }
+      body.nk-hide .nk-side { display: none; }  /* menu oculto: a tela usa a largura toda */
+      .nk-side { display: flex; flex-direction: column; }
+      .nk-side-foot { margin-top: auto; border-top: 1px solid #e6ebef; position: sticky; bottom: 0; background: #fff; }
+      body.nk-mini .nk-side-foot .nk-mini-in { display: none; }
+      body:not(.nk-mini) .nk-side-foot .nk-mini-out { display: none; }
       body.nk-mini .nk-side .nk-label, body.nk-mini .nk-side .nk-chev, body.nk-mini .nk-side .nk-grp { display: none !important; }
       body.nk-mini .nk-side .nk-sec { font-size: 0; padding: .45rem 0 0; margin: 0 .7rem; border-top: 1px solid #e6ebef; }
       body.nk-mini .nk-side .collapse { display: block !important; height: auto !important; }
@@ -125,7 +130,7 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-<script>try { if (localStorage.getItem('nk-side-mini') === '1') document.body.classList.add('nk-mini'); } catch (e) { /* sem armazenamento */ }</script>
+<script>try { if (localStorage.getItem('nk-side-mini') === '1') document.body.classList.add('nk-mini'); if (localStorage.getItem('nk-side-hide') === '1') document.body.classList.add('nk-hide'); } catch (e) { /* sem armazenamento */ }</script>
 {% set p = request.url.path %}
 {% macro nk_item(href, icon, label, on=False, sub=False, tour=None) -%}
 <a class="nk-item{% if sub %} nk-sub{% endif %}{% if on %} active{% endif %}" href="{{ href }}"{% if tour %} data-tour="{{ tour }}"{% endif %} title="{{ label }}"{% if on %} aria-current="page"{% endif %}><i class="bi {{ icon }}"></i><span class="nk-label">{{ label }}</span></a>
@@ -136,7 +141,7 @@
 <header class="navbar navbar-dark nk-top px-2">
   <div class="d-flex align-items-center">
     <button type="button" class="btn btn-link text-white px-2 d-xl-none" data-bs-toggle="offcanvas" data-bs-target="#nkSide" aria-controls="nkSide" title="{{ _("Menu") }}"><i class="bi bi-list fs-5"></i></button>
-    <button type="button" class="btn btn-link text-white px-2 d-none d-xl-inline-block" id="nkSideMini" title="{{ _("Recolher / expandir o menu") }}"><i class="bi bi-layout-sidebar-inset"></i></button>
+    <button type="button" class="btn btn-link text-white px-2 d-none d-xl-inline-block" id="nkSideHide" title="{{ _("Mostrar / ocultar o menu") }}" aria-controls="nkSide"><i class="bi bi-list fs-5"></i></button>
     <a class="navbar-brand ms-1" href="/"><i class="bi bi-box-seam"></i> Neokioski</a>
   </div>
   <div class="d-flex align-items-center ms-auto">
@@ -238,6 +243,10 @@
       <div class="nk-sec">{{ _("Sistema") }}</div>
       {{ nk_item("/settings", "bi-gear", _("Configurações"), p.startswith('/settings')) }}
     </nav>
+    <div class="nk-side-foot d-none d-xl-block">
+      <button type="button" class="nk-item" id="nkSideMini" title="{{ _("Recolher o menu para só os ícones / expandir") }}">
+        <i class="bi bi-chevron-double-left nk-mini-in"></i><i class="bi bi-chevron-double-right nk-mini-out"></i><span class="nk-label">{{ _("Só os ícones") }}</span></button>
+    </div>
   </aside>
   <main class="nk-main container-fluid px-4 pt-4 pb-5">
   {% if flash_msg %}
@@ -254,13 +263,18 @@
 <script>
 /* ---------- Menu lateral: recolher para só os ícones (tela larga); a escolha fica lembrada no navegador ---------- */
 (() => {
-  const btn = document.getElementById('nkSideMini');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    const on = document.body.classList.toggle('nk-mini');
-    try { localStorage.setItem('nk-side-mini', on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
-    window.dispatchEvent(new Event('resize'));  // telas com canvas (3D, plantas) se ajustam à largura nova
-  });
+  // ☰ (tela larga): mostra / oculta o menu; no pé do menu: só os ícones / expandido
+  const toggle = (id, cls, key) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const on = document.body.classList.toggle(cls);
+      try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) { /* sem armazenamento */ }
+      window.dispatchEvent(new Event('resize'));  // telas com canvas (3D, plantas) se ajustam à largura nova
+    });
+  };
+  toggle('nkSideHide', 'nk-hide', 'nk-side-hide');
+  toggle('nkSideMini', 'nk-mini', 'nk-side-mini');
 })();
 </script>
 <script>

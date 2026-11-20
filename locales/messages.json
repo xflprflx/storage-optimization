@@ -2155,7 +2155,7 @@
  "Ajuda nos campos": {
   "src": [
    "services/onboarding.py:47",
-   "templates/base.html:179"
+   "templates/base.html:184"
   ],
   "lazy": true
  },
@@ -2516,7 +2516,7 @@
  },
  "Anterior": {
   "src": [
-   "templates/base.html:473",
+   "templates/base.html:487",
    "static/onboarding.js:73"
   ],
   "js": true
@@ -2949,8 +2949,8 @@
    "routers/warehouses.py:25",
    "services/onboarding.py:55",
    "services/onboarding.py:325",
-   "templates/base.html:217",
-   "templates/base.html:231",
+   "templates/base.html:222",
+   "templates/base.html:236",
    "templates/branches/list.html:24"
   ],
   "lazy": true
@@ -3123,7 +3123,7 @@
  },
  "Arraste para ajustar a largura · duplo clique: automático": {
   "src": [
-   "templates/base.html:413"
+   "templates/base.html:427"
   ],
   "js": true
  },
@@ -4319,7 +4319,7 @@
  "Cadastros": {
   "src": [
    "services/onboarding.py:31",
-   "templates/base.html:214"
+   "templates/base.html:219"
   ],
   "lazy": true
  },
@@ -4599,8 +4599,8 @@
    "routers/optimization.py:1025",
    "services/onboarding.py:136",
    "services/onboarding.py:336",
-   "templates/base.html:221",
-   "templates/base.html:234"
+   "templates/base.html:226",
+   "templates/base.html:239"
   ],
   "lazy": true
  },
@@ -5305,7 +5305,7 @@
  },
  "Completas": {
   "src": [
-   "templates/base.html:508"
+   "templates/base.html:522"
   ],
   "js": true
  },
@@ -5434,7 +5434,7 @@
  },
  "Conceitos em linguagem simples": {
   "src": [
-   "templates/base.html:161",
+   "templates/base.html:166",
    "templates/onboarding.html:45"
   ]
  },
@@ -5482,7 +5482,7 @@
   "src": [
    "routers/settings.py:13",
    "services/onboarding.py:269",
-   "templates/base.html:239",
+   "templates/base.html:244",
    "templates/settings.html:2",
    "templates/settings.html:4"
   ],
@@ -5516,7 +5516,7 @@
  },
  "Conforme o idioma": {
   "src": [
-   "templates/base.html:151"
+   "templates/base.html:156"
   ]
  },
  "Congelado": {
@@ -5887,7 +5887,7 @@
  },
  "Cotas ao longo de toda a planta: zonas, obstáculos, faixas e corredores": {
   "src": [
-   "templates/base.html:519"
+   "templates/base.html:533"
   ],
   "js": true
  },
@@ -5899,13 +5899,13 @@
  },
  "Cotas dentro da planta: tamanho de cada zona e obstáculo e distância até as paredes (ideal para criar e posicionar zonas e obstáculos)": {
   "src": [
-   "templates/base.html:520"
+   "templates/base.html:534"
   ],
   "js": true
  },
  "Cotas encadeadas em volta da planta (bordas de cima e da esquerda)": {
   "src": [
-   "templates/base.html:519"
+   "templates/base.html:533"
   ],
   "js": true
  },
@@ -6451,7 +6451,7 @@
  },
  "Dados": {
   "src": [
-   "templates/base.html:213",
+   "templates/base.html:218",
    "templates/products/detail.html:17"
   ]
  },
@@ -8627,7 +8627,7 @@
  "Estoque": {
   "src": [
    "routers/stock.py:33",
-   "templates/base.html:195"
+   "templates/base.html:200"
   ],
   "lazy": true
  },
@@ -8763,7 +8763,7 @@
   "src": [
    "routers/structures.py:15",
    "services/onboarding.py:329",
-   "templates/base.html:222",
+   "templates/base.html:227",
    "templates/site/project.html:235",
    "templates/structures/list.html:3",
    "templates/structures/list.html:6"
@@ -8835,7 +8835,7 @@
  },
  "Etapa {i}": {
   "src": [
-   "templates/base.html:460"
+   "templates/base.html:474"
   ],
   "js": true
  },
@@ -9484,7 +9484,7 @@
  },
  "Fechar": {
   "src": [
-   "templates/base.html:191",
+   "templates/base.html:196",
    "templates/layout/plan.html:70",
    "templates/site/view3d.html:100",
    "templates/site/view3d.html:540",
@@ -9584,8 +9584,8 @@
   "src": [
    "routers/branches.py:25",
    "services/onboarding.py:62",
-   "templates/base.html:216",
-   "templates/base.html:230",
+   "templates/base.html:221",
+   "templates/base.html:235",
    "templates/branches/list.html:3",
    "templates/branches/list.html:6"
   ],
@@ -10422,7 +10422,7 @@
  "Gerar endereços em lote": {
   "src": [
    "services/onboarding.py:98",
-   "templates/base.html:219",
+   "templates/base.html:224",
    "templates/locations/batch.html:3"
   ],
   "lazy": true
@@ -10554,20 +10554,20 @@
   "src": [
    "routers/onboarding.py:16",
    "services/onboarding.py:49",
-   "templates/base.html:157"
+   "templates/base.html:162"
   ],
   "lazy": true
  },
  "Guia passo a passo": {
   "src": [
-   "templates/base.html:160",
+   "templates/base.html:165",
    "templates/onboarding.html:2",
    "templates/onboarding.html:5"
   ]
  },
  "Guia: tour desta tela e passo a passo": {
   "src": [
-   "templates/base.html:157"
+   "templates/base.html:162"
   ]
  },
  "HEURÍSTICA: o solver não achou solução melhor no tempo limite": {
@@ -10620,7 +10620,7 @@
  "Histórico de pedidos": {
   "src": [
    "services/site_service.py:75",
-   "templates/base.html:210",
+   "templates/base.html:215",
    "templates/imports/history.html:3",
    "templates/layout/plan.html:27"
   ],
@@ -10815,7 +10815,7 @@
  },
  "Idioma": {
   "src": [
-   "templates/base.html:147"
+   "templates/base.html:152"
   ]
  },
  "Idioma e unidades": {
@@ -10826,7 +10826,7 @@
  },
  "Idioma e unidades de medida": {
   "src": [
-   "templates/base.html:145"
+   "templates/base.html:150"
   ]
  },
  "Idênticos mantidos": {
@@ -10841,7 +10841,7 @@
  },
  "Imperial (in, lb, ft)": {
   "src": [
-   "templates/base.html:153"
+   "templates/base.html:158"
   ]
  },
  "Importar": {
@@ -10930,7 +10930,7 @@
    "routers/imports.py:28",
    "services/onboarding.py:115",
    "services/onboarding.py:34",
-   "templates/base.html:227",
+   "templates/base.html:232",
    "templates/imports/index.html:2",
    "templates/imports/index.html:6"
   ],
@@ -12116,7 +12116,7 @@
    "services/onboarding.py:146",
    "services/onboarding.py:36",
    "services/onboarding.py:369",
-   "templates/base.html:196"
+   "templates/base.html:201"
   ],
   "lazy": true
  },
@@ -12236,7 +12236,7 @@
  },
  "Marcar todos os tours como não vistos?": {
   "src": [
-   "templates/base.html:164",
+   "templates/base.html:169",
    "templates/onboarding.html:96"
   ],
   "js": true
@@ -12469,7 +12469,7 @@
  },
  "Medidas:": {
   "src": [
-   "templates/base.html:518"
+   "templates/base.html:532"
   ],
   "js": true
  },
@@ -12627,8 +12627,8 @@
  },
  "Menu": {
   "src": [
-   "templates/base.html:138",
-   "templates/base.html:188"
+   "templates/base.html:143",
+   "templates/base.html:193"
   ]
  },
  "Mesmas bins, redistribuídas entre os níveis.": {
@@ -12716,7 +12716,7 @@
  },
  "Minha conta e senha": {
   "src": [
-   "templates/base.html:172"
+   "templates/base.html:177"
   ]
  },
  "Modelo 3D": {
@@ -12944,6 +12944,11 @@
   ],
   "html": true
  },
+ "Mostrar / ocultar o menu": {
+  "src": [
+   "templates/base.html:144"
+  ]
+ },
  "Mostrar bins": {
   "src": [
    "services/field_help.py:60"
@@ -13153,7 +13158,7 @@
  },
  "Métrico (cm, kg, m)": {
   "src": [
-   "templates/base.html:152"
+   "templates/base.html:157"
   ]
  },
  "Mín.": {
@@ -13557,7 +13562,7 @@
  },
  "Nenhum resultado": {
   "src": [
-   "templates/base.html:313"
+   "templates/base.html:327"
   ],
   "js": true
  },
@@ -15257,7 +15262,7 @@
  },
  "Ocultar": {
   "src": [
-   "templates/base.html:508"
+   "templates/base.html:522"
   ],
   "js": true
  },
@@ -15714,7 +15719,7 @@
    "routers/optimization.py:30",
    "services/onboarding.py:172",
    "services/onboarding.py:38",
-   "templates/base.html:200",
+   "templates/base.html:205",
    "templates/optimization/index.html:3",
    "templates/optimization/index.html:39"
   ],
@@ -15808,7 +15813,7 @@
   "src": [
    "routers/dashboard.py:15",
    "services/onboarding.py:44",
-   "templates/base.html:194",
+   "templates/base.html:199",
    "templates/dashboard.html:2",
    "templates/dashboard.html:5"
   ],
@@ -16459,7 +16464,7 @@
  },
  "Peças de estrutura": {
   "src": [
-   "templates/base.html:224",
+   "templates/base.html:229",
    "templates/structure_kinds/list.html:8",
    "templates/structure_kinds/pieces.html:3",
    "templates/structure_kinds/pieces.html:6"
@@ -16511,7 +16516,7 @@
  },
  "Planejamento": {
   "src": [
-   "templates/base.html:199"
+   "templates/base.html:204"
   ]
  },
  "Planilha": {
@@ -16641,7 +16646,7 @@
   "src": [
    "services/onboarding.py:153",
    "services/onboarding.py:371",
-   "templates/base.html:197",
+   "templates/base.html:202",
    "templates/layout/index.html:31",
    "templates/layout/plan.html:20",
    "templates/optimization/page.html:222"
@@ -16748,7 +16753,7 @@
   "src": [
    "services/onboarding.py:350",
    "services/run_history.py:22",
-   "templates/base.html:203",
+   "templates/base.html:208",
    "templates/runs/list.html:13"
   ],
   "lazy": true
@@ -16796,7 +16801,7 @@
  },
  "Por dentro": {
   "src": [
-   "templates/base.html:520"
+   "templates/base.html:534"
   ],
   "js": true
  },
@@ -16816,7 +16821,7 @@
  "Por endereço": {
   "src": [
    "services/run_history.py:22",
-   "templates/base.html:202",
+   "templates/base.html:207",
    "templates/optimization/index.html:44",
    "templates/optimization/pool.html:25",
    "templates/runs/list.html:12"
@@ -16851,7 +16856,7 @@
  },
  "Por fora": {
   "src": [
-   "templates/base.html:519"
+   "templates/base.html:533"
   ],
   "js": true
  },
@@ -17282,7 +17287,7 @@
    "routers/products.py:32",
    "services/onboarding.py:256",
    "services/onboarding.py:339",
-   "templates/base.html:225",
+   "templates/base.html:230",
    "templates/dashboard.html:37",
    "templates/products/detail.html:8"
   ],
@@ -17290,7 +17295,7 @@
  },
  "Produtos (CSV/Excel)": {
   "src": [
-   "templates/base.html:235"
+   "templates/base.html:240"
   ]
  },
  "Produtos atualizados": {
@@ -17406,7 +17411,7 @@
    "services/onboarding.py:211",
    "services/onboarding.py:217",
    "services/run_history.py:22",
-   "templates/base.html:204"
+   "templates/base.html:209"
   ],
   "lazy": true,
   "help": true
@@ -17660,7 +17665,7 @@
  },
  "Próximo: {steps}": {
   "src": [
-   "templates/base.html:480"
+   "templates/base.html:494"
   ],
   "js": true
  },
@@ -18226,14 +18231,14 @@
    "templates/site/view3d.html:99"
   ]
  },
- "Recolher / expandir o menu": {
-  "src": [
-   "templates/base.html:139"
-  ]
- },
  "Recolher / expandir o painel dos separadores": {
   "src": [
    "templates/site/view3d.html:92"
+  ]
+ },
+ "Recolher o menu para só os ícones / expandir": {
+  "src": [
+   "templates/base.html:247"
   ]
  },
  "Recomposição aplicada em {bays} estante(s): {created} nível(is) criado(s), {removed} removido(s). Use Desfazer a última recomposição para voltar.": {
@@ -18364,7 +18369,7 @@
  },
  "Reiniciar o onboarding (marcar tudo como não visto)": {
   "src": [
-   "templates/base.html:164"
+   "templates/base.html:169"
   ]
  },
  "Relacionados": {
@@ -18622,7 +18627,7 @@
   "src": [
    "services/onboarding.py:240",
    "services/onboarding.py:352",
-   "templates/base.html:205",
+   "templates/base.html:210",
    "templates/optimization/page.html:64",
    "templates/runs/list.html:3",
    "templates/runs/list.html:15"
@@ -18634,7 +18639,7 @@
    "services/plan_export.py:49",
    "services/site_report.py:294",
    "services/slotting.py:575",
-   "templates/base.html:508"
+   "templates/base.html:522"
   ],
   "js": true
  },
@@ -19012,7 +19017,7 @@
  },
  "Sair": {
   "src": [
-   "templates/base.html:175"
+   "templates/base.html:180"
   ]
  },
  "Saldo": {
@@ -19083,7 +19088,7 @@
    "services/onboarding.py:263",
    "services/onboarding.py:42",
    "services/onboarding.py:341",
-   "templates/base.html:198",
+   "templates/base.html:203",
    "templates/stock/list.html:3"
   ],
   "lazy": true
@@ -19096,7 +19101,7 @@
  },
  "Saldos de estoque (CSV/Excel)": {
   "src": [
-   "templates/base.html:236"
+   "templates/base.html:241"
   ]
  },
  "Saldos gravados": {
@@ -19490,7 +19495,7 @@
  },
  "Sem medidas": {
   "src": [
-   "templates/base.html:519"
+   "templates/base.html:533"
   ],
   "js": true
  },
@@ -19842,7 +19847,7 @@
    "routers/simulator.py:14",
    "services/onboarding.py:233",
    "services/onboarding.py:40",
-   "templates/base.html:207",
+   "templates/base.html:212",
    "templates/simulator/index.html:2"
   ],
   "lazy": true
@@ -19895,7 +19900,7 @@
  },
  "Simular trajeto e 3D": {
   "src": [
-   "templates/base.html:209"
+   "templates/base.html:214"
   ]
  },
  "Simulação": {
@@ -19977,7 +19982,7 @@
  },
  "Sistema": {
   "src": [
-   "templates/base.html:238"
+   "templates/base.html:243"
   ]
  },
  "Situação": {
@@ -20276,7 +20281,7 @@
  },
  "Só o tamanho do imóvel (ex.: 40 × 25 m)": {
   "src": [
-   "templates/base.html:519"
+   "templates/base.html:533"
   ],
   "js": true
  },
@@ -20291,6 +20296,11 @@
    "services/field_help.py:191"
   ],
   "help": true
+ },
+ "Só os ícones": {
+  "src": [
+   "templates/base.html:248"
+  ]
  },
  "Só propõe mexer numa estante quando ela ganha pelo menos este número de bins": {
   "src": [
@@ -20687,7 +20697,7 @@
  },
  "Tempos padrão": {
   "src": [
-   "templates/base.html:211",
+   "templates/base.html:216",
    "templates/simulator/index.html:8"
   ]
  },
@@ -20967,7 +20977,7 @@
  "Tipos de Bin": {
   "src": [
    "routers/bin_types.py:27",
-   "templates/base.html:220",
+   "templates/base.html:225",
    "templates/bin_types/list.html:3",
    "templates/bin_types/list.html:6",
    "templates/dashboard.html:36"
@@ -20977,7 +20987,7 @@
  "Tipos de bin": {
   "src": [
    "services/onboarding.py:327",
-   "templates/base.html:232"
+   "templates/base.html:237"
   ],
   "lazy": true
  },
@@ -21006,7 +21016,7 @@
  },
  "Tipos de estrutura": {
   "src": [
-   "templates/base.html:223",
+   "templates/base.html:228",
    "templates/structure_kinds/list.html:3",
    "templates/structure_kinds/list.html:6",
    "templates/structure_kinds/pieces.html:8",
@@ -21083,7 +21093,7 @@
  },
  "Todas as importações": {
   "src": [
-   "templates/base.html:229"
+   "templates/base.html:234"
   ]
  },
  "Todos": {
@@ -21167,12 +21177,12 @@
  },
  "Tour desta tela": {
   "src": [
-   "templates/base.html:159"
+   "templates/base.html:164"
   ]
  },
  "Tour geral do sistema": {
   "src": [
-   "templates/base.html:162",
+   "templates/base.html:167",
    "templates/onboarding.html:6"
   ]
  },
@@ -21521,7 +21531,7 @@
  },
  "Unidades de medida": {
   "src": [
-   "templates/base.html:150"
+   "templates/base.html:155"
   ]
  },
  "Unidades de outros itens desalojadas": {
@@ -21736,7 +21746,7 @@
  "Usuários": {
   "src": [
    "routers/users.py:15",
-   "templates/base.html:173",
+   "templates/base.html:178",
    "templates/users/list.html:3",
    "templates/users/list.html:6",
    "static/field_help.js:258"
@@ -22713,7 +22723,7 @@
  "administrador": {
   "src": [
    "templates/account.html:9",
-   "templates/base.html:171",
+   "templates/base.html:176",
    "templates/users/list.html:20"
   ]
  },

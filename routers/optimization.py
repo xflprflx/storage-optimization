@@ -490,6 +490,7 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                         notes = [_("Recurso infinito: mesmo sem limite de quantidade, o plano cabe nas bins que já existem no escopo.")]
                 else:
                     notes = []
+                code_of = lambda t: types[t].code if t in types else str(t)  # noqa: E731
                 dinfo = summary.donors
                 if dinfo:
                     unc = dinfo.get("uncovered") or {}
@@ -497,7 +498,9 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
                         notes.append(_("Faltaram bins nos outros endereços do escopo para o plano dos itens filtrados: ")
                                      + ", ".join(f"{n} × {types[t].code if t in types else t}" for t, n in sorted(unc.items()))
                                      + _(". O plano foi refeito com o que dá para liberar."))
-                ctx.update(orphans=list(summary.orphans or []), addr_focus=dinfo)
+                ctx.update(orphans=list(summary.orphans or []), addr_focus=dinfo,
+                           splits=[{**s_, "parent_code": code_of(s_["parent"]), "child_code": code_of(s_["child"])}
+                                   for s_ in (summary.splits or [])])
                 ctx.update(results=results, rows=page_rows, arr_views=arr_views, n_shown=len(shown), n_total=len(results),
                            page_no=page, pages=pages, types=types, sort=sort, sort_dir="desc" if desc else "asc",
                            status_filter=status_f, chips=chips, kpis=kpis, by_type=by_type, notes=notes,

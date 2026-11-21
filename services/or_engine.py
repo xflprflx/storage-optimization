@@ -660,12 +660,20 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
             for t, n in (a.current or {}).items():
                 budget[t] = budget.get(t, 0) + n
         tset = set(budget) | {t for _x, opts, _x in entries for o in opts for t in o[0]}
+        # fracionamento: s[t] bins pai viram compartimentos t (k cada); saem do estoque da bin pai
+        splits = {t: pk for t, pk in (getattr(prm, "splits", None) or {}).items() if t in tset and budget.get(pk[0], 0) > 0}
+        svar = {t: m.NewIntVar(0, budget.get(p, 0), "") for t, (p, _k) in splits.items()}
         for t in tset:
             fixed_n = sum(cfg.get(t, 0) for cfg in fixed.values())
             expr = sum(xo * o[0].get(t, 0) for a, opts, _x in entries for xo, o in zip(x[a.id], opts))
             slack = m.NewIntVar(0, 100000, "")
             pen.append(slack)
-            m.Add(expr + fixed_n <= budget.get(t, 0) + slack)
+            gained = svar[t] * splits[t][1] if t in svar else 0
+            lost = sum(v for c, v in svar.items() if splits[c][0] == t)
+            m.Add(expr + fixed_n + lost <= budget.get(t, 0) + gained + slack)
+        split_total = sum(svar.values()) if svar else None
+    else:
+        split_total = None
 
     # 4) critérios
     def total(f):
@@ -681,6 +689,8 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
     stages = [("short", exprs["short"])] + [(c, exprs[c]) for c in prio]
     if own_extra:
         stages.append(("levels", sum(own_extra)))  # desempate: preferir o próprio nível
+    if split_total is not None:
+        stages.append(("splits", split_total))  # desempate: fracionar o mínimo de bins pai
 
     # 5) dica = heurística
     for a, opts, slots in entries:

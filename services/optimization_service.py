@@ -30,6 +30,12 @@ def load_types(db: Session) -> dict[int, BinSpec]:
     }
 
 
+def load_splits(db: Session) -> dict:
+    """Compartimentos com "permitir fracionar a bin pai": {compartimento: (bin pai, compartimentos por pai)}."""
+    return {bt.id: (bt.parent_id, bt.per_parent) for bt in db.scalars(select(BinType).where(BinType.allow_split.is_(True)))
+            if bt.is_fraction and bt.parent_id is not None}
+
+
 def bin_cost(bt: BinType) -> Optional[float]:
     """Custo de uma bin do tipo; compartimento sem custo próprio = custo da bin pai ÷ compartimentos por pai."""
     if bt.cost is not None:
@@ -168,6 +174,7 @@ def run(db: Session, location_ids: list[int], prm: Params, donors: Optional[list
     from services.or_engine import cached
 
     donors = donors if (donors and prm.limit_inventory) else None
+    prm.splits = load_splits(db) if prm.limit_inventory else None
     return cached(db, "address", location_ids, prm, tuple(donors or ()),
                   lambda: _run(db, location_ids, prm, donors))
 
@@ -193,7 +200,7 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     import copy
     import dataclasses
 
-    from services.bin_optimizer import Donor, assign_donors, donors_inventory, summarize
+    from services.bin_optimizer import Donor, assign_donors, donors_inventory, split_report, summarize
 
     if len(location_ids) + len(donors or []) > MAX_SCOPE:
         raise ValueError(_("O escopo tem {len} endereços (limite {MAX_SCOPE}). Filtre por armazém ou corredor.", len=f"{len(location_ids) + len(donors or []):,}", MAX_SCOPE=f"{MAX_SCOPE:,}"))
@@ -203,6 +210,7 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     if not donors:
         addresses, ledger = load_addresses(db, location_ids, prm.basis, types)
         results, summary = optimize(addresses, types, prm, ledger)
+        summary.splits = split_report(results, prm)
         return results, summary, types
     # foco: os endereços filtrados podem usar as bins dos doadores (outros endereços do escopo)
     focus = set(location_ids)
@@ -225,6 +233,7 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     all_res = results + dres
     s = summarize(all_res)
     s.solver = summary.solver
+    s.splits = split_report(results, dataclasses.replace(prm, extra_inventory=extra))
     s.orphans = orphans
     s.donors = {"free": sum(1 for d in dn if not d.stocked), "stocked": sum(1 for d in dn if d.stocked),
                 "free_bins": sum(sum(d.a.current.values()) for d in dn if not d.stocked),
@@ -232,10 +241,10 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     return all_res, s, types
 
 
-def inventory_closure(results, only: set) -> set:
+def inventory_closure(results, only: set, splits: Optional[dict] = None) -> set:
     """Bins existentes: aplicando só alguns endereços, o total de cada tipo não pode passar do que existe no escopo.
     Endereços que ganham bins de um tipo puxam junto os que liberam bins desse tipo (doadores), até fechar a conta."""
-    from services.bin_optimizer import _after
+    from services.bin_optimizer import _after, split_budget
 
     sel = {r.id for r in results if r.id in only and r.applicable}
     budget: dict[int, int] = {}
@@ -248,9 +257,12 @@ def inventory_closure(results, only: set) -> set:
         for r in results:
             for t, n in (_after(r) if r.id in sel else dict(r.current or {})).items():
                 tot[t] = tot.get(t, 0) + n
-        over = [t for t, n in tot.items() if n > budget.get(t, 0)]
+        eff, _p = split_budget(budget, tot, splits)  # bins pai que sobram podem virar compartimentos
+        over = [t for t, n in tot.items() if n > eff.get(t, 0)]
         if not over:
             return sel
+        # quem libera o tipo que falta ou, para um compartimento fracionável, a bin pai dele
+        over += [splits[t][0] for t in over if splits and t in splits]
         d = next((r for r in donors if r.id not in sel
                   and any(_after(r).get(t, 0) < (r.current or {}).get(t, 0) for t in over)), None)
         if d is None:
@@ -281,7 +293,7 @@ def apply(db: Session, location_ids: list[int], prm: Params, only: Optional[set]
     results, _x, _x = run(db, location_ids, prm, donors)
     chosen = None
     if only is not None:
-        chosen = inventory_closure(results, only) if prm.limit_inventory else set(only)
+        chosen = inventory_closure(results, only, load_splits(db)) if prm.limit_inventory else set(only)
     changed = 0
     touched: list[int] = []
     loose: dict[int, list] = {}  # doador "órfão": conteúdo das bins que ficam (o resto fica fora de bin)

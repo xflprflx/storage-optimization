@@ -50,6 +50,12 @@
           <div class="d-flex align-items-center gap-2"><svg id="gridPrev" width="90" height="70"></svg><div class="small" id="gridTxt"></div></div>
         </div>
         <div class="col-12">{{ field_error(errors, 'div_w') }}</div>
+        <div class="col-12" id="splitBox">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="allow_split" id="allow_split" value="1" {% if data.get('allow_split') %}checked{% endif %}>
+            <label class="form-check-label" for="allow_split">{{ _h("<b>Permitir fracionar a bin pai na otimização</b>: com bins existentes, uma bin pai sobrando pode virar estes compartimentos (colocando a divisória)") }}</label>
+          </div>
+        </div>
       </div>
       <div class="form-text" id="fracHint">{{ _("Divide a bin pai numa grade: colunas na largura (lado a lado) × fileiras no comprimento (da frente para o fundo). Ex.: 2 × 1 = meia bin (1/2); 2 × 3 = 6 compartimentos (1/6). Com as dimensões vazias, elas vêm da bin pai (largura ÷ colunas, comprimento ÷ fileiras; peso e volume ÷ compartimentos) e acompanham se ela mudar.") }}</div>
       <hr class="my-4">
@@ -130,6 +136,7 @@
   const gp = document.getElementById('gridPrev'), gt = document.getElementById('gridTxt');
   function grid() {
     const c = Math.max(1, parseInt(dw.value) || 1), r = Math.max(1, parseInt(dl.value) || 1), o = par.selectedOptions[0];
+    document.getElementById('splitBox').style.display = (o && o.value && c * r >= 2) ? '' : 'none';  // só compartimentos
     if (!o || !o.value || c * r < 2) { gp.innerHTML = ''; gt.innerHTML = '<span class="text-muted">' + _t('bin inteira') + '<\/span>'; return; }
     const w = num(o.dataset.w), l = num(o.dataset.l), h = num(o.dataset.h);
     const sc = Math.min(86 / (w || 1), 66 / (l || 1)), W = (w || 40) * sc, L = (l || 30) * sc;

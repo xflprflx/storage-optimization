@@ -152,7 +152,8 @@ def _add_missing_columns(conn) -> None:
     for col, ddl in (("parent_id", "INTEGER REFERENCES bin_types(id)"), ("fraction_num", "INTEGER"),
                      ("fraction_den", "INTEGER"), ("split_axis", "VARCHAR(10) NOT NULL DEFAULT 'width'"),
                      ("dims_auto", "BOOLEAN NOT NULL DEFAULT 0"), ("div_w", "INTEGER"), ("div_l", "INTEGER"),
-                     ("cost", "BIGINT"), ("open_top", "BOOLEAN NOT NULL DEFAULT 0"), ("over_cm", "BIGINT")):
+                     ("cost", "BIGINT"), ("open_top", "BOOLEAN NOT NULL DEFAULT 0"), ("over_cm", "BIGINT"),
+                     ("allow_split", "BOOLEAN NOT NULL DEFAULT 0")):
         if "bin_types" in tables and col not in btcols:
             conn.execute(text(f"ALTER TABLE bin_types ADD COLUMN {col} {ddl}"))
     if "bin_types" in tables and "div_w" not in btcols:

@@ -58,6 +58,7 @@ BIN_TYPE_FIELDS = {
     "div_l": (N_("Divisões no comprimento"), False, ("divisoesnocomprimento", "divisoescomprimento", "fileiras", "nocomprimento", "divcomprimento", "divisoesc")),
     "fraction": (N_("Fração (ex.: 1/2) — alternativa às divisões"), False, ("fracao", "fração", "fraction", "compartimento")),
     "split_axis": (N_("Divisão (largura/comprimento)"), False, ("divisao", "divisão", "eixo", "split", "dividirna")),
+    "allow_split": (N_("Permite fracionar a bin pai (sim/não)"), False, ("permitefracionar", "permitefracionarabinpai", "fracionar", "fracionavel", "fracionável", "allowsplit", "split_parent")),
 }
 LOCATION_FIELDS = {
     "branch_code": (N_("Filial"), False, ("filial", "codfilial", "codigofilial", "branch", "loja", "empresa")),
@@ -313,6 +314,12 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
                         vals[k] = d[k]
         if vals.get("open_top") is None:
             vals.pop("open_top", None)  # coluna vazia: não mexe (tipo novo: fechada)
+        sraw = get_cell(row, mapping.get("allow_split")) if mapping.get("allow_split") is not None else None
+        if sraw is not None and str(sraw).strip():  # compartimento: a otimização pode fracionar a bin pai
+            on = str(sraw).strip().casefold() in {"s", "sim", "1", "x", "true", "verdadeiro", "yes", "y", "si", "oui", "ja", "是"}
+            if on and parent is None:
+                raise ValueError(_("Permite fracionar a bin pai: só vale para compartimentos (informe a bin pai)"))
+            vals["allow_split"] = on
         bt = by_code.get(code)
         seen.add(code)
         if bt is None:
@@ -593,10 +600,12 @@ MASTER_KINDS = {
                            N_("Compartimentos: Bin pai (código de uma bin inteira, cadastrada antes ou em linha anterior) + "
                            "Divisões na largura × no comprimento (ex.: 2 e 3 = 6 compartimentos). Alternativa: Fração (1/2…) + "
                            "Divisão (largura ou comprimento). Sem dimensões, elas vêm da bin pai."),
+                           N_("Permite fracionar a bin pai (sim/não), nos compartimentos: na otimização com bins existentes, uma bin "
+                           "pai sobrando pode virar compartimentos deste tipo (colocando a divisória)."),
                            N_("Tipos existentes são atualizados só nos campos preenchidos.")],
-                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm)\n"
-                            "CX-P;Caixa pequena;10;20;30;8;;;;;nao;\nCX-M;Caixa média;20;30;40;15;;;;;nao;\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135\n"
-                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;\n"},
+                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm);Permite fracionar a bin pai\n"
+                            "CX-P;Caixa pequena;10;20;30;8;;;;;nao;;\nCX-M;Caixa média;20;30;40;15;;;;;nao;;\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135;\n"
+                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;;sim\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;;nao\n"},
     "locations": {"sync_help": N_("Nas filiais/armazéns que aparecem no arquivo, exclui os endereços que não estão nele. Endereço ocupado ou com item atrelado é mantido."),"title": N_("Importação de Endereços"), "fields": LOCATION_FIELDS, "run": import_locations,
                   "back": ("/locations", "endereços"), "scope": True, "bins_option": True,
                   "help": [N_("Informe o endereço completo (A-01-02-03) OU as colunas Corredor, Estante, Nível, Posição e "

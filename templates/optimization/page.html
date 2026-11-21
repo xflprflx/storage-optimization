@@ -611,6 +611,10 @@
       </div>
     </div>
     {% endif %}
+    {% if splits %}
+    <div class="alert alert-info py-2 small"><i class="bi bi-scissors"></i> {{ _h("<b>Bins pai fracionadas</b> — sobram no escopo e viram compartimentos (coloque a divisória antes de guardar):") }}
+      <ul class="mb-0 mt-1">{% for s in splits %}<li>{{ _h("Fracionar <b>{n}× {parent}</b> em <b>{made}× {child}</b> ({k} por bin){spare}", n=s.parents, parent=s.parent_code, made=s.made, child=s.child_code, k=s.k, spare=(_h(" — sobram {n} compartimento(s) vazio(s)", n=s.spare) if s.spare else "")) }}</li>{% endfor %}</ul></div>
+    {% endif %}
     {% if orphans %}
     <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> {{ _h("<b>{orphans} item(ns) órfão(s)</b> — perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use \"Realocar os itens desalojados\"):", orphans=(orphans|length)) }}
       <ul class="mb-0 mt-1">{% for sku, addr, tag, q in orphans[:30] %}<li>{{ _h("<span class=\"mono\">{sku}</span> · {q} un. · <span class=\"mono\">{addr}</span> {tag}", sku=(sku), q=(q|dec), addr=(addr), tag=(tag)) }}</li>{% endfor %}</ul>

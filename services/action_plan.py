@@ -127,6 +127,15 @@ def build_address_plan(results, summary, types, scope: list, params: list, conte
         Kpi(_("Endereços com ação"), None, changed, "", True),
     ]
     n = 0
+    for sp in getattr(s, "splits", None) or []:  # bins pai que sobram viram compartimentos: antes de distribuir
+        n += 1
+        pc = types[sp["parent"]].code if sp["parent"] in types else str(sp["parent"])
+        cc = types[sp["child"]].code if sp["child"] in types else str(sp["child"])
+        plan.steps.append(Step(n, _("Preparar"), _("Fracionar"), _("bins pai que sobram"),
+                               _("Fracionar {n}× {parent} em {made}× {child} (colocar a divisória){spare}", n=sp["parents"],
+                                 parent=pc, made=sp["made"], child=cc,
+                                 spare=_(" — sobram {n} compartimento(s) vazio(s)", n=sp["spare"]) if sp["spare"] else ""),
+                               "", f"{sp['parents']}× {pc}", "change"))
     for r in act:
         aisle = r.address.split("-")[0]
         before_lv = _placement_by_level(r.current_placement, r.own_level) if r.current_placement else {"": dict(r.current)}

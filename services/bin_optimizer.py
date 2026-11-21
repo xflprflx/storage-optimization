@@ -221,6 +221,9 @@ class Params:
     bin_source: str = "free"
     orphans: str = "relocate"
     extra_inventory: Optional[dict] = None  # interno: bins de outros endereços disponíveis ao plano {tipo: qtd}
+    # bins existentes: compartimento -> (bin pai, compartimentos por pai) dos compartimentos com "permitir fracionar a
+    # bin pai" — uma bin pai sobrando no escopo pode virar compartimentos (coloca-se a divisória)
+    splits: Optional[dict] = None
 
     def validate(self) -> None:
         if self.objective not in OBJECTIVES:
@@ -308,6 +311,7 @@ class Summary:
     solver: Optional[dict] = None  # pesquisa operacional: status, tempo, valores por critério
     orphans: list = field(default_factory=list)  # (sku, endereço, bin, qtd) que ficam fora de bin
     donors: Optional[dict] = None  # foco: endereços doadores {"free": n, "stocked": n, "uncovered": {tipo: n}}
+    splits: list = field(default_factory=list)  # bins pai fracionadas: [{"parent", "child", "parents", "made", "spare"}]
 
     @property
     def fill_before(self) -> Optional[float]:
@@ -885,16 +889,60 @@ def _after(r: AddressResult) -> dict[int, int]:
     return dict(r.suggested or {}) if (r.applicable and r.status != "ok") or r.status == "liberar" else dict(r.current or {})
 
 
+def split_budget(budget: dict, used: dict, splits: Optional[dict]) -> tuple[dict, dict]:
+    """Estoque efetivo com o fracionamento das bins pai: para cada compartimento com "permitir fracionar" que passa do
+    que existe, fraciona bins pai que sobram (1 bin pai = k compartimentos). Retorna (estoque efetivo, {compartimento:
+    bins pai fracionadas})."""
+    eff, plan = dict(budget), {}
+    if not splits:
+        return eff, plan
+    deficit = {t: used.get(t, 0) - eff.get(t, 0) for t in splits}
+    for t in sorted((t for t, d in deficit.items() if d > 0), key=lambda t: -deficit[t]):
+        p, k = splits[t]
+        spare = eff.get(p, 0) - used.get(p, 0)
+        take = min(-(-deficit[t] // k), max(0, spare))
+        if take > 0:
+            eff[t] = eff.get(t, 0) + take * k
+            eff[p] = eff.get(p, 0) - take
+            plan[t] = take
+    return eff, plan
+
+
+def inventory_budget(results: list, prm: Params) -> dict:
+    """Bins de cada tipo disponíveis ao plano (bins existentes): as do escopo + as de outros endereços (foco)."""
+    budget: dict[int, int] = dict(prm.extra_inventory or {})
+    for r in results:
+        for t, n in (r.current or {}).items():
+            budget[t] = budget.get(t, 0) + n
+    return budget
+
+
+def split_report(results: list, prm: Params) -> list:
+    """Bins pai a fracionar no plano final: [{"parent", "child", "parents", "made", "spare"}] (spare = compartimentos
+    que sobram vazios)."""
+    if not (prm.limit_inventory and prm.splits):
+        return []
+    used: dict[int, int] = {}
+    for r in results:
+        for t, n in _after(r).items():
+            used[t] = used.get(t, 0) + n
+    budget = inventory_budget(results, prm)
+    _eff, plan = split_budget(budget, used, prm.splits)
+    out = []
+    for t, n in sorted(plan.items()):
+        p, k = prm.splits[t]
+        need = used.get(t, 0) - budget.get(t, 0)
+        out.append({"parent": p, "child": t, "parents": n, "made": n * k, "spare": n * k - need, "k": k})
+    return out
+
+
 def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], types: dict[int, BinSpec], prm: Params,
                      ledger: Optional[LevelLedger]) -> None:
     """Bins existentes: o plano só pode usar as bins que existem hoje no escopo (elas trocam de endereço).
     Se algum tipo passar do estoque, refaz os endereços que ganham bins desse tipo, limitando cada um ao que sobra:
     primeiro as correções (o saldo não cabe nas bins atuais), contando que as melhorias opcionais ainda não
     decididas abrem mão do que ganhariam; depois as melhorias, com o que restou."""
-    budget: dict[int, int] = dict(prm.extra_inventory or {})
-    for r in results:
-        for t, n in (r.current or {}).items():
-            budget[t] = budget.get(t, 0) + n
+    budget = inventory_budget(results, prm)
     by_id = {a.id: a for a in addresses}
     done: set[int] = set()
 
@@ -907,7 +955,8 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
 
     while True:
         u = used()
-        over = [t for t, n in u.items() if n > budget.get(t, 0)]
+        eff, _plan = split_budget(budget, u, prm.splits)  # bins pai sobrando podem virar compartimentos
+        over = [t for t, n in u.items() if n > eff.get(t, 0)]
         if not over:
             return
         prio = {"corrigir": 0, "melhoria": 1}
@@ -917,7 +966,8 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
             # ainda passa do estoque (uma melhoria ficou com o que outra devolveria): desfaz melhorias que ganham o tipo
             for t in over:
                 for j in sorted(range(len(results)), key=lambda j: results[j].address):
-                    if used().get(t, 0) <= budget.get(t, 0):
+                    uu = used()
+                    if uu.get(t, 0) <= split_budget(budget, uu, prm.splits)[0].get(t, 0):
                         break
                     o = results[j]
                     if o.status == "melhoria" and _after(o).get(t, 0) > (o.current or {}).get(t, 0):
@@ -944,7 +994,11 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
                 oa = {t: min(n, (o.current or {}).get(t, 0)) for t, n in oa.items()}
             for t, n in oa.items():
                 others[t] = others.get(t, 0) + n
-        limits = {t: max(budget.get(t, 0) - others.get(t, 0), 0) for t in set(budget) | set(types)}
+        eff_o, _p = split_budget(budget, others, prm.splits)
+        limits = {t: max(eff_o.get(t, 0) - others.get(t, 0), 0) for t in set(budget) | set(types)}
+        for t, (p, k) in (prm.splits or {}).items():  # o que sobra da bin pai ainda pode virar compartimentos
+            if t in limits:
+                limits[t] += k * max(0, eff_o.get(p, 0) - others.get(p, 0))
         if ledger is not None and r.applicable and r.placement is not None:
             ledger.commit(r.placement, a.current_placement)  # desfaz a sugestão antes de refazer
         nr = optimize_address(a, types, prm, ledger, limits)

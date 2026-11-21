@@ -44,7 +44,11 @@ def test_bulk_delete_histories_and_levels(client, db, seeded):
     db.add(reserved)
     db.flush()
     used = db.query(ShelfLevel).filter_by(branch_id=b.id, aisle="A", bay="01", level="1").one()
-    db.add(LevelCapacity(shelf_level_id=used.id, bin_type_id=seeded["bt"], max_bins=4))
+    cap = db.query(LevelCapacity).filter_by(shelf_level_id=used.id, bin_type_id=seeded["bt"]).one_or_none()
+    if cap is None:  # outro teste pode ter calculado a capacidade deste nível (banco compartilhado)
+        db.add(LevelCapacity(shelf_level_id=used.id, bin_type_id=seeded["bt"], max_bins=4))
+    else:
+        cap.max_bins = 4
     db.commit()
     rid, uid, bid = reserved.id, used.id, b.id
     page = client.get(f"/levels?branch_id={bid}&warehouse_id={seeded['w']}").text

@@ -66,6 +66,7 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
     data.update(parent_id=parent.id if parent else None, split_axis="grid",
                 div_w=grid[0] if grid else None, div_l=grid[1] if grid else None,
                 fraction_num=1 if grid else None, fraction_den=grid[0] * grid[1] if grid else None)
+    data["allow_split"] = parent is not None and str(form.get("allow_split") or "").lower() in {"1", "on", "true"}
     if grid and parent is None and not msg:
         errors.add("parent_id", _("Informe a bin pai do compartimento."))
     if parent is not None and not grid and not msg:
@@ -166,7 +167,8 @@ def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_
     from services.appearance import code_text
 
     data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
-                                        "parent_id", "dims_auto", "look_model", "open_top", "over_cm")}
+                                        "parent_id", "dims_auto", "look_model", "open_top", "over_cm",
+                                        "allow_split")}
     data["look_code"] = code_text(bt.appearance)
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")
     if bt.dims_auto:  # dimensões vindas da bin pai: o formulário mostra vazio (continua automático)

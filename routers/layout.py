@@ -223,9 +223,7 @@ async def plan_save(request: Request, db: Session = Depends(get_db)):
     br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
     if br is None:
         return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
-    data = clean(body.get("data") or {})
-    if not data["rows"]:
-        return JSONResponse({"error": _("A planta não tem fileiras.")}, status_code=400)
+    data = clean(body.get("data") or {})  # sem fileiras também vale (só o imóvel): as estantes são desenhadas depois
     lay = get_layout(db, br.id, wid)
     if lay is None:
         lay = BranchLayout(branch_id=br.id, warehouse_id=wid, data=data)

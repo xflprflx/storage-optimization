@@ -78,3 +78,25 @@ def test_routes(client, db):
     code = '{"rows": [{"aisle": "S", "bays": "all", "x": 1, "y": 1, "direction": "horizontal", "corridor_side": "below"}]}'
     r = client.post("/layout/plan/ai", json={"branch_id": bid, "warehouse_id": "none", "code": code}).json()
     assert not r.get("error") and r["placed"] == 7 and r["data"]["L"] > 700 and any("imóvel" in n for n in r["notes"])
+
+
+def test_plan_without_rows_is_accepted(client, db):
+    """Planta só do imóvel (sem estantes desenhadas): vale, com aviso; as fileiras são desenhadas depois."""
+    from services.plan_ai import parse
+
+    bid, bays = _bays(db, "PA6")
+    code = ('{"building": {"length": 40, "width": 25}, "rows": [], '
+            '"obstacles": [{"name": "Escritório", "x": 0, "y": 0, "length": 6, "width": 4}], '
+            '"reference": {"x": 1, "y": 12, "label": "Doca"}}')
+    data, err, notes = parse(code, bays)
+    assert not err and data["rows"] == [] and (data["L"], data["W"]) == (4000, 2500) and len(data["obstacles"]) == 1
+    assert any("Sem fileiras" in n for n in notes)
+    assert not parse('{"building": {"length": 40, "width": 25}}', bays)[1]  # sem a chave rows
+    r = client.post("/layout/plan/ai", json={"branch_id": bid, "warehouse_id": "none", "code": code}).json()
+    assert not r.get("error") and r["placed"] == 0 and r["data"]["rows"] == []
+    r = client.post("/layout/plan/save", json={"branch_id": bid, "warehouse_id": "none", "data": r["data"]}).json()
+    assert not r.get("error")
+    for url in (f"/layout/plan?branch_id={bid}&warehouse_id=none", f"/layout/plan/3d?branch_id={bid}&warehouse_id=none",
+                f"/optimization/slotting/routes?branch_id={bid}&warehouse_id=none", f"/layout?branch_id={bid}",
+                f"/layout/plan/data?branch_id={bid}&warehouse_id=none"):
+        assert client.get(url).status_code == 200, url  # telas que usam a planta continuam abrindo

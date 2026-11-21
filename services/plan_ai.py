@@ -158,7 +158,8 @@ def prompt(bays: dict) -> str:
         "- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do "
         "canto de cima à esquerda, length em x, width em y).\n"
         "- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n"
-        "- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n\n"
+        "- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n"
+        "- Se a planta não tiver estantes, devolva \"rows\": [] com o imóvel, os obstáculos e a referência.\n\n"
         "Corredores e estantes cadastrados:\n{aisles}", aisles=summary(bays))
 
 
@@ -185,9 +186,11 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
                 obj = inner
                 break
     rows_in = _get(obj, "rows") or []
-    if not isinstance(rows_in, list) or not any(isinstance(r, dict) for r in rows_in):
-        return None, _("A resposta não tem fileiras (rows)."), []
+    rows_in = rows_in if isinstance(rows_in, list) else []
     b = _get(obj, "building") or {}
+    b = b if isinstance(b, dict) else {}
+    if not any(isinstance(r, dict) for r in rows_in) and not b and not _get(obj, "obstacles"):
+        return None, _("A resposta não descreve uma planta (esperado um objeto com building, rows, obstacles e reference)."), []
     L, W = _f(_get(b, "length")), _f(_get(b, "width"))
 
     # unidade: metros pedidos; detectada pelo tamanho do imóvel (ou de tudo) e pela chave "unit"
@@ -275,8 +278,9 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
     if skipped:
         notes.append(_("Corredor(es) que não existem nos endereços da filial ficaram de fora: {list}.",
                        list=", ".join(sorted(set(skipped)))[:300]))
-    if not rows:
-        return None, _("Nenhuma fileira da resposta é de um corredor cadastrado nesta filial."), notes
+    if not rows:  # planta só do imóvel (sem estantes, ou nenhuma de corredor cadastrado): vale, as fileiras vêm depois
+        notes.append(_("Sem fileiras de estantes: a planta fica com o imóvel, os obstáculos e a referência. Desenhe as "
+                       "fileiras no editor (+ Fileira) ou use Gerar automaticamente."))
 
     obstacles = []
     obs_in = _get(obj, "obstacles") or []
@@ -296,8 +300,10 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
         ln = sum(bb.w or r["bay_w"] for bb in row_bays(r, bays)) or n * r["bay_w"]
         return (r["x"] + (ln if r["orient"] == "h" else r["depth"]), r["y"] + (r["depth"] if r["orient"] == "h" else ln))
     ex = [extent(r) for r in rows] + [(o["x"] + o["w"], o["y"] + o["d"]) for o in obstacles]
-    need_L, need_W = max(e[0] for e in ex), max(e[1] for e in ex)
+    need_L, need_W = max([e[0] for e in ex] or [0.0]), max([e[1] for e in ex] or [0.0])
     L, W = cm(L), cm(W)
+    if not ex and not (L and W):
+        return None, _("A resposta não tem o tamanho do imóvel (building) nem fileiras ou obstáculos para calculá-lo."), notes
     if not L or not W:
         notes.append(_("Sem o tamanho do imóvel: calculado pelas fileiras e obstáculos."))
     elif L + 1 < need_L or W + 1 < need_W:

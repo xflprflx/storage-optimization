@@ -525,7 +525,9 @@ A resposta é um JSON em metros, com origem no canto de cima à esquerda:
 O app só lê a descrição, nunca executa código, e conserta os erros comuns das IAs com aviso: texto e ``` em volta,
 comentários e vírgula sobrando, números em texto com vírgula decimal, medidas em cm ou mm, chaves em português,
 posição em lista, corredor escrito de outro jeito (`07` = `7`), corredores e estantes que não existem (ficam de fora),
-lado do corredor que não combina com a direção, imóvel menor que o desenho (é aumentado) e referência ausente. A frente
+lado do corredor que não combina com a direção, imóvel menor que o desenho (é aumentado) e referência ausente. Planta
+sem estantes (só o imóvel, os obstáculos e a referência, com `"rows": []`) também vale: carrega e salva assim, e as
+fileiras são desenhadas depois no editor ou geradas automaticamente. A frente
 das estantes sem estrutura cadastrada sai do comprimento desenhado; quando as estantes cadastradas não fecham com a
 planta, o aviso mostra as duas medidas.
 

@@ -1897,12 +1897,13 @@
  },
  "A resposta não descreve uma planta (esperado um objeto com building, rows, obstacles e reference).": {
   "src": [
-   "services/plan_ai.py:180"
+   "services/plan_ai.py:181",
+   "services/plan_ai.py:193"
   ]
  },
- "A resposta não tem fileiras (rows).": {
+ "A resposta não tem o tamanho do imóvel (building) nem fileiras ou obstáculos para calculá-lo.": {
   "src": [
-   "services/plan_ai.py:189"
+   "services/plan_ai.py:306"
   ]
  },
  "A resposta não é um JSON válido (linha {line}, coluna {col}): {msg}.": {
@@ -1912,7 +1913,7 @@
  },
  "A resposta tinha só a lista de fileiras: o tamanho do imóvel foi calculado por elas.": {
   "src": [
-   "services/plan_ai.py:178"
+   "services/plan_ai.py:179"
   ]
  },
  "A rota otimizada anda <b>{fmt}%</b> menos que a lista.": {
@@ -4966,7 +4967,7 @@
  },
  "Cole a resposta da IA.": {
   "src": [
-   "services/plan_ai.py:171",
+   "services/plan_ai.py:172",
    "templates/layout/plan.html:664"
   ],
   "js": true
@@ -6030,7 +6031,7 @@
  },
  "Corredor(es) que não existem nos endereços da filial ficaram de fora: {list}.": {
   "src": [
-   "services/plan_ai.py:276"
+   "services/plan_ai.py:279"
   ]
  },
  "Corredor-Estante-Nível-Posição (ex.: A-01-2-1). Gere em lote a partir das faixas (ex.: corredores A a D, estantes 01 a 20) ou importe.": {
@@ -9862,42 +9863,42 @@
  },
  "Fileira {n} ({aisle}) sem posição x, y: ficou de fora.": {
   "src": [
-   "services/plan_ai.py:217"
+   "services/plan_ai.py:220"
   ]
  },
  "Fileira {n} ({aisle}): direção \"{v}\" desconhecida, usada {o}.": {
   "src": [
-   "services/plan_ai.py:226"
+   "services/plan_ai.py:229"
   ]
  },
  "Fileira {n} ({aisle}): estante(s) não cadastrada(s) ignorada(s): {list}.": {
   "src": [
-   "services/plan_ai.py:255"
+   "services/plan_ai.py:258"
   ]
  },
  "Fileira {n} ({aisle}): estantes \"{v}\" desconhecidas, usadas todas.": {
   "src": [
-   "services/plan_ai.py:246"
+   "services/plan_ai.py:249"
   ]
  },
  "Fileira {n} ({aisle}): lado do corredor \"{v}\" desconhecido; ajuste no editor (F).": {
   "src": [
-   "services/plan_ai.py:236"
+   "services/plan_ai.py:239"
   ]
  },
  "Fileira {n} ({aisle}): lado do corredor \"{v}\" não combina com a direção; ajuste no editor (F troca o lado).": {
   "src": [
-   "services/plan_ai.py:234"
+   "services/plan_ai.py:237"
   ]
  },
  "Fileira {n} ({aisle}): na planta tem {a} m, mas as estantes cadastradas somam {b} m.": {
   "src": [
-   "services/plan_ai.py:272"
+   "services/plan_ai.py:275"
   ]
  },
  "Fileira {n} ({aisle}): nenhuma estante cadastrada nesse lado; confira no editor.": {
   "src": [
-   "services/plan_ai.py:261"
+   "services/plan_ai.py:264"
   ]
  },
  "Fileiras": {
@@ -9944,7 +9945,7 @@
  },
  "Fileiras ou obstáculos passavam do imóvel ({L} × {W} m): o imóvel foi aumentado.": {
   "src": [
-   "services/plan_ai.py:304"
+   "services/plan_ai.py:310"
   ]
  },
  "Fileiras, da frente para o fundo": {
@@ -12905,7 +12906,7 @@
  },
  "Medidas em centímetros na resposta: convertidas.": {
   "src": [
-   "services/plan_ai.py:201"
+   "services/plan_ai.py:204"
   ]
  },
  "Medidas em massa": {
@@ -12921,7 +12922,7 @@
  },
  "Medidas em milímetros na resposta: convertidas.": {
   "src": [
-   "services/plan_ai.py:204"
+   "services/plan_ai.py:207"
   ]
  },
  "Medidas internas": {
@@ -14230,11 +14231,6 @@
    "templates/locations/batch.html:131"
   ],
   "html": true
- },
- "Nenhuma fileira da resposta é de um corredor cadastrado nesta filial.": {
-  "src": [
-   "services/plan_ai.py:279"
-  ]
  },
  "Nenhuma filial cadastrada.": {
   "src": [
@@ -15742,7 +15738,7 @@
  },
  "Obstáculo sem posição ou tamanho ignorado: {name}.": {
   "src": [
-   "services/plan_ai.py:289"
+   "services/plan_ai.py:293"
   ]
  },
  "Obstáculo {i}": {
@@ -20220,6 +20216,11 @@
   ],
   "lazy": true
  },
+ "Sem fileiras de estantes: a planta fica com o imóvel, os obstáculos e a referência. Desenhe as fileiras no editor (+ Fileira) ou use Gerar automaticamente.": {
+  "src": [
+   "services/plan_ai.py:282"
+  ]
+ },
  "Sem histórico de saídas. Envie a aba <b>Pedidos</b> (pedido, SKU, quantidade) ou a coluna <b>Saída</b>.": {
   "src": [
    "templates/slotting/skus.html:15"
@@ -20253,12 +20254,12 @@
  },
  "Sem o ponto de referência (expedição): ficou no meio da parede esquerda; marque no editor.": {
   "src": [
-   "services/plan_ai.py:311"
+   "services/plan_ai.py:317"
   ]
  },
  "Sem o tamanho do imóvel: calculado pelas fileiras e obstáculos.": {
   "src": [
-   "services/plan_ai.py:302"
+   "services/plan_ai.py:308"
   ]
  },
  "Sem pares (precisa da aba Pedidos).": {
@@ -22012,7 +22013,7 @@
    "services/site_planner.py:1202"
   ]
  },
- "Transforme a planta baixa anexada (depósito/armazém) numa descrição para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{{\"building\": {{\"length\": 60, \"width\": 35}},\n \"rows\": [{{\"aisle\": \"A\", \"bays\": \"odd\", \"x\": 4, \"y\": 2, \"direction\": \"horizontal\", \"length\": 20, \"depth\": 1.1, \"corridor_side\": \"below\", \"numbering_from\": \"start\"}}],\n \"obstacles\": [{{\"name\": \"Pilar\", \"x\": 10, \"y\": 10, \"length\": 0.4, \"width\": 0.4}}],\n \"reference\": {{\"x\": 1, \"y\": 17, \"label\": \"Expedição\"}}}}\n\nRegras:\n- Todas as medidas em METROS. Use as cotas da planta; sem cotas, estime pela escala ou pelas medidas das estantes abaixo.\n- Origem no canto de cima à esquerda do imóvel, como a planta aparece: x cresce para a direita, y para baixo. building.length = tamanho em x; building.width = tamanho em y.\n- rows: cada fileira de estantes encostadas lado a lado. x, y = canto de cima à esquerda do retângulo da fileira. direction \"horizontal\" (a fileira corre ao longo de x: length em x, depth em y) ou \"vertical\" (length em y, depth em x).\n- corridor_side = de que lado fica o corredor de onde se pegam os produtos: \"above\" ou \"below\" nas fileiras horizontais, \"left\" ou \"right\" nas verticais. Duas fileiras costas com costas são DUAS rows, cada uma com o seu lado de corredor.\n- aisle = o código do corredor (lista abaixo). bays = \"odd\" (estantes ímpares), \"even\" (pares), \"all\" (todas do corredor) ou a lista dos códigos das estantes daquela fileira, ex.: [\"01\", \"03\", \"05\"]. Normalmente as ímpares ficam de um lado do corredor e as pares do outro.\n- numbering_from = \"start\" se os números das estantes crescem com x (horizontal) ou com y (vertical); \"end\" se crescem no sentido contrário.\n- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do canto de cima à esquerda, length em x, width em y).\n- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n\nCorredores e estantes cadastrados:\n{aisles}": {
+ "Transforme a planta baixa anexada (depósito/armazém) numa descrição para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{{\"building\": {{\"length\": 60, \"width\": 35}},\n \"rows\": [{{\"aisle\": \"A\", \"bays\": \"odd\", \"x\": 4, \"y\": 2, \"direction\": \"horizontal\", \"length\": 20, \"depth\": 1.1, \"corridor_side\": \"below\", \"numbering_from\": \"start\"}}],\n \"obstacles\": [{{\"name\": \"Pilar\", \"x\": 10, \"y\": 10, \"length\": 0.4, \"width\": 0.4}}],\n \"reference\": {{\"x\": 1, \"y\": 17, \"label\": \"Expedição\"}}}}\n\nRegras:\n- Todas as medidas em METROS. Use as cotas da planta; sem cotas, estime pela escala ou pelas medidas das estantes abaixo.\n- Origem no canto de cima à esquerda do imóvel, como a planta aparece: x cresce para a direita, y para baixo. building.length = tamanho em x; building.width = tamanho em y.\n- rows: cada fileira de estantes encostadas lado a lado. x, y = canto de cima à esquerda do retângulo da fileira. direction \"horizontal\" (a fileira corre ao longo de x: length em x, depth em y) ou \"vertical\" (length em y, depth em x).\n- corridor_side = de que lado fica o corredor de onde se pegam os produtos: \"above\" ou \"below\" nas fileiras horizontais, \"left\" ou \"right\" nas verticais. Duas fileiras costas com costas são DUAS rows, cada uma com o seu lado de corredor.\n- aisle = o código do corredor (lista abaixo). bays = \"odd\" (estantes ímpares), \"even\" (pares), \"all\" (todas do corredor) ou a lista dos códigos das estantes daquela fileira, ex.: [\"01\", \"03\", \"05\"]. Normalmente as ímpares ficam de um lado do corredor e as pares do outro.\n- numbering_from = \"start\" se os números das estantes crescem com x (horizontal) ou com y (vertical); \"end\" se crescem no sentido contrário.\n- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do canto de cima à esquerda, length em x, width em y).\n- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n- Se a planta não tiver estantes, devolva \"rows\": [] com o imóvel, os obstáculos e a referência.\n\nCorredores e estantes cadastrados:\n{aisles}": {
   "src": [
    "services/plan_ai.py:134"
   ]
@@ -24411,7 +24412,7 @@
    "services/branch_layout.py:212",
    "services/branch_layout.py:261",
    "services/branch_layout.py:1017",
-   "services/plan_ai.py:315",
+   "services/plan_ai.py:321",
    "templates/layout/plan.html:612",
    "static/field_help.js:170"
   ],
@@ -24621,7 +24622,7 @@
  },
  "horizontal": {
   "src": [
-   "services/plan_ai.py:227"
+   "services/plan_ai.py:230"
   ]
  },
  "identificador curto e único": {
@@ -26483,7 +26484,7 @@
  },
  "vertical": {
   "src": [
-   "services/plan_ai.py:227"
+   "services/plan_ai.py:230"
   ]
  },
  "visto de cima": {

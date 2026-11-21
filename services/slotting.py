@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from services.i18n import N_, _, translate_workbook
+from services.i18n import N_, _, fmt_num, translate_workbook
 
 EPS = 1e-9
 SLOT_DEFAULTS = {"slot": "1", "slot_metric": "lines", "slot_ref": "", "slot_aisle_m": "3", "slot_bay_m": "1",
@@ -484,9 +484,10 @@ def summary_text(data: Optional[dict]) -> str:
         return ""
     if data.get("kind") == "column":
         return _("coluna Saída ({skus} SKUs)", skus=len(data.get('skus') or {}))
-    txt = f"{data.get('orders', 0)} pedidos, {data.get('lines', 0)} linhas, {len(data.get('skus') or {})} SKUs"
+    txt = _("{orders} pedidos, {lines} linhas, {skus} SKUs", orders=fmt_num(data.get('orders', 0)),
+            lines=fmt_num(data.get('lines', 0)), skus=fmt_num(len(data.get('skus') or {})))
     if data.get("dates"):
-        txt += f", {data['dates'][0]} a {data['dates'][1]}"
+        txt += ", " + _("{a} a {b}", a=data['dates'][0], b=data['dates'][1])
     if data.get("has_release"):
         txt += ", " + _("com horário de liberação")
     return txt

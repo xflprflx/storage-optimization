@@ -701,6 +701,7 @@ def by_day(sim: dict) -> list[dict]:
 
 ROUTE_KINDS = (("list", N_("Lista de separação"), "#d62728"), ("s", N_("Serpentina (rota em S)"), "#2f6db5"),
                ("opt", N_("Otimizada"), "#1a9850"))
+ROUTE_SHORT = {"list": N_("Lista"), "s": N_("Serpentina"), "opt": N_("Otimizada"), "batch": N_("Lote")}  # rótulo no 3D
 
 
 def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Callable = dist) -> dict:
@@ -708,7 +709,7 @@ def orders_payload(sample: list, nodes_of: dict, start: Node, ref: dict, d: Call
     sim = simulate(sample, nodes_of, start, d)
     rows = sorted(sim["rows"], key=lambda r: -r["list_m"])
     r2 = lambda v: round(v, 2) if v is not None else None  # noqa: E731
-    return {"ref": ref, "kinds": [{"key": k, "name": n, "color": c} for k, n, c in ROUTE_KINDS],
+    return {"ref": ref, "kinds": [{"key": k, "name": _(n), "short": _(ROUTE_SHORT[k]), "color": c} for k, n, c in ROUTE_KINDS],
             "summary": {k: r2(sim.get(k)) for k in ("list_avg", "s_avg", "opt_avg", "gain_pct")} | {"orders": sim["orders"],
                                                                                                 "has_qty": sim.get("has_qty", False),
                                                                                                 "has_release": sim.get("has_release", False)},
@@ -749,7 +750,7 @@ def _trip_route(trip: dict, entries: dict, nodes_of: dict, start: Node, d: Calla
     idx: list = []
     pts = path_points(route, start, idx)
     grp = [groups.get(n.key, [n.key]) for n in route]
-    return {"name": _("Lote — {n} pedidos no trajeto", n=len(trip["orders"])), "color": BATCH_COLOR,
+    return {"name": _("Lote — {n} pedidos no trajeto", n=len(trip["orders"])), "short": _(ROUTE_SHORT["batch"]), "color": BATCH_COLOR,
             "pts": [[round(x, 1), round(y, 1)] for x, y in pts], "stops": idx[:-1], "keys": [n.key for n in route],
             "groups": grp, "skus": [", ".join(x for k in g for x in skus_at.get(k, [])) for g in grp],
             "qty": [round(sum(units_at.get(k, 0.0) for k in g), 3) for g in grp],
@@ -794,7 +795,7 @@ def order_payload(sample: list, nodes_of: dict, start: Node, ref: dict, order: s
         idx: list = []
         pts = path_points(rt[kind], start, idx)
         grp = [groups.get(n.key, [n.key]) for n in rt[kind]]  # endereços de cada parada (mesmo módulo)
-        routes[kind] = {"name": name, "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
+        routes[kind] = {"name": _(name), "short": _(ROUTE_SHORT[kind]), "color": color, "pts": [[round(x, 1), round(y, 1)] for x, y in pts],
                         "stops": idx[:-1], "keys": [n.key for n in rt[kind]], "groups": grp,
                         "skus": [", ".join(x for k in g for x in skus_at.get(k, [sku_of.get(k, "")])) for g in grp],
                         "qty": [round(sum(units_at.get(k, 1.0) for k in g), 3) for g in grp],

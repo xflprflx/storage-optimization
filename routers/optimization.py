@@ -25,7 +25,7 @@ from services.pool_optimizer import POOL_OBJECTIVES, PoolParams
 from routers.packing import Arranger, bin_card, section
 from services.plan_export import to_pdf, to_xlsx
 from services.pool_service import apply_pool, run_pool
-from services.i18n import N_, _
+from services.i18n import N_, _, fmt_num
 
 router = APIRouter(prefix="/optimization", tags=[N_("Otimização de bins")])
 
@@ -925,7 +925,7 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                         kpi(_("Endereços com bins"), tot["addr_before"], None if prm.unlimited else tot["addr_after"]),
                         {"label": _("Dimensionados") if prm.unlimited else N_("Movimentações"),
                          "value": len(rows_all) if prm.unlimited else tot["moves"],
-                         "hint": _("recurso infinito: só simulação") if prm.unlimited else f"{tot['units']:g} unidades"}]
+                         "hint": _("recurso infinito: só simulação") if prm.unlimited else _("{n} unidades", n=fmt_num(round(tot['units'], 1)))}]
                 counts: dict[str, int] = {}
                 for m in rows_all:
                     counts[m["status"]] = counts.get(m["status"], 0) + 1

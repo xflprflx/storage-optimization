@@ -616,7 +616,7 @@ async function loadOrders(order, day) {
     $('nkWalkMsg').textContent = _t('Carregando os pedidos…');
     try { WK.list = await (await fetch(routesUrl())).json(); } catch (e) { WK.list = { error: _t('Falha ao carregar os pedidos.') }; }
     if (WK.list.error) { $('nkWalkMsg').textContent = WK.list.error; WK.list = null; return; }
-    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${o.lines} lin. · ` + (CMP ? _t('hoje {a} m → proposta {b} m', {a: fmt(o[rk() + '_cur']), b: fmt(o[rk() + '_new'])}) : `lista ${fmt(o.list_m)} m → otim. ${fmt(o.opt_m)} m`) + '</option>').join('');
+    $('nkOrder').innerHTML = WK.list.orders.map(o => `<option value="${esc(o.order)}">${esc(o.order)} · ${_t('{n} lin.', {n: o.lines})} · ` + (CMP ? _t('hoje {a} m → proposta {b} m', {a: fmt(o[rk() + '_cur']), b: fmt(o[rk() + '_new'])}) : _t('lista {a} m → otim. {b} m', {a: fmt(o.list_m), b: fmt(o.opt_m)})) + '</option>').join('');
     const s = WK.list.summary;
     $('nkRelease').disabled = !s.has_release;
     $('nkRelNote').textContent = s.has_release ? '' : _t('(o histórico não tem a coluna Liberação)');
@@ -753,7 +753,7 @@ function build() {
     const cart = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.45), new THREE.MeshLambertMaterial({ color: '#8a96a0' })); cart.position.set(0.62, 0.55, 0);
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.55, 32), new THREE.MeshBasicMaterial({ color: R.color, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2; ring.position.y = 0.035;
-    fig.add(body, head, cart, ring, label(R.name.split(' ')[0], 0, 2.1, 0, R.color, Math.min(LBL * 0.6, 0.45)));
+    fig.add(body, head, cart, ring, label(R.short || R.name.split(' ')[0], 0, 2.1, 0, R.color, Math.min(LBL * 0.6, 0.45)));
     WK.group.add(fig);
     return { k, R, P, cum, total, segs, ev, arrive, arrS, T: t, fig, body, ring, d: 0, picked: 0, pick: null, rot: null };
   });
@@ -761,7 +761,10 @@ function build() {
   const R0 = d.routes;
   const gain = d.compare ? null : R0.list && R0.opt && R0.list.m ? (1 - R0.opt.m / R0.list.m) * 100 : null;
   const gainCmp = d.compare && R0.cur.m ? (1 - R0.new.m / R0.cur.m) * 100 : null;
-  $('nkWalkInfo').innerHTML = (d.day ? _t('<b>Dia {day}<\/b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)', {day: esc(fmtDay(d.day)), n: d.orders.length}) + '<br>' : '') + _t(d.day ? '{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>' : '<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : '') + (gainCmp != null ? '<br>' + (gainCmp >= 0 ? _t('A proposta anda <b>{fmt}%<\/b> menos que hoje.', {fmt: fmt(gainCmp, 0)}) : _t('A proposta anda <b>{fmt}%<\/b> mais que hoje.', {fmt: fmt(-gainCmp, 0)})) : ''), mmss: mmss(WK.T / speed())});
+  const W3I = {esc: esc(d.order), lines: d.lines, stops: d.stops, units: d.units != null ? ' ' + _t('· {fmt} peça(s)', {fmt: fmt(d.units, 2)}) : '', kinds: kinds.map(k => `<span style="color:${R0[k].color}">■</span> ${esc(R0[k].name)}: <b>${fmt(R0[k].m)} m</b> · ${mmss(WK.walkers.find(w => w.k === k).T)}`).join('<br>'), gain: (gain != null ? '<br>' + _t('A rota otimizada anda <b>{fmt}%<\/b> menos que a lista.', {fmt: fmt(gain, 0)}) : '') + (gainCmp != null ? '<br>' + (gainCmp >= 0 ? _t('A proposta anda <b>{fmt}%<\/b> menos que hoje.', {fmt: fmt(gainCmp, 0)}) : _t('A proposta anda <b>{fmt}%<\/b> mais que hoje.', {fmt: fmt(-gainCmp, 0)})) : ''), mmss: mmss(WK.T / speed())};
+  $('nkWalkInfo').innerHTML = (d.day ? _t('<b>Dia {day}<\/b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)', {day: esc(fmtDay(d.day)), n: d.orders.length}) + '<br>' : '') + (d.day
+    ? _t('{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', W3I)
+    : _t('<b>Pedido {esc}<\/b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class="text-muted">Vídeo ≈ {mmss} na velocidade escolhida.<\/span>', W3I));
   if (d.release && d.start_s != null) {  // horário de liberação: o relógio do vídeo começa no 1º pedido liberado
     const hh = Math.floor(d.start_s / 3600), mm = Math.floor(d.start_s % 3600 / 60);
     $('nkWalkInfo').insertAdjacentHTML('beforeend', '<div><i class="bi bi-clock-history"><\/i> ' + _t('Com o horário de liberação: o dia começa às {h} (1º pedido liberado); o separador espera na referência quando não há pedido liberado.', {h: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`}) + '<\/div>');

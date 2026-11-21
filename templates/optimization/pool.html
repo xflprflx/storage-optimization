@@ -150,7 +150,7 @@
                   (_('Bins usadas no plano'), tot.after, ''),
                   ((_('Bins liberadas'), tot.before - tot.after, '') if tot.before >= tot.after else (_('Bins a mais'), tot.after - tot.before, _('hoje há saldo acima da capacidade das bins'))),
                   (_('Endereços hoje → plano'), tot.addr_before|string ~ ' → ' ~ tot.addr_after|string, ''),
-                  (_('Movimentações'), tot.moves, (tot.units|dec) ~ ' unidades')] %}
+                  (_('Movimentações'), tot.moves, _h('{n} unidades', n=(tot.units|dec)))] %}
   {% for label, value, hint in cards %}
   <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card h-100"><div class="card-body py-2">
     <div class="label">{{ label }}</div><div class="value fs-4">{{ value|dec if value is number else value }}</div>

@@ -308,12 +308,12 @@
  "% das saídas": {
   "src": [
    "services/site_planner.py:1284",
-   "services/slotting.py:561"
+   "services/slotting.py:562"
   ]
  },
  "% dos pedidos": {
   "src": [
-   "services/slotting.py:562"
+   "services/slotting.py:563"
   ]
  },
  "% enchimento": {
@@ -432,7 +432,7 @@
  },
  "(início presumido às 08:00)": {
   "src": [
-   "templates/site/view3d.html:894"
+   "templates/site/view3d.html:897"
   ],
   "js": true
  },
@@ -609,7 +609,7 @@
  },
  "+{n}": {
   "src": [
-   "templates/site/view3d.html:858"
+   "templates/site/view3d.html:861"
   ],
   "js": true
  },
@@ -1120,7 +1120,7 @@
  },
  "<b>Dia {day}</b> · {n} pedidos em sequência (saída e volta na referência a cada pedido)": {
   "src": [
-   "templates/site/view3d.html:764"
+   "templates/site/view3d.html:765"
   ],
   "js": true
  },
@@ -1255,6 +1255,12 @@
    "templates/structure_kinds/form.html:23"
   ],
   "html": true
+ },
+ "<b>Pedido {esc}</b> · {lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class=\"text-muted\">Vídeo ≈ {mmss} na velocidade escolhida.</span>": {
+  "src": [
+   "templates/site/view3d.html:767"
+  ],
+  "js": true
  },
  "<b>Pedidos</b>: cada linha é um item de pedido. Linhas do mesmo pedido e SKU são somadas; quantidade vazia conta 1 unidade.": {
   "src": [
@@ -1591,8 +1597,8 @@
  },
  "A busca expirou ou ainda não terminou: rode de novo.": {
   "src": [
-   "routers/layout.py:484",
-   "routers/layout.py:599",
+   "routers/layout.py:482",
+   "routers/layout.py:597",
    "routers/levels.py:420",
    "routers/site.py:431"
   ]
@@ -1667,7 +1673,7 @@
  },
  "A comparação expirou (o servidor foi reiniciado ou houve muitas otimizações depois). Rode a otimização de novo e abra o 3D pelo resultado.": {
   "src": [
-   "routers/layout.py:392"
+   "routers/layout.py:390"
   ]
  },
  "A comprar": {
@@ -1838,11 +1844,6 @@
    "services/site_planner.py:1396"
   ]
  },
- "A planta não tem fileiras.": {
-  "src": [
-   "routers/layout.py:228"
-  ]
- },
  "A posição dos SKUs pela saída está desligada no projeto, mas foi ligada em todas as variações para o trajeto ser comparável.": {
   "src": [
    "templates/site/layout_proposal.html:17"
@@ -1873,8 +1874,8 @@
  },
  "A proposta expirou: gere de novo.": {
   "src": [
-   "routers/layout.py:516",
-   "routers/layout.py:654",
+   "routers/layout.py:514",
+   "routers/layout.py:652",
    "routers/levels.py:437",
    "services/proposals.py:101"
   ]
@@ -2217,7 +2218,7 @@
  },
  "Agora": {
   "src": [
-   "templates/site/view3d.html:923"
+   "templates/site/view3d.html:926"
   ],
   "js": true
  },
@@ -2581,7 +2582,7 @@
  },
  "Amostra sem quantidades: cada linha conta como 1 peça (reenvie o histórico de pedidos para usar as quantidades).": {
   "src": [
-   "templates/site/view3d.html:803"
+   "templates/site/view3d.html:806"
   ],
   "js": true
  },
@@ -3464,8 +3465,8 @@
  },
  "Atual": {
   "src": [
+   "routers/layout.py:490",
    "routers/layout.py:492",
-   "routers/layout.py:494",
    "routers/site.py:442"
   ]
  },
@@ -4133,8 +4134,8 @@
  },
  "Busca sem resultado.": {
   "src": [
-   "routers/layout.py:487",
-   "routers/layout.py:602",
+   "routers/layout.py:485",
+   "routers/layout.py:600",
    "routers/levels.py:423",
    "routers/site.py:434"
   ]
@@ -5195,7 +5196,7 @@
  },
  "Com o horário de liberação: o dia começa às {h} (1º pedido liberado); o separador espera na referência quando não há pedido liberado.": {
   "src": [
-   "templates/site/view3d.html:767"
+   "templates/site/view3d.html:770"
   ],
   "js": true
  },
@@ -6249,14 +6250,14 @@
   "src": [
    "services/onboarding.py:293",
    "services/site_report.py:349",
-   "services/slotting.py:561",
+   "services/slotting.py:562",
    "templates/slotting/skus.html:21"
   ],
   "lazy": true
  },
  "Curva ABC (A/B/C)": {
   "src": [
-   "services/slotting.py:578"
+   "services/slotting.py:579"
   ]
  },
  "Curva ABC (SKUs)": {
@@ -6983,7 +6984,7 @@
  },
  "Desenhar a planta": {
   "src": [
-   "routers/layout.py:278"
+   "routers/layout.py:276"
   ]
  },
  "Desenhar a planta da filial": {
@@ -7133,7 +7134,7 @@
  },
  "Dia {day} · {n} pedidos · {lines} linha(s){pcs}": {
   "src": [
-   "templates/site/view3d.html:891"
+   "templates/site/view3d.html:894"
   ],
   "js": true
  },
@@ -8077,7 +8078,7 @@
  },
  "Endereço(s)": {
   "src": [
-   "services/slotting.py:562"
+   "services/slotting.py:563"
   ]
  },
  "Endereços": {
@@ -8684,13 +8685,13 @@
  },
  "Esta filial ainda não tem planta desenhada.": {
   "src": [
-   "routers/layout.py:318",
+   "routers/layout.py:316",
    "services/rearrange.py:467"
   ]
  },
  "Esta filial ainda não tem planta desenhada. Desenhe a planta para ver o 3D.": {
   "src": [
-   "routers/layout.py:297"
+   "routers/layout.py:295"
   ]
  },
  "Esta filial/armazém não tem endereços cadastrados.": {
@@ -8889,7 +8890,7 @@
  },
  "Este navegador não grava vídeo (use Chrome, Edge ou Firefox).": {
   "src": [
-   "templates/site/view3d.html:982"
+   "templates/site/view3d.html:985"
   ],
   "js": true
  },
@@ -10161,8 +10162,8 @@
    "routers/branches.py:107",
    "routers/branches.py:132",
    "routers/imports.py:173",
-   "routers/layout.py:247",
-   "routers/layout.py:271"
+   "routers/layout.py:245",
+   "routers/layout.py:269"
   ]
  },
  "Filial onde os endereços serão criados.": {
@@ -10580,14 +10581,14 @@
  },
  "Força": {
   "src": [
-   "services/slotting.py:580",
+   "services/slotting.py:581",
    "templates/site/project.html:597",
    "templates/slotting/skus.html:56"
   ]
  },
  "Força (%)": {
   "src": [
-   "services/slotting.py:572"
+   "services/slotting.py:573"
   ]
  },
  "Fração (ex.: 1/2) — alternativa às divisões": {
@@ -10899,7 +10900,7 @@
  "Gravar vídeo": {
   "src": [
    "templates/site/view3d.html:147",
-   "templates/site/view3d.html:1011"
+   "templates/site/view3d.html:1014"
   ],
   "js": true
  },
@@ -11137,7 +11138,7 @@
  },
  "Hora {h} · simulação {t}": {
   "src": [
-   "templates/site/view3d.html:894"
+   "templates/site/view3d.html:897"
   ],
   "js": true
  },
@@ -12084,8 +12085,8 @@
  },
  "Lift": {
   "src": [
-   "services/slotting.py:572",
-   "services/slotting.py:581",
+   "services/slotting.py:573",
+   "services/slotting.py:582",
    "templates/slotting/skus.html:56"
   ]
  },
@@ -12297,8 +12298,8 @@
  },
  "Linhas de pedido": {
   "src": [
-   "services/slotting.py:561",
-   "services/slotting.py:576"
+   "services/slotting.py:562",
+   "services/slotting.py:577"
   ]
  },
  "Linhas de pedido (quantas vezes o item é pego) ou unidades que saem.": {
@@ -12322,7 +12323,7 @@
  },
  "Linhas por pedido": {
   "src": [
-   "services/slotting.py:577"
+   "services/slotting.py:578"
   ]
  },
  "Linhas repetidas": {
@@ -12335,6 +12336,12 @@
   "src": [
    "templates/imports/mapping_stock.html:67"
   ]
+ },
+ "Lista": {
+  "src": [
+   "services/route_sim.py:704"
+  ],
+  "lazy": true
  },
  "Lista (km)": {
   "src": [
@@ -12425,6 +12432,12 @@
   ],
   "lazy": true
  },
+ "Lote": {
+  "src": [
+   "services/route_sim.py:704"
+  ],
+  "lazy": true
+ },
  "Lote (km)": {
   "src": [
    "templates/slotting/routes.html:161"
@@ -12486,17 +12499,17 @@
  },
  "Lote — {n} pedidos no trajeto": {
   "src": [
-   "services/route_sim.py:752"
+   "services/route_sim.py:753"
   ]
  },
  "Lote — {n} trajetos": {
   "src": [
-   "services/route_sim.py:882"
+   "services/route_sim.py:883"
   ]
  },
  "Lote: o separador faz o trajeto inteiro, com os pedidos {orders} (mesmo dia).": {
   "src": [
-   "templates/site/view3d.html:771"
+   "templates/site/view3d.html:774"
   ],
   "js": true
  },
@@ -12513,7 +12526,7 @@
  },
  "Lote: {n} trajetos no dia, um depois do outro (saída e volta na referência a cada trajeto).": {
   "src": [
-   "templates/site/view3d.html:772"
+   "templates/site/view3d.html:775"
   ],
   "js": true
  },
@@ -12572,7 +12585,7 @@
  "Mapa do estoque": {
   "src": [
    "routers/layout.py:17",
-   "routers/layout.py:274",
+   "routers/layout.py:272",
    "services/onboarding.py:148",
    "services/onboarding.py:36",
    "services/onboarding.py:371",
@@ -12962,7 +12975,7 @@
  },
  "Melhor trajeto: {label}": {
   "src": [
-   "routers/layout.py:492",
+   "routers/layout.py:490",
    "routers/site.py:440"
   ]
  },
@@ -14045,7 +14058,7 @@
  },
  "Nenhum pedido do dia {day} na amostra.": {
   "src": [
-   "services/route_sim.py:821"
+   "services/route_sim.py:822"
   ]
  },
  "Nenhum produto cadastrado.": {
@@ -14288,7 +14301,7 @@
  },
  "No dia": {
   "src": [
-   "templates/site/view3d.html:884"
+   "templates/site/view3d.html:887"
   ],
   "js": true
  },
@@ -14311,7 +14324,7 @@
  },
  "No pedido": {
   "src": [
-   "templates/site/view3d.html:884"
+   "templates/site/view3d.html:887"
   ],
   "js": true
  },
@@ -14342,7 +14355,7 @@
  },
  "No trajeto": {
   "src": [
-   "templates/site/view3d.html:884"
+   "templates/site/view3d.html:887"
   ],
   "js": true
  },
@@ -14772,7 +14785,7 @@
  },
  "Não foi possível iniciar a gravação.": {
   "src": [
-   "templates/site/view3d.html:989"
+   "templates/site/view3d.html:992"
   ],
   "js": true
  },
@@ -14796,7 +14809,7 @@
  },
  "Não há rearranjo para desfazer.": {
   "src": [
-   "routers/layout.py:533"
+   "routers/layout.py:531"
   ]
  },
  "Não há recomposição para desfazer.": {
@@ -15538,7 +15551,7 @@
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).": {
   "src": [
-   "routers/layout.py:322"
+   "routers/layout.py:320"
   ]
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se ele foi enviado antes desta versão, envie de novo.": {
@@ -15569,12 +15582,12 @@
  },
  "O sistema testa as variações da planta (passagens transversais e troca de corredores) e, em cada uma, a recomposição das estruturas com as estantes vizinhas daquela planta. Leva mais que as propostas separadas: uma recomposição por variação.": {
   "src": [
-   "routers/layout.py:576"
+   "routers/layout.py:574"
   ]
  },
  "O sistema testa obras na planta desenhada — passagens transversais e troca de corredores de lugar — e percorre os pedidos do histórico em cada uma. Leva alguns segundos (mais em plantas grandes).": {
   "src": [
-   "routers/layout.py:443"
+   "routers/layout.py:441"
   ]
  },
  "O solver não achou solução no tempo limite.": {
@@ -16109,12 +16122,12 @@
  },
  "Os SKUs do pedido {order} não estão na planta.": {
   "src": [
-   "services/route_sim.py:771"
+   "services/route_sim.py:772"
   ]
  },
  "Os SKUs dos pedidos do dia {day} não estão na planta.": {
   "src": [
-   "services/route_sim.py:853"
+   "services/route_sim.py:854"
   ]
  },
  "Os SKUs mais procurados (por bin) escolhem primeiro e ficam nos endereços mais fáceis; os que saem juntos ficam perto. Usa o motor heurístico.": {
@@ -16227,6 +16240,7 @@
  },
  "Otimizada": {
   "src": [
+   "services/route_sim.py:704",
    "services/route_sim.py:703",
    "templates/site/view3d.html:118"
   ],
@@ -16528,7 +16542,7 @@
  },
  "Paradas — {esc}:": {
   "src": [
-   "templates/site/view3d.html:800"
+   "templates/site/view3d.html:803"
   ],
   "js": true
  },
@@ -16546,7 +16560,7 @@
  },
  "Parar e salvar": {
   "src": [
-   "templates/site/view3d.html:1004"
+   "templates/site/view3d.html:1007"
   ],
   "js": true
  },
@@ -16557,7 +16571,7 @@
  },
  "Pares": {
   "src": [
-   "services/slotting.py:572",
+   "services/slotting.py:573",
    "templates/layout/plan.html:74"
   ]
  },
@@ -16674,18 +16688,18 @@
  },
  "Pedido {k} de {n}: {order} ({lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:798"
+   "templates/site/view3d.html:801"
   ],
   "js": true
  },
  "Pedido {order} não está na amostra.": {
   "src": [
-   "services/route_sim.py:767"
+   "services/route_sim.py:768"
   ]
  },
  "Pedido {order} · {lines} linha(s) · {stops} parada(s){pcs}": {
   "src": [
-   "templates/site/view3d.html:892"
+   "templates/site/view3d.html:895"
   ],
   "js": true
  },
@@ -16704,7 +16718,7 @@
  "Pedidos": {
   "src": [
    "services/site_import.py:968",
-   "services/slotting.py:576",
+   "services/slotting.py:577",
    "templates/optimization/page.html:547",
    "templates/simulator/index.html:17",
    "templates/simulator/index.html:49",
@@ -16737,7 +16751,7 @@
  },
  "Pedidos juntos": {
   "src": [
-   "services/slotting.py:572",
+   "services/slotting.py:573",
    "templates/optimization/page.html:607",
    "templates/site/project.html:597"
   ]
@@ -16891,7 +16905,7 @@
  },
  "Período": {
   "src": [
-   "services/slotting.py:579"
+   "services/slotting.py:580"
   ]
  },
  "Peso": {
@@ -17331,7 +17345,7 @@
  },
  "Planta removida: a caminhada volta a ser estimada pelo endereço.": {
   "src": [
-   "routers/layout.py:252"
+   "routers/layout.py:250"
   ]
  },
  "Planta salva": {
@@ -18249,7 +18263,7 @@
  },
  "Proposta combinada: rearranjo + recomposição": {
   "src": [
-   "routers/layout.py:573",
+   "routers/layout.py:571",
    "templates/layout/combined.html:8"
   ]
  },
@@ -18274,7 +18288,7 @@
  },
  "Proposta de rearranjo das estantes": {
   "src": [
-   "routers/layout.py:440",
+   "routers/layout.py:438",
    "templates/layout/rearrange.html:8",
    "templates/optimization/page.html:466"
   ]
@@ -18924,12 +18938,12 @@
  },
  "Rearranjo aplicado à planta: {label}. Use Desfazer rearranjo para voltar à anterior.": {
   "src": [
-   "routers/layout.py:520"
+   "routers/layout.py:518"
   ]
  },
  "Rearranjo desfeito: a planta voltou a ser a anterior.": {
   "src": [
-   "routers/layout.py:536"
+   "routers/layout.py:534"
   ]
  },
  "Recalcular": {
@@ -19108,7 +19122,7 @@
  },
  "Relatório": {
   "src": [
-   "services/slotting.py:576"
+   "services/slotting.py:577"
   ]
  },
  "Relatório de SKUs": {
@@ -19379,7 +19393,7 @@
   "src": [
    "services/plan_export.py:49",
    "services/site_report.py:294",
-   "services/slotting.py:575",
+   "services/slotting.py:576",
    "templates/base.html:526"
   ],
   "js": true
@@ -19646,7 +19660,7 @@
  },
  "SKUs com saída": {
   "src": [
-   "services/slotting.py:577",
+   "services/slotting.py:578",
    "templates/slotting/skus.html:19"
   ]
  },
@@ -19755,7 +19769,7 @@
  },
  "Sai junto com (pedidos juntos · força · lift)": {
   "src": [
-   "services/slotting.py:563"
+   "services/slotting.py:564"
   ]
  },
  "Sair": {
@@ -20518,6 +20532,12 @@
    "templates/slotting/routes.html:201"
   ]
  },
+ "Serpentina": {
+  "src": [
+   "services/route_sim.py:704"
+  ],
+  "lazy": true
+ },
  "Serpentina (rota em S)": {
   "src": [
    "services/route_sim.py:702",
@@ -20622,7 +20642,7 @@
  },
  "Simulador de trajeto": {
   "src": [
-   "routers/layout.py:276",
+   "routers/layout.py:274",
    "routers/site.py:536",
    "services/onboarding.py:248",
    "services/onboarding.py:365",
@@ -20699,7 +20719,7 @@
  },
  "Simulação {t}": {
   "src": [
-   "templates/site/view3d.html:895"
+   "templates/site/view3d.html:898"
   ],
   "js": true
  },
@@ -22004,7 +22024,7 @@
  },
  "Trajeto {k} de {n}: {orders} ({c} pedido(s), {lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:794"
+   "templates/site/view3d.html:797"
   ],
   "js": true
  },
@@ -22334,7 +22354,7 @@
    "services/site_report.py:343",
    "services/site_report.py:595",
    "services/site_service.py:77",
-   "services/slotting.py:561",
+   "services/slotting.py:562",
    "templates/optimization/page.html:235",
    "templates/site/project.html:693"
   ],
@@ -22859,7 +22879,7 @@
  },
  "Voltar": {
   "src": [
-   "routers/layout.py:575",
+   "routers/layout.py:573",
    "routers/levels.py:390",
    "templates/bin_types/form.html:8",
    "templates/branches/form.html:7",
@@ -22911,8 +22931,8 @@
  },
  "Voltar à planta": {
   "src": [
-   "routers/layout.py:273",
-   "routers/layout.py:442",
+   "routers/layout.py:271",
+   "routers/layout.py:440",
    "templates/layout/combined.html:13",
    "templates/layout/rearrange.html:11"
   ]
@@ -23148,7 +23168,7 @@
  },
  "Vídeo salvo ({fmt} MB).": {
   "src": [
-   "templates/site/view3d.html:1000"
+   "templates/site/view3d.html:1003"
   ],
   "js": true
  },
@@ -23256,7 +23276,7 @@
  },
  "Zona de ouro da caminhada": {
   "src": [
-   "services/slotting.py:562",
+   "services/slotting.py:563",
    "templates/site/project.html:697"
   ]
  },
@@ -23279,7 +23299,7 @@
  },
  "Zona de ouro da pega": {
   "src": [
-   "services/slotting.py:562"
+   "services/slotting.py:563"
   ]
  },
  "Zona de ouro da pega (altura)": {
@@ -23599,19 +23619,19 @@
  },
  "agora": {
   "src": [
-   "templates/site/view3d.html:903"
+   "templates/site/view3d.html:906"
   ],
   "js": true
  },
  "aguardando a liberação de {order} ({h})": {
   "src": [
-   "templates/site/view3d.html:873"
+   "templates/site/view3d.html:876"
   ],
   "js": true
  },
  "aguardando completar o lote (sai às {h})": {
   "src": [
-   "templates/site/view3d.html:873"
+   "templates/site/view3d.html:876"
   ],
   "js": true
  },
@@ -23661,7 +23681,7 @@
  },
  "andando para {key}": {
   "src": [
-   "templates/site/view3d.html:877"
+   "templates/site/view3d.html:880"
   ],
   "js": true
  },
@@ -23967,7 +23987,7 @@
  },
  "com horário de liberação": {
   "src": [
-   "services/slotting.py:491"
+   "services/slotting.py:492"
   ]
  },
  "com movimentação": {
@@ -24198,7 +24218,7 @@
  },
  "em que fração dos pedidos do menos vendido do par os dois saem juntos": {
   "src": [
-   "services/slotting.py:580"
+   "services/slotting.py:581"
   ]
  },
  "em vez de {factor}% — todos os SKUs reduzidos na mesma proporção.": {
@@ -24468,7 +24488,7 @@
  },
  "fora da planta: {v}{v2}": {
   "src": [
-   "routers/layout.py:303"
+   "routers/layout.py:301"
   ]
  },
  "fora das duas": {
@@ -24605,7 +24625,7 @@
  },
  "hoje × proposta": {
   "src": [
-   "routers/layout.py:284"
+   "routers/layout.py:282"
   ]
  },
  "hoje × {v}": {
@@ -24695,7 +24715,7 @@
  },
  "início presumido às 08:00": {
   "src": [
-   "templates/site/view3d.html:915"
+   "templates/site/view3d.html:918"
   ],
   "js": true
  },
@@ -24798,6 +24818,12 @@
  "lista {a} km → otim. {b} km": {
   "src": [
    "templates/site/view3d.html:625"
+  ],
+  "js": true
+ },
+ "lista {a} m → otim. {b} m": {
+  "src": [
+   "templates/site/view3d.html:619"
   ],
   "js": true
  },
@@ -24961,7 +24987,7 @@
  },
  "muda de lugar": {
   "src": [
-   "routers/layout.py:636",
+   "routers/layout.py:634",
    "templates/layout/combined.html:79"
   ]
  },
@@ -25474,7 +25500,7 @@
  },
  "pedido {k} de {n} · {order} ({lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:862"
+   "templates/site/view3d.html:865"
   ],
   "js": true
  },
@@ -25508,7 +25534,7 @@
  },
  "pegando {grpOf} ({fmt} pç)": {
   "src": [
-   "templates/site/view3d.html:875"
+   "templates/site/view3d.html:878"
   ],
   "js": true
  },
@@ -25787,12 +25813,12 @@
  },
  "recompor": {
   "src": [
-   "routers/layout.py:636"
+   "routers/layout.py:634"
   ]
  },
  "recompor e mudar de lugar": {
   "src": [
-   "routers/layout.py:636"
+   "routers/layout.py:634"
   ]
  },
  "recomposição em {bays} estante(s) ({created} nível(is) criado(s), {removed} removido(s))": {
@@ -26336,7 +26362,7 @@
  },
  "trajeto com {orders}": {
   "src": [
-   "templates/site/view3d.html:864"
+   "templates/site/view3d.html:867"
   ],
   "js": true
  },
@@ -26355,7 +26381,7 @@
  },
  "trajeto {k} de {n} · {orders} ({c} pedido(s), {lines} linha(s))": {
   "src": [
-   "templates/site/view3d.html:859"
+   "templates/site/view3d.html:862"
   ],
   "js": true
  },
@@ -26507,7 +26533,7 @@
  },
  "voltando à referência": {
   "src": [
-   "templates/site/view3d.html:879"
+   "templates/site/view3d.html:882"
   ],
   "js": true
  },
@@ -26609,6 +26635,11 @@
  "{assigned} atribuição(ões) produto → endereço": {
   "src": [
    "routers/site.py:769"
+  ]
+ },
+ "{a} a {b}": {
+  "src": [
+   "services/slotting.py:490"
   ]
  },
  "{a} m (comprimento, X)": {
@@ -26793,7 +26824,7 @@
  },
  "{fmt} de {fmt2} m · paradas {picked} de {keys} · peças {fmt3} de {fmt4}": {
   "src": [
-   "templates/site/view3d.html:885"
+   "templates/site/view3d.html:888"
   ],
   "js": true
  },
@@ -27093,6 +27124,12 @@
    "routers/structures.py:98"
   ]
  },
+ "{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class=\"text-muted\">Vídeo ≈ {mmss} na velocidade escolhida.</span>": {
+  "src": [
+   "templates/site/view3d.html:766"
+  ],
+  "js": true
+ },
  "{lines} linhas": {
   "src": [
    "templates/site/project.html:374"
@@ -27151,7 +27188,7 @@
  },
  "{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×": {
   "src": [
-   "templates/site/view3d.html:1027"
+   "templates/site/view3d.html:1030"
   ],
   "js": true
  },
@@ -27350,6 +27387,12 @@
   ],
   "html": true
  },
+ "{n} lin.": {
+  "src": [
+   "templates/site/view3d.html:619"
+  ],
+  "js": true
+ },
  "{n} linhas por pedido": {
   "src": [
    "templates/slotting/skus.html:20"
@@ -27422,6 +27465,13 @@
   ],
   "html": true
  },
+ "{n} unidades": {
+  "src": [
+   "routers/optimization.py:928",
+   "templates/optimization/pool.html:153"
+  ],
+  "html": true
+ },
  "{n} valor(es) um pouco fora do intervalo ajustado(s)": {
   "src": [
    "services/appearance.py:264"
@@ -27457,6 +27507,11 @@
    "templates/slotting/skus.html:7"
   ],
   "html": true
+ },
+ "{orders} pedidos, {lines} linhas, {skus} SKUs": {
+  "src": [
+   "services/slotting.py:487"
+  ]
  },
  "{ori}, {n} transversal(is)": {
   "src": [
@@ -27838,7 +27893,7 @@
  },
  "· <b>{fmt} pç</b>": {
   "src": [
-   "templates/site/view3d.html:802"
+   "templates/site/view3d.html:805"
   ],
   "js": true
  },
@@ -27862,7 +27917,7 @@
  },
  "· <span class=\"text-warning-emphasis\">{out} fora do ouro</span>": {
   "src": [
-   "templates/site/view3d.html:802"
+   "templates/site/view3d.html:805"
   ],
   "js": true
  },
@@ -27970,7 +28025,7 @@
  "· {fmt} peça(s)": {
   "src": [
    "templates/site/view3d.html:764",
-   "templates/site/view3d.html:890"
+   "templates/site/view3d.html:893"
   ],
   "js": true
  },
@@ -28389,13 +28444,13 @@
  },
  "✓ terminou em {t}": {
   "src": [
-   "templates/site/view3d.html:869"
+   "templates/site/view3d.html:872"
   ],
   "js": true
  },
  "✓ terminou às {h}": {
   "src": [
-   "templates/site/view3d.html:869"
+   "templates/site/view3d.html:872"
   ],
   "js": true
  }

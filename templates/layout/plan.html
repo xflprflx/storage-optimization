@@ -137,6 +137,17 @@
       <button class="btn btn-sm btn-outline-primary mt-1" id="btnAuto"><i class="bi bi-magic"></i> {{ _("Gerar") }}</button>
     </div></div>
 
+    <div class="card mb-2" data-tour="plan-ai"><div class="card-body py-2">
+      <div class="fw-semibold mb-1"><i class="bi bi-stars"></i> {{ _("Planta pela IA") }}</div>
+      <div class="text-muted mb-1">{{ _("Mande a planta do depósito (foto, PDF ou desenho) para um chat de IA (Claude, Gemini, ChatGPT) junto com o prompt e cole a resposta aqui. O prompt já leva os corredores e as estantes desta filial. A planta vai para o editor, para revisar e salvar; o app só lê a descrição, nunca executa código.") }}</div>
+      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1" id="aiPrompt"><i class="bi bi-clipboard"></i> {{ _("Copiar prompt para a IA") }}</button>
+      <div class="text-muted small mb-1" id="aiCopied"></div>
+      <textarea class="form-control form-control-sm d-none mb-1" id="aiPromptText" rows="4" readonly></textarea>
+      <textarea class="form-control form-control-sm font-monospace mb-1" id="aiCode" rows="4" placeholder="{{ _("Cole aqui a resposta da IA (JSON)") }}"></textarea>
+      <button type="button" class="btn btn-sm btn-outline-primary w-100" id="aiApply"><i class="bi bi-box-arrow-in-down"></i> {{ _("Carregar no editor") }}</button>
+      <div class="small mt-1" id="aiNotes"></div>
+    </div></div>
+
     <div class="card mb-2" data-tour="plan-rearr"><div class="card-body py-2">
       <div class="fw-semibold mb-1"><i class="bi bi-arrows-move"></i> {{ _("Proposta de rearranjo") }}</div>
       <div class="text-muted mb-1">{{ _("Testa obras na planta salva — passagens transversais atravessando as fileiras e troca de corredores de lugar (os de mais saídas mais perto da referência) — e compara o trajeto dos pedidos do histórico, com os SKUs onde estão hoje.") }}</div>
@@ -640,6 +651,24 @@
     const r = await post('/layout/plan/auto', { mode: $('aMode').value, aisle_w: cm($('aW').value), front: cm($('aF').value), widths: $('aWs').value });
     if (r.error) { alert(r.error); return; }
     load({ ...r, bays: BAYS }); dirty = true; status();
+  });
+  $('aiPrompt').addEventListener('click', async () => {
+    const r = await (await fetch(`/layout/plan/ai/prompt?branch_id=${SCOPE.branch_id}&warehouse_id=${SCOPE.warehouse_id}`)).json();
+    if (r.error) { alert(r.error); return; }
+    $('aiPromptText').value = r.prompt;
+    try { await navigator.clipboard.writeText(r.prompt); $('aiCopied').textContent = _t('Prompt copiado: cole no chat de IA e anexe a planta (imagem ou PDF).'); }
+    catch (e) { $('aiPromptText').classList.remove('d-none'); $('aiPromptText').select(); $('aiCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }
+  });
+  $('aiApply').addEventListener('click', async () => {
+    const code = $('aiCode').value.trim();
+    if (!code) { $('aiNotes').innerHTML = '<span class="text-danger">' + esc(_t('Cole a resposta da IA.')) + '<\/span>'; return; }
+    if (D.rows.length && !confirm(_t('Substituir a planta em edição pela da IA?'))) return;
+    const r = await post('/layout/plan/ai', { code });
+    const notes = (r.notes || []).map(n => `<li>${esc(n)}</li>`).join('');
+    if (r.error) { $('aiNotes').innerHTML = `<div class="text-danger">${esc(r.error)}</div>` + (notes ? `<ul class="text-muted ps-3 mb-0">${notes}</ul>` : ''); return; }
+    load({ ...r, bays: BAYS }); dirty = true; status();
+    $('aiNotes').innerHTML = '<div class="text-success"><i class="bi bi-check2"><\/i> ' + esc(_t('Planta carregada no editor: confira e clique em Salvar planta.')) + '<\/div>'
+      + (notes ? '<div class="text-warning-emphasis mt-1">' + esc(_t('Consertos e avisos:')) + `</div><ul class="text-muted ps-3 mb-0">${notes}</ul>` : '');
   });
   if ($('btnPrj')) $('btnPrj').addEventListener('click', async () => {
     if (D.rows.length && !confirm(_t('Substituir a planta em edição pela do projeto?'))) return;

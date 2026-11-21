@@ -113,6 +113,8 @@ R(PPLAN, "#aMode", "Como os endereços usam as letras", "Uma letra por corredor 
 R(PPLAN, "#aW", "Largura dos corredores (m)", "Vão entre as duas fileiras de cada corredor na planta gerada automaticamente.", "plan:gap")
 R(PPLAN, "#aF", "Frente livre (m)", "Espaço sem estantes entre a parede e o início das fileiras, onde fica a expedição.", "plan:front")
 R(PPLAN, "#aWs", "Corredores com outra largura", "Largura própria de alguns corredores, pela letra. Ex.: A=3,5; C=2,8.", "plan:widths")
+R(PPLAN, "#aiCode", "Resposta da IA (planta)", "O JSON que um chat de IA (Claude, Gemini, ChatGPT…) devolve a partir da planta do depósito (foto, PDF ou desenho), com o prompt do botão Copiar prompt: o imóvel, as fileiras (corredor, lado das estantes, posição, direção, lado do corredor), os obstáculos e a referência, em metros. O app conserta os erros comuns e avisa; nada é salvo até Salvar planta.", "plan:auto")
+R(PPLAN, "#aiPromptText", "Prompt para a IA (planta)", "Aparece quando o navegador não deixa copiar sozinho: selecione e copie (Ctrl+C), cole no chat de IA e anexe a planta do depósito. Já traz os corredores e as estantes desta filial.", "plan:auto")
 R(PPLAN, "#prjSel", "Projeto de filial nova", "Projeto cujo plano vira a planta desta filial (os endereços precisam ter os mesmos códigos).", "plan:auto")
 R(PPLAN, "branch_id", "Filial", "Filial cuja planta está sendo desenhada. Há uma planta por filial e armazém.", "scope:branch")
 R(PPLAN, "warehouse_id", "Armazém", "Armazém da filial a que a planta pertence.", "scope:wh")

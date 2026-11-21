@@ -511,6 +511,24 @@ A frente de cada estante vem da estrutura cadastrada (*Estruturas nas estantes*)
 
 Informe a largura do corredor e o espaço livre na frente. Em *Corredores com outra largura*, dê uma largura própria a alguns corredores pela letra (ex.: `A=3,5; C=2,8`).
 
+**Planta pela IA** (`services/plan_ai.py`): no cartão *Planta pela IA*, **Copiar prompt para a IA** leva um prompt com
+o formato pedido e a lista dos corredores e estantes cadastrados da filial (os códigos, a frente média e a
+profundidade). No Claude, Gemini ou ChatGPT, cole o prompt, anexe a planta do depósito (foto, PDF ou desenho) e cole a
+resposta no campo; **Carregar no editor** troca a planta em edição (sem salvar: confira e clique em *Salvar planta*).
+A resposta é um JSON em metros, com origem no canto de cima à esquerda:
+- `building` (comprimento em x, largura em y);
+- `rows`: corredor, estantes (`odd`, `even`, `all` ou a lista dos códigos), canto da fileira, direção
+  (horizontal/vertical), comprimento, profundidade, lado do corredor (`above`/`below` ou `left`/`right`) e de que
+  ponta a numeração começa;
+- `obstacles` (pilares, escritórios, docas) e `reference` (expedição).
+
+O app só lê a descrição, nunca executa código, e conserta os erros comuns das IAs com aviso: texto e ``` em volta,
+comentários e vírgula sobrando, números em texto com vírgula decimal, medidas em cm ou mm, chaves em português,
+posição em lista, corredor escrito de outro jeito (`07` = `7`), corredores e estantes que não existem (ficam de fora),
+lado do corredor que não combina com a direção, imóvel menor que o desenho (é aumentado) e referência ausente. A frente
+das estantes sem estrutura cadastrada sai do comprimento desenhado; quando as estantes cadastradas não fecham com a
+planta, o aviso mostra as duas medidas.
+
 **Vários objetos e o imóvel com o mouse:** Shift+clique soma ou tira objetos da seleção, e Shift+arrastar o fundo seleciona por área; arrastar qualquer um move todos, as setas movem, Del apaga e R/F giram/trocam o lado das fileiras selecionadas. As alças na borda direita, na de baixo e no canto do imóvel mudam o comprimento e a largura.
 
 **Pega pelos dois lados:** na fileira, a opção *Pega pelos dois lados* serve para estruturas que comportam 2 (ou mais) bins na profundidade e não têm vizinho encostado atrás: as bins da frente são pegas pelo corredor da frente e as do fundo pelo corredor de trás (face tracejada). O usuário decide fileira a fileira; com fileira ou obstáculo a menos de 80 cm atrás a opção é ignorada e o painel avisa. Os endereços do fundo (pela arrumação das bins do 3D) param na face de trás — no simulador, no 3D e na posição pela saída.

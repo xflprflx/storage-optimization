@@ -172,6 +172,35 @@ async def plan_from_project(request: Request, db: Session = Depends(get_db)):
     return {"data": data, **_geom_info(build(data, scope_bays(db, br.id, wid)))}
 
 
+@router.get("/layout/plan/ai/prompt")
+def plan_ai_prompt(branch_id: str = "", warehouse_id: str = "", db: Session = Depends(get_db)):
+    """Prompt para o chat de IA (com os corredores e as estantes da filial), a mandar junto com a planta."""
+    from services.branch_layout import scope_bays
+    from services.plan_ai import prompt
+
+    br, wid, _w = _plan_scope(db, branch_id, warehouse_id)
+    if br is None:
+        return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
+    return {"prompt": prompt(scope_bays(db, br.id, wid))}
+
+
+@router.post("/layout/plan/ai")
+async def plan_ai(request: Request, db: Session = Depends(get_db)):
+    """Planta a partir da resposta da IA (JSON). Não salva: volta para o editor, com os avisos dos consertos."""
+    from services.branch_layout import build, scope_bays
+    from services.plan_ai import parse
+
+    body = await request.json()
+    br, wid, _w = _plan_scope(db, body.get("branch_id"), body.get("warehouse_id"))
+    if br is None:
+        return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
+    bays = scope_bays(db, br.id, wid)
+    data, error, notes = parse(str(body.get("code") or "")[:500000], bays)
+    if error:
+        return {"error": error, "notes": notes}
+    return {"data": data, "notes": notes, **_geom_info(build(data, bays))}
+
+
 @router.post("/layout/plan/check")
 async def plan_check(request: Request, db: Session = Depends(get_db)):
     """Corredores e pendências da planta em edição (sem salvar)."""

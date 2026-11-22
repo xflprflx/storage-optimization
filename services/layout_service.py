@@ -249,7 +249,7 @@ def load_layout(db: Session, branch_id: int, warehouse_id: Optional[int], aisle:
     sl_key = {sl.id: norm((sl.aisle, sl.bay, sl.level)) for sl in shelf_levels}
     levels_info: dict[tuple, dict] = {}
 
-    # ---- Estruturas de armazenagem das estantes ----
+    # ---- Modelos de estrutura das estantes ----
     from services.structure_service import bay_structures
 
     bay_st = {k: {"code": st.code, "name": st.name, "width": float(st.width), "depth": float(st.depth),

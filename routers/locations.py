@@ -541,7 +541,7 @@ def batch_run(request: Request, form: FormData = Depends(form_data), db: Session
                                for seg, _x in result.new_paths if len(seg) >= 2})
                 if st is not None and bays:
                     apply_structure(db, bays, st, create_levels=False)
-                    result.structure_note = _("Estrutura {code} aplicada a {len} estante(s).", code=st.code, len=len(bays))
+                    result.structure_note = _("Modelo {code} aplicado a {len} estante(s).", code=st.code, len=len(bays))
                 db.commit()
             if action == "execute" and bin_items:
                 spill_overflow(db, None)

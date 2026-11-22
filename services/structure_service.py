@@ -1,4 +1,4 @@
-"""Estruturas de armazenagem aplicadas às estantes de depósitos existentes.
+"""Modelos de estrutura aplicados às estantes de depósitos existentes.
 
 Aplicar uma estrutura a uma estante (Corredor + Estante):
   - grava o vínculo (BayStructure);

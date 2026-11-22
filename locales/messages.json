@@ -806,7 +806,7 @@
  },
  "1º nível a {base} cm + {what} (= {v} cm) passam da altura total ({height} cm).": {
   "src": [
-   "routers/structures.py:100"
+   "routers/structures.py:101"
   ]
  },
  "1º nível a {first_level_cm} cm": {
@@ -1641,7 +1641,7 @@
   ],
   "lazy": true
  },
- "A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.": {
+ "A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Modelos de estrutura) ou dos níveis informados.": {
   "src": [
    "templates/optimization/page.html:277"
   ]
@@ -1738,16 +1738,23 @@
    "services/bin_type_service.py:43"
   ]
  },
+ "A especificação do módulo que se repete no armazém, ex.: estante de 100 cm de frente, 60 cm de profundidade, 200 cm de altura e 5 níveis. Cada estante física segue um modelo.": {
+  "src": [
+   "services/onboarding.py:78"
+  ],
+  "lazy": true
+ },
+ "A especificação que várias estantes físicas seguem (frente, profundidade, altura, níveis e vão): usada no projeto de filial nova e nas estantes dos depósitos existentes (<a href=\"/levels\">Capacidade dos níveis → Aplicar modelo</a>: define o vão e calcula a capacidade de cada nível). O tipo de estrutura (porta-palete, estante, câmara…) diz de que peças o modelo é feito. Medidas em cm; o vão útil é a altura livre de cada nível.": {
+  "src": [
+   "templates/structures/list.html:12"
+  ],
+  "html": true
+ },
  "A estante não sai do lugar: o rearranjo descarta passagens que a fariam andar e não troca o corredor dela de lugar; no editor da planta a fileira não se move, e a planta gerada (automática, pela IA ou do projeto) a mantém onde está.": {
   "src": [
    "services/field_help.py:374"
   ],
   "help": true
- },
- "A estrutura {code} está em {n} estante(s). Remova-a das estantes em Capacidade dos níveis → Aplicar estrutura → remover, antes de excluir.": {
-  "src": [
-   "routers/structures.py:181"
-  ]
  },
  "A exclusão não pode ser desfeita.": {
   "src": [
@@ -2428,7 +2435,7 @@
  },
  "Altura do 1º nível": {
   "src": [
-   "routers/structures.py:34"
+   "routers/structures.py:35"
   ],
   "lazy": true
  },
@@ -2537,7 +2544,7 @@
  },
  "Altura total": {
   "src": [
-   "routers/structures.py:28"
+   "routers/structures.py:29"
   ],
   "lazy": true
  },
@@ -2777,7 +2784,7 @@
   ],
   "html": true
  },
- "Aplica uma estrutura às estantes geradas: preenche o vão e a capacidade dos níveis.": {
+ "Aplica um modelo de estrutura às estantes geradas: preenche o vão e a capacidade dos níveis.": {
   "src": [
    "services/field_help.py:342"
   ],
@@ -2812,12 +2819,6 @@
   ],
   "js": true
  },
- "Aplicar a estrutura às estantes que atendem às condições?": {
-  "src": [
-   "templates/levels/index.html:118"
-  ],
-  "js": true
- },
  "Aplicar a todos os níveis que atendem às condições?": {
   "src": [
    "templates/levels/index.html:94"
@@ -2846,17 +2847,6 @@
   ],
   "js": true
  },
- "Aplicar estrutura": {
-  "src": [
-   "templates/levels/index.html:118"
-  ]
- },
- "Aplicar estrutura de armazenagem às estantes <span class=\"text-muted fw-normal\">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo; o cálculo se atualiza sozinho quando a estrutura, o vão ou os tipos de bin mudam (<a href=\"/structures\">cadastro de estruturas</a>)</span>": {
-  "src": [
-   "templates/levels/index.html:100"
-  ],
-  "html": true
- },
  "Aplicar fator {fit_factor}% e otimizar": {
   "src": [
    "templates/site/suggest.html:33"
@@ -2879,6 +2869,23 @@
   "src": [
    "templates/site/suggest.html:59"
   ]
+ },
+ "Aplicar modelo": {
+  "src": [
+   "templates/levels/index.html:118"
+  ]
+ },
+ "Aplicar modelo de estrutura às estantes <span class=\"text-muted fw-normal\">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo; o cálculo se atualiza sozinho quando o modelo, o vão ou os tipos de bin mudam (<a href=\"/structures\">modelos de estrutura</a>)</span>": {
+  "src": [
+   "templates/levels/index.html:100"
+  ],
+  "html": true
+ },
+ "Aplicar o modelo às estantes que atendem às condições?": {
+  "src": [
+   "templates/levels/index.html:118"
+  ],
+  "js": true
  },
  "Aplicar plano": {
   "src": [
@@ -4449,7 +4456,7 @@
   ],
   "help": true
  },
- "Cadastre as <a href=\"/structures\">estruturas de armazenagem</a> (frente, profundidade, altura, níveis e vão) e os <a href=\"/bin-types\">tipos de bin</a>.": {
+ "Cadastre os <a href=\"/structures\">modelos de estrutura</a> (frente, profundidade, altura, níveis e vão) e os <a href=\"/bin-types\">tipos de bin</a>.": {
   "src": [
    "templates/site/index.html:39"
   ],
@@ -4472,15 +4479,15 @@
   ],
   "lazy": true
  },
- "Cadastro de estrutura": {
-  "src": [
-   "services/onboarding.py:76"
-  ],
-  "lazy": true
- },
  "Cadastro de filial": {
   "src": [
    "services/onboarding.py:52"
+  ],
+  "lazy": true
+ },
+ "Cadastro de modelo de estrutura": {
+  "src": [
+   "services/onboarding.py:76"
   ],
   "lazy": true
  },
@@ -4794,14 +4801,14 @@
   ],
   "lazy": true
  },
- "Capacidade dos níveis recalculada nas estantes com esta estrutura ({n} alteração(ões)).": {
-  "src": [
-   "routers/structures.py:168"
-  ]
- },
  "Capacidade dos níveis recalculada nas estantes com estas estruturas ({n} alteração(ões)).": {
   "src": [
    "services/structure_importer.py:384"
+  ]
+ },
+ "Capacidade dos níveis recalculada nas estantes com este modelo ({n} alteração(ões)).": {
+  "src": [
+   "routers/structures.py:169"
   ]
  },
  "Capacidade dos níveis, largura/altura máximas e \"remover bins de vazios\" não se aplicam ao pool: as bins não mudam de lugar nem de tipo.": {
@@ -4864,7 +4871,7 @@
  },
  "Carga máxima por nível": {
   "src": [
-   "routers/structures.py:30"
+   "routers/structures.py:31"
   ],
   "lazy": true
  },
@@ -5417,7 +5424,7 @@
   ],
   "help": true
  },
- "Como o tipo aparece no cadastro de estruturas (ex.: Porta-palete seletivo, Estante leve).": {
+ "Como o tipo aparece nos modelos de estrutura (ex.: Porta-palete seletivo, Estante leve).": {
   "src": [
    "services/field_help.py:446"
   ],
@@ -6382,7 +6389,7 @@
  },
  "Custo por módulo": {
   "src": [
-   "routers/structures.py:31"
+   "routers/structures.py:32"
   ],
   "lazy": true
  },
@@ -6525,10 +6532,8 @@
  },
  "Código da estrutura": {
   "src": [
-   "services/field_help.py:423",
    "services/structure_importer.py:282"
   ],
-  "help": true,
   "lazy": true
  },
  "Código da filial": {
@@ -6580,7 +6585,7 @@
    "routers/bin_types.py:45",
    "routers/branches.py:39",
    "routers/structure_kinds.py:38",
-   "routers/structures.py:52",
+   "routers/structures.py:53",
    "routers/warehouses.py:39"
   ]
  },
@@ -6599,6 +6604,12 @@
   ],
   "help": true,
   "lazy": true
+ },
+ "Código do modelo": {
+  "src": [
+   "services/field_help.py:423"
+  ],
+  "help": true
  },
  "Código do nível reservado": {
   "src": [
@@ -6651,7 +6662,7 @@
    "routers/bin_types.py:43",
    "routers/branches.py:37",
    "routers/structure_kinds.py:36",
-   "routers/structures.py:50",
+   "routers/structures.py:51",
    "routers/warehouses.py:37"
   ]
  },
@@ -7652,14 +7663,19 @@
    "templates/locations/form.html:6"
   ]
  },
- "Editar estrutura ": {
-  "src": [
-   "templates/structures/form.html:7"
-  ]
- },
  "Editar filial ": {
   "src": [
    "templates/branches/form.html:6"
+  ]
+ },
+ "Editar modelo": {
+  "src": [
+   "templates/structures/form.html:3"
+  ]
+ },
+ "Editar modelo ": {
+  "src": [
+   "templates/structures/form.html:7"
   ]
  },
  "Editar motivo": {
@@ -8443,11 +8459,6 @@
    "services/slotting.py:138"
   ]
  },
- "Escolha a estrutura de armazenagem.": {
-  "src": [
-   "routers/levels.py:346"
-  ]
- },
  "Escolha a filial (e o armazém) para listar os níveis de cada estante.": {
   "src": [
    "services/onboarding.py:139"
@@ -8520,6 +8531,11 @@
    "routers/imports.py:134"
   ]
  },
+ "Escolha o modelo de estrutura.": {
+  "src": [
+   "routers/levels.py:346"
+  ]
+ },
  "Escolha o objetivo \"Menor tempo de separação\": os SKUs da curva A vão para perto da expedição e para a zona de ouro. O resultado compara hoje × proposta em caminhada e horas.": {
   "src": [
    "services/onboarding.py:363"
@@ -8534,7 +8550,7 @@
  },
  "Escolha o tipo de estrutura (cadastre em Tipos de estrutura).": {
   "src": [
-   "routers/structures.py:47"
+   "routers/structures.py:48"
   ]
  },
  "Escolha o tipo do arquivo.": {
@@ -8793,7 +8809,7 @@
  },
  "Estante": {
   "src": [
-   "routers/structures.py:123",
+   "routers/structures.py:124",
    "services/batch_generator.py:54",
    "services/field_help.py:384",
    "services/field_help.py:31",
@@ -8940,7 +8956,7 @@
   ],
   "help": true
  },
- "Estantes de depósitos existentes com esta estrutura": {
+ "Estantes de depósitos existentes com este modelo": {
   "src": [
    "templates/structures/list.html:30"
   ]
@@ -9012,14 +9028,13 @@
  "Estrutura": {
   "src": [
    "routers/site.py:190",
-   "services/field_help.py:396",
    "services/site_report.py:331",
    "services/site_report.py:337",
    "services/site_report.py:343",
-   "services/site_report.py:587"
+   "services/site_report.py:587",
+   "services/site_report.py:595"
   ],
-  "lazy": true,
-  "help": true
+  "lazy": true
  },
  "Estrutura (código; \"remover\" tira a estrutura)": {
   "src": [
@@ -9032,12 +9047,6 @@
    "services/level_service.py:307"
   ]
  },
- "Estrutura aplicada às estantes: define frente, profundidade, níveis, vãos e zona de ouro.": {
-  "src": [
-   "services/field_help.py:396"
-  ],
-  "help": true
- },
  "Estrutura com quantidade fixa: informe a quantidade (ou use \"Otimizar quantidade\").": {
   "src": [
    "services/site_service.py:292"
@@ -9045,30 +9054,11 @@
  },
  "Estrutura das estantes": {
   "src": [
-   "services/field_help.py:342",
    "services/onboarding.py:140",
    "templates/base.html:245",
    "templates/imports/index.html:29"
   ],
-  "help": true,
   "lazy": true
- },
- "Estrutura de armazenagem": {
-  "src": [
-   "services/onboarding.py:77"
-  ],
-  "lazy": true
- },
- "Estrutura de armazenagem da estante": {
-  "src": [
-   "templates/levels/index.html:168"
-  ]
- },
- "Estrutura de armazenagem das estantes <small class=\"text-muted\">(opcional)</small>": {
-  "src": [
-   "templates/locations/batch.html:84"
-  ],
-  "html": true
  },
  "Estrutura nova: código, tipo, frente, profundidade, altura (cm), nº de níveis e vão útil. Existentes são atualizadas só nos campos preenchidos.": {
   "src": [
@@ -9088,14 +9078,9 @@
  },
  "Estrutura não encontrada.": {
   "src": [
-   "routers/structures.py:145",
-   "routers/structures.py:155",
-   "routers/structures.py:176"
-  ]
- },
- "Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).": {
-  "src": [
-   "routers/levels.py:343"
+   "routers/structures.py:146",
+   "routers/structures.py:156",
+   "routers/structures.py:177"
   ]
  },
  "Estrutura sobe para acomodar a bin (vão): ": {
@@ -9113,31 +9098,6 @@
  "Estrutura {code} ({height} cm) é mais alta que o pé-direito útil ({v} cm): descartada.": {
   "src": [
    "services/site_planner.py:1181"
-  ]
- },
- "Estrutura {code} aplicada a {bays} estante(s) ({levels} níveis": {
-  "src": [
-   "routers/levels.py:360"
-  ]
- },
- "Estrutura {code} aplicada a {len} estante(s).": {
-  "src": [
-   "routers/locations.py:544"
-  ]
- },
- "Estrutura {code} atualizada.": {
-  "src": [
-   "routers/structures.py:166"
-  ]
- },
- "Estrutura {code} criada.": {
-  "src": [
-   "routers/structures.py:138"
-  ]
- },
- "Estrutura {code} excluída.": {
-  "src": [
-   "routers/structures.py:185"
   ]
  },
  "Estrutura {code} não cadastrada": {
@@ -9177,17 +9137,6 @@
   "src": [
    "services/structure_importer.py:303",
    "services/structure_importer.py:362"
-  ],
-  "lazy": true
- },
- "Estruturas de armazenagem": {
-  "src": [
-   "routers/structures.py:15",
-   "services/onboarding.py:331",
-   "templates/base.html:228",
-   "templates/base.html:244",
-   "templates/imports/index.html:28",
-   "templates/site/project.html:235"
   ],
   "lazy": true
  },
@@ -9478,11 +9427,6 @@
    "templates/runs/list.html:37"
   ]
  },
- "Excluir a estrutura ": {
-  "src": [
-   "templates/structures/list.html:50"
-  ]
- },
  "Excluir a filial ": {
   "src": [
    "templates/branches/list.html:37"
@@ -9539,6 +9483,11 @@
    "templates/locations/list.html:229"
   ],
   "js": true
+ },
+ "Excluir o modelo ": {
+  "src": [
+   "templates/structures/list.html:50"
+  ]
  },
  "Excluir o motivo ": {
   "src": [
@@ -10682,7 +10631,7 @@
  },
  "Foram informados {len} vãos para {levels} níveis.": {
   "src": [
-   "routers/structures.py:92",
+   "routers/structures.py:93",
    "services/structure_importer.py:343"
   ]
  },
@@ -10812,7 +10761,7 @@
  },
  "Frente do módulo": {
   "src": [
-   "routers/structures.py:26"
+   "routers/structures.py:27"
   ],
   "lazy": true
  },
@@ -11339,12 +11288,6 @@
   ],
   "help": true
  },
- "Identificador curto e único (ex.: EST-100).": {
-  "src": [
-   "services/field_help.py:423"
-  ],
-  "help": true
- },
  "Identificador curto e único (ex.: LONG-270).": {
   "src": [
    "services/field_help.py:468"
@@ -11360,6 +11303,12 @@
  "Identificador curto e único do armazém (ex.: CD1).": {
   "src": [
    "services/field_help.py:535"
+  ],
+  "help": true
+ },
+ "Identificador curto e único do modelo de estrutura (ex.: EST-100).": {
+  "src": [
+   "services/field_help.py:423"
   ],
   "help": true
  },
@@ -11457,15 +11406,15 @@
   ],
   "lazy": true
  },
- "Importação de Estruturas de armazenagem": {
-  "src": [
-   "services/structure_importer.py:524"
-  ],
-  "lazy": true
- },
  "Importação de Filiais": {
   "src": [
    "services/master_importer.py:583"
+  ],
+  "lazy": true
+ },
+ "Importação de Modelos de estrutura": {
+  "src": [
+   "services/structure_importer.py:524"
   ],
   "lazy": true
  },
@@ -11874,6 +11823,11 @@
    "routers/warehouses.py:45"
   ]
  },
+ "Já existe um modelo com o código {code}.": {
+  "src": [
+   "routers/structures.py:59"
+  ]
+ },
  "Já existe um motivo com o nome {name}.": {
   "src": [
    "routers/lock_reasons.py:32"
@@ -11892,11 +11846,6 @@
  "Já existe um usuário {u}.": {
   "src": [
    "routers/users.py:52"
-  ]
- },
- "Já existe uma estrutura com o código {code}.": {
-  "src": [
-   "routers/structures.py:58"
   ]
  },
  "Já existe uma filial com o código {code}.": {
@@ -13390,6 +13339,11 @@
    "templates/base.html:178"
   ]
  },
+ "Modelo": {
+  "src": [
+   "templates/levels/index.html:168"
+  ]
+ },
  "Modelo 3D": {
   "src": [
    "services/field_help.py:439",
@@ -13413,6 +13367,37 @@
   ],
   "lazy": true
  },
+ "Modelo de estrutura": {
+  "src": [
+   "services/field_help.py:396",
+   "services/onboarding.py:77"
+  ],
+  "help": true,
+  "lazy": true
+ },
+ "Modelo de estrutura aplicado às estantes: define frente, profundidade, níveis, vãos e zona de ouro.": {
+  "src": [
+   "services/field_help.py:396"
+  ],
+  "help": true
+ },
+ "Modelo de estrutura da estante": {
+  "src": [
+   "templates/levels/index.html:168"
+  ]
+ },
+ "Modelo de estrutura das estantes": {
+  "src": [
+   "services/field_help.py:342"
+  ],
+  "help": true
+ },
+ "Modelo de estrutura das estantes <small class=\"text-muted\">(opcional)</small>": {
+  "src": [
+   "templates/locations/batch.html:84"
+  ],
+  "html": true
+ },
  "Modelo de importação — Projeto de filial nova": {
   "src": [
    "services/site_import.py:886"
@@ -13422,6 +13407,47 @@
   "src": [
    "templates/optimization/page.html:179"
   ]
+ },
+ "Modelo removido de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).": {
+  "src": [
+   "routers/levels.py:343"
+  ]
+ },
+ "Modelo {code} aplicado a {bays} estante(s) ({levels} níveis": {
+  "src": [
+   "routers/levels.py:360"
+  ]
+ },
+ "Modelo {code} aplicado a {len} estante(s).": {
+  "src": [
+   "routers/locations.py:544"
+  ]
+ },
+ "Modelo {code} atualizado.": {
+  "src": [
+   "routers/structures.py:167"
+  ]
+ },
+ "Modelo {code} criado.": {
+  "src": [
+   "routers/structures.py:139"
+  ]
+ },
+ "Modelo {code} excluído.": {
+  "src": [
+   "routers/structures.py:186"
+  ]
+ },
+ "Modelos de estrutura": {
+  "src": [
+   "routers/structures.py:16",
+   "services/onboarding.py:331",
+   "templates/base.html:228",
+   "templates/base.html:244",
+   "templates/imports/index.html:28",
+   "templates/site/project.html:235"
+  ],
+  "lazy": true
  },
  "Modo": {
   "src": [
@@ -13971,12 +13997,6 @@
    "services/site_planner.py:1457"
   ]
  },
- "Módulos (estantes, porta-paletes…) usados no projeto de filial nova e nas estantes dos depósitos existentes (<a href=\"/levels\">Capacidade dos níveis → Aplicar estrutura</a>: define o vão e calcula a capacidade de cada nível). Medidas em cm; o vão útil é a altura livre de cada nível.": {
-  "src": [
-   "templates/structures/list.html:12"
-  ],
-  "html": true
- },
  "Módulos de estrutura": {
   "src": [
    "routers/site.py:173",
@@ -14230,6 +14250,17 @@
    "templates/locations/form.html:82"
   ]
  },
+ "Nenhum modelo cadastrado.": {
+  "src": [
+   "templates/structures/list.html:54"
+  ]
+ },
+ "Nenhum modelo de estrutura cadastrado. <a href=\"/structures/new\">Cadastre os modelos de estante/porta-palete</a> que podem ser usados antes de otimizar.": {
+  "src": [
+   "templates/site/index.html:31"
+  ],
+  "html": true
+ },
  "Nenhum motivo cadastrado.": {
   "src": [
    "templates/lock_reasons/list.html:35"
@@ -14451,8 +14482,7 @@
  },
  "Nenhuma estrutura cadastrada.": {
   "src": [
-   "templates/site/project.html:257",
-   "templates/structures/list.html:54"
+   "templates/site/project.html:257"
   ]
  },
  "Nenhuma estrutura cadastrada. <a href=\"/structures/new\">Cadastrar</a>": {
@@ -14465,12 +14495,6 @@
   "src": [
    "services/rearrange.py:158"
   ]
- },
- "Nenhuma estrutura de armazenagem cadastrada. <a href=\"/structures/new\">Cadastre as estantes/porta-paletes</a> que podem ser usadas antes de otimizar.": {
-  "src": [
-   "templates/site/index.html:31"
-  ],
-  "html": true
  },
  "Nenhuma exceção. Exemplo: no Corredor <span class=\"mono\">B</span>, Estante <span class=\"mono\">05</span>, o Nível vai de 01 a 03 (em vez do padrão 01 a 08) — escolha \"Nível\" como nível afetado, preencha <span class=\"mono\">B</span> e <span class=\"mono\">05</span> nas condições e a nova faixa 01–03.": {
   "src": [
@@ -14639,12 +14663,6 @@
   ],
   "help": true
  },
- "Nome da estrutura": {
-  "src": [
-   "services/field_help.py:424"
-  ],
-  "help": true
- },
  "Nome da filial": {
   "src": [
    "services/field_help.py:532"
@@ -14710,6 +14728,12 @@
  "Nome do armazém, quando ele for criado.": {
   "src": [
    "services/field_help.py:209"
+  ],
+  "help": true
+ },
+ "Nome do modelo": {
+  "src": [
+   "services/field_help.py:424"
   ],
   "help": true
  },
@@ -14811,19 +14835,7 @@
  },
  "Nova": {
   "src": [
-   "templates/branches/form.html:3",
-   "templates/structures/form.html:3"
-  ]
- },
- "Nova estrutura": {
-  "src": [
-   "templates/site/project.html:236",
-   "templates/structures/list.html:9"
-  ]
- },
- "Nova estrutura de armazenagem": {
-  "src": [
-   "templates/structures/form.html:7"
+   "templates/branches/form.html:3"
   ]
  },
  "Nova filial": {
@@ -14875,6 +14887,18 @@
    "templates/locations/batch.html:207",
    "templates/locations/form.html:6",
    "templates/locations/list.html:13"
+  ]
+ },
+ "Novo modelo": {
+  "src": [
+   "templates/site/project.html:236",
+   "templates/structures/list.html:9"
+  ]
+ },
+ "Novo modelo de estrutura": {
+  "src": [
+   "templates/structures/form.html:3",
+   "templates/structures/form.html:7"
   ]
  },
  "Novo motivo": {
@@ -14949,7 +14973,7 @@
  },
  "Nº de níveis: inteiro maior que zero.": {
   "src": [
-   "routers/structures.py:70"
+   "routers/structures.py:71"
   ]
  },
  "Não": {
@@ -15575,6 +15599,11 @@
   ],
   "lazy": true
  },
+ "O modelo {code} está em {n} estante(s). Remova-o das estantes em Capacidade dos níveis → Aplicar modelo → remover, antes de excluir.": {
+  "src": [
+   "routers/structures.py:182"
+  ]
+ },
  "O motivo {name} está em {n} estante(s) travada(s): troque o motivo delas antes de excluir.": {
   "src": [
    "routers/lock_reasons.py:90"
@@ -15584,12 +15613,6 @@
   "src": [
    "templates/optimization/page.html:364"
   ]
- },
- "O módulo físico que se repete no armazém, ex.: estante de 100 cm de frente, 60 cm de profundidade, 200 cm de altura e 5 níveis.": {
-  "src": [
-   "services/onboarding.py:78"
-  ],
-  "lazy": true
  },
  "O nome de usuário que o administrador cadastrou para você.": {
   "src": [
@@ -16444,7 +16467,7 @@
   ],
   "html": true
  },
- "Os módulos (estantes, porta-paletes) com frente, níveis e zona de ouro. Com eles, a zona de ouro e a caminhada usam medidas reais em vez de estimativas.": {
+ "Os modelos de módulo (estantes, porta-paletes) com frente, níveis e zona de ouro. Com eles, a zona de ouro e a caminhada usam medidas reais em vez de estimativas.": {
   "src": [
    "services/onboarding.py:332"
   ],
@@ -16672,7 +16695,7 @@
  },
  "Palete no chão": {
   "src": [
-   "routers/structures.py:17",
+   "routers/structures.py:18",
    "services/structure_kinds.py:36"
   ],
   "lazy": true
@@ -18364,7 +18387,7 @@
  },
  "Profundidade": {
   "src": [
-   "routers/structures.py:27"
+   "routers/structures.py:28"
   ],
   "lazy": true
  },
@@ -20558,12 +20581,6 @@
    "services/branch_layout.py:844"
   ]
  },
- "Sem estrutura, o sistema estima tudo pelo endereço. Com ela, sabe a altura real de cada nível (para a zona de ouro), a frente real de cada estante (para a caminhada) e o espaço disponível para as bins.": {
-  "src": [
-   "services/onboarding.py:79"
-  ],
-  "lazy": true
- },
  "Sem fileiras de estantes: a planta fica com o imóvel, os obstáculos e a referência. Desenhe as fileiras no editor (+ Fileira) ou use Gerar automaticamente.": {
   "src": [
    "services/plan_ai.py:282"
@@ -20594,6 +20611,12 @@
    "templates/base.html:538"
   ],
   "js": true
+ },
+ "Sem modelo, o sistema estima tudo pelo endereço. Com ele, sabe a altura real de cada nível (para a zona de ouro), a frente real de cada estante (para a caminhada) e o espaço disponível para as bins.": {
+  "src": [
+   "services/onboarding.py:79"
+  ],
+  "lazy": true
  },
  "Sem mudança: o arranjo continua igual ao de antes.": {
   "src": [
@@ -23458,12 +23481,12 @@
  },
  "Vão por nível inválido: {part}.": {
   "src": [
-   "routers/structures.py:85"
+   "routers/structures.py:86"
   ]
  },
  "Vão por nível: os valores devem ser maiores que zero.": {
   "src": [
-   "routers/structures.py:88",
+   "routers/structures.py:89",
    "services/structure_importer.py:328"
   ]
  },
@@ -23477,7 +23500,7 @@
  },
  "Vão útil por nível": {
   "src": [
-   "routers/structures.py:29"
+   "routers/structures.py:30"
   ],
   "lazy": true
  },
@@ -23713,13 +23736,13 @@
  },
  "Zona de ouro — fim": {
   "src": [
-   "routers/structures.py:33"
+   "routers/structures.py:34"
   ],
   "lazy": true
  },
  "Zona de ouro — início": {
   "src": [
-   "routers/structures.py:32"
+   "routers/structures.py:33"
   ],
   "lazy": true
  },
@@ -23731,7 +23754,7 @@
  },
  "Zona de ouro: informe início e fim (ou deixe os dois vazios).": {
   "src": [
-   "routers/structures.py:73",
+   "routers/structures.py:74",
    "services/structure_importer.py:346"
   ]
  },
@@ -23743,13 +23766,13 @@
  },
  "Zona de ouro: o fim deve ser maior que o início.": {
   "src": [
-   "routers/structures.py:75",
+   "routers/structures.py:76",
    "services/structure_importer.py:348"
   ]
  },
  "Zona de ouro: o fim passa da altura total ({height} cm).": {
   "src": [
-   "routers/structures.py:77"
+   "routers/structures.py:78"
   ]
  },
  "Zona {i}": {
@@ -25824,7 +25847,7 @@
  },
  "os vãos por nível": {
   "src": [
-   "routers/structures.py:98"
+   "routers/structures.py:99"
   ]
  },
  "otimizada": {
@@ -27375,7 +27398,7 @@
  },
  "{label}: deve ser maior que zero.": {
   "src": [
-   "routers/structures.py:66"
+   "routers/structures.py:67"
   ]
  },
  "{label}: faixa '{token}' com início maior que o fim.": {
@@ -27448,7 +27471,7 @@
  },
  "{label}: obrigatório.": {
   "src": [
-   "routers/structures.py:64",
+   "routers/structures.py:65",
    "services/site_service.py:89"
   ]
  },
@@ -27537,7 +27560,7 @@
  },
  "{levels} níveis × vão {level_height} cm": {
   "src": [
-   "routers/structures.py:98"
+   "routers/structures.py:99"
   ]
  },
  "{lines} linha(s) · {stops} parada(s){units}<br>{kinds}{gain}<br><span class=\"text-muted\">Vídeo ≈ {mmss} na velocidade escolhida.</span>": {
@@ -27779,7 +27802,7 @@
    "routers/levels.py:313"
   ]
  },
- "{n} estante(s) sem estrutura (aplique em Capacidade dos níveis → Aplicar estrutura)": {
+ "{n} estante(s) sem modelo de estrutura (aplique em Capacidade dos níveis → Aplicar modelo)": {
   "src": [
    "templates/levels/recompose.html:34"
   ],
@@ -28216,12 +28239,6 @@
  "{v} endereço": {
   "src": [
    "templates/locations/form.html:3"
-  ],
-  "html": true
- },
- "{v} estrutura": {
-  "src": [
-   "templates/structures/form.html:3"
   ],
   "html": true
  },
@@ -28764,11 +28781,6 @@
    "templates/imports/history.html:21"
   ]
  },
- "— estrutura —": {
-  "src": [
-   "templates/levels/index.html:105"
-  ]
- },
  "— estruturas nos trechos mais perto da expedição": {
   "src": [
    "templates/site/project.html:659"
@@ -28778,6 +28790,11 @@
   "src": [
    "templates/products/form.html:59",
    "templates/products/form.html:75"
+  ]
+ },
+ "— modelo —": {
+  "src": [
+   "templates/levels/index.html:105"
   ]
  },
  "— motivo —": {
@@ -28830,7 +28847,7 @@
   ],
   "js": true
  },
- "— remover a estrutura das estantes —": {
+ "— remover o modelo das estantes —": {
   "src": [
    "templates/levels/index.html:107"
   ]

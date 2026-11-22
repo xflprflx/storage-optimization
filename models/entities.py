@@ -492,7 +492,7 @@ class BinContent(TimestampMixin, Base):
 
 
 # --------------------------------------------------------------------------- #
-# Projeto de filial nova (greenfield): estruturas de armazenagem e projetos
+# Projeto de filial nova (greenfield): modelos de estrutura e projetos
 # --------------------------------------------------------------------------- #
 class StructurePiece(TimestampMixin, Base):
     """Peça de estrutura (montante, longarina, prateleira, braço…): o que se compra, desmonta e remonta. A mesma
@@ -559,7 +559,7 @@ class StructureKindPiece(Base):
 
 
 class StructureType(TimestampMixin, Base):
-    """Estrutura de armazenagem modular (estante, porta-palete, flow rack...): um MÓDULO com frente,
+    """Modelo de estrutura (estante, porta-palete, flow rack...): a especificação de um MÓDULO com frente,
     profundidade, altura total, nº de níveis e vão útil por nível (cm). Usada no projeto de filial nova."""
 
     __tablename__ = "structure_types"
@@ -626,7 +626,7 @@ class SiteProject(TimestampMixin, Base):
 
 
 class BayStructure(TimestampMixin, Base):
-    """Estrutura de armazenagem de uma estante (Corredor + Estante) de um depósito existente: a estante é um
+    """Modelo de estrutura de uma estante (Corredor + Estante) de um depósito existente: a estante é um
     módulo daquele tipo (frente, profundidade, nº de níveis e vão). Usada para preencher a capacidade e o vão
     dos níveis, desenhar o mapa e projetar filiais novas."""
 

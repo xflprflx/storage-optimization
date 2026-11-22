@@ -2,7 +2,7 @@
 
 Um Excel com até 4 abas (todas opcionais, identificadas pelo nome):
   - Imóvel      : Campo | Valor (comprimento, largura, pé-direito, corredores...)
-  - Estruturas  : estruturas de armazenagem (cadastradas/atualizadas pelo código) e o modo de cada uma no projeto
+  - Estruturas  : modelos de estrutura (cadastrados/atualizados pelo código) e o modo de cada uma no projeto
   - Bins        : tipos de bin (os códigos novos são cadastrados; os existentes são mantidos)
   - SKUs        : SKU, produto, material, dimensões, peso, saldo, min level e max level da filial NOVA
 CSV ou planilha de uma aba só sem nome reconhecido = lista de SKUs.

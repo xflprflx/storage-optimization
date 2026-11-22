@@ -1,4 +1,5 @@
-"""CRUD de Estruturas de armazenagem (módulos de estante/porta-palete usados no projeto de filial nova)."""
+"""CRUD dos Modelos de estrutura: a especificação (frente, profundidade, altura, níveis, vão) que várias estantes
+físicas seguem — no projeto de filial nova e nas estantes dos depósitos existentes."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
@@ -12,7 +13,7 @@ from routers.common import FormErrors, apply_sort, f_dec, f_int, f_str, form_dat
 from services.addressing import normalize_code
 from services.i18n import N_, _
 
-router = APIRouter(prefix="/structures", tags=[N_("Estruturas de armazenagem")])
+router = APIRouter(prefix="/structures", tags=[N_("Modelos de estrutura")])
 
 FLOOR_KIND = N_("Palete no chão")  # paletes direto no piso (empilhados por nível), sem montantes nem longarinas
 
@@ -55,7 +56,7 @@ def _validate(db: Session, form: FormData, sid: int | None):
         if sid:
             stmt = stmt.where(StructureType.id != sid)
         if db.scalar(stmt):
-            errors.add("code", _("Já existe uma estrutura com o código {code}.", code=data['code']))
+            errors.add("code", _("Já existe um modelo com o código {code}.", code=data['code']))
     if not data["name"]:
         errors.add("name", _("Nome é obrigatório."))
     for key, label, req in NUM_FIELDS:
@@ -135,7 +136,7 @@ def create_structure(request: Request, form: FormData = Depends(form_data), db: 
     db.add(st)
     db.commit()
     back = form.get("back") or "/structures"
-    return redirect(back if back.startswith("/") else "/structures", _("Estrutura {code} criada.", code=st.code))
+    return redirect(back if back.startswith("/") else "/structures", _("Modelo {code} criado.", code=st.code))
 
 
 @router.get("/{sid}/edit")
@@ -163,9 +164,9 @@ def update_structure(sid: int, request: Request, form: FormData = Depends(form_d
 
     n = recalc_capacities(db, structure_ids=[st.id])  # medidas novas: a capacidade das estantes acompanha
     db.commit()
-    msg = _("Estrutura {code} atualizada.", code=st.code)
+    msg = _("Modelo {code} atualizado.", code=st.code)
     if n:
-        msg += " " + _("Capacidade dos níveis recalculada nas estantes com esta estrutura ({n} alteração(ões)).", n=n)
+        msg += " " + _("Capacidade dos níveis recalculada nas estantes com este modelo ({n} alteração(ões)).", n=n)
     return redirect("/structures", msg)
 
 
@@ -178,8 +179,8 @@ def delete_structure(sid: int, db: Session = Depends(get_db)):
 
     n = usage_counts(db).get(st.id, 0)
     if n:
-        return redirect("/structures", _("A estrutura {code} está em {n} estante(s). Remova-a das estantes em Capacidade dos níveis → Aplicar estrutura → remover, antes de excluir.", code=st.code, n=n), "danger")
+        return redirect("/structures", _("O modelo {code} está em {n} estante(s). Remova-o das estantes em Capacidade dos níveis → Aplicar modelo → remover, antes de excluir.", code=st.code, n=n), "danger")
     code = st.code
     db.delete(st)
     db.commit()
-    return redirect("/structures", _("Estrutura {code} excluída.", code=code))
+    return redirect("/structures", _("Modelo {code} excluído.", code=code))

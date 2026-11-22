@@ -276,7 +276,7 @@ def import_kinds(db: Session, path: Path, mapping: dict, opts: MasterOptions) ->
 
 
 # --------------------------------------------------------------------------- #
-# Estruturas de armazenagem
+# Modelos de estrutura
 # --------------------------------------------------------------------------- #
 STRUCT_FIELDS = {
     "code": (N_("Código da estrutura"), True, ("codigo", "código", "cod", "estrutura", "codigodaestrutura", "code")),
@@ -521,7 +521,7 @@ STRUCTURE_KINDS = {
                   "Estante;nao;sim;;;;;;shelving;COL-EST;2;lateral;#8a96a0\nEstante;;;;;;;;;PRAT-EST;1;nivel;#c9d1d6\n"
                   "Camara refrigerada;nao;nao;refrigerado;de giro;2;90;6;cold_room;COL-EST;4;modulo;\n"},
     "structures": {
-        "title": N_("Importação de Estruturas de armazenagem"), "fields": STRUCT_FIELDS, "run": import_structures,
+        "title": N_("Importação de Modelos de estrutura"), "fields": STRUCT_FIELDS, "run": import_structures,
         "back": ("/structures", "estruturas"), "scope": False, "bins_option": False,
         "help": [N_("Estrutura nova: código, tipo, frente, profundidade, altura (cm), nº de níveis e vão útil. Existentes são "
                  "atualizadas só nos campos preenchidos."),

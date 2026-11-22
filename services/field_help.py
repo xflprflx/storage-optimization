@@ -339,7 +339,7 @@ R(PBATCH, r"exc_end_.*", "Exceção: fim", "Último código da faixa dentro da e
 R(PBATCH, r"exc_value_.*", "Exceção: valor fixo", "Código único usado dentro da exceção.", "range:value")
 R(PBATCH, r"exc_padding_.*", "Exceção: dígitos", "Quantidade de dígitos com zeros à esquerda dentro da exceção.", "range:pad")
 R(PBATCH, "replace_unoccupied", "Substituir posições desocupadas", "Os endereços livres do trecho são refeitos pela regra nova; os ocupados ficam.", "range:replace")
-R(PBATCH, "structure_type_id", "Estrutura das estantes", "Aplica uma estrutura às estantes geradas: preenche o vão e a capacidade dos níveis.", "rack:top")
+R(PBATCH, "structure_type_id", "Modelo de estrutura das estantes", "Aplica um modelo de estrutura às estantes geradas: preenche o vão e a capacidade dos níveis.", "rack:top")
 R(PBATCH, "bin_type_id", "Tipo de bin", "Tipo de bin colocado em cada endereço gerado.", "bin:type")
 R(PBATCH, "bin_qty", "Quantidade de bins", "Quantas bins do tipo em cada endereço gerado.", "bin:qty")
 R(PBATCH, "branch_id", "Filial", "Filial onde os endereços serão criados.", "scope:branch")
@@ -393,7 +393,7 @@ R(PLEV, "height", "Vão do nível (cm)", "Distância entre este nível e o de ci
 R(PLEV, "clear_height", "Limpar vão", "Apaga o vão cadastrado dos níveis: eles voltam a usar a altura das bins.", "rack:vao")
 R(PLEV, "s_aisle", "Corredor (estrutura)", "Corredores cujas estantes recebem a estrutura.", "addr:aisle")
 R(PLEV, "s_bay", "Estante (estrutura)", "Estantes que recebem a estrutura: valor, lista ou faixa; vazio = todas.", "addr:bay")
-R(PLEV, "structure_type_id", "Estrutura", "Estrutura aplicada às estantes: define frente, profundidade, níveis, vãos e zona de ouro.", "rack:top")
+R(PLEV, "structure_type_id", "Modelo de estrutura", "Modelo de estrutura aplicado às estantes: define frente, profundidade, níveis, vãos e zona de ouro.", "rack:top")
 R(PLEV, "top_gap", "Folga acima da bin (cm)", "Espaço entre o topo da bin e o nível de cima, para conseguir tirá-la. Fica gravada nas estantes e vale nos recálculos da capacidade.", "rack:gap")
 R(PLEV, "first_level", "Altura do 1º nível (cm)", "Para estantes montadas diferente da estrutura; vazio = a altura da estrutura.", "rack:base")
 R(PLEV, "set_heights", "Gravar o vão dos níveis", "Cada nível recebe o vão da estrutura (com vão por nível, o de cada um).", "rack:vaos")
@@ -420,8 +420,8 @@ R(PSET, "sim_gold", "Fora da zona de ouro (s por item)", "Padrão da simulação
 R(PSET, "sim_video", "Velocidade do vídeo (caminhada 3D)", "Velocidade inicial da animação e do vídeo gravado na caminhada 3D (tempo real a 50×). Na tela 3D dá para mudar na hora.", "time:v")
 R(PSET, "sim_camera", "Câmera (caminhada 3D)", "Câmera inicial da caminhada 3D: seguir o separador, primeira pessoa, de cima ou livre. Na tela 3D dá para mudar na hora.", "time:v")
 R(PSET, "sim_gold_piece", "Fora da zona de ouro (s por peça)", "Padrão da simulação: tempo a mais por peça pega fora da zona de ouro da pega.", "time:goldp")
-R(PST, "code", "Código da estrutura", "Identificador curto e único (ex.: EST-100).", "tag:code")
-R(PST, "name", "Nome da estrutura", "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).", "tag:name")
+R(PST, "code", "Código do modelo", "Identificador curto e único do modelo de estrutura (ex.: EST-100).", "tag:code")
+R(PST, "name", "Nome do modelo", "Descrição que aparece nas telas (ex.: Estante leve 100 × 60, 5 níveis).", "tag:name")
 R(PST, "kind", "Tipo", "Estante, porta-palete, palete no chão… O palete no chão é desenhado sem montantes, em camadas.", "rack:pallet")
 R(PST, "kind_id", "Tipo", "O tipo de estrutura cadastrado (Cadastros → Tipos de estrutura): diz de que peças a estrutura é feita (por módulo e por nível), a furação e a aparência no 3D. Um tipo marcado como paletes no piso é desenhado sem montantes, em camadas.", "rack:pallet")
 R(PST, "width", "Frente (largura útil, cm)", "Espaço livre entre as colunas, onde as bins ficam lado a lado.", "rack:width")
@@ -443,7 +443,7 @@ R(PST, "q", "Busca", "Procura pelo código, nome ou tipo da estrutura.", "find:t
 
 # =========================================================================== tipos de bin
 PSK = r"/structure-kinds"
-R(PSK, "name", "Nome do tipo", "Como o tipo aparece no cadastro de estruturas (ex.: Porta-palete seletivo, Estante leve).", "tag:name")
+R(PSK, "name", "Nome do tipo", "Como o tipo aparece nos modelos de estrutura (ex.: Porta-palete seletivo, Estante leve).", "tag:name")
 R(PSK, "shared_sides", "Vizinhos compartilham a lateral", "Ligado: módulos encostados do mesmo tipo e da mesma profundidade usam uma lateral só entre eles (colunas, quadro de montantes) — um módulo sozinho usa 2 laterais, cada vizinho só mais 1 (N módulos seguidos = N + 1). Marque as peças da lateral como \"por lateral\" na composição. A recomposição das estruturas e o rearranjo da planta contam as laterais pelas estantes vizinhas (pela planta desenhada; sem ela, pela numeração).", "rack:levels")
 R(PSK, "floor", "Paletes no piso", "Tipo blocado: paletes direto no piso, empilhados por nível, sem montantes nem longarinas. O 3D desenha os paletes em camadas.", "rack:pallet")
 R(PSK, "condition", "Condição de armazenagem", "Ambiente, refrigerado, congelado ou controlado (seguro). A estrutura só recebe produtos com a mesma condição (cadastro do produto): no projeto de filial nova, no Pool e nas trocas da posição pela saída. Na recomposição, só troca por estrutura da mesma condição.", "rack:levels")

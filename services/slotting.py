@@ -11,7 +11,7 @@ a facilidade de cada endereço é ESTIMADA pelo próprio endereço:
 - corredor de referência: o mais perto da expedição (padrão: o primeiro, na ordem natural dos códigos);
 - posição no corredor: estantes ímpares de um lado e pares do outro, numeradas a partir da ponta da expedição
   (estante 01 e 02 = posição 1, 03 e 04 = posição 2…);
-- zona de ouro: pela estrutura cadastrada na estante (Cadastros → Estruturas, início/fim em cm) e, sem estrutura,
+- zona de ouro: pela estrutura cadastrada na estante (Cadastros → Modelos de estrutura, início/fim em cm) e, sem estrutura,
   pelos níveis informados (ex.: "2,3").
 
 Popularidade: histórico de pedidos (linhas de pedido ou unidades por SKU, pares que saem juntos) ou uma coluna Saída,

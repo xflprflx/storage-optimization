@@ -81,7 +81,7 @@
           {{ bin_editor(bin_types, data.get('bins') or [], none, _('Sem bins — pode atribuir depois na lista de endereços.')) }}
         </div>
         <div class="col-md-6">
-          <label class="form-label mb-1"><i class="bi bi-bookshelf"></i> {{ _h("Estrutura de armazenagem das estantes <small class=\"text-muted\">(opcional)</small>") }}</label>
+          <label class="form-label mb-1"><i class="bi bi-bookshelf"></i> {{ _h("Modelo de estrutura das estantes <small class=\"text-muted\">(opcional)</small>") }}</label>
           <select class="form-select" name="structure_type_id">
             <option value="">{{ _("— nenhuma —") }}</option>
             {% for st in structures %}<option value="{{ st.id }}" {% if data.get('structure_type_id') == st.id %}selected{% endif %}>{{ _h("{code} — {levels} níveis × {level_height} cm, frente {width} cm", code=(st.code), levels=(st.levels), level_height=(st.level_height|dec), width=(st.width|dec)) }}</option>{% endfor %}

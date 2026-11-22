@@ -97,14 +97,14 @@
       <div class="col-12 order-last">
         <form method="post" action="/levels/structure" class="row g-2 align-items-end border-top pt-2">
           {{ hidden_filters() }}
-          <div class="col-12 small fw-semibold"><i class="bi bi-bookshelf"></i> {{ _h("Aplicar estrutura de armazenagem às estantes <span class=\"text-muted fw-normal\">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo; o cálculo se atualiza sozinho quando a estrutura, o vão ou os tipos de bin mudam (<a href=\"/structures\">cadastro de estruturas</a>)</span>") }}</div>
+          <div class="col-12 small fw-semibold"><i class="bi bi-bookshelf"></i> {{ _h("Aplicar modelo de estrutura às estantes <span class=\"text-muted fw-normal\">— define o vão de cada nível e calcula quantas bins de cada tipo cabem pela frente × profundidade do módulo; o cálculo se atualiza sozinho quando o modelo, o vão ou os tipos de bin mudam (<a href=\"/structures\">modelos de estrutura</a>)</span>") }}</div>
           <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="s_aisle" placeholder="{{ _("Corredor") }}" value="{{ aisle }}"></div>
           <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="s_bay" placeholder="{{ _("Estante") }}" value="{{ bay }}"></div>
           <div class="col-8 col-md-3">
             <select class="form-select form-select-sm" name="structure_type_id" required>
-              <option value="">{{ _("— estrutura —") }}</option>
+              <option value="">{{ _("— modelo —") }}</option>
               {% for st in structures %}<option value="{{ st.id }}">{{ _h("{code} — {levels} níveis × {level_height} cm, frente {width} × prof. {depth}", code=(st.code), levels=(st.levels), level_height=(st.level_height|dec), width=(st.width|dec), depth=(st.depth|dec)) }}</option>{% endfor %}
-              <option value="remove">{{ _("— remover a estrutura das estantes —") }}</option>
+              <option value="remove">{{ _("— remover o modelo das estantes —") }}</option>
             </select>
           </div>
           <div class="col-4 col-md-1"><input class="form-control form-control-sm text-end" name="top_gap" data-u="cm" inputmode="decimal" value="5" title="{{ _("Folga acima da bin (cm) para tirá-la do nível") }}"></div>
@@ -115,7 +115,7 @@
             <div class="form-check" title="{{ _("Apaga os limites manuais dessas estantes: vale só a capacidade calculada") }}"><input class="form-check-input" type="checkbox" name="clear_manual" value="1" id="rc"><label class="form-check-label" for="rc">{{ _("remover os limites manuais") }}</label></div>
             <div class="form-check" title="{{ _("Cria os níveis 1..N que a estante ainda não tem (como níveis reservados)") }}"><input class="form-check-input" type="checkbox" name="create_levels" value="1" id="cl"><label class="form-check-label" for="cl">{{ _("criar níveis que faltam") }}</label></div>
           </div>
-          <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm(_t('Aplicar a estrutura às estantes que atendem às condições?'))">{{ _("Aplicar estrutura") }}</button></div>
+          <div class="col-auto"><button class="btn btn-sm btn-accent" onclick="return confirm(_t('Aplicar o modelo às estantes que atendem às condições?'))">{{ _("Aplicar modelo") }}</button></div>
           {% if not structures %}<div class="col-12 small text-muted">{{ _h("Nenhuma estrutura cadastrada. <a href=\"/structures/new\">Cadastrar</a>") }}</div>{% endif %}
         </form>
       </div>
@@ -165,7 +165,7 @@
       <table class="table table-sm table-hover mb-0 small align-middle">
         <thead class="sticky-top"><tr>
           <th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".bulk-levels" title="{{ _("Selecionar todos da página") }}"></th>
-          <th>{{ _("Nível") }}</th><th title="{{ _("Estrutura de armazenagem da estante") }}">{{ _("Estrutura") }}</th><th class="text-end">{{ _("Endereços") }}</th>
+          <th>{{ _("Nível") }}</th><th title="{{ _("Modelo de estrutura da estante") }}">{{ _("Modelo") }}</th><th class="text-end">{{ _("Endereços") }}</th>
           {% for bt in bin_types %}<th class="text-center" title="{{ bt.name }}">{{ _h("Cabem<br><span class=\"mono\">{code}</span>", code=(bt.code)) }}</th>{% endfor %}
           <th class="text-center" title="{{ _("Distância entre este nível e o de cima (cm)") }}">{{ _h("Vão<br>(cm)") }}</th>
           <th>{{ _("Bins no nível") }}</th><th style="width:170px">{{ _("Uso") }}</th><th>{{ _("Observação") }}</th><th></th>

@@ -28,7 +28,7 @@
         </form>
         <div class="small text-muted mt-2"><i class="bi bi-stars"></i> {{ _h("Ou comece por um dos <a href=\"#exemplos\">projetos de exemplo</a> abaixo.") }}</div>
         {% if not n_structs %}
-        <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle"></i> {{ _h("Nenhuma estrutura de armazenagem cadastrada. <a href=\"/structures/new\">Cadastre as estantes/porta-paletes</a> que podem ser usadas antes de otimizar.") }}</div>
+        <div class="alert alert-warning small mt-3 mb-0"><i class="bi bi-exclamation-triangle"></i> {{ _h("Nenhum modelo de estrutura cadastrado. <a href=\"/structures/new\">Cadastre os modelos de estante/porta-palete</a> que podem ser usados antes de otimizar.") }}</div>
         {% endif %}
       </div>
     </div>
@@ -36,7 +36,7 @@
       <div class="card-body small text-muted">
         <p class="mb-2"><b>{{ _("Como funciona") }}</b></p>
         <ol class="ps-3 mb-0">
-          <li>{{ _h("Cadastre as <a href=\"/structures\">estruturas de armazenagem</a> (frente, profundidade, altura, níveis e vão) e os <a href=\"/bin-types\">tipos de bin</a>.") }}</li>
+          <li>{{ _h("Cadastre os <a href=\"/structures\">modelos de estrutura</a> (frente, profundidade, altura, níveis e vão) e os <a href=\"/bin-types\">tipos de bin</a>.") }}</li>
           <li>{{ _("No projeto, informe as dimensões do imóvel, corredores e áreas reservadas.") }}</li>
           <li>{{ _h("Escolha, por estrutura, se o sistema <b>otimiza a quantidade</b> (com mínimo/máximo opcional) ou se a quantidade é <b>fixa</b>.") }}</li>
           <li>{{ _("Defina a demanda (saldo ou min/max level de uma filial de referência, com fator e crescimento).") }}</li>

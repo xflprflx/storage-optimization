@@ -110,12 +110,12 @@ As importações ficam em **Importações** (`/imports`), na mesma ordem. O hist
   biblioteca). Várias linhas do mesmo tipo com *Peça*, *Qtd*, *Por* (módulo ou nível) e *Cor no 3D* montam a
   composição; com peças no arquivo, a composição do tipo passa a ser a do arquivo. Peça inexistente é cadastrada com o
   código.
-- **Estruturas de armazenagem:** código, tipo (criado se não existir), frente, profundidade, altura, níveis, vão útil,
+- **Modelos de estrutura:** código, tipo (criado se não existir), frente, profundidade, altura, níveis, vão útil,
   vãos por nível (60/40/35), 1º nível, carga, custo e zona de ouro. A capacidade das estantes com a estrutura é
   recalculada.
 - **Estrutura das estantes:** filial, armazém, corredor e estante (aceitam lista e faixa), a estrutura (ou "remover"),
   a folga acima da bin, o 1º nível e as opções criar níveis que faltam e remover limites manuais — o mesmo que
-  *Capacidade dos níveis → Aplicar estrutura*.
+  *Capacidade dos níveis → Aplicar modelo*.
 
 Os tipos de bin também importam *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* (ver 6.0.11).
 
@@ -242,7 +242,7 @@ Em **Otimização de bins → Projeto de filial nova** (`/optimization/site`) o 
 
 ```mermaid
 flowchart TD
-    A[Cadastro: Estruturas de armazenagem\nfrente, profundidade, altura, níveis, vão, carga, custo] --> C
+    A[Cadastro: Modelos de estrutura\nfrente, profundidade, altura, níveis, vão, carga, custo] --> C
     B[Projeto: Imóvel\ncomprimento × largura × pé-direito, corredores, docas, transversais] --> C
     D[Demanda: produtos\nsaldo ou min/max de uma filial de referência, fator e crescimento] --> C
     C[Planta: fileiras simples/duplas e corredores\nna orientação que comporta mais] --> E[Bins por SKU\ntipo e quantidade]
@@ -252,7 +252,7 @@ flowchart TD
     G --> I[Gerar cadastro da filial\nníveis, capacidades, endereços e bins]
 ```
 
-- **Estruturas** (`Cadastros → Estruturas de armazenagem`): cada módulo tem tipo, frente útil, profundidade, altura total, nº de níveis, vão útil por nível, carga por nível e custo. O tipo de estrutura (ver 6.0.9) traz a composição de peças, a aparência no 3D, a condição de armazenagem e a porta (ver 6.0.10).
+- **Modelos de estrutura** (`Cadastros → Modelos de estrutura`): cada modelo (a especificação que várias estantes físicas seguem) tem tipo, frente útil, profundidade, altura total, nº de níveis, vão útil por nível, carga por nível e custo. O tipo de estrutura (ver 6.0.9) traz a composição de peças, a aparência no 3D, a condição de armazenagem e a porta (ver 6.0.10).
 - **Zonas** (opcional): áreas com orientação de fileiras, largura de corredor, corredores transversais e estruturas permitidas próprias. Há dois modos:
   - **Posicionadas por X/Y:** cada zona é um retângulo em qualquer lugar do imóvel, como um obstáculo (X, Y, comprimento em X, largura em Y; largura vazia = até a parede), e o espaço entre as zonas é a circulação. Uma fileira pode ficar de frente para a borda da zona, e a ponta recebe cabeceira, quando do lado de fora há ao menos um corredor livre (sem parede, outra zona ou obstáculo). Zonas sobrepostas ou fora do imóvel são recusadas com mensagem clara.
   - **Empilhadas:** sem X/Y, as zonas são faixas ao longo do comprimento a partir da frente (docas), separadas por **avenidas** transversais.
@@ -264,7 +264,7 @@ flowchart TD
   - Com *Posição fixa*, valem X/Y/comprimento/largura. Também dá para desenhar o setor com o mouse (ferramenta *Desenhar setor*).
   - Os setores aparecem na planta (os automáticos com "Mostrar fileiras"), no resultado, no PDF e no 3D (área verde no piso).
   - Na planilha, use a aba **Setores**. O exemplo *CD com porta-paletes e picking* traz recebimento e expedição.
-- **Zona de ouro** (opcional, por estrutura, em *Cadastros → Estruturas*): faixa de altura (cm do piso) mais ergonômica para pegar.
+- **Zona de ouro** (opcional, por modelo de estrutura, em *Cadastros → Modelos de estrutura*): faixa de altura (cm do piso) mais ergonômica para pegar.
   - **Como definir:** arraste no desenho da estrutura (vista de frente, com os níveis em escala e uma pessoa de 1,75 m de referência), puxe as bordas ou mova a faixa; o botão *Sugerir 75–150 cm* preenche o padrão.
   - **Quais níveis contam:** os níveis cuja altura de pega (meio do vão) cai na faixa.
   - **Onde aparece:** com estrela no plano detalhado, na coluna "Zona de ouro" da aba Níveis do Excel e no 3D (faixa dourada e a cor "Zona de ouro").
@@ -622,12 +622,12 @@ O mapa do estoque, o **3D** e a **zona de ouro da pega** (posição pela saída 
 
 ## 6.0.6 Altura do 1º nível, vão por nível e palete no chão
 
-**Cadastro da estrutura** (Cadastros → Estruturas de armazenagem):
+**Cadastro do modelo de estrutura** (Cadastros → Modelos de estrutura):
 - **Altura do 1º nível (cm):** a base do 1º nível a partir do piso (0 = no chão).
 - **Vão de cada nível (cm), de baixo para cima:** ex.: `60; 40; 35`. Os níveis sem vão informado usam o vão útil. A sobra da altura total (altura − 1º nível − soma dos vãos) vira a espessura das longarinas; o cadastro recusa quando o 1º nível + os vãos passam da altura. O desenho de frente do módulo mostra os níveis nas alturas reais.
 - **Paletes no piso:** estruturas de um tipo marcado com *Paletes no piso* (o tipo padrão "Palete no chão", ver 6.0.9) guardam paletes direto no piso, empilhados por nível (cada nível = uma camada), sem montantes nem longarinas.
 
-**Por estante:** em *Capacidade dos níveis → Aplicar estrutura*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima), e a capacidade de cada nível passa a ser calculada pelo seu vão (ver 7.1).
+**Por estante:** em *Capacidade dos níveis → Aplicar modelo*, o campo *1º nível* define a altura do 1º nível nessas estantes, quando foram montadas diferente da estrutura (vazio = a da estrutura). Aplicar a estrutura grava o vão de cada nível (de baixo para cima), e a capacidade de cada nível passa a ser calculada pelo seu vão (ver 7.1).
 
 **Onde vale:**
 - **3D** (projeto e filial): a base de cada nível sai da altura do 1º nível + vãos (+ longarinas); no palete no chão, um palete de madeira por camada e as bins em cima dele.
@@ -881,11 +881,16 @@ A posição dos SKUs pela saída também vale para as filiais existentes: é a e
 
 **Simulação de separação no resultado (hoje × proposta):** com o histórico de pedidos da filial (aba Pedidos), o resultado de *Por endereço* e *Pool* traz o cartão **Simulação de separação: hoje × proposta**: os pedidos da amostra percorridos com os SKUs **onde estão hoje** (saldo) e **onde ficam na proposta** do solver (no Pool, as bins realocadas; no Por endereço, as trocas sugeridas). Mostra caminhada total, horas de separação e caminhada média por pedido, **por dia** (com a coluna Data no histórico) e **por pedido** (os 400 de maior diferença), na rota otimizada, na serpentina ou na lista de separação. O tempo usa a velocidade e o tempo fora da zona de ouro da etapa Posição pela saída (o tempo por parada e por peça vem de **Configurações → Simulação de separação**); a distância é a mesma da posição pela saída (planta desenhada, quando houver, ou a estimada pelo endereço). Sem saldo no escopo (filial recém-criada) não há situação atual para comparar. **Em 3D:** com a planta da filial desenhada, o botão **Ver em 3D** (e o ícone em cada dia e em cada pedido) abre o Arranjo 3D da planta com **dois separadores** fazendo os mesmos pedidos — **Hoje** (vermelho), com os SKUs onde estão, e **Proposta** (verde), onde ficariam — na rota escolhida (otimizada, serpentina ou lista), um pedido ou o dia inteiro, com painel, tempos e gravação de vídeo. O cenário mostra as bins de hoje; as paradas da proposta acendem os endereços para onde os SKUs iriam. A proposta fica guardada na memória do servidor (as últimas 30 otimizações): depois de reiniciar, rode a otimização de novo para abrir o 3D.
 
-## 7. Estruturas de armazenagem nos depósitos existentes
+## 7. Modelos de estrutura nos depósitos existentes
+
+> **Termos:** *tipo de estrutura* = a família (porta-palete, estante, câmara: peças, porta, condição); *modelo de
+> estrutura* = a especificação (frente, profundidade, altura, níveis e vão) que várias estantes físicas seguem; *estante*
+> = a estante física do depósito (ex.: B-01), que segue um modelo. Ex.: a estante B-01 usa o modelo PP-270-110, do tipo
+> porta-palete.
 
 As estruturas cadastradas também descrevem as estantes que já existem (vínculo *estante → estrutura*):
 
-- **Capacidade dos níveis → Aplicar estrutura**: escolha as estantes (corredor/estante, aceita faixas como `01-04`) e a estrutura. O sistema grava o vínculo e a folga acima da bin, define o vão de cada nível e calcula quantas bins de cada tipo cabem por nível (ver 7.1). Opcionalmente cria os níveis que faltam e remove os limites manuais dessas estantes. A tabela mostra a estrutura de cada estante.
+- **Capacidade dos níveis → Aplicar modelo**: escolha as estantes (corredor/estante, aceita faixas como `01-04`) e a estrutura. O sistema grava o vínculo e a folga acima da bin, define o vão de cada nível e calcula quantas bins de cada tipo cabem por nível (ver 7.1). Opcionalmente cria os níveis que faltam e remove os limites manuais dessas estantes. A tabela mostra a estrutura de cada estante.
 - **Gerar endereços em lote**: as estantes geradas podem receber uma estrutura na hora.
 - **Mapa do estoque**: a estante mostra a estrutura (▤ código, com as medidas no tooltip). A largura do nível passa a ser a frente do módulo, e o vão da estrutura vale quando o nível não tem vão próprio.
 - **Projeto de filial nova → Gerar cadastro da filial**: cada estante criada já fica vinculada à estrutura do plano.

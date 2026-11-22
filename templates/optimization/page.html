@@ -274,7 +274,7 @@
         <div class="form-check form-switch" title="{{ _("Depois de otimizar, testa obras na planta desenhada (passagens transversais e troca de corredores de lugar) com os SKUs onde a proposta os põe, e compara o trajeto dos pedidos do histórico.") if has_plan else _("Desenhe a planta da filial (Mapa do estoque → Planta) para usar esta opção.") }}">
           <input class="form-check-input" type="checkbox" name="slot_rearr" value="1" id="sw_slot_rearr" {% if params.slot_rearr and has_plan %}checked{% endif %} {% if not has_plan %}disabled{% endif %}>
           <label class="form-check-label" for="sw_slot_rearr">{{ _("Propor rearranjo das estantes") }} <span class="text-muted">{% if has_plan %}{{ _("(passagens e troca de corredores na planta desenhada)") }}{% else %}{{ _("(precisa da planta desenhada)") }}{% endif %}</span></label></div>
-        <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Estruturas) ou dos níveis informados.") }}</div>
+        <div class="form-text">{{ _("A caminhada é estimada pelo endereço: corredores de distância até o de referência × distância entre corredores + soma das frentes das estantes até a posição dela no corredor (01/02 na ponta da expedição; frente da estrutura cadastrada ou, sem ela, o campo Frente). A zona de ouro vem da estrutura da estante (Cadastros → Modelos de estrutura) ou dos níveis informados.") }}</div>
       </div>
     </div>
 

@@ -323,7 +323,7 @@ def set_bay_locks(form: FormData = Depends(form_data), db: Session = Depends(get
 
 @router.post("/structure")
 def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
-    """Aplica (ou remove) uma estrutura de armazenagem às estantes que atendem às condições."""
+    """Aplica (ou remove) um modelo de estrutura às estantes que atendem às condições."""
     from services.structure_service import apply_structure, matching_bays, remove_structure
 
     bid = f_int(form, "f_branch_id")
@@ -340,10 +340,10 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
     if sid == "remove":
         n = remove_structure(db, bays)
         db.commit()
-        return redirect(_back(form), _("Estrutura removida de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).", n=n))
+        return redirect(_back(form), _("Modelo removido de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).", n=n))
     st = db.get(StructureType, int(sid)) if str(sid).isdigit() else None
     if st is None:
-        return redirect(_back(form), _("Escolha a estrutura de armazenagem."), "danger")
+        return redirect(_back(form), _("Escolha o modelo de estrutura."), "danger")
     on = lambda k: str(form.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
     try:
         gap = float(parse_decimal(form.get("top_gap") or "5") or 0)
@@ -357,7 +357,7 @@ def apply_structure_bulk(form: FormData = Depends(form_data), db: Session = Depe
         return redirect(_back(form), _("Altura do 1º nível não pode ser negativa."), "danger")
     stats = apply_structure(db, bays, st, create_levels=on("create_levels"), set_heights=on("set_heights"),
                             clear_manual=on("clear_manual"), top_gap_cm=gap, first_level_cm=fl)
-    msgs = [_("Estrutura {code} aplicada a {bays} estante(s) ({levels} níveis", code=st.code, bays=stats['bays'], levels=stats['levels'])
+    msgs = [_("Modelo {code} aplicado a {bays} estante(s) ({levels} níveis", code=st.code, bays=stats['bays'], levels=stats['levels'])
             + (_(", {n} criados", n=stats["levels_created"]) if stats["levels_created"] else "") + ")"
             + (_(", 1º nível a {fl} cm do piso nessas estantes", fl=f"{fl:g}") if fl is not None else "") + "."]
     msgs.append(_("Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins; elas se atualizam sozinhas quando a estrutura, o vão ou os tipos de bin mudam.")

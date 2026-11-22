@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% from "_macros.html" import field_error, invalid, form_alert %}
-{% block title %}{{ _h("{v} estrutura", v=(_('Editar') if item else _('Nova'))) }}{% endblock %}
+{% block title %}{{ _("Editar modelo") if item else _("Novo modelo de estrutura") }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-bookshelf"></i> {{ _('Editar estrutura ') ~ item.code if item else _('Nova estrutura de armazenagem') }}</h1>
+  <h1><i class="bi bi-bookshelf"></i> {{ _('Editar modelo ') ~ item.code if item else _('Novo modelo de estrutura') }}</h1>
   <a href="/structures" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
 </div>
 <div class="card" style="max-width: 900px">

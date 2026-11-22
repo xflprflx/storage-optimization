@@ -4,7 +4,7 @@ Projeto de filial nova (greenfield): dimensiona o armazém do zero.
 Entradas (sem banco de dados — ver `site_service` para a carga):
   - Imóvel: comprimento × largura × pé-direito útil, largura dos corredores, afastamento das paredes, faixas
     reservadas (docas/expedição) e corredores transversais;
-  - Estruturas de armazenagem candidatas (módulos): frente, profundidade, altura, nº de níveis, vão útil, carga por
+  - Modelos de estrutura candidatos (módulos): frente, profundidade, altura, nº de níveis, vão útil, carga por
     nível e custo. Cada uma tem um modo: "auto" (o sistema escolhe a quantidade, opcionalmente entre um mínimo e um
     máximo), "fixed" (quantidade exata informada) ou "off";
   - Tipos de bin permitidos e a demanda (SKUs com dimensões e quantidade a guardar).

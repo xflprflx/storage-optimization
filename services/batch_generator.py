@@ -276,7 +276,7 @@ class BatchConflict:
 
 @dataclass
 class BatchResult:
-    structure_note: str = ""  # estrutura de armazenagem aplicada às estantes geradas
+    structure_note: str = ""  # modelo de estrutura aplicado às estantes geradas
     total_combinations: int = 0
     to_create: int = 0
     created: int = 0

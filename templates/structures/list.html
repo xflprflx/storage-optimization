@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 {% from "_macros.html" import bulk_delete_bar, pagination, delete_button, th, keep_params, filter_buttons %}
-{% block title %}{{ _("Estruturas de armazenagem") }}{% endblock %}
+{% block title %}{{ _("Modelos de estrutura") }}{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1><i class="bi bi-bookshelf"></i> {{ _("Estruturas de armazenagem") }}</h1>
+  <h1><i class="bi bi-bookshelf"></i> {{ _("Modelos de estrutura") }}</h1>
   <div class="d-flex gap-2">
     <a href="/optimization/site" class="btn btn-outline-secondary"><i class="bi bi-building-add"></i> {{ _("Projeto de filial nova") }}</a>
-    <a href="/structures/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Nova estrutura") }}</a>
+    <a href="/structures/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo modelo") }}</a>
   </div>
 </div>
-<div class="small text-muted mb-3">{{ _h("Módulos (estantes, porta-paletes…) usados no projeto de filial nova e nas estantes dos depósitos existentes (<a href=\"/levels\">Capacidade dos níveis → Aplicar estrutura</a>: define o vão e calcula a capacidade de cada nível). Medidas em cm; o vão útil é a altura livre de cada nível.") }}</div>
+<div class="small text-muted mb-3">{{ _h("A especificação que várias estantes físicas seguem (frente, profundidade, altura, níveis e vão): usada no projeto de filial nova e nas estantes dos depósitos existentes (<a href=\"/levels\">Capacidade dos níveis → Aplicar modelo</a>: define o vão e calcula a capacidade de cada nível). O tipo de estrutura (porta-palete, estante, câmara…) diz de que peças o modelo é feito. Medidas em cm; o vão útil é a altura livre de cada nível.") }}</div>
 <div class="card">
   {{ bulk_delete_bar(request, "structures", ".bulk-structures") }}
 <div class="card-body border-bottom">
@@ -27,7 +27,7 @@
         {{ th(request, sort, 'width', _('Frente'), 'text-end') }}{{ th(request, sort, 'depth', _('Prof.'), 'text-end') }}
         {{ th(request, sort, 'height', _('Altura'), 'text-end') }}{{ th(request, sort, 'levels', _('Níveis'), 'text-end') }}
         {{ th(request, sort, 'level_height', _('Vão'), 'text-end') }}<th class="text-end">{{ _("Carga/nível (kg)") }}</th>
-        {{ th(request, sort, 'cost', _('Custo (R$)'), 'text-end') }}<th class="text-end" title="{{ _("Estantes de depósitos existentes com esta estrutura") }}">{{ _("Em uso") }}</th>
+        {{ th(request, sort, 'cost', _('Custo (R$)'), 'text-end') }}<th class="text-end" title="{{ _("Estantes de depósitos existentes com este modelo") }}">{{ _("Em uso") }}</th>
         <th class="text-end" style="width:110px">{{ _("Ações") }}</th>
       </tr></thead>
       <tbody>
@@ -47,11 +47,11 @@
           <td class="text-end">{{ usage.get(s.id, 0) or '' }}{% if usage.get(s.id) %} {{ _("estante(s)") }}{% endif %}</td>
           <td class="text-end text-nowrap">
             <a class="btn btn-sm btn-outline-primary" href="/structures/{{ s.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
-            {{ delete_button('/structures/' ~ s.id ~ '/delete', '', _('Excluir a estrutura ') ~ s.code ~ '?') }}
+            {{ delete_button('/structures/' ~ s.id ~ '/delete', '', _('Excluir o modelo ') ~ s.code ~ '?') }}
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="13" class="text-center text-muted py-4">{{ _("Nenhuma estrutura cadastrada.") }}</td></tr>
+        <tr><td colspan="13" class="text-center text-muted py-4">{{ _("Nenhum modelo cadastrado.") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

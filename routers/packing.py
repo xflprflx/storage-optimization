@@ -39,6 +39,26 @@ def parent_info(bt, seq: Optional[int] = None) -> Optional[dict]:
             "slot": slot + 1, "n": ((seq or 1) - 1) // k + 1, "label": bt.fraction_label, "code": p.code}
 
 
+def _item(bt, p, sku: str, q, res=0) -> tuple:
+    """Item do desenho: unidades soltas ou, quando a bin guarda caixas/palete (unitização), as caixas do produto
+    (medidas da caixa e a quantidade em caixas, arredondada para cima)."""
+    import math
+
+    from services.bin_optimizer import BinSpec, handling
+    from services.packaging import case_dims, unit_of
+
+    if p is None or None in (p.height, p.width, p.length):
+        return (sku, q, None, res)
+    d = (_f(p.height), _f(p.width), _f(p.length))
+    if bt is not None and (bt.store_as or "units") != "units":
+        u = unit_of(p)
+        if handling(u, BinSpec(bt.id, bt.code, store_as=bt.store_as)) in ("cases", "pallet"):
+            k = int(p.case_qty)
+            cq = lambda v: math.ceil(float(v or 0) / k - 1e-9)  # noqa: E731
+            return (sku, cq(q), case_dims(p), cq(res), _("caixas de {k} un.", k=k))
+    return (sku, q, d, res)
+
+
 def _arrange_bt(bt, data, rotation, seq=None):
     bdims = (_f(bt.height), _f(bt.width), _f(bt.length)) if bt and None not in (bt.height, bt.width, bt.length) else None
     # bin aberta em cima: a carga pode passar da borda (até o máximo do tipo; sem ele, o quanto precisar)
@@ -76,9 +96,7 @@ def bin_arrangement(db: Session, bin_type_id: int, items: list[tuple[str, float]
     prods = {p.sku: p for p in db.scalars(select(Product).where(Product.sku.in_(skus)))} if skus else {}
     data = []
     for sku, q, *res in items:
-        p = prods.get(sku)
-        d = (_f(p.height), _f(p.width), _f(p.length)) if p is not None and None not in (p.height, p.width, p.length) else None
-        data.append((sku, q, d, res[0] if res else 0))
+        data.append(_item(bt, prods.get(sku), sku, q, res[0] if res else 0))
     return _arrange_bt(bt, data, rotation, seq)
 
 
@@ -122,9 +140,7 @@ class Arranger:
         bt = self.types.get(type_id)
         data = []
         for sku, q, *res in items:
-            p = self.products.get(sku)
-            d = (_f(p.height), _f(p.width), _f(p.length)) if p is not None and None not in (p.height, p.width, p.length) else None
-            data.append((sku, q, d, res[0] if res else 0))
+            data.append(_item(bt, self.products.get(sku), sku, q, res[0] if res else 0))
         arr = _arrange_bt(bt, data, self.rotation, seq)
         q = [("bt", type_id), ("rot", self.rotation), ("title", title)] + [("i", _tok(i)) for i in items]
         return {"svg": svg_mini(arr, size) if arr.ok else "", "url": "/packing/3d?" + self._urlencode(q),
@@ -148,9 +164,7 @@ def bin_card(arranger: "Arranger", type_id: int, label: str, items: list, seq: O
     arranger._load([i[0] for i in items])
     data = []
     for sku, q, *res in items:
-        p = arranger.products.get(sku)
-        d = (_f(p.height), _f(p.width), _f(p.length)) if p is not None and None not in (p.height, p.width, p.length) else None
-        data.append((sku, q, d, res[0] if res else 0))
+        data.append(_item(bt, arranger.products.get(sku), sku, q, res[0] if res else 0))
     arr = _arrange_bt(bt, data, arranger.rotation, seq)
     return {"label": label, "arr": arr, "svg": svg_mini(arr, 150) if arr.ok and (items or arr.parent) else "",
             "json": json.dumps(arr.as_json()) if arr.dims else "null", "empty": not items}

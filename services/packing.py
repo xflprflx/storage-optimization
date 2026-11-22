@@ -38,6 +38,7 @@ class ItemArrangement:
     boxes: list = field(default_factory=list)  # [(x, y, z, dx, dy, dz)]
     reserved: int = 0  # espaço reservado (plano por min/max level acima do saldo): desenhado vazio, tracejado
     real: int = 0  # quantas das `boxes` são unidades físicas (as demais são reserva)
+    unit: str = ""  # unitização: "caixas de 12 un." quando o desenho é das caixas do produto (vazio = unidades)
 
     def layers(self) -> list[tuple[int, float, float, int, int]]:
         """[(nº da camada a partir de baixo, y, altura, unidades físicas, posições de reserva)]"""
@@ -64,7 +65,7 @@ class ItemArrangement:
         oh, ow, ol = self.oriented
         if not self.per_bin:
             return _("não cabe nesta bin com a rotação permitida")
-        t = (_("{vertical} na vertical · base {n}×{n2} cm · {nx}×{nz} por camada · {layers_used} de {ny} camada(s)", vertical=self.vertical, n=_n(ow), n2=_n(ol), nx=self.nx, nz=self.nz, layers_used=self.layers_used, ny=self.ny))
+        t = (self.unit + " · " if self.unit else "") + (_("{vertical} na vertical · base {n}×{n2} cm · {nx}×{nz} por camada · {layers_used} de {ny} camada(s)", vertical=self.vertical, n=_n(ow), n2=_n(ol), nx=self.nx, nz=self.nz, layers_used=self.layers_used, ny=self.ny))
         if self.reserved:
             t += _(" · + espaço reservado para mais {reserved} un. do plano", reserved=self.reserved)
         if self.overflow:
@@ -89,7 +90,7 @@ class BinArrangement:
     def as_json(self) -> dict:
         h, w, l_ = self.dims or (0, 0, 0)
         return {"code": self.code, "h": h, "w": w, "l": l_, "approx": self.approx, "parent": self.parent, "load_h": self.load_h,
-                "items": [{"sku": i.sku, "qty": i.qty, "color": i.color, "text": i.text, "boxes": i.boxes,
+                "items": [{"sku": i.sku, "qty": i.qty, "unit": i.unit, "color": i.color, "text": i.text, "boxes": i.boxes,
                            "layers": [list(x) for x in i.layers()], "real": i.real, "reserved": i.reserved,
                            "dims": i.dims, "oriented": i.oriented, "overflow": i.overflow} for i in self.items]}
 
@@ -138,7 +139,8 @@ def arrange(bin_code: str, bin_dims: Optional[tuple], items: list[tuple], rotati
         sku, q, d = it[:3]
         res = int(math.ceil(float(it[3]) - EPS)) if len(it) > 3 and it[3] else 0
         out.append(ItemArrangement(sku, int(math.ceil(float(q) - EPS)), d or (None, None, None),
-                                   color=PALETTE[i % len(PALETTE)], reserved=max(res, 0)))
+                                   color=PALETTE[i % len(PALETTE)], reserved=max(res, 0),
+                                   unit=it[4] if len(it) > 4 else ""))
     arr = BinArrangement(bin_code, bin_dims, out, approx=len(out) > 1)
     if not bin_dims or not all(bin_dims):
         return arr

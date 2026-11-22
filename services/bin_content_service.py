@@ -69,9 +69,11 @@ def _caps(product: Product, bt: BinType, prm=None) -> Optional[int]:
     from services.bin_optimizer import BinSpec, Params, ProductUnit, capacity
 
     f = lambda v: float(v) if v is not None else None  # noqa: E731
-    p = ProductUnit(product.sku, 0, f(product.height), f(product.width), f(product.length), f(product.weight))
+    from services.packaging import unit_of
+
+    p = unit_of(product)
     b = BinSpec(bt.id, bt.code, f(bt.height), f(bt.width), f(bt.length), f(bt.volume), f(bt.max_weight),
-                open_top=bool(bt.open_top), over_cm=f(bt.over_cm))
+                open_top=bool(bt.open_top), over_cm=f(bt.over_cm), store_as=bt.store_as or "units")
     if not p.has_dims or b.volume_cm3 is None:
         return None
     from services.bin_optimizer import at_vao

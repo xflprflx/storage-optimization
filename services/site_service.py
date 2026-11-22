@@ -26,6 +26,7 @@ from services.bin_optimizer import BASES, OBJECTIVES, BinSpec, ProductUnit, cano
 from services.file_reader import parse_decimal
 from services.material_service import material_condition
 from services.optimization_service import load_types
+from services.packaging import pack_of
 from services.site_planner import (
     CAP_ALIGN,
     ORIENTATIONS,
@@ -418,7 +419,8 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
                 from_cat += 1
             dims = filled
         cond = (it.get("condition") or (p.storage_condition if p is not None else "") or "").strip().lower()
-        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims), condition=cond))
+        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims,
+                                                                  pack_of(p) if p is not None else None), condition=cond))
     if no_level:
         notes.append(_("{no_level} SKU(s) do arquivo sem {v} level: usou o saldo.", no_level=no_level, v='min' if basis == 'min' else 'max'))
     if from_cat:
@@ -478,7 +480,7 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
             continue
         f = lambda v: float(v) if v is not None else None  # noqa: E731
         out.append(Demand(p.sku, p.name, p.material_type or "",
-                          ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight)),
+                          ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight), pack_of(p)),
                           condition=p.storage_condition or ""))
     if no_level:
         label = _("nível mínimo") if basis == "min" else _("nível máximo")

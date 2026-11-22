@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% block title %}{{ _("Editar modelo de embalagem") if item else _("Novo modelo de embalagem") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-box2"></i> {{ _('Editar modelo de embalagem ') ~ item.code if item else _('Novo modelo de embalagem') }}</h1>
+  <a href="/packaging-models" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
+</div>
+<div class="card" style="max-width: 820px"><div class="card-body">
+  {{ form_alert(errors) }}
+  <form method="post" autocomplete="off">
+    {% if request.query_params.get('back') %}<input type="hidden" name="back" value="{{ request.query_params.get('back') }}">{% endif %}
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">{{ _("Código *") }}</label>
+        <input class="form-control mono text-uppercase {{ invalid(errors, 'code') }}" name="code" maxlength="30" value="{{ data.get('code') or '' }}" required autofocus placeholder="{{ _("Ex.: CX-40") }}">
+        {{ field_error(errors, 'code') }}
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">{{ _("Nome") }}</label>
+        <input class="form-control" name="name" maxlength="150" value="{{ data.get('name') or '' }}" placeholder="{{ _("Ex.: Caixa padrão 40 × 30 × 20") }}">
+      </div>
+      {% for key, label in fields %}
+      <div class="col-md-3">
+        <label class="form-label">{{ _(label) }} <small class="text-muted">({{ 'kg' if key == 'tare' else 'cm' }})</small></label>
+        <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" data-u="{{ 'kg' if key == 'tare' else 'cm' }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
+        {{ field_error(errors, key) }}
+      </div>
+      {% endfor %}
+      <div class="col-12">
+        <label class="form-label">{{ _("Observações") }}</label>
+        <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="{{ _("Fornecedor, material, empilhamento máximo…") }}">
+      </div>
+    </div>
+    <div class="form-text mt-2">{{ _("Medidas externas da caixa. A tara (caixa vazia) entra no peso da caixa cheia quando o produto não informa o peso da caixa: unidades × peso da unidade + tara.") }}</div>
+    <div class="mt-4">
+      <button class="btn btn-accent" data-tour="form-save"><i class="bi bi-check-lg"></i> {{ _("Salvar") }}</button>
+      <a href="/packaging-models" class="btn btn-link">{{ _("Cancelar") }}</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}

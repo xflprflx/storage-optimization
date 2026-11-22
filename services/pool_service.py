@@ -89,6 +89,9 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
             pols[(pol.product_id, pol.branch_id)] = pol
     notes: list[str] = []
     no_level: list[str] = []
+    from services.packaging import load_packs
+
+    packs = load_packs(db, list(prods))  # embalagem (unitização)
 
     def dflt_of(p, gk):
         pol = pols.get((p.id, gk[0]))
@@ -99,14 +102,14 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
         grp = groups.setdefault(gk, {"bins": [], "demands": {}, "reserved": set(), "no_dims": [], "fixed": {}})
         if focus is not None and pid not in focus:
             grp["fixed"][p.sku] = pid  # fora do foco: fica como está, nas bins de hoje
-            u_ = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight))
+            u_ = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), packs.get(pid))
             if bin_source == "any" and u_.has_dims and sum(cur.values()) > 0:
                 # pode ser desalojado se o foco usar a bin dele (realocado ou órfão, conforme a opção)
                 grp.setdefault("secondary", []).append(SkuDemand(p.sku, pid, u_, sum(cur.values()), dict(cur), dflt_of(p, gk)))
             else:
                 grp.setdefault("pinned", set()).add(p.sku)
             continue
-        unit = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight))
+        unit = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), packs.get(pid))
         dflt = dflt_of(p, gk)
         if not unit.has_dims:
             grp["no_dims"].append(p.sku)

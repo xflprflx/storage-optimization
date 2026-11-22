@@ -91,6 +91,16 @@
         </div>
       </div>
       <div class="row g-3 mt-1">
+        <div class="col-md-4">
+          <label class="form-label">{{ _("Armazena em") }}</label>
+          <select class="form-select" name="store_as" id="store_as">
+            {% for v, lbl in [('units', _('Unidades soltas')), ('cases', _('Caixas do produto')), ('both', _('Unidades ou caixas')), ('pallet', _('Palete fechado'))] %}
+            <option value="{{ v }}" {% if (data.get('store_as') or 'units') == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+          </select>
+          <div class="form-text">{{ _("Caixas: a capacidade conta caixas inteiras do produto (cadastro de produtos → Embalagem). Unidades ou caixas: caixas inteiras + o resto solto. Palete fechado: caixas por camada × camadas. Produto sem caixa cadastrada fica em unidades.") }}</div>
+        </div>
+      </div>
+      <div class="row g-3 mt-1">
         <div class="col-md-8">
           <div class="form-check form-switch mt-md-4">
             <input class="form-check-input" type="checkbox" name="open_top" value="1" id="open_top" {% if data.get('open_top') %}checked{% endif %}>

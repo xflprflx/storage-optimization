@@ -204,6 +204,9 @@ class BinType(TimestampMixin, Base):
     # compartimento: a otimização (bins existentes) pode fracionar bins pai sobrando nestes compartimentos
     # (1 bin pai = per_parent compartimentos; colocar a divisória)
     allow_split: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    # o que a bin guarda: "units" (unidades soltas), "cases" (caixas do produto), "both" (caixas inteiras + o resto
+    # solto, ou unidades para quem não tem caixa) ou "pallet" (palete fechado: caixas por camada × camadas)
+    store_as: Mapped[str] = mapped_column(String(10), nullable=False, default="units", server_default="units")
     # bin aberta em cima (palete, bandeja, caixa sem tampa): a carga pode passar da borda, até o vão do nível
     # (menos a folga para pegar) ou até `over_cm` acima da borda, o que for menor
     open_top: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
@@ -390,6 +393,22 @@ class Dimensions:
         return all(v is None for v in (self.height, self.width, self.length, self.weight))
 
 
+class PackagingModel(TimestampMixin, Base):
+    """Modelo de embalagem (caixa padrão usada por vários produtos): só as medidas e a tara. Cada produto que usa o
+    modelo informa quantas unidades vão nele (Product.case_qty)."""
+
+    __tablename__ = "packaging_models"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(30), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    tare: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # peso da caixa vazia (kg)
+    notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+
 class Product(TimestampMixin, Base):
     """Cadastro ÚNICO do produto, compartilhado por todas as filiais: o que é do produto em si (SKU, nome, material,
     dimensões e peso). O que muda de filial para filial (endereço padrão, min e max level) fica na política de
@@ -408,6 +427,23 @@ class Product(TimestampMixin, Base):
     width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    # embalagem (unitização): caixa do produto (unidades por caixa + medidas externas e peso da caixa cheia, ou o
+    # modelo de embalagem) e o palete (caixas por camada × camadas, no tipo de bin do palete); tudo opcional
+    case_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    case_model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="RESTRICT"),
+                                                         nullable=True, index=True)
+    case_height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    case_width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    case_length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    case_weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    pallet_type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bin_types.id", ondelete="SET NULL"),
+                                                          nullable=True)
+    pallet_layer: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # caixas por camada (lastro)
+    pallet_layers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # camadas
+    # como guardar nas bins que aceitam unidades e caixas: "auto" (caixas inteiras + o resto solto), "units", "cases"
+    store_pref: Mapped[str] = mapped_column(String(10), nullable=False, default="auto", server_default="auto")
+
+    case_model: Mapped[Optional[PackagingModel]] = relationship()
 
     dimensions: Mapped[Dimensions] = composite("height", "width", "length", "weight")
 

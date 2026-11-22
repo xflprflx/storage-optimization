@@ -38,10 +38,12 @@ def _mapping_template(kind: str) -> str:
     return "imports/mapping_master.html" if kind in MASTER_KINDS else f"imports/mapping_{kind}.html"
 
 SAMPLE_PRODUCTS = (
-    "SKU;Descricao;Tipo de material;Altura;Largura;Comprimento;Peso;Estoque minimo;Estoque maximo;Filial;Armazem;Endereco\n"
-    "PRD-001;Parafuso sextavado M8;Fixação;0,5;0,5;3;0,02;100;500;01;CD01;A-01-01-01\n"
-    "PRD-002;Arruela lisa 8mm;Fixação;0,1;1,6;1,6;0,005;200;1000;01;CD01;A-01-01-02\n"
-    "PRD-003;Porca M8;Fixação;0,6;1,3;1,3;0,01;;;02;CD02;\n"
+    "SKU;Descricao;Tipo de material;Altura;Largura;Comprimento;Peso;Estoque minimo;Estoque maximo;Filial;Armazem;Endereco;"
+    "Unidades por caixa;Altura da caixa;Largura da caixa;Comprimento da caixa;Peso da caixa cheia;Palete;Caixas por camada;"
+    "Camadas\n"
+    "PRD-001;Parafuso sextavado M8;Fixação;0,5;0,5;3;0,02;100;500;01;CD01;A-01-01-01;500;12;20;30;10,5;PAL;10;8\n"
+    "PRD-002;Arruela lisa 8mm;Fixação;0,1;1,6;1,6;0,005;200;1000;01;CD01;A-01-01-02;1000;10;16;16;5,2;;;\n"
+    "PRD-003;Porca M8;Fixação;0,6;1,3;1,3;0,01;;;02;CD02;;;;;;;;;\n"
 )
 SAMPLE_STOCK = (
     "Filial;Armazem;Posicao;SKU;Qtd Disponivel;Qtd Reservada;Qtd Avariada\n"

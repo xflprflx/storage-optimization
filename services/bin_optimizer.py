@@ -58,6 +58,24 @@ APPLICABLE = {"melhoria", "corrigir", "liberar", "realocar", "orfao"}
 # Entradas
 # --------------------------------------------------------------------------- #
 @dataclass
+class Pack:
+    """Embalagem do produto (unitização): a caixa (unidades por caixa, medidas externas, peso da caixa cheia) e o
+    palete (caixas por camada × camadas). `pref` = como guardar nas bins que aceitam unidades e caixas."""
+    qty: int
+    h: Optional[float] = None
+    w: Optional[float] = None
+    l: Optional[float] = None
+    weight: Optional[float] = None
+    layer: Optional[int] = None  # caixas por camada (lastro)
+    layers: Optional[int] = None  # camadas
+    pref: str = "auto"
+
+    @property
+    def ok(self) -> bool:
+        return bool(self.qty and self.qty > 0 and all(v is not None and v > 0 for v in (self.h, self.w, self.l)))
+
+
+@dataclass
 class ProductUnit:
     sku: str
     qty: float
@@ -65,6 +83,7 @@ class ProductUnit:
     w: Optional[float] = None
     l: Optional[float] = None
     weight: Optional[float] = None
+    pack: Optional["Pack"] = None  # embalagem (caixa e palete), se cadastrada
 
     @property
     def has_dims(self) -> bool:
@@ -89,6 +108,7 @@ class BinSpec:
     open_top: bool = False  # aberta em cima: a carga pode passar da borda
     over_cm: Optional[float] = None  # máximo acima da borda (cm); None = até o vão do nível
     unit_h: Optional[float] = None  # altura útil para as unidades neste nível (bin aberta); None = a da bin
+    store_as: str = "units"  # o que a bin guarda: units | cases | both | pallet (unitização)
 
     @property
     def uh(self) -> Optional[float]:
@@ -371,8 +391,50 @@ def unit_fits(p: ProductUnit, b: BinSpec, prm: Params) -> bool:
     return _grid(p, b, prm.rotation) >= 1
 
 
+def handling(p: ProductUnit, b: BinSpec) -> str:
+    """Como o SKU fica na bin: "units" (soltas), "cases" (caixas inteiras do produto), "pallet" (palete fechado) ou
+    "none" (não pode ficar: o produto só se guarda na caixa e a bin só aceita unidades)."""
+    pk = p.pack if p.pack is not None and p.pack.ok else None
+    pref = p.pack.pref if p.pack is not None else "auto"
+    mode = getattr(b, "store_as", "units") or "units"
+    if mode == "pallet":
+        return "pallet" if pk is not None else "units"
+    if mode == "cases":
+        return "cases" if pk is not None else "units"
+    if mode == "both":
+        return "cases" if pk is not None and pref != "units" else "units"
+    return "none" if (pk is not None and pref == "cases") else "units"
+
+
+def case_unit(p: ProductUnit) -> ProductUnit:
+    """A caixa do produto como uma "unidade" (medidas e peso da caixa cheia)."""
+    pk = p.pack
+    wt = pk.weight if pk.weight else ((p.weight or 0.0) * pk.qty or None)
+    return ProductUnit(p.sku, 0, pk.h, pk.w, pk.l, wt)
+
+
 def capacity(p: ProductUnit, b: BinSpec, prm: Params) -> int:
-    """Unidades de um SKU que cabem em UMA bin do tipo (modo um SKU por bin). 0 = não cabe."""
+    """Unidades de um SKU que cabem em UMA bin do tipo (modo um SKU por bin). 0 = não cabe.
+    Unitização: na bin que guarda caixas, contam caixas inteiras do produto (× unidades por caixa); no palete fechado,
+    caixas por camada × as camadas que cabem na altura (e no peso) — sem o padrão cadastrado, o arranjo das caixas."""
+    how = handling(p, b)
+    if how == "none":
+        return 0
+    if how == "units":
+        return _cap_units(p, b, prm)
+    pk = p.pack
+    cu = case_unit(p)
+    if how == "pallet" and pk.layer and pk.layers:
+        uh = b.uh
+        layers = min(pk.layers, int(math.floor(uh / pk.h + EPS))) if uh else pk.layers
+        n = pk.layer * max(0, layers)
+        if prm.enforce_weight and cu.weight and b.max_weight:
+            n = min(n, int(math.floor(b.max_weight / cu.weight + EPS)))
+        return max(0, n) * pk.qty
+    return _cap_units(cu, b, prm) * pk.qty
+
+
+def _cap_units(p: ProductUnit, b: BinSpec, prm: Params) -> int:
     uv = p.volume_cm3
     if uv is None:
         return 0

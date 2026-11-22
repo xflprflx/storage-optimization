@@ -83,6 +83,7 @@ def _validate(db: Session, form: FormData, bin_type_id: int | None):
     data.update(form_values(form, "bin", errors, (data.get("width"), data.get("height"), data.get("length"))))
     data["look_code"] = f_str(form, "look_code", 20000)
     # aberta em cima: a carga pode passar da borda (até o vão do nível ou até o máximo informado)
+    data["store_as"] = form.get("store_as") if form.get("store_as") in ("units", "cases", "both", "pallet") else "units"
     data["open_top"] = str(form.get("open_top") or "").lower() in {"1", "on", "true"}
     data["over_cm"] = f_dec(form, "over_cm", errors, _("Máximo acima da borda")) if data["open_top"] else None
     if data["over_cm"] is not None and data["over_cm"] <= 0:
@@ -167,7 +168,7 @@ def edit_bin_type(bin_type_id: int, request: Request, db: Session = Depends(get_
     from services.appearance import code_text
 
     data = {k: getattr(bt, k) for k in ("code", "name", "height", "width", "length", "max_weight", "max_volume", "cost",
-                                        "parent_id", "dims_auto", "look_model", "open_top", "over_cm",
+                                        "parent_id", "dims_auto", "look_model", "open_top", "over_cm", "store_as",
                                         "allow_split")}
     data["look_code"] = code_text(bt.appearance)
     data["div_w_txt"], data["div_l_txt"] = (str(bt.grid[0]), str(bt.grid[1])) if bt.is_fraction else ("", "")

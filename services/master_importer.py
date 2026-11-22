@@ -58,8 +58,13 @@ BIN_TYPE_FIELDS = {
     "div_l": (N_("Divisões no comprimento"), False, ("divisoesnocomprimento", "divisoescomprimento", "fileiras", "nocomprimento", "divcomprimento", "divisoesc")),
     "fraction": (N_("Fração (ex.: 1/2) — alternativa às divisões"), False, ("fracao", "fração", "fraction", "compartimento")),
     "split_axis": (N_("Divisão (largura/comprimento)"), False, ("divisao", "divisão", "eixo", "split", "dividirna")),
+    "store_as": (N_("Armazena em (unidades/caixas/ambos/palete)"), False, ("armazenaem", "armazena", "unidadedearmazenagem", "storeas", "guarda")),
     "allow_split": (N_("Permite fracionar a bin pai (sim/não)"), False, ("permitefracionar", "permitefracionarabinpai", "fracionar", "fracionavel", "fracionável", "allowsplit", "split_parent")),
 }
+STORE_WORDS = {"both": ("ambos", "unidades ou", "unidade ou", "both", "mixed", "misto"),
+               "pallet": ("palete", "pallet", "palet", "paleta"),
+               "cases": ("caixa", "case", "box", "caja", "carton"),
+               "units": ("unidade", "unit", "solta", "loose", "un")}
 LOCATION_FIELDS = {
     "branch_code": (N_("Filial"), False, ("filial", "codfilial", "codigofilial", "branch", "loja", "empresa")),
     "warehouse_code": (N_("Armazém"), False, ("armazem", "armazém", "codarmazem", "deposito", "depósito", "warehouse")),
@@ -314,6 +319,12 @@ def import_bin_types(db: Session, path: Path, mapping: dict, opts: MasterOptions
                         vals[k] = d[k]
         if vals.get("open_top") is None:
             vals.pop("open_top", None)  # coluna vazia: não mexe (tipo novo: fechada)
+        aw = str(get_cell(row, mapping.get("store_as")) or "").strip().casefold() if mapping.get("store_as") is not None else ""
+        if aw:  # unitização: o que a bin guarda
+            mode = next((m for m, words in STORE_WORDS.items() if any(aw.startswith(w) for w in words)), None)
+            if mode is None:
+                raise ValueError(_("Armazena em inválido: {v} (use unidades, caixas, ambos ou palete)", v=aw))
+            vals["store_as"] = mode
         sraw = get_cell(row, mapping.get("allow_split")) if mapping.get("allow_split") is not None else None
         if sraw is not None and str(sraw).strip():  # compartimento: a otimização pode fracionar a bin pai
             on = str(sraw).strip().casefold() in {"s", "sim", "1", "x", "true", "verdadeiro", "yes", "y", "si", "oui", "ja", "是"}
@@ -602,10 +613,12 @@ MASTER_KINDS = {
                            "Divisão (largura ou comprimento). Sem dimensões, elas vêm da bin pai."),
                            N_("Permite fracionar a bin pai (sim/não), nos compartimentos: na otimização com bins existentes, uma bin "
                            "pai sobrando pode virar compartimentos deste tipo (colocando a divisória)."),
+                           N_("Armazena em (unitização): unidades (soltas), caixas (caixas inteiras do produto), ambos (caixas "
+                           "inteiras + o resto solto) ou palete (palete fechado: caixas por camada × camadas). Vazio = unidades."),
                            N_("Tipos existentes são atualizados só nos campos preenchidos.")],
-                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm);Permite fracionar a bin pai\n"
-                            "CX-P;Caixa pequena;10;20;30;8;;;;;nao;;\nCX-M;Caixa média;20;30;40;15;;;;;nao;;\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135;\n"
-                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;;sim\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;;nao\n"},
+                  "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm);Permite fracionar a bin pai;Armazena em\n"
+                            "CX-P;Caixa pequena;10;20;30;8;;;;;nao;;;unidades\nCX-M;Caixa média;20;30;40;15;;;;;nao;;;ambos\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135;;palete\n"
+                            "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;;sim;\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;;nao;\n"},
     "locations": {"sync_help": N_("Nas filiais/armazéns que aparecem no arquivo, exclui os endereços que não estão nele. Endereço ocupado ou com item atrelado é mantido."),"title": N_("Importação de Endereços"), "fields": LOCATION_FIELDS, "run": import_locations,
                   "back": ("/locations", "endereços"), "scope": True, "bins_option": True,
                   "help": [N_("Informe o endereço completo (A-01-02-03) OU as colunas Corredor, Estante, Nível, Posição e "

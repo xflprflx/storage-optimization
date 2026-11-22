@@ -25,7 +25,8 @@ def load_types(db: Session) -> dict[int, BinSpec]:
 
     return {
         bt.id: BinSpec(bt.id, bt.code, _f(bt.height), _f(bt.width), _f(bt.length), _f(bt.volume), _f(bt.max_weight),
-                       front_w=footprint_width(bt), cost=bin_cost(bt), open_top=bool(bt.open_top), over_cm=_f(bt.over_cm))
+                       front_w=footprint_width(bt), cost=bin_cost(bt), open_top=bool(bt.open_top), over_cm=_f(bt.over_cm),
+                       store_as=bt.store_as or "units")
         for bt in db.scalars(select(BinType))
     }
 
@@ -77,6 +78,10 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
       - "min"/"max": nível mínimo/máximo do produto, no ENDEREÇO PADRÃO dele (o endereço onde ele fica),
         inclusive se ainda não houver saldo lançado. Nunca menos que o saldo físico do endereço. Sem o nível cadastrado (vazio ou 0), usa o saldo atual (com aviso).
         Em endereços que não são o padrão do produto, vale o saldo atual."""
+    from services.packaging import load_packs
+
+    # embalagem (unitização) dos produtos que têm caixa cadastrada
+    packs = load_packs(db, db.scalars(select(Product.id).where(Product.case_qty.is_not(None))))
     from models import ShelfLevel
 
     out: dict[int, AddressIn] = {}
@@ -125,7 +130,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
                     q = max(float(lvl), q)  # nunca menos espaço que o saldo físico do endereço
                 else:
                     missing.setdefault(lid, []).append(sku)
-            out[lid].items.append(ProductUnit(sku, q, _f(h), _f(w), _f(ln), _f(wt)))
+            out[lid].items.append(ProductUnit(sku, q, _f(h), _f(w), _f(ln), _f(wt), packs.get(pid)))
         for lid, pid, sku, h, w, ln, wt, lvl in db.execute(
             select(StockPolicy.default_location_id, Product.id, Product.sku, Product.height, Product.width,
                    Product.length, Product.weight, level_col)
@@ -134,7 +139,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
             out[lid].linked_without_stock = True
             if basis != "stock" and (lid, pid) not in seen and lvl is not None and float(lvl) > 0:
                 # produto que fica aqui mas ainda sem saldo: dimensiona pelo min/max level
-                out[lid].items.append(ProductUnit(sku, float(lvl), _f(h), _f(w), _f(ln), _f(wt)))
+                out[lid].items.append(ProductUnit(sku, float(lvl), _f(h), _f(w), _f(ln), _f(wt), packs.get(pid)))
         label = _("nível mínimo") if basis == "min" else _("nível máximo")
         for lid, skus in missing.items():
             out[lid].notes.append(_("Sem {label} cadastrado (usou o saldo atual): ", label=label) + ", ".join(skus[:5])

@@ -60,8 +60,114 @@ def _validate(db: Session, form: FormData, product_id: int | None):
         errors.add("name", _("Nome é obrigatório."))
     for key, label in DIM_FIELDS:
         data[key] = f_dec(form, key, errors, label)
+    _pack_fields(db, form, errors, data)
     data["policies"] = _policy_rows(db, form, errors)
     return errors, data
+
+
+PACK_DEC = (("case_height", N_("Altura da caixa")), ("case_width", N_("Largura da caixa")),
+            ("case_length", N_("Comprimento da caixa")), ("case_weight", N_("Peso da caixa cheia")))
+
+
+def _pack_fields(db: Session, form: FormData, errors: FormErrors, data: dict) -> None:
+    """Embalagem (unitização): unidades por caixa, modelo de embalagem, medidas e peso da caixa, palete (tipo de bin,
+    caixas por camada × camadas) e como guardar nas bins de unidades ou caixas."""
+    from models import BinType, PackagingModel
+
+    for key, label in PACK_DEC:
+        data[key] = f_dec(form, key, errors, label)
+    for key, label in (("case_qty", _("Unidades por caixa")), ("pallet_layer", _("Caixas por camada")),
+                       ("pallet_layers", _("Camadas"))):
+        raw = f_str(form, key, 12)
+        data[key] = None
+        if raw:
+            try:
+                v = int(raw)
+                if v <= 0:
+                    raise ValueError
+                data[key] = v
+            except ValueError:
+                errors.add(key, _("{label}: número inteiro maior que zero.", label=label))
+    mid, pid = f_str(form, "case_model_id", 12), f_str(form, "pallet_type_id", 12)
+    data["case_model_id"] = int(mid) if mid.isdigit() and db.get(PackagingModel, int(mid)) else None
+    data["pallet_type_id"] = int(pid) if pid.isdigit() and db.get(BinType, int(pid)) else None
+    pref = str(form.get("store_pref") or "auto")
+    data["store_pref"] = pref if pref in ("auto", "units", "cases") else "auto"
+    has_case = data["case_model_id"] or any(data.get(k) for k, _l in PACK_DEC[:3])
+    if has_case and not data["case_qty"] and not errors:
+        data["_suggest_qty"] = True  # preenchido ao salvar pelo que cabe
+    elif data["case_qty"] and not has_case:
+        errors.add("case_qty", _("Informe as medidas da caixa (ou um modelo de embalagem)."))
+
+
+def _fill_pack(db: Session, prod) -> list[str]:
+    """Ao salvar: completa o que der pelas medidas (unidades por caixa, caixas por camada e camadas) e devolve os
+    avisos da embalagem."""
+    from models import BinType
+    from services.packaging import case_dims, case_weight, check, fit_in_case, suggest_pallet
+
+    notes = []
+    case = case_dims(prod)
+    unit = tuple(float(v) if v is not None else None for v in (prod.height, prod.width, prod.length))
+    if not prod.case_qty and all(case) and all(unit):
+        n = fit_in_case(unit, None, case)
+        if n:
+            prod.case_qty = n
+            notes.append(_("Unidades por caixa calculadas pelas medidas: {n}.", n=n))
+    pallet = db.get(BinType, prod.pallet_type_id) if prod.pallet_type_id else None
+    if prod.case_qty and pallet is not None and all(case) and not (prod.pallet_layer and prod.pallet_layers):
+        layer, layers = suggest_pallet(case, case_weight(prod), pallet)
+        if layer and layers:
+            prod.pallet_layer = prod.pallet_layer or layer
+            prod.pallet_layers = prod.pallet_layers or layers
+            notes.append(_("Palete calculado pelas medidas: {a} caixas por camada × {b} camadas.", a=prod.pallet_layer,
+                           b=prod.pallet_layers))
+    return notes + check(prod, pallet=pallet)
+
+
+@router.post("/packaging-calc")
+def packaging_calc(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Botão Calcular do cadastro: unidades por caixa e palete pelas medidas (sem salvar) + avisos."""
+    from types import SimpleNamespace
+
+    from models import BinType, PackagingModel
+    from services.file_reader import parse_decimal
+    from services.packaging import case_dims, case_weight, check, fit_in_case, suggest_pallet
+
+    def num(k):
+        try:
+            v = parse_decimal(str(form.get(k) or ""))
+            return v if v is not None and v > 0 else None
+        except ValueError:
+            return None
+
+    def integer(k):
+        v = num(k)
+        return int(v) if v is not None else None
+    mid, pid = str(form.get("case_model_id") or ""), str(form.get("pallet_type_id") or "")
+    model = db.get(PackagingModel, int(mid)) if mid.isdigit() else None
+    pallet = db.get(BinType, int(pid)) if pid.isdigit() else None
+    p = SimpleNamespace(height=num("height"), width=num("width"), length=num("length"), weight=num("weight"),
+                        case_qty=integer("case_qty"), case_height=num("case_height"), case_width=num("case_width"),
+                        case_length=num("case_length"), case_weight=num("case_weight"), case_model=model,
+                        pallet_layer=integer("pallet_layer"), pallet_layers=integer("pallet_layers"))
+    out = {"info": [], "warnings": []}
+    case = case_dims(p, model)
+    unit = (p.height, p.width, p.length)
+    if all(case) and all(v is not None for v in unit):
+        fit = fit_in_case(tuple(float(v) for v in unit), None, tuple(float(v) for v in case))
+        out["info"].append(_("Pelas medidas, cabem até {n} unidades na caixa.", n=fit))
+        if not p.case_qty and fit:
+            out["case_qty"] = p.case_qty = fit
+    if pallet is not None and all(case):
+        if p.case_qty and p.weight and p.case_weight is None:
+            p.case_weight = None
+        layer, layers = suggest_pallet(tuple(float(v) for v in case), case_weight(p, model), pallet)
+        if layer:
+            out["info"].append(_("No palete {code}: {a} caixas por camada × {b} camadas.", code=pallet.code, a=layer, b=layers))
+            out["pallet_layer"], out["pallet_layers"] = layer, layers
+    out["warnings"] = check(p, model, pallet)
+    return out
 
 
 def _policy_rows(db: Session, form: FormData, errors: FormErrors) -> list[dict]:
@@ -338,8 +444,16 @@ def product_places(db: Session, products) -> dict[int, list[dict]]:
 def _form(request: Request, db: Session, product, data, errors, status_code: int = 200):
     from models import Branch
 
+    from models import BinType, PackagingModel
+    from services.packaging import check
+
+    pallets = list(db.scalars(select(BinType).where(BinType.store_as == "pallet").order_by(BinType.code)))
+    warns = check(product, pallet=db.get(BinType, product.pallet_type_id) if product is not None and product.pallet_type_id
+                  else None) if product is not None else []
     return render(request, "products/form.html", status_code=status_code, product=product, data=data, errors=errors,
-                  dim_fields=DIM_FIELDS, branches=list(db.scalars(select(Branch).order_by(Branch.code))))
+                  dim_fields=DIM_FIELDS, branches=list(db.scalars(select(Branch).order_by(Branch.code))),
+                  packaging_models=list(db.scalars(select(PackagingModel).order_by(PackagingModel.code))),
+                  pallet_types=pallets, pack_warnings=warns)
 
 
 @router.get("/new")
@@ -353,13 +467,16 @@ def create_product(request: Request, form: FormData = Depends(form_data), db: Se
     if errors:
         return _form(request, db, None, data, errors, 422)
     rows = data.pop("policies")
+    data.pop("_suggest_qty", None)
     prod = Product(**data)
     db.add(prod)
     db.flush()
+    pack_notes = _fill_pack(db, prod)
     refresh_occupancy(db, _save_policies(db, prod, rows))
     sync_default_locations(db, [prod.id])
     db.commit()
-    return redirect(f"/products/{prod.id}", _("Produto {sku} criado.", sku=prod.sku))
+    return redirect(f"/products/{prod.id}", " ".join([_("Produto {sku} criado.", sku=prod.sku)] + pack_notes),
+                    "warning" if pack_notes else "success")
 
 
 @router.get("/{product_id}")
@@ -390,7 +507,9 @@ def edit_product(product_id: int, request: Request, db: Session = Depends(get_db
     if not prod:
         return redirect("/products", _("Produto não encontrado."), "danger")
     data = {k: getattr(prod, k) for k in ("sku", "name", "material_type", "storage_condition", "height", "width", "length",
-                                          "weight")}
+                                          "weight", "case_qty", "case_model_id", "case_height", "case_width",
+                                          "case_length", "case_weight", "pallet_type_id", "pallet_layer",
+                                          "pallet_layers", "store_pref")}
     data["policies"] = _policy_form_rows(db, prod)
     return _form(request, db, prod, data, {})
 
@@ -404,15 +523,18 @@ def update_product(product_id: int, request: Request, form: FormData = Depends(f
     if errors:
         return _form(request, db, prod, data, errors, 422)
     rows = data.pop("policies")
+    data.pop("_suggest_qty", None)
     for k, v in data.items():
         setattr(prod, k, v)
     db.flush()
+    pack_notes = _fill_pack(db, prod)
     refresh_occupancy(db, _save_policies(db, prod, rows))
     if sync_default_locations(db, [prod.id]):
         db.commit()
         return redirect(f"/products/{prod.id}", _("Produto {sku} atualizado. Em filial(is) onde ele tem saldo, o endereço padrão é o endereço onde o produto está (o de maior saldo, se o escolhido não tinha saldo).", sku=prod.sku), "warning")
     db.commit()
-    return redirect(f"/products/{prod.id}", _("Produto {sku} atualizado.", sku=prod.sku))
+    return redirect(f"/products/{prod.id}", " ".join([_("Produto {sku} atualizado.", sku=prod.sku)] + pack_notes),
+                    "warning" if pack_notes else "success")
 
 
 @router.post("/{product_id}/delete")

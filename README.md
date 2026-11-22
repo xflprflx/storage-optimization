@@ -878,6 +878,44 @@ sobe acima da borda. A bin continua com as próprias medidas para o encaixe no n
 Importação: as colunas opcionais *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* entram na importação de
 tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo marca a bin como aberta).
 
+## 6.0.12 Unitização: unidades, caixas e palete fechado
+
+**Por tipo de bin — Armazena em** (cadastro e importação de tipos de bin, coluna *Armazena em*):
+
+| Valor | Como a capacidade conta |
+|---|---|
+| **Unidades soltas** (padrão) | o arranjo das unidades; um produto marcado *Sempre na caixa* não vai para essa bin |
+| **Caixas do produto** | caixas inteiras × unidades por caixa (o encaixe é feito com as medidas da caixa) |
+| **Unidades ou caixas** | caixas inteiras + o resto solto; a caixa aberta ocupa o espaço de uma caixa inteira (conta como caixa cheia) |
+| **Palete fechado** | caixas por camada (lastro) × camadas, limitadas pelo vão do nível e pelo peso máximo |
+
+Produto sem caixa cadastrada fica em unidades em qualquer tipo.
+
+**Por produto — Embalagem (unitização)** no cadastro de produtos: unidades por caixa, modelo de embalagem
+(opcional), medidas e peso da caixa cheia, *Guardar nas bins de unidades ou caixas* (Automático / Sempre em unidades
+soltas / Sempre na caixa), palete (um tipo de bin com *Armazena em = Palete fechado*), caixas por camada e camadas.
+
+**Modelos de embalagem** (Cadastros → Modelos de embalagem, `/packaging-models`): caixas-padrão com medidas externas e
+tara, usadas por vários produtos. As medidas do modelo valem quando o produto não tem medidas próprias da caixa; o peso
+da caixa cheia, quando vazio, é unidades × peso da unidade + tara. Um modelo em uso não pode ser excluído.
+
+**Quantidades: cadastradas, validadas e sugeridas.** As quantidades são do usuário (o fornecedor define), mas o sistema:
+- **sugere** quando vazias (botão *Calcular* no formulário, ao salvar e na importação): o máximo de unidades que cabe na
+  caixa pelas medidas; o lastro pelo encaixe das caixas na base do palete; as camadas pela altura máxima de carga
+  (*Máximo acima da borda* do palete ou 150 cm) e pelo peso máximo do palete;
+- **avisa** quando as unidades informadas não cabem na caixa, quando o lastro não cabe na base do palete ou quando a
+  caixa não tem medidas.
+
+Em porta-palete, só contam as camadas que cabem no vão do nível. O desenho da bin (Arranjo das unidades) mostra as
+caixas ("caixas de 12 un.") quando a bin armazena caixas ou palete.
+
+**Importação de produtos:** colunas opcionais *Unidades por caixa*, *Modelo de embalagem* (código), *Altura/Largura/
+Comprimento da caixa*, *Peso da caixa cheia*, *Palete* (código do tipo de bin), *Caixas por camada*, *Camadas* e
+*Guardar em* (automático/unidades/caixa).
+
+Limitações: a planilha de SKUs do projeto de filial nova usa a embalagem do cadastro de produtos (sem colunas próprias);
+o palete fechado não é forçado a ter um único SKU.
+
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 
 A posição dos SKUs pela saída também vale para as filiais existentes: é a etapa **Posição pela saída** nas telas *Por endereço* e *Pool*.

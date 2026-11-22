@@ -22,6 +22,11 @@
         <dt class="col-5">{{ _("Comprimento") }}</dt><dd class="col-7">{{ product.dimensions.length|dec or '—' }}</dd>
         <dt class="col-5">{{ _("Volume") }}</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
         <dt class="col-5">{{ _("Peso") }}</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
+        {% if product.case_qty %}
+        <dt class="col-5">{{ _("Caixa") }}</dt><dd class="col-7">{{ _h("{n} un.", n=product.case_qty) }}{% if product.case_model %} · <span class="mono">{{ product.case_model.code }}</span>{% endif %}
+          {% if product.case_height %} · {{ product.case_height|dec }} × {{ product.case_width|dec }} × {{ product.case_length|dec }} cm{% endif %}</dd>
+        {% if product.pallet_layer and product.pallet_layers %}<dt class="col-5">{{ _("Palete") }}</dt><dd class="col-7">{{ _h("{a} caixas por camada × {b} camadas = {n} un.", a=product.pallet_layer, b=product.pallet_layers, n=product.pallet_layer * product.pallet_layers * product.case_qty) }}</dd>{% endif %}
+        {% endif %}
         <dt class="col-5">{{ _("Saldo total") }}</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>
       </dl>
     </div></div>

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% block title %}{{ _("Modelos de embalagem") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-box2"></i> {{ _("Modelos de embalagem") }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/products" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> {{ _("Produtos") }}</a>
+    <a href="/packaging-models/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo modelo") }}</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">{{ _("Caixas padrão usadas por vários produtos: só as medidas externas e a tara. No cadastro do produto (Embalagem), escolha o modelo e informe quantas unidades vão na caixa; as medidas do modelo valem quando o produto não tem medidas de caixa próprias.") }}</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por código ou nome") }}"></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>{{ th(request, sort, 'code', _('Código')) }}{{ th(request, sort, 'name', _('Nome')) }}
+        <th class="text-end">{{ _("Altura") }}</th><th class="text-end">{{ _("Largura") }}</th><th class="text-end">{{ _("Comprimento") }}</th>
+        <th class="text-end">{{ _("Tara (kg)") }}</th><th class="text-end">{{ _("Produtos") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th></tr></thead>
+      <tbody>
+      {% for m in page.items %}
+        <tr>
+          <td class="mono fw-semibold">{{ m.code }}</td>
+          <td>{{ m.name }}{% if m.notes %}<div class="small text-muted">{{ m.notes }}</div>{% endif %}</td>
+          <td class="text-end">{{ m.height|dec }}</td><td class="text-end">{{ m.width|dec }}</td><td class="text-end">{{ m.length|dec }}</td>
+          <td class="text-end">{{ m.tare|dec(3) if m.tare is not none else '' }}</td>
+          <td class="text-end">{{ usage.get(m.id) or '' }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/packaging-models/{{ m.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/packaging-models/' ~ m.id ~ '/delete', '', _('Excluir o modelo de embalagem ') ~ m.code ~ '?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">{{ _("Nenhum modelo de embalagem cadastrado.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

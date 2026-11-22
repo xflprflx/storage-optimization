@@ -153,7 +153,7 @@ def _add_missing_columns(conn) -> None:
                      ("fraction_den", "INTEGER"), ("split_axis", "VARCHAR(10) NOT NULL DEFAULT 'width'"),
                      ("dims_auto", "BOOLEAN NOT NULL DEFAULT 0"), ("div_w", "INTEGER"), ("div_l", "INTEGER"),
                      ("cost", "BIGINT"), ("open_top", "BOOLEAN NOT NULL DEFAULT 0"), ("over_cm", "BIGINT"),
-                     ("allow_split", "BOOLEAN NOT NULL DEFAULT 0")):
+                     ("allow_split", "BOOLEAN NOT NULL DEFAULT 0"), ("store_as", "VARCHAR(10) NOT NULL DEFAULT 'units'")):
         if "bin_types" in tables and col not in btcols:
             conn.execute(text(f"ALTER TABLE bin_types ADD COLUMN {col} {ddl}"))
     if "bin_types" in tables and "div_w" not in btcols:
@@ -196,6 +196,13 @@ def _add_missing_columns(conn) -> None:
                      ("door_angle", "INTEGER NOT NULL DEFAULT 90"), ("door_time_s", "BIGINT")):  # porta e condição
         if "structure_kinds" in tables and col not in kcols:
             conn.execute(text(f"ALTER TABLE structure_kinds ADD COLUMN {col} {ddl}"))
+    pc2 = {c["name"] for c in insp.get_columns("products")} if "products" in tables else set()
+    for col, ddl in (("case_qty", "INTEGER"), ("case_model_id", "INTEGER REFERENCES packaging_models(id)"),
+                     ("case_height", "BIGINT"), ("case_width", "BIGINT"), ("case_length", "BIGINT"), ("case_weight", "BIGINT"),
+                     ("pallet_type_id", "INTEGER REFERENCES bin_types(id)"), ("pallet_layer", "INTEGER"),
+                     ("pallet_layers", "INTEGER"), ("store_pref", "VARCHAR(10) NOT NULL DEFAULT 'auto'")):
+        if "products" in tables and pc2 and col not in pc2:  # embalagem (unitização)
+            conn.execute(text(f"ALTER TABLE products ADD COLUMN {col} {ddl}"))
     if "products" in tables and "storage_condition" not in {c["name"] for c in insp.get_columns("products")}:
         conn.execute(text("ALTER TABLE products ADD COLUMN storage_condition VARCHAR(20) NOT NULL DEFAULT ''"))
     if "structure_types" in tables and "kind_id" not in stcols:  # tipo de estrutura cadastrado

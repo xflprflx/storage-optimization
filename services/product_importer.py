@@ -50,9 +50,25 @@ PRODUCT_FIELDS: dict[str, tuple[str, bool, tuple[str, ...]]] = {
         ("armazem", "armazém", "deposito", "depósito", "codarmazem", "warehouse", "local estoque"),
     ),
     "location": (N_("Endereço padrão"), False, ("endereco", "endereço", "posicao", "posição", "location", "localizacao")),
+    # embalagem (unitização) — opcionais
+    "case_qty": (N_("Unidades por caixa"), False, ("unidadesporcaixa", "unporcaixa", "qtdcaixa", "qtdporcaixa", "embalagem",
+                                                  "caseqty", "unitspercase", "multiplo", "múltiplo")),
+    "case_model": (N_("Modelo de embalagem"), False, ("modelodeembalagem", "modeloembalagem", "caixapadrao", "casemodel")),
+    "case_height": (N_("Altura da caixa"), False, ("alturadacaixa", "alturacaixa", "caseheight")),
+    "case_width": (N_("Largura da caixa"), False, ("larguradacaixa", "larguracaixa", "casewidth")),
+    "case_length": (N_("Comprimento da caixa"), False, ("comprimentodacaixa", "comprimentocaixa", "caselength")),
+    "case_weight": (N_("Peso da caixa cheia"), False, ("pesodacaixa", "pesocaixa", "pesodacaixacheia", "caseweight")),
+    "pallet_type": (N_("Palete (tipo de bin)"), False, ("palete", "tipodepalete", "pallet", "pallettype")),
+    "pallet_layer": (N_("Caixas por camada"), False, ("caixasporcamada", "lastro", "casesperlayer", "ti")),
+    "pallet_layers": (N_("Camadas"), False, ("camadas", "layers", "hi", "alturadopalete")),
+    "store_pref": (N_("Guardar em (automático/unidades/caixa)"), False, ("guardarem", "storepref", "guardar")),
 }
-DECIMAL_FIELDS = ("height", "width", "length", "weight", "min_level", "max_level")
-PRODUCT_DECIMALS = ("height", "width", "length", "weight")  # cadastro único do produto (todas as filiais)
+DECIMAL_FIELDS = ("height", "width", "length", "weight", "min_level", "max_level", "case_height", "case_width",
+                  "case_length", "case_weight")
+PRODUCT_DECIMALS = ("height", "width", "length", "weight", "case_height", "case_width", "case_length", "case_weight")
+INT_FIELDS = ("case_qty", "pallet_layer", "pallet_layers")
+PREF_WORDS = {"units": ("unidade", "unit", "solta", "un"), "cases": ("caixa", "case", "box", "caja"),
+              "auto": ("auto", "automatico", "automático")}
 POLICY_DECIMALS = ("min_level", "max_level")  # política de estoque do produto na filial
 
 
@@ -125,6 +141,21 @@ def _parse_row(line: int, row: list[str], mapping: dict[str, Optional[int]], opt
         opts.default_warehouse_code
     )
     data["location"] = normalize_code(get_cell(row, mapping.get("location")))
+    for f in INT_FIELDS:  # embalagem: inteiros
+        raw = get_cell(row, mapping.get(f)).strip()
+        try:
+            v = parse_decimal(raw) if raw else None
+        except ValueError:
+            raise ValueError(_("{v} inválido(a): {raw}", v=PRODUCT_FIELDS[f][0], raw=f"{raw!r}"))
+        if v is not None and (v <= 0 or v != int(v)):
+            raise ValueError(_("{v}: número inteiro maior que zero", v=PRODUCT_FIELDS[f][0]))
+        data[f] = int(v) if v is not None else None
+    data["case_model"] = normalize_code(get_cell(row, mapping.get("case_model")))
+    data["pallet_type"] = normalize_code(get_cell(row, mapping.get("pallet_type")))
+    pref = get_cell(row, mapping.get("store_pref")).strip().casefold()
+    data["store_pref"] = next((k for k, ws in PREF_WORDS.items() if any(pref.startswith(w) for w in ws)), None) if pref else None
+    if pref and data["store_pref"] is None:
+        raise ValueError(_("Guardar em inválido: {raw} (use automático, unidades ou caixa)", raw=pref))
     return data
 
 
@@ -222,12 +253,34 @@ def _process_chunk(
     products: dict[str, Product] = {sku: by_id[pid] for sku, pid in sku_ids.items() if pid in by_id}
     existing_skus = set(products.keys())
     updated_skus: set[str] = set()
+    from models import BinType, PackagingModel
+
+    pack_models = {m.code: m.id for m in db.scalars(select(PackagingModel))}
+    pallet_codes = {b.code: b.id for b in db.scalars(select(BinType))}
+
+    def pack(prod, p):  # embalagem (unitização): só os campos preenchidos
+        for f in INT_FIELDS:
+            if p.get(f) is not None:
+                setattr(prod, f, p[f])
+        if p.get("store_pref"):
+            prod.store_pref = p["store_pref"]
+        if p.get("case_model"):
+            if p["case_model"] in pack_models:
+                prod.case_model_id = pack_models[p["case_model"]]
+            else:
+                result.warn(p["line"], _("Modelo de embalagem {code} não cadastrado (ignorado).", code=p["case_model"]))
+        if p.get("pallet_type"):
+            if p["pallet_type"] in pallet_codes:
+                prod.pallet_type_id = pallet_codes[p["pallet_type"]]
+            else:
+                result.warn(p["line"], _("Palete {code} não cadastrado nos tipos de bin (ignorado).", code=p["pallet_type"]))
     for p in parsed:
         prod = products.get(p["sku"])
         if prod is None:
             prod = Product(sku=p["sku"], name=p["name"] or p["sku"], material_type=materials(p["material_type"]))
             for f in PRODUCT_DECIMALS:
                 setattr(prod, f, p[f])
+            pack(prod, p)
             db.add(prod)
             products[p["sku"]] = prod
             result.products_created += 1
@@ -239,6 +292,7 @@ def _process_chunk(
             for f in PRODUCT_DECIMALS:
                 if p[f] is not None:
                     setattr(prod, f, p[f])
+            pack(prod, p)
             if p["sku"] not in updated_skus:
                 updated_skus.add(p["sku"])
                 result.products_updated += 1
@@ -251,7 +305,29 @@ def _process_chunk(
             for f in PRODUCT_DECIMALS:
                 if p[f] is not None:
                     setattr(prod, f, p[f])
+            pack(prod, p)
     db.flush()
+    # embalagem: o que dá para calcular pelas medidas (unidades por caixa, palete) e os avisos
+    from services.packaging import case_dims, case_weight, check, fit_in_case, suggest_pallet
+
+    pallets = {b.id: b for b in db.scalars(select(BinType))}
+    lines = {p["sku"]: p["line"] for p in parsed}
+    for sku, prod in products.items():
+        if sku not in lines or not (prod.case_qty or prod.case_model_id or prod.case_height):
+            continue
+        case = case_dims(prod)
+        unit = tuple(float(v) if v is not None else None for v in (prod.height, prod.width, prod.length))
+        if not prod.case_qty and all(case) and all(unit):
+            prod.case_qty = fit_in_case(unit, None, case) or None
+            if prod.case_qty:
+                result.warn(lines[sku], _("Unidades por caixa calculadas pelas medidas: {n}.", n=prod.case_qty))
+        pal = pallets.get(prod.pallet_type_id) if prod.pallet_type_id else None
+        if prod.case_qty and pal is not None and all(case) and not (prod.pallet_layer and prod.pallet_layers):
+            layer, layers = suggest_pallet(case, case_weight(prod), pal)
+            if layer and layers:
+                prod.pallet_layer, prod.pallet_layers = prod.pallet_layer or layer, prod.pallet_layers or layers
+        for w in check(prod, pallet=pal):
+            result.warn(lines[sku], f"{sku}: {w}")
 
     # 3) Endereço padrão (filial/armazém, se informados, indicam o depósito do endereço)
     for p in parsed:

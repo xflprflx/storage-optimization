@@ -145,16 +145,28 @@ flowchart LR
 - **Níveis e Capacidade**: Níveis têm restrição de quantidade de Bins e vão livre. Nas estantes com estrutura, a capacidade é calculada pelas medidas (ver 7.1). Excesso de Bins em um endereço aloca os itens no "nível dedicado" acima.
 - **Mapa (Layout)**: O sistema traça uma elevação frontal visual, em escala, dos corredores, com destaque por ocupação e links em 3D.
 - **Compartimentos**: Bins que são divisões de uma Bin maior (ex: 1/6 de uma caixa).
-- **Fracionar a bin pai na otimização**: no cadastro do compartimento (onde se escolhe a bin pai) e na importação
-  de tipos de bin (coluna *Permite fracionar a bin pai*, sim/não), a opção **Permitir fracionar a bin pai na
-  otimização**. Na otimização **Por endereço** com bins **Existentes**, a bin pai e esses compartimentos dividem o
-  mesmo estoque: uma bin pai que sobra no escopo pode virar compartimentos (1 bin pai = compartimentos por pai,
-  colocando a divisória). O otimizador fraciona o mínimo de bins pai necessário — a heurística e o CP-SAT (como último
-  desempate). O resultado mostra *Bins pai fracionadas* (quantas bins pai, quantos compartimentos e os que sobram
-  vazios), e o plano de ação começa com o passo **Fracionar**. Aplicar só alguns endereços puxa junto os que liberam a
-  bin pai. Sem a opção, a bin pai nunca vira esse compartimento. O caminho inverso (juntar compartimentos numa bin pai)
-  não é feito: os compartimentos livres podem ser de bins pai diferentes. No Pool as bins ficam fixas (não se aplica);
-  com Recurso infinito, os compartimentos já podem ser usados à vontade.
+- **Fracionar e juntar a bin pai na otimização** (`services/bin_family.py`, `services/pool_family.py`): no cadastro do
+  compartimento (onde se escolhe a bin pai) e na importação de tipos de bin (coluna *Permite fracionar a bin pai*,
+  sim/não), a opção **Permitir fracionar a bin pai na otimização**. Com bins **Existentes**, a bin pai e esses
+  compartimentos são a mesma caixa, com ou sem a divisória: a bin pai pode virar compartimentos (**fracionar**) e os
+  compartimentos de uma mesma bin pai podem voltar a ser a bin pai inteira (**juntar**). Sem a opção, nada muda de forma.
+  - **Por endereço**: a família é contada em bins pai — cada endereço usa as bins pai inteiras + ⌈n/k⌉ por tipo de
+    compartimento (n compartimentos de k por bin pai), e o total não passa do que existe no escopo. Isso faz as irmãs
+    ficarem na mesma bin pai (meia bin sozinha num endereço gasta uma bin pai). Heurística e CP-SAT (o mínimo de bins
+    pai divididas é o último desempate). O resultado mostra quantas bins pai fracionar e quantas juntar, e os
+    compartimentos que ficam vazios; o plano de ação começa com os passos **Fracionar** / **Juntar**. Aplicar só alguns
+    endereços puxa junto os que liberam a bin pai.
+  - **Pool** (as bins ficam no lugar, só mudam de forma): os compartimentos de um tipo, no mesmo endereço e nível,
+    formam grupos de k (cada grupo é uma bin pai). Na escolha das bins, depois da zona de ouro e da caminhada, vale o
+    compartimento de uma bin pai já usada (com a posição pela saída, ele ganha até ≈ 1 m de tolerância). Depois do
+    plano, o Pool **consolida**: tenta esvaziar as bins pai divididas menos usadas, levando o conteúdo para compartimentos
+    vazios de outras já usadas — só se a caminhada não piora mais que 1 m, não sai da zona de ouro da pega e o SKU
+    continua num endereço só (quando não pode dividir). Cada bin pai dividida que fica vazia é **juntada** (volta a
+    ser a bin pai inteira). Quando falta bin para algum SKU, **fraciona** bins pai que guardam pouco (o conteúdo cabe
+    num compartimento) ou junta compartimentos vazios para quem só cabe na bin pai, e roda de novo. Aplicar grava as
+    bins de cada endereço (LocationBin), renumera e grava o conteúdo; o plano de ação tem **Fracionar** antes das
+    movimentações e **Juntar** depois.
+  - No Recurso infinito, não se aplica (os compartimentos já podem ser usados à vontade).
 
 ---
 

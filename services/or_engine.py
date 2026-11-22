@@ -660,18 +660,39 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
             for t, n in (a.current or {}).items():
                 budget[t] = budget.get(t, 0) + n
         tset = set(budget) | {t for _x, opts, _x in entries for o in opts for t in o[0]}
-        # fracionamento: s[t] bins pai viram compartimentos t (k cada); saem do estoque da bin pai
-        splits = {t: pk for t, pk in (getattr(prm, "splits", None) or {}).items() if t in tset and budget.get(pk[0], 0) > 0}
-        svar = {t: m.NewIntVar(0, budget.get(p, 0), "") for t, (p, _k) in splits.items()}
-        for t in tset:
+        from services.bin_family import ceil_div, family_stock, family_types, parents_of
+
+        splits = getattr(prm, "splits", None) or {}
+        ftypes = family_types(splits)
+        for t in tset:  # tipos comuns: o total de cada tipo
+            if t in ftypes:
+                continue
             fixed_n = sum(cfg.get(t, 0) for cfg in fixed.values())
             expr = sum(xo * o[0].get(t, 0) for a, opts, _x in entries for xo, o in zip(x[a.id], opts))
             slack = m.NewIntVar(0, 100000, "")
             pen.append(slack)
-            gained = svar[t] * splits[t][1] if t in svar else 0
-            lost = sum(v for c, v in svar.items() if splits[c][0] == t)
-            m.Add(expr + fixed_n + lost <= budget.get(t, 0) + gained + slack)
-        split_total = sum(svar.values()) if svar else None
+            m.Add(expr + fixed_n <= budget.get(t, 0) + slack)
+        # família bin pai + compartimentos fracionáveis: em bins pai — cada endereço usa ⌈n/k⌉ bins pai por tipo de
+        # compartimento (g ≥ n/k); fracionar e juntar são a mesma bin mudando de forma
+        gvars = []
+        fstock = family_stock([a.current or {} for a in addresses], splits, getattr(prm, "extra_inventory", None))
+        for p, kids in parents_of(splits).items():
+            terms = []
+            for a, opts, _x in entries:
+                terms.append(sum(xo * o[0].get(p, 0) for xo, o in zip(x[a.id], opts)))
+                for t, k in kids:
+                    hi = max([o[0].get(t, 0) for o in opts] or [0])
+                    if hi <= 0:
+                        continue
+                    g = m.NewIntVar(0, ceil_div(hi, k), "")
+                    m.Add(g * k >= sum(xo * o[0].get(t, 0) for xo, o in zip(x[a.id], opts)))
+                    terms.append(g)
+                    gvars.append(g)
+            fixed_n = sum(cfg.get(p, 0) + sum(ceil_div(cfg.get(t, 0), k) for t, k in kids) for cfg in fixed.values())
+            slack = m.NewIntVar(0, 100000, "")
+            pen.append(slack)
+            m.Add(sum(terms) + fixed_n <= fstock.get(p, 0) + slack)
+        split_total = sum(gvars) if gvars else None
     else:
         split_total = None
 
@@ -690,7 +711,7 @@ def solve_addresses(addresses, types: dict[int, BinSpec], prm, ledger=None):
     if own_extra:
         stages.append(("levels", sum(own_extra)))  # desempate: preferir o próprio nível
     if split_total is not None:
-        stages.append(("splits", split_total))  # desempate: fracionar o mínimo de bins pai
+        stages.append(("splits", split_total))  # desempate: o mínimo de bins pai divididas (irmãs juntas)
 
     # 5) dica = heurística
     for a, opts, slots in entries:

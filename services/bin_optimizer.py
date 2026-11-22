@@ -889,25 +889,6 @@ def _after(r: AddressResult) -> dict[int, int]:
     return dict(r.suggested or {}) if (r.applicable and r.status != "ok") or r.status == "liberar" else dict(r.current or {})
 
 
-def split_budget(budget: dict, used: dict, splits: Optional[dict]) -> tuple[dict, dict]:
-    """Estoque efetivo com o fracionamento das bins pai: para cada compartimento com "permitir fracionar" que passa do
-    que existe, fraciona bins pai que sobram (1 bin pai = k compartimentos). Retorna (estoque efetivo, {compartimento:
-    bins pai fracionadas})."""
-    eff, plan = dict(budget), {}
-    if not splits:
-        return eff, plan
-    deficit = {t: used.get(t, 0) - eff.get(t, 0) for t in splits}
-    for t in sorted((t for t, d in deficit.items() if d > 0), key=lambda t: -deficit[t]):
-        p, k = splits[t]
-        spare = eff.get(p, 0) - used.get(p, 0)
-        take = min(-(-deficit[t] // k), max(0, spare))
-        if take > 0:
-            eff[t] = eff.get(t, 0) + take * k
-            eff[p] = eff.get(p, 0) - take
-            plan[t] = take
-    return eff, plan
-
-
 def inventory_budget(results: list, prm: Params) -> dict:
     """Bins de cada tipo disponíveis ao plano (bins existentes): as do escopo + as de outros endereços (foco)."""
     budget: dict[int, int] = dict(prm.extra_inventory or {})
@@ -918,22 +899,13 @@ def inventory_budget(results: list, prm: Params) -> dict:
 
 
 def split_report(results: list, prm: Params) -> list:
-    """Bins pai a fracionar no plano final: [{"parent", "child", "parents", "made", "spare"}] (spare = compartimentos
-    que sobram vazios)."""
+    """Bins pai a fracionar ou a juntar no plano final (família bin pai + compartimentos fracionáveis): ver
+    services/bin_family.report."""
     if not (prm.limit_inventory and prm.splits):
         return []
-    used: dict[int, int] = {}
-    for r in results:
-        for t, n in _after(r).items():
-            used[t] = used.get(t, 0) + n
-    budget = inventory_budget(results, prm)
-    _eff, plan = split_budget(budget, used, prm.splits)
-    out = []
-    for t, n in sorted(plan.items()):
-        p, k = prm.splits[t]
-        need = used.get(t, 0) - budget.get(t, 0)
-        out.append({"parent": p, "child": t, "parents": n, "made": n * k, "spare": n * k - need, "k": k})
-    return out
+    from services.bin_family import report
+
+    return report([dict(r.current or {}) for r in results], [_after(r) for r in results], prm.splits)
 
 
 def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], types: dict[int, BinSpec], prm: Params,
@@ -953,10 +925,24 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
                 u[t] = u.get(t, 0) + n
         return u
 
-    while True:
+    from services.bin_family import family_stock, family_types, parent_units, parents_of
+
+    fam = parents_of(prm.splits)
+    ftypes = family_types(prm.splits)
+    fstock = family_stock([r.current or {} for r in results], prm.splits, prm.extra_inventory)
+
+    def over_types() -> list:
+        """Tipos que passam do estoque: por tipo, ou (família) em bins pai — fracionar e juntar são livres."""
         u = used()
-        eff, _plan = split_budget(budget, u, prm.splits)  # bins pai sobrando podem virar compartimentos
-        over = [t for t, n in u.items() if n > eff.get(t, 0)]
+        out = [t for t, n in u.items() if t not in ftypes and n > budget.get(t, 0)]
+        afters = [_after(r) for r in results]
+        for p, kids in fam.items():
+            if parent_units(afters, p, kids) > fstock.get(p, 0):
+                out += [p] + [t for t, _k in kids]
+        return out
+
+    while True:
+        over = over_types()
         if not over:
             return
         prio = {"corrigir": 0, "melhoria": 1}
@@ -966,8 +952,7 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
             # ainda passa do estoque (uma melhoria ficou com o que outra devolveria): desfaz melhorias que ganham o tipo
             for t in over:
                 for j in sorted(range(len(results)), key=lambda j: results[j].address):
-                    uu = used()
-                    if uu.get(t, 0) <= split_budget(budget, uu, prm.splits)[0].get(t, 0):
+                    if t not in over_types():
                         break
                     o = results[j]
                     if o.status == "melhoria" and _after(o).get(t, 0) > (o.current or {}).get(t, 0):
@@ -986,19 +971,22 @@ def _limit_inventory(addresses: list[AddressIn], results: list[AddressResult], t
         r, a = results[i], by_id[results[i].id]
         done.add(r.id)
         others: dict[int, int] = {}
+        o_cfgs = []
         for j, o in enumerate(results):
             if j == i:
                 continue
             oa = _after(o)
             if o.status == "melhoria" and o.id not in done:  # melhoria ainda não decidida: pode abrir mão do ganho
                 oa = {t: min(n, (o.current or {}).get(t, 0)) for t, n in oa.items()}
+            o_cfgs.append(oa)
             for t, n in oa.items():
                 others[t] = others.get(t, 0) + n
-        eff_o, _p = split_budget(budget, others, prm.splits)
-        limits = {t: max(eff_o.get(t, 0) - others.get(t, 0), 0) for t in set(budget) | set(types)}
-        for t, (p, k) in (prm.splits or {}).items():  # o que sobra da bin pai ainda pode virar compartimentos
-            if t in limits:
-                limits[t] += k * max(0, eff_o.get(p, 0) - others.get(p, 0))
+        limits = {t: max(budget.get(t, 0) - others.get(t, 0), 0) for t in set(budget) | set(types)}
+        for p, kids in fam.items():  # família: o que sobra em bins pai serve inteiro ou fracionado
+            spare = max(0, fstock.get(p, 0) - parent_units(o_cfgs, p, kids))
+            limits[p] = spare
+            for t, k in kids:
+                limits[t] = spare * k
         if ledger is not None and r.applicable and r.placement is not None:
             ledger.commit(r.placement, a.current_placement)  # desfaz a sugestão antes de refazer
         nr = optimize_address(a, types, prm, ledger, limits)

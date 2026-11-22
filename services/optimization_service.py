@@ -244,7 +244,8 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
 def inventory_closure(results, only: set, splits: Optional[dict] = None) -> set:
     """Bins existentes: aplicando só alguns endereços, o total de cada tipo não pode passar do que existe no escopo.
     Endereços que ganham bins de um tipo puxam junto os que liberam bins desse tipo (doadores), até fechar a conta."""
-    from services.bin_optimizer import _after, split_budget
+    from services.bin_family import family_stock, family_types, parent_units, parents_of
+    from services.bin_optimizer import _after
 
     sel = {r.id for r in results if r.id in only and r.applicable}
     budget: dict[int, int] = {}
@@ -252,17 +253,22 @@ def inventory_closure(results, only: set, splits: Optional[dict] = None) -> set:
         for t, n in (r.current or {}).items():
             budget[t] = budget.get(t, 0) + n
     donors = sorted((r for r in results if r.applicable and r.id not in sel), key=lambda r: r.address)
+    fam, ftypes = parents_of(splits), family_types(splits)
+    fstock = family_stock([r.current or {} for r in results], splits)
     while True:
         tot: dict[int, int] = {}
+        cfgs = []
         for r in results:
-            for t, n in (_after(r) if r.id in sel else dict(r.current or {})).items():
+            cfg = _after(r) if r.id in sel else dict(r.current or {})
+            cfgs.append(cfg)
+            for t, n in cfg.items():
                 tot[t] = tot.get(t, 0) + n
-        eff, _p = split_budget(budget, tot, splits)  # bins pai que sobram podem virar compartimentos
-        over = [t for t, n in tot.items() if n > eff.get(t, 0)]
+        over = [t for t, n in tot.items() if t not in ftypes and n > budget.get(t, 0)]
+        for p, kids in fam.items():  # família: contada em bins pai (fracionar e juntar são livres)
+            if parent_units(cfgs, p, kids) > fstock.get(p, 0):
+                over += [p] + [t for t, _k in kids]
         if not over:
             return sel
-        # quem libera o tipo que falta ou, para um compartimento fracionável, a bin pai dele
-        over += [splits[t][0] for t in over if splits and t in splits]
         d = next((r for r in donors if r.id not in sel
                   and any(_after(r).get(t, 0) < (r.current or {}).get(t, 0) for t in over)), None)
         if d is None:

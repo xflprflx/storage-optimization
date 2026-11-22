@@ -127,15 +127,20 @@ def build_address_plan(results, summary, types, scope: list, params: list, conte
         Kpi(_("Endereços com ação"), None, changed, "", True),
     ]
     n = 0
-    for sp in getattr(s, "splits", None) or []:  # bins pai que sobram viram compartimentos: antes de distribuir
-        n += 1
+    for sp in getattr(s, "splits", None) or []:  # bin pai <-> compartimentos: antes de distribuir as bins
         pc = types[sp["parent"]].code if sp["parent"] in types else str(sp["parent"])
         cc = types[sp["child"]].code if sp["child"] in types else str(sp["child"])
-        plan.steps.append(Step(n, _("Preparar"), _("Fracionar"), _("bins pai que sobram"),
-                               _("Fracionar {n}× {parent} em {made}× {child} (colocar a divisória){spare}", n=sp["parents"],
-                                 parent=pc, made=sp["made"], child=cc,
-                                 spare=_(" — sobram {n} compartimento(s) vazio(s)", n=sp["spare"]) if sp["spare"] else ""),
-                               "", f"{sp['parents']}× {pc}", "change"))
+        if sp["split"]:
+            n += 1
+            plan.steps.append(Step(n, _("Preparar"), _("Fracionar"), _("bins pai que sobram"),
+                                   _("Fracionar {n}× {parent} em {made}× {child} (colocar a divisória)", n=sp["split"],
+                                     parent=pc, made=sp["split"] * sp["k"], child=cc), "", f"{sp['split']}× {pc}", "change"))
+        if sp["join"]:
+            n += 1
+            plan.steps.append(Step(n, _("Preparar"), _("Juntar"), _("compartimentos que sobram"),
+                                   _("Juntar {made}× {child} em {n}× {parent} conforme forem retirados dos endereços (tirar a "
+                                     "divisória: os compartimentos de uma mesma bin pai)", n=sp["join"], parent=pc, made=sp["join"] * sp["k"], child=cc),
+                                   "", f"{sp['join'] * sp['k']}× {cc}", "change"))
     for r in act:
         aisle = r.address.split("-")[0]
         before_lv = _placement_by_level(r.current_placement, r.own_level) if r.current_placement else {"": dict(r.current)}
@@ -332,6 +337,13 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
                                    _("{sku}: retirar {fmt} un. da bin — fica fora de bin no endereço (órfão, sem destino no plano: tratar à mão)", sku=sku, fmt=_fmt(q)), _("fora de bin"), _fmt(q), "remove"))
         if orphans:
             plan.warnings.append(_("{len} item(ns) ficam órfãos (fora de bin) para liberar bins aos itens filtrados.", len=len(orphans)))
+        ops = [op for r in results for op in (r.reshape or [])]
+        lvl = lambda op: op["address"] + (_(" (nível {level})", level=op["level"]) if op["level"] else "")  # noqa: E731
+        for op in [o for o in ops if o["kind"] == "split"]:  # a divisória antes de guardar nos compartimentos
+            n += 1
+            plan.steps.append(Step(n, _("Preparar"), _("Fracionar"), lvl(op),
+                                   _("Colocar a divisória: 1× {parent} vira {k}× {child}", parent=code(op["parent"]),
+                                     k=op["k"], child=code(op["child"])), "", f"1× {code(op['parent'])}", "change"))
         for item in seq:
             mv, leg = item["move"], item["leg"]
             src = f"{addr(mv.src_loc)} · {tag(mv.src_bin)}"
@@ -365,6 +377,11 @@ def build_pool_plan(results, locs, types, scope: list, params: list, unlimited: 
                             _("Passa pela área de espera"), _("Destino no momento do passo")]
         if n_staged:
             plan.warnings.append(_("{n_staged} movimentação(ões) formam trocas circulares e passam pela {staging}.", n_staged=n_staged, staging=staging))
+        for op in [o for o in ops if o["kind"] == "join"]:  # depois das movimentações: os compartimentos já vazios
+            n += 1
+            plan.steps.append(Step(n, _("Finalizar"), _("Juntar"), lvl(op),
+                                   _("Tirar a divisória: {k}× {child} (vazios) voltam a ser 1× {parent}", parent=code(op["parent"]),
+                                     k=op["k"], child=code(op["child"])), "", f"{op['k']}× {code(op['child'])}", "change"))
         transfers = all_moves
         # endereços que ficam vazios
         freed = []

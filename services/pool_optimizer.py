@@ -117,6 +117,8 @@ class PoolParams:
     # "abc": {sku: A/B/C}, "aff": {(a, b): força}}; fora do repr (o cache usa `slot_key`)
     slotting: Optional[dict] = field(default=None, repr=False, compare=False)
     slot_key: str = ""
+    # bins existentes: compartimento -> (bin pai, k) dos tipos com "permitir fracionar a bin pai" (services/pool_family)
+    splits: Optional[dict] = None
 
     @property
     def unlimited(self) -> bool:
@@ -255,6 +257,8 @@ class PoolResult:
     fixed_pids: dict = field(default_factory=dict)  # SKUs fora do foco que ficam nas suas bins: sku -> produto
     focus: Optional[dict] = None  # foco nos SKUs filtrados: {"skus": n, "locked_bins": n, "free_bins": n}
     solver: Optional[dict] = None  # pesquisa operacional: status, tempo, valores por critério, comparação c/ heurística
+    reshape: list = field(default_factory=list)  # bins pai fracionadas / compartimentos juntados (services/pool_family)
+    notes: list = field(default_factory=list)
 
     @property
     def shortage(self) -> bool:
@@ -277,7 +281,17 @@ def optimize_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int
                   reserved_locations: Optional[set] = None, no_dims: Optional[list] = None,
                   secondary: Optional[list] = None) -> PoolResult:
     """Motor escolhido: pesquisa operacional (OR-Tools CP-SAT) ou a heurística gulosa.
-    `secondary` = produtos fora do foco que podem ser desalojados (bins com saldo usadas pelo foco)."""
+    `secondary` = produtos fora do foco que podem ser desalojados (bins com saldo usadas pelo foco).
+    Com compartimentos fracionáveis (bins existentes), fraciona/junta bins pai sobre o resultado (pool_family)."""
+    res = _solve_pool(bins, demands, types, prm, reserved_locations, no_dims, secondary)
+    if prm.splits and not prm.unlimited:
+        from services.pool_family import reshape
+
+        res = reshape(res, bins, demands, types, prm, reserved_locations, no_dims, secondary, _solve_pool)
+    return res
+
+
+def _solve_pool(bins, demands, types, prm: PoolParams, reserved_locations=None, no_dims=None, secondary=None):
     if prm.engine == "or":
         from services.or_engine import solve_pool
 
@@ -391,6 +405,19 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
 
     def foreign(b) -> bool:
         return any(s_ not in dem_skus and q_ > 0 for s_, q_ in b.orig.items())
+
+    # compartimentos fracionáveis: preferir os de uma bin pai já usada (as irmãs juntas), depois da zona de ouro e
+    # da caminhada (é só desempate)
+    from services.pool_family import groups_of
+
+    sgid, sgroups = groups_of(pool, prm.splits or {}) if prm.splits and not prm.unlimited else ({}, {})
+
+    def sib(b) -> int:
+        g = sgid.get(b.id)
+        return 0 if g is None or any(x.contents for x in sgroups[g] if x is not b) else 1
+
+    def first(lst):
+        return min(enumerate(lst), key=lambda ib: (foreign(ib[1]), sib(ib[1]), ib[0]))[1] if sgid else lst[0]
     # bins livres antes das que guardam outros produtos (só usadas com "qualquer bin")
     for b in sorted(pool, key=lambda b: (b.address, any(s not in dem_skus for s in b.orig), b.id)):
         fresh.setdefault((b.type_id, b.location_id), []).append(b)
@@ -408,25 +435,30 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
             vseq[t] = vseq.get(t, 0) + 1
             return [PoolBin(-(len(virtual) * 1000 + t) - 1, None, "", t, vseq[t], type_code=types[t].code)]
         out, got_far = [], False
-        far_pick = [None]
+        far_pick, sib_pick = [None], [None]
         if only["loc"] is not None:
             lst = fresh.get((t, only["loc"])) or []
             mine = [b for b in lst if sku in b.orig]
-            return (mine[:2] or lst[:1])
+            return (mine[:2] or [first(lst)] if lst else [])
         for l in locs_by_type.get(t, []):
             lst = fresh.get((t, l))
             if not lst:
                 continue
             if l in here:
                 mine = [b for b in lst if sku in b.orig]  # a bin onde o SKU já está vem primeiro
-                out.extend(mine[:2] or [lst[0]])
+                out.extend(mine[:2] or [first(lst)])
             elif not got_far or (foreign(far_pick[0]) and not foreign(lst[0])):
                 # uma candidata de outro endereço (livre, se houver)
                 if got_far:
                     out.remove(far_pick[0])
-                out.append(lst[0])
-                far_pick[0] = lst[0]
+                out.append(first(lst))
+                far_pick[0] = first(lst)
                 got_far = True
+            elif sgid and not sib_pick[0] and not sib(first(lst)) and not foreign(first(lst)):
+                # e o compartimento livre de uma bin pai já usada (irmãs juntas), se houver: a escolha final decide
+                # pela posição (com tolerância) — ver skb
+                sib_pick[0] = first(lst)
+                out.append(first(lst))
         return out
 
     # SKUs que precisam de mais bins primeiro (melhor escolha das bins grandes)
@@ -503,8 +535,13 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
             if near:
                 v += min(st * geo_dist(geo[l], geo[o]) for st, o in near)
             return round(v, 1)
+        def skb(b) -> float:
+            """Nota do endereço (sk) com tolerância para as irmãs: um compartimento de bin pai já usada vale até 1
+            ponto (≈ 1 m de caminhada) a menos — só desempata posições parecidas."""
+            v = sk(b.location_id)
+            return round(v - 1.0, 1) if (sl and sgid and b.id in sgid and not sib(b)) else v
         mm = prm.objective == "min_moves"
-        far2 = (lambda b: (far(b), sk(b.location_id))) if mm else (lambda b: (sk(b.location_id), far(b)))  # noqa: E731
+        far2 = (lambda b: (far(b), skb(b))) if mm else (lambda b: (skb(b), far(b)))  # noqa: E731
 
         def eff(b: PoolBin) -> int:
             c = cap.get(b.type_id, 0)
@@ -655,43 +692,43 @@ def greedy_pool(bins: list[PoolBin], demands: list[SkuDemand], types: dict[int, 
                 local = [be for be in cands if far(be[0]) <= 3]
                 lfits = [be for be in fits if far(be[0]) <= 3]
                 if lfits:
-                    b, e = pick(lfits, lambda be: (far2(be[0]), partial(be[0]), be[1], vol[be[0].type_id], be[0].id))
+                    b, e = pick(lfits, lambda be: (far2(be[0]), partial(be[0]), be[1], vol[be[0].type_id], sib(be[0]), be[0].id))
                 elif local:
-                    b, e = pick(local, lambda be: (far2(be[0]), partial(be[0]), -be[1], be[0].id))
+                    b, e = pick(local, lambda be: (far2(be[0]), partial(be[0]), -be[1], sib(be[0]), be[0].id))
                 elif fits:
-                    b, e = pick(fits, lambda be: (partial(be[0]), be[1], vol[be[0].type_id], be[0].id))
+                    b, e = pick(fits, lambda be: (partial(be[0]), be[1], vol[be[0].type_id], sib(be[0]), be[0].id))
                 else:
-                    b, e = pick(cands, lambda be: (partial(be[0]), -be[1], be[0].id))
+                    b, e = pick(cands, lambda be: (partial(be[0]), -be[1], sib(be[0]), be[0].id))
             elif prm.objective == "min_width":
                 if fits:
-                    b, e = pick(fits, lambda be: (partial(be[0]), wid[be[0].type_id], far2(be[0]), be[0].id))
+                    b, e = pick(fits, lambda be: (partial(be[0]), wid[be[0].type_id], far2(be[0]), sib(be[0]), be[0].id))
                 else:
                     b, e = pick(cands, lambda be: (partial(be[0]), wid[be[0].type_id] / max(cap[be[0].type_id], 1),
-                                                      far2(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], sib(be[0]), be[0].id))
             elif prm.objective == "min_cost":
                 cst = lambda t: (types[t].cost or 0.0) if t in types else 0.0  # noqa: E731
                 if fits:
                     b, e = pick(fits, lambda be: (partial(be[0]), cst(be[0].type_id) * (1 - be[0].used),
-                                                     vol[be[0].type_id], far2(be[0]), be[0].id))
+                                                     vol[be[0].type_id], far2(be[0]), sib(be[0]), be[0].id))
                 else:
                     b, e = pick(cands, lambda be: (partial(be[0]), cst(be[0].type_id) / max(cap[be[0].type_id], 1),
-                                                      far2(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], sib(be[0]), be[0].id))
             elif prm.objective == "min_volume":
                 if fits:
                     b, e = pick(fits, lambda be: (partial(be[0]), vol[be[0].type_id] * (1 - be[0].used),
-                                                     far2(be[0]), be[0].id))
+                                                     far2(be[0]), sib(be[0]), be[0].id))
                 else:
                     b, e = pick(cands, lambda be: (partial(be[0]), vol[be[0].type_id] / max(cap[be[0].type_id], 1),
-                                                      far2(be[0]), -be[1], be[0].id))
+                                                      far2(be[0]), -be[1], sib(be[0]), be[0].id))
             elif prm.objective in SLOT_OBJECTIVES and sl:  # trajeto/pega: o endereço mais fácil manda
                 pool_k = fits or cands
-                b, e = pick(pool_k, lambda be: (sk(be[0].location_id), partial(be[0]), -be[1] if not fits else be[1],
-                                                   far(be[0]), be[0].id))
+                b, e = pick(pool_k, lambda be: (skb(be[0]), partial(be[0]), -be[1] if not fits else be[1],
+                                                   far(be[0]), sib(be[0]), be[0].id))
             else:  # min_bins
                 if fits:
-                    b, e = pick(fits, lambda be: (partial(be[0]), be[1], far2(be[0]), vol[be[0].type_id], be[0].id))
+                    b, e = pick(fits, lambda be: (partial(be[0]), be[1], far2(be[0]), vol[be[0].type_id], sib(be[0]), be[0].id))
                 else:
-                    b, e = pick(cands, lambda be: (partial(be[0]), -be[1], far2(be[0]), be[0].id))
+                    b, e = pick(cands, lambda be: (partial(be[0]), -be[1], far2(be[0]), sib(be[0]), be[0].id))
             m = min(need, e)
             if b.used <= EPS:
                 if b.location_id is None:

@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from models import Product, StockItem, StockPolicy, StorageLocation
+from models import Product, ShelfLevel, StockItem, StockPolicy, StorageLocation
 from services.bin_optimizer import ProductUnit
 from services.optimization_service import MAX_SCOPE, load_types
 from services.pool_optimizer import PoolBin, PoolParams, PoolResult, SkuDemand, optimize_pool
@@ -142,6 +142,9 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
 def run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str = "stock", focus: Optional[set] = None):
     from services.or_engine import cached
 
+    from services.optimization_service import load_splits
+
+    prm.splits = load_splits(db) if not prm.unlimited else None  # bin pai <-> compartimentos (pool_family)
     key = (basis, tuple(sorted(focus)) if focus is not None else None)
     return cached(db, "pool", location_ids, prm, key, lambda: _run_pool(db, location_ids, prm, basis, focus))
 
@@ -160,6 +163,9 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
         r = optimize_pool(grp["bins"], list(grp["demands"].values()), gtypes, prm, grp["reserved"], grp["no_dims"],
                           grp.get("secondary") if (focus is not None and prm.bin_source == "any") else None)
         r.fixed_pids = dict(grp.get("fixed", {}))
+        for n_ in r.notes or []:
+            if n_ not in notes:
+                notes.append(n_)
         if focus is not None:
             avail = [b for b in grp["bins"] if b.location_id not in grp["reserved"]]
             r.focus = {"skus": len(grp["demands"]), "locked_bins": sum(1 for b in avail if b.locked),
@@ -249,6 +255,53 @@ def pool_closure(results, skus) -> set:
     return need
 
 
+def _reshape_bins(db: Session, results) -> set:
+    """Grava as bins que mudam de forma (bin pai <-> compartimentos) e renumera as bins dos endereços tocados como o
+    cadastro numera. Retorna os endereços tocados."""
+    from models import LocationBin
+    from services.pool_family import renumber
+
+    touched = set()
+    for r in results:
+        ops = r.reshape or []
+        if not ops:
+            continue
+        for op in ops:
+            lid = op["location_id"]
+            rows = list(db.scalars(select(LocationBin).where(LocationBin.location_id == lid)))
+            sl_code = {}
+            if any(x.shelf_level_id for x in rows):
+                sl_code = dict(db.execute(select(ShelfLevel.id, ShelfLevel.level)
+                                          .where(ShelfLevel.id.in_({x.shelf_level_id for x in rows if x.shelf_level_id}))).all())
+            lv = op["level"] or ""
+            same = [x for x in rows if (sl_code.get(x.shelf_level_id, "") if x.shelf_level_id else "") == lv]
+            sid = next((x.shelf_level_id for x in same), None)
+
+            def row_of(t):
+                x = next((x for x in same if x.bin_type_id == t), None)
+                if x is None:
+                    x = LocationBin(location_id=lid, bin_type_id=t, quantity=0, shelf_level_id=sid)
+                    db.add(x)
+                    same.append(x)
+                return x
+            for b in op["removed"]:
+                x = row_of(b.type_id)
+                x.quantity = max(0, (x.quantity or 0) - 1)
+            for c in op["created"]:
+                x = row_of(c.type_id)
+                x.quantity = (x.quantity or 0) + 1
+            for x in same:
+                if not x.quantity:
+                    if x in db.new:
+                        db.expunge(x)
+                    else:
+                        db.delete(x)
+            touched.add(lid)
+        renumber([b for b in r.bins if b.location_id in touched])
+    db.flush()
+    return touched
+
+
 def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str = "stock",
                only_skus: Optional[set] = None, focus: Optional[set] = None) -> tuple[int, int, set]:
     """Recalcula o plano e executa: move os saldos entre endereços e grava o conteúdo de cada bin física.
@@ -261,6 +314,11 @@ def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str
         raise ValueError(_("Com bins como recurso infinito o plano é só um dimensionamento e não pode ser aplicado."))
     all_skus = {p.sku for r in results for p in r.plans}
     applied = all_skus if only_skus is None else pool_closure(results, only_skus)
+    if only_skus is not None:  # fracionar/juntar: os produtos que estavam nas bins que mudam de forma vão junto
+        applied |= {s for r in results for op in (r.reshape or []) for b in op["removed"] for s in b.orig
+                    if s in all_skus}
+        applied |= {p.sku for r in results for p in r.plans
+                    if any(b.id in {c.id for op in (r.reshape or []) for c in op["created"]} for b, _n in p.allocations)}
     if not applied:
         raise ValueError(_("Nenhum SKU selecionado."))
     short = sorted(p.sku for r in results for p in r.plans if p.sku in applied and p.shortage)
@@ -273,6 +331,7 @@ def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str
     for r in results:  # produtos fora do foco: continuam nas bins de hoje
         for sku, pid in (r.fixed_pids or {}).items():
             pid_of.setdefault(sku, pid)
+    reshaped = _reshape_bins(db, results)  # bins pai fracionadas / compartimentos juntados (LocationBin)
     changed, touched_locs, touched_prods = 0, set(), set()
     applied_entries: dict[int, list] = {}  # endereço -> [(tipo, nº, produto, qtd)] dos SKUs aplicados
     affected: set[int] = set()
@@ -334,7 +393,7 @@ def apply_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str
     sync_default_locations(db, touched_prods)
     # conteúdo de cada bin: SKUs aplicados conforme o plano; os demais continuam como estavam
     # endereços a regravar: todos do pool; com seleção ou foco, só os que o plano toca
-    targets = set(pool_bins) if (only_skus is None and focus is None) else (affected & set(pool_bins))
+    targets = set(pool_bins) if (only_skus is None and focus is None) else ((affected | reshaped) & set(pool_bins))
     for l in targets:
         entries = list(applied_entries.get(l, []))
         for b in pool_bins.get(l, []):

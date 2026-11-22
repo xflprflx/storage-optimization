@@ -519,6 +519,20 @@ def optimization_page(request: Request, db: Session = Depends(get_db)):
     return render(request, "optimization/page.html", **ctx)
 
 
+def _pool_reshape_view(results, types) -> list:
+    """Bins pai fracionadas / compartimentos juntados no Pool, por par de tipos, com os endereços."""
+    code = lambda t: types[t].code if t in types else str(t)  # noqa: E731
+    agg: dict[tuple, dict] = {}
+    for r in results:
+        for op in r.reshape or []:
+            s = agg.setdefault((op["parent"], op["child"]), {"parent_code": code(op["parent"]), "child_code": code(op["child"]),
+                                                             "k": op["k"], "split": 0, "join": 0, "empty": 0, "where": []})
+            s[op["kind"]] += 1
+            lbl = op["address"] + (_(" (nível {level})", level=op["level"]) if op["level"] else "")
+            s["where"].append((op["kind"], lbl))
+    return list(agg.values())
+
+
 def _solver_txt(infos: list, prm) -> str:
     """Origem do resultado para o histórico: heurística, solver ótimo comprovado ou melhor no tempo."""
     if getattr(prm, "engine", "heuristic") != "or":
@@ -942,6 +956,7 @@ def pool_page(request: Request, db: Session = Depends(get_db)):
                            solvers=[_solver_view(r.solver, prm.objective, prm.priority, prm.unlimited) for r in results],
                            orphans=[(sku, locs[l][0] if l in locs else "—", b.tag if b is not None else "—", q)
                                     for r in results for sku, l, b, q in (r.orphans or [])],
+                           splits=_pool_reshape_view(results, types),
                            displaced=sum(len(r.displaced or {}) for r in results),
                            focus_info=({k: sum((r.focus or {}).get(k, 0) for r in results)
                                         for k in ("skus", "locked_bins", "free_bins", "fixed_skus")}

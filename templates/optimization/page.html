@@ -612,8 +612,14 @@
     </div>
     {% endif %}
     {% if splits %}
-    <div class="alert alert-info py-2 small"><i class="bi bi-scissors"></i> {{ _h("<b>Bins pai fracionadas</b> — sobram no escopo e viram compartimentos (coloque a divisória antes de guardar):") }}
-      <ul class="mb-0 mt-1">{% for s in splits %}<li>{{ _h("Fracionar <b>{n}× {parent}</b> em <b>{made}× {child}</b> ({k} por bin){spare}", n=s.parents, parent=s.parent_code, made=s.made, child=s.child_code, k=s.k, spare=(_h(" — sobram {n} compartimento(s) vazio(s)", n=s.spare) if s.spare else "")) }}</li>{% endfor %}</ul></div>
+    <div class="alert alert-info py-2 small"><i class="bi bi-scissors"></i> {{ _h("<b>Bins pai fracionadas e juntadas</b> — a bin pai e os compartimentos dela são a mesma caixa, com ou sem a divisória:") }}
+      <ul class="mb-0 mt-1">{% for s in splits %}
+        {% if s.split %}<li>{{ _h("Fracionar <b>{n}× {parent}</b> em <b>{made}× {child}</b> (colocar a divisória)", n=s.split, parent=s.parent_code, made=s.split * s.k, child=s.child_code) }}</li>{% endif %}
+        {% if s.join %}<li>{{ _h("Juntar <b>{made}× {child}</b> em <b>{n}× {parent}</b> (tirar a divisória)", n=s.join, parent=s.parent_code, made=s.join * s.k, child=s.child_code) }}</li>{% endif %}
+        {% endfor %}</ul>
+      {% for s in splits if s.where %}<details class="mt-1"><summary>{{ _h("Onde ({parent} / {child})", parent=s.parent_code, child=s.child_code) }}</summary>
+        <div class="mono small">{% for kind, w in s.where %}{{ _('fracionar') if kind == 'split' else _('juntar') }}: {{ w }}{% if not loop.last %} · {% endif %}{% endfor %}</div></details>{% endfor %}
+      {% set emp = splits|sum(attribute='empty') %}{% if emp %}<div class="text-muted mt-1">{{ _h("{n} compartimento(s) vazio(s) nas bins pai divididas depois do plano.", n=emp) }}</div>{% endif %}</div>
     {% endif %}
     {% if orphans %}
     <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> {{ _h("<b>{orphans} item(ns) órfão(s)</b> — perdem a bin para os itens filtrados e ficam fora de bin no mesmo endereço (trate à mão ou use \"Realocar os itens desalojados\"):", orphans=(orphans|length)) }}

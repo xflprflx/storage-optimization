@@ -53,7 +53,7 @@
         <div class="col-12" id="splitBox">
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="allow_split" id="allow_split" value="1" {% if data.get('allow_split') %}checked{% endif %}>
-            <label class="form-check-label" for="allow_split">{{ _h("<b>Permitir fracionar a bin pai na otimização</b>: com bins existentes, uma bin pai sobrando pode virar estes compartimentos (colocando a divisória)") }}</label>
+            <label class="form-check-label" for="allow_split">{{ _h("<b>Permitir fracionar a bin pai na otimização</b>: com bins existentes, uma bin pai pode virar estes compartimentos (colocando a divisória) e os compartimentos de uma bin pai podem voltar a ser a bin pai inteira (tirando a divisória)") }}</label>
           </div>
         </div>
       </div>

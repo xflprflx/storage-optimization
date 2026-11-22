@@ -118,7 +118,7 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
         reason_id = next((r.id for r in lk["lock_reasons"] if r.name == lk_state[2]), None)
     ctx.update(rows=rows, total=total, page_no=page, pages=pages, recomp_log=last_log(db, bid, wid),
                bay_locks=lock_rows(db, bid, wid),
-               lock_form={"fixed": lk_state[0] if lk_state else True,
+               lock_form={"fixed": bool(lk_state and lk_state[0]),  # sem trava: nada marcado
                           "no_recompose": bool(lk_state and lk_state[1]), "reason_id": reason_id,
                           "mixed": len(states) > 1})
     return render(request, "levels/index.html", **ctx)

@@ -126,7 +126,7 @@
           <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="k_aisle" placeholder="{{ _("Corredor") }}" value="{{ aisle }}"></div>
           <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="k_bay" placeholder="{{ _("Estante") }}" value="{{ bay }}"></div>
           <div class="col-auto small d-flex flex-wrap gap-3">
-            {% set lf = lock_form or {"fixed": True} %}
+            {% set lf = lock_form or {} %}
             <div class="form-check"><input class="form-check-input" type="checkbox" name="fixed" value="1" id="lk_fixed" {% if lf.fixed %}checked{% endif %}><label class="form-check-label" for="lk_fixed">{{ _("posição fixa") }}</label></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" name="no_recompose" value="1" id="lk_norec" {% if lf.no_recompose %}checked{% endif %}><label class="form-check-label" for="lk_norec">{{ _("não recompor") }}</label></div>
           </div>

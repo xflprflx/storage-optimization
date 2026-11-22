@@ -64,6 +64,16 @@ def test_lock_and_unlock_bays_on_the_levels_page(client, db):
     client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "03", "action": "save"})  # nada marcado
     db.expire_all()
     assert {x.bay for x in db.query(BayLock).filter_by(branch_id=bid)} == {"01"}
+    # estante sem trava: o formulário abre sem nada marcado (marcar só "não recompor" não leva a posição fixa junto)
+    free = client.get(f"/levels?branch_id={bid}&warehouse_id=none&aisle=S&bay=03").text
+    assert 'id="lk_fixed" checked' not in free and 'id="lk_norec" checked' not in free
+    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "03", "no_recompose": "1", "action": "save"})
+    db.expire_all()
+    lk3 = db.query(BayLock).filter_by(branch_id=bid, bay="03").one()
+    assert (lk3.fixed_position, lk3.no_recompose) == (False, True)
+    only_fixed = client.get(f"/levels?branch_id={bid}&warehouse_id=none&aisle=S&bay=03").text
+    assert 'id="lk_fixed" checked' not in only_fixed and 'id="lk_norec" checked' in only_fixed
+    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "03", "action": "save"})
     client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "", "action": "unlock"})
     assert db.query(BayLock).filter_by(branch_id=bid).count() == 0
 

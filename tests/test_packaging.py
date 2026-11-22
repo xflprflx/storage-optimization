@@ -326,3 +326,53 @@ def test_unitization_example_sku_packagings(db, tmp_path):
     assert d["UN0009"].pack is None  # embalagem não habilitada
     assert d["UN0010"].pack.qty and d["UN0010"].pack.qty > 1  # quantidade calculada pelas medidas
     assert d["UN0006"].pack.pref == "cases" and d["UN0007"].pack.pref == "units"
+
+
+def test_bulk_apply_skus_then_level_above_and_calc_weight(client, db):
+    """Lote: marcar SKUs e aplicar a caixa (quantidade calculada por SKU); marcar as caixas e aplicar o master por
+    cima; o Calcular devolve o peso da embalagem cheia."""
+    from models import BinType, Branch, PackagingModel, Product, ProductPackaging
+
+    br = db.query(Branch).filter_by(code="PKL").first() or Branch(code="PKL", name="Lote", unitization="full")
+    cx = PackagingModel(code="PKL-CX", name="Caixa", height=Decimal(20), width=Decimal(30), length=Decimal(20),
+                        tare=Decimal("0.5"))
+    ms = PackagingModel(code="PKL-MS", name="Master", height=Decimal(40), width=Decimal(60), length=Decimal(40))
+    pal = BinType(code="PKL-PAL", name="Palete", height=Decimal(15), width=Decimal(100), length=Decimal(120),
+                  max_weight=Decimal(1000), store_as="pallet", open_top=True)
+    a = Product(sku="PKL-A", name="A", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.5"))
+    b = Product(sku="PKL-B", name="B", height=Decimal(5), width=Decimal(10), length=Decimal(10), weight=Decimal("0.2"))
+    db.add_all([br, cx, ms, pal, a, b])
+    db.commit()
+    page = client.post("/packagings/apply", data={"ids": [str(a.id), str(b.id)], "back": "/products"})
+    assert page.status_code == 200 and "2 SKU(s)" in page.text
+    r = client.post("/packagings/apply/confirm", data={
+        "mode": "skus", "ids": f"{a.id},{b.id}", "model_id": str(cx.id), "branch_ids": str(br.id),
+        "pal_idx": "n0", "pal_type_n0": str(pal.id), "back": "/products"}, follow_redirects=False)
+    assert r.status_code == 303
+    db.expire_all()
+    ka = next(k for k in db.get(Product, a.id).packagings if k.model_id == cx.id)
+    kb = next(k for k in db.get(Product, b.id).packagings if k.model_id == cx.id)
+    assert (ka.inner_qty, kb.inner_qty) == (12, 24)  # calculadas pelas medidas de cada SKU
+    assert [x.code for x in ka.branches] == ["PKL"] and (ka.pallets[0].layer, ka.pallets[0].layers) == (20, 7)
+    assert "PKL-A" in client.get(f"/packagings?model={cx.id}").text
+    # nível acima: marcar as caixas e aplicar o master (quantidade calculada: 4 caixas 20 × 30 × 20 no 40 × 60 × 40)
+    page = client.post("/packagings/apply", data={"mode": "level", "ids": [str(ka.id), str(kb.id)]})
+    assert page.status_code == 200 and "PKL-CX: 2" in page.text
+    r = client.post("/packagings/apply/confirm", data={"mode": "level", "ids": f"{ka.id},{kb.id}",
+                                                      "model_id": str(ms.id), "branch_ids": str(br.id)},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    db.expire_all()
+    ma = next(k for k in db.get(Product, a.id).packagings if k.model_id == ms.id)
+    assert ma.inner.model_id == cx.id and ma.inner_qty == 8 and ma.units() == 96
+    # remover: a caixa de B está dentro do master de B (não marcado) e fica; a de A sai junto com o master de A
+    ka_id, kb_id, ma_id = ka.id, kb.id, ma.id
+    mb_id = next(k.id for k in db.get(Product, b.id).packagings if k.model_id == ms.id)
+    r = client.post("/packagings/delete", data={"ids": [str(ka_id), str(ma_id), str(kb_id)]}, follow_redirects=False)
+    assert "mantida" in r.headers["location"]
+    db.expire_all()
+    assert db.query(ProductPackaging).filter(ProductPackaging.id.in_([ka_id, ma_id])).count() == 0
+    assert db.query(ProductPackaging).filter(ProductPackaging.id.in_([kb_id, mb_id])).count() == 2
+    # Calcular: o peso da embalagem cheia = 24 × 0,2 + tara 0,5
+    calc = client.post(f"/products/{b.id}/packagings/calc", data={"model_id": str(cx.id), "inner_qty": "24"}).json()
+    assert calc["weight"] == 5.3

@@ -909,6 +909,16 @@ display de 6 un. → caixa com 4 displays → master com 2 caixas = 48 un.), o p
 tara), a ordem, as **filiais em que está habilitada** e as **paletizações**: tipo de palete (tipo de bin com *Armazena
 em = Palete fechado*), caixas por camada e camadas — o mesmo palete pode ter mais de uma (baixo e alto).
 
+**Cadastro em lote (o jeito rápido):**
+- **1º nível:** em **Produtos**, marque os SKUs (ou escolha "todos os filtrados") → **Aplicar embalagem**: escolha o
+  modelo, as filiais habilitadas e o palete; quantidade, peso cheia e caixas por camada × camadas vazios são
+  calculados pelas medidas de **cada** SKU. SKU que já tem o modelo: atualizar ou pular;
+- **níveis acima:** em **Cadastros → Embalagens dos produtos** (`/packagings`), filtre pelo modelo (ex.: as caixas),
+  marque as embalagens (ou "todas as filtradas") → **Aplicar nível acima**: o modelo escolhido (ex.: master) passa a
+  conter a embalagem marcada de cada SKU (quantidade vazia = quantas cabem). A mesma tela remove em lote;
+- o botão **Calcular** da embalagem de um produto preenche a quantidade, as paletizações e o **peso da embalagem
+  cheia** (conteúdo + tara do modelo).
+
 **Escolha na otimização:**
 - a otimização de uma filial só usa as embalagens **habilitadas naquela filial** (e só com a unitização da filial
   ligada); a 1ª habilitada (pela ordem) é a primeira opção em toda bin; com **Embalagens diferentes por bin** marcado no

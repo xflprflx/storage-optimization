@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field_error, invalid, form_alert %}
+{% block title %}{{ _("Aplicar embalagem") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-boxes"></i> {{ _("Aplicar nível acima") if mode == 'level' else _("Aplicar embalagem") }}</h1>
+  <a href="{{ back }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _("Voltar") }}</a>
+</div>
+<div class="card" style="max-width: 980px"><div class="card-body">
+  {{ form_alert(errors) }}
+  <div class="alert alert-info small py-2">
+    {% if mode == 'level' %}{{ _h("<b>{n} embalagem(ns)</b> marcada(s): cada SKU ganha o modelo abaixo contendo a embalagem marcada dele.", n=n) }}
+      {% if inner_models %}<span class="text-muted">({% for code, c in inner_models %}{{ code }}: {{ c }}{% if not loop.last %}, {% endif %}{% endfor %})</span>{% endif %}
+    {% else %}{{ _h("<b>{n} SKU(s)</b>: cada um ganha o modelo abaixo com unidades do produto dentro.", n=n) }}{% endif %}
+    <div class="mono small text-muted mt-1">{{ sample|join(', ') }}{% if n > sample|length %} …{% endif %}</div>
+  </div>
+  <form method="post" action="/packagings/apply/confirm" autocomplete="off" id="apForm">
+    <input type="hidden" name="mode" value="{{ mode }}"><input type="hidden" name="ids" value="{{ ids }}"><input type="hidden" name="back" value="{{ back }}">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">{{ _("Modelo de embalagem *") }}</label>
+        <select class="form-select {{ invalid(errors, 'model_id') }}" name="model_id" required>
+          <option value="">{{ _("— escolha —") }}</option>
+          {% for m in models %}<option value="{{ m.id }}" {% if data.get('model_id') == m.id %}selected{% endif %}>{{ m.code }} — {{ m.name }} ({{ m.height|dec }} × {{ m.width|dec }} × {{ m.length|dec }} cm)</option>{% endfor %}
+        </select>
+        {{ field_error(errors, 'model_id') }}
+        <div class="form-text"><a href="/packaging-models/new" target="_blank">{{ _("Novo modelo de embalagem") }}</a></div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">{{ _("Quantidade") }} <small class="text-muted">({{ _("de cada embalagem marcada") if mode == 'level' else _("unidades") }})</small></label>
+        <input class="form-control text-end {{ invalid(errors, 'inner_qty') }}" name="inner_qty" inputmode="numeric" value="{{ data.get('inner_qty') or '' }}" placeholder="{{ _("vazio = calcula") }}">
+        {{ field_error(errors, 'inner_qty') }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">{{ _("Peso cheia") }} <small class="text-muted">(kg)</small></label>
+        <input class="form-control text-end {{ invalid(errors, 'weight') }}" name="weight" data-u="kg" inputmode="decimal" value="{{ data.get('weight')|dec_input }}" placeholder="{{ _("vazio = calcula") }}">
+        {{ field_error(errors, 'weight') }}
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">{{ _("Habilitada nas filiais") }}</label>
+        <div class="border rounded p-2 d-flex flex-wrap gap-3">
+          {% for b in branches %}
+          <div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="branch_ids" value="{{ b.id }}" id="br{{ b.id }}" {% if b.id in (data.get('branch_ids') or []) %}checked{% endif %}>
+            <label class="form-check-label" for="br{{ b.id }}"><span class="mono">{{ b.code }}</span> {{ b.name }}{% if (b.unitization or 'off') == 'off' %} <span class="text-muted small">({{ _("unitização desligada") }})</span>{% endif %}</label></div>
+          {% else %}<span class="text-muted small">{{ _("Nenhuma filial cadastrada.") }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ _("SKU que já tem este modelo") }}</label>
+        <select class="form-select" name="on_existing">
+          <option value="update" {% if data.get('on_existing') != 'skip' %}selected{% endif %}>{{ _("Atualizar a embalagem dele") }}</option>
+          <option value="skip" {% if data.get('on_existing') == 'skip' %}selected{% endif %}>{{ _("Pular (manter como está)") }}</option>
+        </select>
+      </div>
+    </div>
+    <h6 class="text-muted text-uppercase small mt-4 mb-1"><i class="bi bi-stack"></i> {{ _("Paletizações") }}</h6>
+    <div class="form-text mt-0 mb-2">{{ _("Caixas por camada e camadas vazias = calculadas pelas medidas de cada SKU (o mais comum: só escolher o palete).") }}</div>
+    {% if pallet_types %}
+    <table class="table table-sm align-middle mb-1" id="palTable" data-no-resize>
+      <thead class="small"><tr><th>{{ _("Palete") }}</th><th style="width:160px">{{ _("Caixas por camada") }}</th><th style="width:160px">{{ _("Camadas") }}</th><th style="width:70px" class="text-center">{{ _("Remover") }}</th></tr></thead>
+      <tbody>
+      {% for r in data.get('pallets') or [] %}{% set i = r.idx %}
+        <tr><td><input type="hidden" name="pal_idx" value="{{ i }}">
+          <select class="form-select form-select-sm" name="pal_type_{{ i }}">{% for b in pallet_types %}<option value="{{ b.id }}" {% if r.pallet_type_id == b.id %}selected{% endif %}>{{ b.code }} — {{ b.name }}</option>{% endfor %}</select></td>
+          <td><input class="form-control form-control-sm text-end" name="pal_layer_{{ i }}" inputmode="numeric" value="{{ r.layer or '' }}"></td>
+          <td><input class="form-control form-control-sm text-end" name="pal_layers_{{ i }}" inputmode="numeric" value="{{ r.layers or '' }}"></td>
+          <td class="text-center"><input class="form-check-input" type="checkbox" name="pal_del_{{ i }}" value="1"></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="addPal"><i class="bi bi-plus-lg"></i> {{ _("Adicionar palete") }}</button>
+    <template id="palTpl">
+      <tr><td><input type="hidden" name="pal_idx" value="__i__">
+        <select class="form-select form-select-sm" name="pal_type___i__">{% for b in pallet_types %}<option value="{{ b.id }}">{{ b.code }} — {{ b.name }}</option>{% endfor %}</select></td>
+        <td><input class="form-control form-control-sm text-end" name="pal_layer___i__" inputmode="numeric"></td>
+        <td><input class="form-control form-control-sm text-end" name="pal_layers___i__" inputmode="numeric"></td>
+        <td class="text-center"><input class="form-check-input" type="checkbox" name="pal_del___i__" value="1"></td></tr>
+    </template>
+    {% else %}
+    <div class="small text-muted">{{ _h("Nenhum tipo de bin com Armazena em = palete fechado. <a href=\"/bin-types\">Tipos de bin</a>") }}</div>
+    {% endif %}
+    <div class="mt-4">
+      <button class="btn btn-accent"><i class="bi bi-check2-all"></i> {{ _h("Aplicar em {n}", n=n) }}</button>
+      <a href="{{ back }}" class="btn btn-link">{{ _("Cancelar") }}</a>
+    </div>
+  </form>
+</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  let n = 0;
+  document.getElementById('addPal')?.addEventListener('click', () => {
+    document.querySelector('#palTable tbody').insertAdjacentHTML('beforeend', document.getElementById('palTpl').innerHTML.replaceAll('__i__', 'n' + (n++)));
+  });
+})();
+</script>
+{% endblock %}

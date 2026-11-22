@@ -89,6 +89,7 @@ def _pages(client, ids) -> dict[str, str]:
              "/structures/new", f"/structures/{ids['st']}/edit", "/structure-kinds", "/structure-kinds/new",
              "/structure-kinds/1/edit", "/structure-pieces", "/structure-pieces/new", "/structure-pieces/1/edit", "/products/new", f"/products/{ids['p']}/edit",
              f"/products/{ids['p']}/packagings", f"/products/{ids['p']}/packagings/new", "/imports/packagings",
+             "/packagings",
              f"/products/{ids['p']}", "/settings", "/stock", "/stock/new", "/imports", "/imports/history",
              f"/levels?branch_id={b}&warehouse_id={w}", f"/layout?branch_id={b}&warehouse_id={w}",
              f"/layout/plan?branch_id={b}&warehouse_id={w}", f"/layout/plan/3d?branch_id={b}&warehouse_id={w}",
@@ -154,7 +155,9 @@ def test_dynamic_fields_have_help():
                       ("/layout/plan/3d", "#nkA-A"), ("/optimization/site/1/3d", "#nkA-B"),
                       ("/optimization/site/1", "z_name_0"), ("/optimization/site/1", "o_x_m_2"),
                       ("/optimization/site/1", "sec_area_m2_1"), ("/locations/batch", "exc_cond_bay_3"),
-                      ("/products/new", "pol_min_2"), ("/products/1/packagings/new", "pal_layers_n3"), ("/optimization/site/1", "nkdims1"),
+                      ("/products/new", "pol_min_2"), ("/products/1/packagings/new", "pal_layers_n3"),
+                      ("/packagings/apply", "model_id"), ("/packagings/apply", "pal_layers_n2"),
+                      ("/packagings/apply", "on_existing"), ("/packagings/apply", "branch_ids"), ("/optimization/site/1", "nkdims1"),
                       ("/optimization/site/1", "nkdims2p"), ("/optimization/site/1", "nk-tool")]:
         assert find(path, key) is not None, (path, key)
 

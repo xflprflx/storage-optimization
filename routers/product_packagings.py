@@ -229,5 +229,12 @@ def calc_packaging(product_id: int, form: FormData = Depends(form_data), db: Ses
                                             layer=f_int(form, f"pal_layer_{i}"), layers=f_int(form, f"pal_layers_{i}"))))
     k.pallets = [r for _i, r in rows]
     info = fill(k, prod)
+    from services.packaging import weight_of
+
+    wt = weight_of(k, prod)  # peso cheia: o conteúdo (unidades ou embalagens de dentro) + a tara do modelo
+    if wt is not None and k.weight is None:
+        info.append(_("Peso da embalagem cheia calculado: {w} kg.", w=f"{wt:.3f}".rstrip("0").rstrip(".").replace(".", ",")))
+    elif wt is None:
+        info.append(_("Peso cheia não calculado: informe o peso da unidade no produto (ou o peso da embalagem de dentro)."))
     return {"inner_qty": k.inner_qty, "pallets": {i: [r.layer, r.layers] for i, r in rows}, "info": info,
-            "warnings": check(k, prod), "units": k.units()}
+            "warnings": check(k, prod), "units": k.units(), "weight": round(wt, 3) if wt is not None else None}

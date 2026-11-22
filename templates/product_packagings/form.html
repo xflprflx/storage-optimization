@@ -106,6 +106,9 @@
     }
     const r = await (await fetch(location.pathname.replace(/\/(new|\d+\/edit)$/, '') + '/calc', { method: 'POST', body })).json();
     if (r.inner_qty && !$('inner_qty').value) $('inner_qty').value = r.inner_qty;
+    if (r.weight != null && !$('weight').value) {  // peso cheia calculado (kg; o campo pode estar em libras)
+      if (window.nkU && nkU.set) nkU.set($('weight'), r.weight, 3); else $('weight').value = String(r.weight).replace('.', ',');
+    }
     for (const [i, [a, b]] of Object.entries(r.pallets || {})) {
       const la = form.querySelector(`[name="pal_layer_${i}"]`), lb = form.querySelector(`[name="pal_layers_${i}"]`);
       if (la && !la.value && a) la.value = a;

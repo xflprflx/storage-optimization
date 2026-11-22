@@ -539,3 +539,46 @@ def apply_item_pack(db: Session, pr, it: dict, models: dict, pallets: dict, bran
                 setattr(pp, attr, int(v))
                 changed = True
     return changed
+
+
+# --------------------------------------------------------------------------- #
+# Aplicar embalagem em lote (vários SKUs, ou um nível acima de várias embalagens)
+# --------------------------------------------------------------------------- #
+def apply_bulk(db: Session, targets: list, model, qty: Optional[int], weight, branches: list,
+               pallet_rows: list, on_existing: str = "update") -> dict:
+    """Aplica o modelo de embalagem em cada alvo (produto, embalagem de dentro ou None = unidades): cria a embalagem
+    do produto (ou atualiza, se ele já tem esse modelo e on_existing = "update"); quantidade vazia e paletização sem
+    lastro/camadas = calculadas pelas medidas de cada SKU; filiais habilitadas e paletizações iguais para todos.
+    `pallet_rows` = [(tipo de palete, lastro, camadas)]. Retorna o resumo (criadas, atualizadas, puladas, avisos)."""
+    from decimal import Decimal
+
+    from models import PackagingPallet, ProductPackaging
+
+    out = {"created": 0, "updated": 0, "skipped": 0, "calculated": 0, "warnings": []}
+    for prod, inner in targets:
+        if inner is not None and inner.model_id == model.id:
+            out["skipped"] += 1  # a embalagem não pode ser feita dela mesma
+            continue
+        k = next((x for x in prod.packagings if x.model_id == model.id), None)
+        if k is not None and on_existing != "update":
+            out["skipped"] += 1
+            continue
+        if k is None:
+            k = ProductPackaging(model=model, model_id=model.id, name=model.code[:40],
+                                 sort=max((x.sort or 0 for x in prod.packagings), default=0) + 1)
+            prod.packagings.append(k)
+            out["created"] += 1
+        else:
+            out["updated"] += 1
+        k.inner = inner
+        k.inner_qty = qty  # vazia: calculada pelo que cabe (fill)
+        k.weight = Decimal(str(weight)) if weight not in (None, "") else None
+        k.branches = list(branches)
+        keep = [pp for pp in k.pallets if pp.pallet_type_id not in {p.id for p, _a, _b in pallet_rows}]
+        k.pallets[:] = keep + [PackagingPallet(pallet_type_id=p.id, pallet_type=p, layer=a, layers=b)
+                               for p, a, b in pallet_rows]
+        notes = fill(k, prod)
+        out["calculated"] += len(notes)
+        out["warnings"].extend(f"{prod.sku}: {w}" for w in check(k, prod))
+    db.flush()
+    return out

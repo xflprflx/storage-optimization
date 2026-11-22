@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, keep_params, filter_buttons %}
+{% block title %}{{ _("Embalagens dos produtos") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-boxes"></i> {{ _("Embalagens dos produtos") }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/products" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> {{ _("Produtos") }}</a>
+    <a href="/packaging-models" class="btn btn-outline-secondary"><i class="bi bi-box2"></i> {{ _("Modelos de embalagem") }}</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">{{ _h("Todas as embalagens dos produtos (SKU × modelo). Para cadastrar em lote: na lista de <b>Produtos</b>, marque os SKUs e use <b>Aplicar embalagem</b> (1º nível: unidades no modelo). Aqui, marque as embalagens e use <b>Aplicar nível acima</b> (ex.: master com N caixas) — quantidade vazia = calculada pelo que cabe em cada SKU.") }}</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por SKU ou nome") }}"></div>
+      <div class="col-md-3"><select class="form-select" name="model"><option value="">{{ _("Todos os modelos") }}</option>
+        {% for m in models %}<option value="{{ m.id }}" {% if model == m.id %}selected{% endif %}>{{ m.code }} — {{ m.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><select class="form-select" name="branch"><option value="">{{ _("Todas as filiais") }}</option>
+        <option value="none" {% if branch == 'none' %}selected{% endif %}>{{ _("Sem filial habilitada") }}</option>
+        {% for b in branches %}<option value="{{ b.id }}" {% if branch == b.id|string %}selected{% endif %}>{{ _("Habilitada em {code}", code=b.code) }}</option>{% endfor %}</select></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <form method="post" id="pkSel">
+    <input type="hidden" name="mode" value="level"><input type="hidden" name="back" value="{{ request.url.path }}?{{ request.url.query }}">
+    <input type="hidden" name="f_q" value="{{ q }}"><input type="hidden" name="f_model" value="{{ model or '' }}"><input type="hidden" name="f_branch" value="{{ branch }}">
+  <div class="table-responsive">
+    <table class="table table-hover table-sm mb-0 align-middle">
+      <thead><tr><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".pk-check" title="{{ _("Selecionar todos da página") }}"></th>
+        <th>SKU</th><th>{{ _("Produto") }}</th><th>{{ _("Modelo de embalagem") }}</th><th>{{ _("Contém") }}</th><th class="text-end">{{ _("Unidades") }}</th>
+        <th>{{ _("Habilitada nas filiais") }}</th><th>{{ _("Paletes") }}</th><th></th></tr></thead>
+      <tbody>
+      {% for k in page.items %}
+        <tr>
+          <td><input type="checkbox" class="form-check-input pk-check" name="ids" value="{{ k.id }}"></td>
+          <td class="mono">{{ k.product.sku }}</td>
+          <td class="small">{{ k.product.name }}</td>
+          <td><span class="mono fw-semibold">{{ k.model.code if k.model else k.name }}</span></td>
+          <td class="small">{{ k.inner_qty or '?' }} × {{ k.inner.model.code if k.inner and k.inner.model else _("unidades") }}</td>
+          <td class="text-end">{{ k.units() or '—' }}</td>
+          <td class="small">{% for b in k.branches %}<span class="badge text-bg-success fw-normal me-1">{{ b.code }}</span>{% else %}<span class="text-muted">{{ _("nenhuma") }}</span>{% endfor %}</td>
+          <td class="small">{% for pp in k.pallets %}<span class="mono">{{ pp.pallet_type.code }}</span>{% if pp.layer and pp.layers %} {{ pp.layer }}×{{ pp.layers }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/products/{{ k.product_id }}/packagings/{{ k.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="text-center text-muted py-4">{{ _("Nenhuma embalagem. Na lista de Produtos, marque os SKUs e use Aplicar embalagem.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.items %}
+  <div class="card-footer bg-white d-flex flex-wrap align-items-center gap-2">
+    <select class="form-select form-select-sm w-auto" name="scope" id="pkScope">
+      <option value="selected">{{ _("nas embalagens marcadas") }}</option>
+      <option value="filtered">{{ _h("em TODAS as {total} embalagem(ns) filtradas", total=page.total) }}</option>
+    </select>
+    <button class="btn btn-sm btn-accent" formaction="/packagings/apply" id="pkLevel"><i class="bi bi-layers"></i> {{ _("Aplicar nível acima") }}</button>
+    <button class="btn btn-sm btn-outline-danger" formaction="/packagings/delete" id="pkDel"><i class="bi bi-trash"></i> {{ _("Remover marcadas") }}</button>
+  </div>
+  {% endif %}
+  </form>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const n = () => document.getElementById('pkScope').value === 'filtered' ? {{ page.total }} : document.querySelectorAll('.pk-check:checked').length;
+  document.getElementById('pkLevel')?.addEventListener('click', e => { if (!n()) { e.preventDefault(); alert(_t('Marque ao menos uma embalagem.')); } });
+  document.getElementById('pkDel')?.addEventListener('click', e => {
+    if (document.getElementById('pkScope').value === 'filtered') { e.preventDefault(); alert(_t('Para remover, marque as embalagens.')); return; }
+    const k = n(); if (!k) { e.preventDefault(); alert(_t('Marque ao menos uma embalagem.')); return; }
+    if (!confirm(_t('Remover {n} embalagem(ns)?', {n: k}))) e.preventDefault();
+  });
+})();
+</script>
+{% endblock %}

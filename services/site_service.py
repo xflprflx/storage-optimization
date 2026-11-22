@@ -394,7 +394,10 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
         for p in db.scalars(select(Product).where(Product.sku.in_(skus[i:i + 900]))):
             cat[p.sku] = p
     f = lambda v: float(v) if v is not None else None  # noqa: E731
-    out, no_level, from_cat = [], 0, 0
+    from services.packaging import catalogs, item_has_pack, item_product
+
+    models, pallets = catalogs(db)
+    out, no_level, from_cat, sug_q, sug_p = [], 0, 0, 0, 0
     for it in items:
         p = cat.get(it["sku"])
         name = it.get("name") or (p.name if p else "")
@@ -419,12 +422,22 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
                 from_cat += 1
             dims = filled
         cond = (it.get("condition") or (p.storage_condition if p is not None else "") or "").strip().lower()
-        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims,
-                                                                  pack_of(p) if p is not None else None), condition=cond))
+        pack = None  # embalagem: a da planilha (aba SKUs) sobre a do cadastro do produto
+        if item_has_pack(it) or (p is not None and p.case_qty):
+            ns, model, _pal, sug = item_product(it, p, models, pallets)
+            ns.height, ns.width, ns.length, ns.weight = dims
+            pack = pack_of(ns, model)
+            sug_q += "case_qty" in sug
+            sug_p += "pallet" in sug
+        out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims, pack), condition=cond))
     if no_level:
         notes.append(_("{no_level} SKU(s) do arquivo sem {v} level: usou o saldo.", no_level=no_level, v='min' if basis == 'min' else 'max'))
     if from_cat:
         notes.append(_("{from_cat} SKU(s) do arquivo tiveram dimensões/peso completados pelo cadastro de produtos.", from_cat=from_cat))
+    if sug_q:
+        notes.append(_("Embalagem: {n} SKU(s) com unidades por caixa calculadas pelas medidas.", n=sug_q))
+    if sug_p:
+        notes.append(_("Embalagem: {n} SKU(s) com caixas por camada e camadas do palete calculadas pelas medidas.", n=sug_p))
     return out, notes
 
 
@@ -755,6 +768,9 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             products[pr.sku] = pr
     dec = lambda v: Decimal(str(v)) if v is not None else None  # noqa: E731
     sku_set = set(placed)
+    from services.packaging import apply_item_pack, catalogs, item_has_pack
+
+    pk_models, pk_pallets = catalogs(db)
     pending_levels: dict[str, dict] = {}  # sku -> min/max da filial nova (gravados na política depois)
     for sku in skus:
         it, d = by_item.get(sku, {}), demand.get(sku)
@@ -771,6 +787,8 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 stats["skus_without_product"] += 1
                 continue
             pr = Product(sku=sku[:60], **vals)
+            if item_has_pack(it):
+                apply_item_pack(pr, it, pk_models, pk_pallets)
             db.add(pr)
             products[sku] = pr
             stats["products_created"] += 1
@@ -784,6 +802,8 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 if informed and getattr(pr, k) != v:
                     setattr(pr, k, v)
                     changed = True
+            if item_has_pack(it):  # embalagem informada na planilha
+                changed = apply_item_pack(pr, it, pk_models, pk_pallets) or changed
             stats["products_updated"] += int(changed)
         if any(v is not None for v in levels.values()):
             pending_levels[sku] = levels

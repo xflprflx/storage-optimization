@@ -391,6 +391,14 @@ def unit_fits(p: ProductUnit, b: BinSpec, prm: Params) -> bool:
     return _grid(p, b, prm.rotation) >= 1
 
 
+def _case_fits(pk, b: BinSpec) -> bool:
+    """A caixa cabe na bin em alguma orientação (medidas ordenadas); bin sem medidas = cabe."""
+    bd = [v for v in (b.uh, b.w, b.l) if v]
+    if len(bd) < 3:
+        return True
+    return all(c <= d + EPS for c, d in zip(sorted((pk.h, pk.w, pk.l)), sorted(bd)))
+
+
 def handling(p: ProductUnit, b: BinSpec) -> str:
     """Como o SKU fica na bin: "units" (soltas), "cases" (caixas inteiras do produto), "pallet" (palete fechado) ou
     "none" (não pode ficar: o produto só se guarda na caixa e a bin só aceita unidades)."""
@@ -401,8 +409,8 @@ def handling(p: ProductUnit, b: BinSpec) -> str:
         return "pallet" if pk is not None else "units"
     if mode == "cases":
         return "cases" if pk is not None else "units"
-    if mode == "both":
-        return "cases" if pk is not None and pref != "units" else "units"
+    if mode == "both":  # caixa que não cabe na bin: fica solta (unidades)
+        return "cases" if pk is not None and pref != "units" and _case_fits(pk, b) else "units"
     return "none" if (pk is not None and pref == "cases") else "units"
 
 

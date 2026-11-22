@@ -913,8 +913,21 @@ caixas ("caixas de 12 un.") quando a bin armazena caixas ou palete.
 Comprimento da caixa*, *Peso da caixa cheia*, *Palete* (código do tipo de bin), *Caixas por camada*, *Camadas* e
 *Guardar em* (automático/unidades/caixa).
 
-Limitações: a planilha de SKUs do projeto de filial nova usa a embalagem do cadastro de produtos (sem colunas próprias);
-o palete fechado não é forçado a ter um único SKU.
+**Planilha do projeto de filial nova:** a aba **SKUs** aceita as mesmas colunas de embalagem (*Unidades por caixa*,
+*Modelo de embalagem*, *Altura/Largura/Comprimento da caixa (cm)*, *Peso da caixa cheia (kg)*, *Palete (tipo de bin)*,
+*Caixas por camada (lastro)*, *Camadas*, *Guardar em*); vazias = o cadastro do produto. A aba **Bins** tem a coluna
+*Armazena em* (também atualiza tipos já cadastrados) e a aba nova **Embalagens** (código, nome, medidas, tara) cadastra
+ou atualiza os modelos de caixa. Sem unidades por caixa ou sem o padrão do palete, o projeto calcula pelas medidas
+(o resultado avisa quantos); a importação avisa códigos de modelo/palete não cadastrados e unidades que não cabem na
+caixa. Ao criar a filial a partir do projeto, a embalagem da planilha vai para o cadastro dos produtos. A caixa que
+não cabe numa bin *Unidades ou caixas* fica em unidades soltas nela.
+
+**Projetos de exemplo:** as planilhas de exemplo trazem a aba **Embalagens** (CX-P, CX-M, CX-G), *Armazena em* nas bins
+(BIN-8 e CX-50 = ambos; PALETE = palete fechado) e a embalagem de cerca de metade dos SKUs (caixa-padrão com a
+quantidade do fornecedor); os volumosos (argamassa, tinta, piso, rejunte, cimento) vêm no palete PBR com lastro e
+camadas calculados pelas medidas e pelo peso.
+
+Limitação: o palete fechado não é forçado a ter um único SKU.
 
 ## 6.1 Posição pela saída nos modos Por endereço e Pool
 

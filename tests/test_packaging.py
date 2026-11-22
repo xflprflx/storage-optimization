@@ -132,3 +132,41 @@ def test_address_optimization_counts_whole_cases(db):
     r_cases, _s, _t = run(db, [loc.id], Params(**base, allowed_types={bc.id}))
     got = lambda r: (r[0].suggested if r[0].applicable else r[0].current)  # noqa: E731
     assert got(r_units) == {bu.id: 1} and got(r_cases) == {bc.id: 2}
+
+
+def test_project_sheet_and_examples_bring_packaging(db, tmp_path):
+    """A planilha do projeto (exemplo CD paletes + picking) traz Embalagens, Armazena em e as colunas de embalagem
+    dos SKUs: a importação cadastra os modelos e a demanda do projeto usa caixa e palete."""
+    from models import BinType, PackagingModel
+    from services.site_examples import BY_SLUG, write_workbook
+    from services.site_import import import_file, template_xlsx
+    from services.site_service import load_uploaded_demand, merged
+
+    path = write_workbook(BY_SLUG["cd-paletes-picking"], tmp_path / "ex.xlsx")
+    cfg, msgs, errs = import_file(db, path, merged(None))
+    assert not [e for e in errs if not e.startswith("Pedidos")], errs  # pedidos: sem a conversão (outro teste)
+    assert db.query(PackagingModel).filter_by(code="CX-P").one().height == 15
+    assert db.query(BinType).filter_by(code="PALETE").one().store_as == "pallet"
+    assert db.query(BinType).filter_by(code="BIN-8").one().store_as == "both"
+    assert any("Embalagem:" in m for m in msgs)
+    items = {it["sku"]: it for it in cfg["items"]}
+    cim = next(it for it in items.values() if it["name"].startswith("Cimento"))
+    assert (cim["case_qty"], cim["pallet"], cim["pallet_layer"], cim["pallet_layers"]) == (1, "PALETE", 2, 10)
+    boxed = next(it for it in items.values() if it.get("case_model"))
+    demands, _notes = load_uploaded_demand(db, cfg["items"], cfg["demand"])
+    by = {d.sku: d for d in demands}
+    assert by[cim["sku"]].unit.pack.layer == 2
+    assert by[boxed["sku"]].unit.pack.qty == boxed["case_qty"] and by[boxed["sku"]].unit.pack.h
+    # sem unidades por caixa: calculadas pelas medidas da caixa
+    it = {"sku": "PKX-1", "h": 10, "w": 10, "l": 10, "wt": 0.5, "stock": 30, "case_model": "CX-P"}
+    d, notes = load_uploaded_demand(db, [it], {"basis": "stock"})
+    assert d[0].unit.pack.qty == 1 * 2 * 3 and any("calculadas" in n for n in notes)
+    # o modelo da planilha traz as colunas novas
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    wb = load_workbook(BytesIO(template_xlsx(db, cfg)), read_only=True)
+    assert "Embalagens" in wb.sheetnames
+    head = next(wb["SKUs"].iter_rows(values_only=True))
+    assert "Unidades por caixa" in head and "Camadas" in head

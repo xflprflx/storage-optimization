@@ -44,6 +44,45 @@ BINS = {
 }
 # bins abertas em cima: máximo acima da borda (cm) — o palete de 15 cm leva a carga até 150 cm
 OPEN_BINS = {"PALETE": 135}
+# unitização: o que cada bin guarda (vazio = unidades soltas)
+STORE_AS = {"BIN-8": "ambos", "CX-50": "ambos", "PALETE": "palete"}
+# modelos de embalagem (caixas-padrão): código, nome, altura, largura, comprimento (cm), tara (kg)
+PACKAGING = [("CX-P", "Caixa de papelão pequena 15 × 20 × 30", 15, 20, 30, 0.25),
+             ("CX-M", "Caixa de papelão média 25 × 30 × 40", 25, 30, 40, 0.45),
+             ("CX-G", "Caixa de papelão grande 40 × 40 × 60", 40, 40, 60, 0.9)]
+CASE_QTYS = (6, 10, 12, 20, 24, 50, 100)
+PACK_COLS = ["Unidades por caixa", "Modelo de embalagem", "Altura da caixa (cm)", "Largura da caixa (cm)",
+             "Comprimento da caixa (cm)", "Peso da caixa cheia (kg)", "Palete (tipo de bin)", "Caixas por camada (lastro)",
+             "Camadas", "Guardar em (automático/unidades/caixa)"]
+
+
+def _packaging(row: tuple) -> tuple:
+    """Embalagem fictícia do SKU (sorteio próprio por SKU: não muda os SKUs nem os pedidos do exemplo).
+    Volumosos: a própria unidade é a caixa, no palete PBR com o lastro e as camadas pelas medidas. Demais: cerca de
+    metade vem em caixa-padrão, com a quantidade de fornecedor que cabe; o resto fica sem embalagem (unidades soltas)."""
+    from types import SimpleNamespace
+
+    from services.packaging import fit_in_case, suggest_pallet
+
+    sku, name, _mat, h, w, ln, peso = row[:7]
+    empty = (None,) * len(PACK_COLS)
+    if not (h and w and ln):
+        return empty
+    rng = random.Random(f"embalagem-{sku}")
+    if any(name.startswith(b[0]) for b in BULKY):
+        _c, ph, pw, pl, pmax, _v, _custo = BINS["PALETE"]
+        pallet = SimpleNamespace(width=pw, length=pl, max_weight=pmax, over_cm=OPEN_BINS["PALETE"])
+        layer, layers = suggest_pallet((h, w, ln), peso, pallet)
+        return (1, None, h, w, ln, peso, "PALETE", layer or None, layers or None, "automático")
+    if rng.random() < 0.5:
+        return empty
+    for code, _n, ch, cw, cl, tare in PACKAGING:
+        fit = fit_in_case((h, w, ln), peso, (ch, cw, cl))
+        qtys = [q for q in CASE_QTYS if q <= fit]
+        if qtys:
+            return (rng.choice(qtys[-3:]), code, None, None, None, None, None, None, None,
+                    rng.choice(["automático"] * 4 + ["unidades"]))
+    return empty
 # família, material, (alt, larg, comp) mín–máx (cm), peso (kg) mín–máx, giro (multiplicador de saldo)
 SMALL = [
     ("Parafuso sextavado", "Fixação", (2, 6), (2, 6), (4, 10), (0.05, 0.4), 3.0),
@@ -298,6 +337,9 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
         "do comprimento e Y ao longo da largura, a partir do canto superior esquerdo da planta.",
         "Estruturas: medidas em cm; Modo = Otimizar, Fixa ou Não usar. Bins: medidas internas em cm, peso em kg, custo "
         "em R$. SKUs: dimensões em cm, peso em kg por unidade, saldo/min/max em unidades.",
+        "Embalagem (unitização): a aba Embalagens traz as caixas-padrão; na aba SKUs, unidades por caixa, modelo de "
+        "embalagem (ou medidas próprias da caixa), palete, caixas por camada, camadas e Guardar em. Na aba Bins, "
+        "Armazena em: BIN-8 e CX-50 guardam caixas inteiras + o resto solto (ambos), o PALETE é palete fechado.",
         "Ao importar, as estruturas e bins são cadastradas (códigos existentes de bins mantêm as medidas; o custo é "
         "atualizado). Os SKUs ficam só no projeto.",
         "Pedidos: um mês de histórico (pedido, data, SKU, quantidade e horário de liberação para separação), no formato "
@@ -331,16 +373,21 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
           [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None)), *KIND_EXTRA.get(code, (None,) * 5),
             SHARED_SIDES.get(STRUCTURES[code][1]))
            for code, mode in ex["structures"].items()], {2: 36, 17: 22, 22: 22})
+    sheet(wb.create_sheet("Embalagens"), ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Tara (kg)"],
+          PACKAGING, {2: 40})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
-           "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)"],
-          [(code, *BINS[code], "sim" if code in OPEN_BINS else "não", OPEN_BINS.get(code)) for code in ex["bins"]], {2: 36})
+           "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)",
+           "Armazena em (unidades/caixas/ambos/palete)"],
+          [(code, *BINS[code], "sim" if code in OPEN_BINS else "não", OPEN_BINS.get(code), STORE_AS.get(code, "unidades"))
+           for code in ex["bins"]], {2: 36, 11: 22})
     skus = ex["skus"](rng)
     cond = any(len(r) > 10 for r in skus)  # condição de armazenagem (só nos exemplos com refrigerados)
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level"] + (["Condição de armazenagem"] if cond else []),
-          [tuple(r) + ((None,) * (11 - len(r)) if cond else ()) for r in skus], {2: 36, 11: 24})
+           "Min level", "Max level"] + (["Condição de armazenagem"] if cond else []) + PACK_COLS,
+          [tuple(r[:10]) + ((tuple(r[10:11]) or (None,)) if cond else ()) + _packaging(r) for r in skus],
+          {2: 36, 11: 24})
     if ex.get("orders"):
         sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade", "Liberação"],
               _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"],

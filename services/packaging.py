@@ -132,3 +132,94 @@ def check(p, model=None, pallet=None) -> list[str]:
             out.append(_("{n} caixas por camada não cabem na base do palete {code}: cabem até {fit}.",
                          n=p.pallet_layer, code=pallet.code, fit=layer))
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Embalagem vinda da planilha do projeto de filial nova (aba SKUs), sobre o cadastro do produto
+# --------------------------------------------------------------------------- #
+ITEM_PACK_KEYS = ("case_qty", "case_model", "case_h", "case_w", "case_l", "case_wt", "pallet", "pallet_layer",
+                  "pallet_layers", "store_pref")
+
+
+def item_has_pack(it: dict) -> bool:
+    return any(it.get(k) not in (None, "") for k in ITEM_PACK_KEYS)
+
+
+def catalogs(db: Session) -> tuple[dict, dict]:
+    """({código: modelo de embalagem}, {código: tipo de bin de palete})."""
+    from models import BinType, PackagingModel
+
+    return ({m.code: m for m in db.scalars(select(PackagingModel))},
+            {b.code: b for b in db.scalars(select(BinType).where(BinType.store_as == "pallet"))})
+
+
+def item_product(it: dict, p, models: dict, pallets: dict):
+    """Produto "virtual" (o que vale para o projeto): a embalagem da planilha, completada pelo cadastro do produto.
+    Sem unidades por caixa ou sem o padrão do palete, sugere pelas medidas. Retorna (produto, modelo, palete,
+    sugeridos), com sugeridos ⊂ {"case_qty", "pallet"}."""
+    from types import SimpleNamespace
+
+    def pick(key, attr):
+        v = it.get(key)
+        return v if v not in (None, "") else (getattr(p, attr) if p is not None else None)
+
+    model = models.get(it.get("case_model") or "") or (getattr(p, "case_model", None) if p is not None else None)
+    pallet = pallets.get(it.get("pallet") or "")
+    if pallet is None and p is not None and getattr(p, "pallet_type_id", None):
+        pallet = next((b for b in pallets.values() if b.id == p.pallet_type_id), None)
+    ns = SimpleNamespace(
+        sku=it.get("sku"), height=pick("h", "height"), width=pick("w", "width"), length=pick("l", "length"),
+        weight=pick("wt", "weight"), case_qty=pick("case_qty", "case_qty"), case_height=pick("case_h", "case_height"),
+        case_width=pick("case_w", "case_width"), case_length=pick("case_l", "case_length"),
+        case_weight=pick("case_wt", "case_weight"), pallet_layer=pick("pallet_layer", "pallet_layer"),
+        pallet_layers=pick("pallet_layers", "pallet_layers"), store_pref=pick("store_pref", "store_pref") or "auto",
+        case_model=model)
+    for k in ("case_qty", "pallet_layer", "pallet_layers"):
+        if getattr(ns, k) is not None:
+            setattr(ns, k, int(getattr(ns, k)))
+    suggested = set()
+    case = case_dims(ns, model)
+    if not ns.case_qty and all(case):
+        n = fit_in_case((_f(ns.height), _f(ns.width), _f(ns.length)), None, case)
+        if n:
+            ns.case_qty = n
+            suggested.add("case_qty")
+    if ns.case_qty and pallet is not None and all(case) and not (ns.pallet_layer and ns.pallet_layers):
+        layer, layers = suggest_pallet(case, case_weight(ns, model), pallet)
+        if layer and layers:
+            ns.pallet_layer, ns.pallet_layers = ns.pallet_layer or layer, ns.pallet_layers or layers
+            suggested.add("pallet")
+    return ns, model, pallet, suggested
+
+
+def apply_item_pack(pr, it: dict, models: dict, pallets: dict) -> bool:
+    """Grava no cadastro do produto a embalagem informada na planilha do projeto (só os campos preenchidos)."""
+    from decimal import Decimal
+
+    changed = False
+    simple = {"case_qty": "case_qty", "pallet_layer": "pallet_layer", "pallet_layers": "pallet_layers",
+              "store_pref": "store_pref"}
+    dec = {"case_h": "case_height", "case_w": "case_width", "case_l": "case_length", "case_wt": "case_weight"}
+    for k, attr in simple.items():
+        v = it.get(k)
+        if v not in (None, ""):
+            v = int(v) if k != "store_pref" else v
+            if getattr(pr, attr) != v:
+                setattr(pr, attr, v)
+                changed = True
+    for k, attr in dec.items():
+        v = it.get(k)
+        if v not in (None, ""):
+            v = Decimal(str(v))
+            if getattr(pr, attr) != v:
+                setattr(pr, attr, v)
+                changed = True
+    m = models.get(it.get("case_model") or "")
+    if m is not None and pr.case_model_id != m.id:
+        pr.case_model_id = m.id
+        changed = True
+    pal = pallets.get(it.get("pallet") or "")
+    if pal is not None and pr.pallet_type_id != pal.id:
+        pr.pallet_type_id = pal.id
+        changed = True
+    return changed

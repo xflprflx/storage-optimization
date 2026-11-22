@@ -795,6 +795,22 @@ laranja = a recompor, azul = muda de lugar, lilás = as duas coisas (passe o mou
 **Aplicar** grava a planta da variação e a recomposição; para voltar, **Desfazer rearranjo** (na planta) e
 **Desfazer a última recomposição**.
 
+**Estantes travadas** (`services/bay_locks.py`, cadastro de motivos em `/lock-reasons`): em **Capacidade dos níveis →
+Travar estantes** (Corredor e Estante aceitam valor, lista ou faixa), marque **Posição fixa** e/ou **Não recompor**, com
+um **motivo** do cadastro *Motivos de estante travada* (criar, editar, excluir; motivo em uso não pode ser excluído).
+**Destravar** tira as travas marcadas (nenhuma marcada = as duas). A tabela dos níveis mostra o cadeado e a lista das
+estantes travadas do depósito. Também na importação da estrutura das estantes: colunas *Posição fixa*, *Não recompor*
+(sim/não; vazio = não mexe) e *Motivo da trava* (o motivo que não existe é cadastrado); uma linha só com as travas vale.
+- **Posição fixa:** o rearranjo descarta a passagem transversal que faria a estante andar (com o motivo na tabela) e não
+  troca de lugar o corredor que tem estante fixa; a proposta combinada herda. No editor da planta, a estante tem um
+  cadeado e a fileira dela não se arrasta, não gira, não troca de lado e não muda de posição/corredor; **Salvar planta**
+  recusa a planta em que uma estante fixa saiu do lugar (a comparação é com a planta salva). *Gerar automaticamente*,
+  *Planta pela IA* e *Planta de um projeto* mantêm as fileiras com estante fixa onde estavam (com aviso: confira se a
+  planta gerada não passa por cima delas). Aplicar uma proposta de rearranjo ou desfazer também recusa se uma estante
+  fixa mudaria de lugar (proposta gerada antes da trava).
+- **Não recompor:** a recomposição das estruturas não mexe na estante (níveis e estrutura); ela só conta como vizinha
+  para as laterais compartilhadas. A proposta mostra quantas ficaram de fora por estarem travadas.
+
 **Proposta desatualizada:** cada proposta guarda o estado da planta e da última recomposição de quando foi gerada.
 Se a outra proposta for aplicada ou desfeita depois (ou a planta for editada), a tela da proposta avisa e oferece
 **Gerar de novo**, com os mesmos parâmetros. A recomposição depende da planta (vizinhas das laterais); o rearranjo

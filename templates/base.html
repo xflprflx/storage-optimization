@@ -186,7 +186,7 @@
   </div>
 </header>
 {% set is_sim = p.startswith('/simulator') or p in ('/optimization/slotting/routes', '/optimization/slotting/skus') or (p.startswith('/optimization/site/') and (p.endswith('/routes') or p.endswith('/skus'))) %}
-{% set cad_paths = ('/branches', '/warehouses', '/locations', '/bin-types', '/levels', '/structure', '/products') %}
+{% set cad_paths = ('/branches', '/warehouses', '/locations', '/bin-types', '/levels', '/structure', '/products', '/lock-reasons') %}
 {% set is_cad = p.startswith(cad_paths) %}
 {% set is_opt = p.startswith('/optimization') and not is_sim %}
 {% set is_imp = p.startswith('/imports') and not p.startswith('/imports/history') %}
@@ -227,6 +227,7 @@
         {{ nk_item("/levels", "bi-layers", _("Capacidade dos níveis"), p.startswith('/levels'), sub=True) }}
         {{ nk_item("/structures", "bi-bookshelf", _("Estruturas de armazenagem"), p.startswith('/structures'), sub=True) }}
         {{ nk_item("/structure-kinds", "bi-diagram-3", _("Tipos de estrutura"), p.startswith('/structure-kinds'), sub=True) }}
+        {{ nk_item("/lock-reasons", "bi-lock", _("Motivos de estante travada"), p.startswith('/lock-reasons'), sub=True) }}
         {{ nk_item("/structure-pieces", "bi-nut", _("Peças de estrutura"), p.startswith('/structure-pieces'), sub=True) }}
         {{ nk_item("/products", "bi-tag", _("Produtos"), p.startswith('/products'), sub=True) }}
       </div>

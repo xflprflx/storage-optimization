@@ -130,8 +130,15 @@ def plan_data(branch_id: str = "", warehouse_id: str = "", db: Session = Depends
     bays = scope_bays(db, br.id, wid)
     lay = get_layout(db, br.id, wid)
     data = clean(lay.data) if lay is not None else auto_layout(bays)
+    from services.bay_locks import fixed_bays
+
+    bj = bays_json(bays)
+    for (a, b), why in fixed_bays(db, br.id, wid).items():  # estantes de posição fixa: cadeado no editor
+        for e in bj.get(a, []):
+            if e["bay"] == b:
+                e["lock"] = why or True
     return {"saved": lay is not None, "updated": str(lay.updated_at) if lay is not None else "", "data": data,
-            "bays": bays_json(bays), **_geom_info(build(data, bays))}
+            "bays": bj, **_geom_info(build(data, bays))}
 
 
 @router.post("/layout/plan/auto")
@@ -147,7 +154,10 @@ async def plan_auto(request: Request, db: Session = Depends(get_db)):
 
     data = auto_layout(bays, "row" if body.get("mode") == "row" else "aisle", body.get("aisle_w"), body.get("front"),
                        parse_widths(str(body.get("widths") or "")))
-    return {"data": data, **_geom_info(build(data, bays))}
+    from services.bay_locks import keep_fixed
+
+    data, note = keep_fixed(db, br.id, wid, data)
+    return {"data": data, "note": note, **_geom_info(build(data, bays))}
 
 
 @router.post("/layout/plan/from_project")
@@ -168,8 +178,10 @@ async def plan_from_project(request: Request, db: Session = Depends(get_db)):
     plan, errors, _cfg = _plan_for(db, pr)
     if errors or plan is None or not plan.modules:
         return JSONResponse({"error": _("O projeto não tem plano válido: ") + (" ".join(errors) or _("rode a otimização."))})
-    data = clean(from_plan(plan))
-    return {"data": data, **_geom_info(build(data, scope_bays(db, br.id, wid)))}
+    from services.bay_locks import keep_fixed
+
+    data, note = keep_fixed(db, br.id, wid, clean(from_plan(plan)))
+    return {"data": data, "note": note, **_geom_info(build(data, scope_bays(db, br.id, wid)))}
 
 
 @router.get("/layout/plan/ai/prompt")
@@ -198,6 +210,11 @@ async def plan_ai(request: Request, db: Session = Depends(get_db)):
     data, error, notes = parse(str(body.get("code") or "")[:500000], bays)
     if error:
         return {"error": error, "notes": notes}
+    from services.bay_locks import keep_fixed
+
+    data, note = keep_fixed(db, br.id, wid, data)
+    if note:
+        notes.append(note)
     return {"data": data, "notes": notes, **_geom_info(build(data, bays))}
 
 
@@ -224,6 +241,13 @@ async def plan_save(request: Request, db: Session = Depends(get_db)):
     if br is None:
         return JSONResponse({"error": _("Filial não encontrada.")}, status_code=404)
     data = clean(body.get("data") or {})  # sem fileiras também vale (só o imóvel): as estantes são desenhadas depois
+    from services.bay_locks import moved_fixed
+
+    moved = moved_fixed(db, br.id, wid, data)
+    if moved:
+        return JSONResponse({"error": _("Estante(s) com posição fixa fora do lugar: {list}. Volte-as ao lugar (ou destrave em "
+                                        "Capacidade dos níveis → Travar estantes) antes de salvar.",
+                                        list=", ".join(moved[:12]) + ("…" if len(moved) > 12 else ""))}, status_code=400)
     lay = get_layout(db, br.id, wid)
     if lay is None:
         lay = BranchLayout(branch_id=br.id, warehouse_id=wid, data=data)
@@ -512,6 +536,12 @@ async def rearrange_apply(request: Request, db: Session = Depends(get_db)):
     lay = get_layout(db, br.id, wid) if br is not None else None
     if v is None or v.get("current") or not v.get("data") or lay is None:
         return redirect(back, _("A proposta expirou: gere de novo."), "warning")
+    from services.bay_locks import moved_fixed
+
+    moved = moved_fixed(db, br.id, wid, clean(v["data"]))
+    if moved:
+        return redirect(back, _("Estante(s) com posição fixa mudariam de lugar ({list}): gere a proposta de novo.",
+                                list=", ".join(moved[:12])), "warning")
     prev = {k: x for k, x in (lay.data or {}).items() if k != "_prev"}
     lay.data = {**clean(v["data"]), "_prev": prev}
     db.commit()
@@ -529,6 +559,12 @@ async def rearrange_undo(request: Request, db: Session = Depends(get_db)):
     back = f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout"
     if lay is None or not (lay.data or {}).get("_prev"):
         return redirect(back, _("Não há rearranjo para desfazer."), "warning")
+    from services.bay_locks import moved_fixed
+
+    moved = moved_fixed(db, br.id, wid, clean(lay.data["_prev"]))
+    if moved:
+        return redirect(back, _("Não dá para desfazer: estante(s) com posição fixa mudariam de lugar ({list}).",
+                                list=", ".join(moved[:12])), "warning")
     lay.data = clean(lay.data["_prev"])
     db.commit()
     return redirect(back, _("Rearranjo desfeito: a planta voltou a ser a anterior."), "secondary")

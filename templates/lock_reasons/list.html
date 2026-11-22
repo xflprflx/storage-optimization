@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, delete_button, th, keep_params, filter_buttons %}
+{% block title %}{{ _("Motivos de estante travada") }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-lock"></i> {{ _("Motivos de estante travada") }}</h1>
+  <div class="d-flex gap-2">
+    <a href="/levels" class="btn btn-outline-secondary"><i class="bi bi-layers"></i> {{ _("Capacidade dos níveis") }}</a>
+    <a href="/lock-reasons/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Novo motivo") }}</a>
+  </div>
+</div>
+<div class="small text-muted mb-3">{{ _("Por que uma estante não pode sair do lugar ou não pode ser recomposta: cravada no chão, câmara com tomadas, sprinkler, contrato com o locador… As estantes são travadas em Capacidade dos níveis (ou na importação de estruturas), com um destes motivos.") }}</div>
+<div class="card">
+  <div class="card-body border-bottom">
+    <form class="row g-2" method="get" data-autofilter>
+      {{ keep_params(request) }}
+      <div class="col-md-4"><input class="form-control" type="search" name="q" value="{{ q }}" placeholder="{{ _("Buscar por nome ou observação") }}"></div>
+      {{ filter_buttons(request) }}
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>{{ th(request, sort, 'name', _('Motivo')) }}<th class="text-end">{{ _("Estantes") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th></tr></thead>
+      <tbody>
+      {% for r in page.items %}
+        <tr>
+          <td class="fw-semibold">{{ r.name }}{% if r.notes %}<div class="small text-muted fw-normal">{{ r.notes }}</div>{% endif %}</td>
+          <td class="text-end">{{ usage.get(r.id) or '' }}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-primary" href="/lock-reasons/{{ r.id }}/edit" title="{{ _("Editar") }}"><i class="bi bi-pencil"></i></a>
+            {{ delete_button('/lock-reasons/' ~ r.id ~ '/delete', '', _('Excluir o motivo ') ~ r.name ~ '?') }}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="text-center text-muted py-4">{{ _("Nenhum motivo cadastrado.") }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{{ pagination(request, page) }}
+{% endblock %}

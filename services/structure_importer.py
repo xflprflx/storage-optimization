@@ -394,11 +394,14 @@ BAY_FIELDS = {
     "warehouse_code": (N_("Armazém"), False, ("armazem", "armazém", "codarmazem", "deposito", "warehouse")),
     "aisle": (N_("Corredor (ex.: A ou A,B ou A-C)"), True, ("corredor", "rua", "aisle")),
     "bay": (N_("Estante (vazio = todas; 01-04)"), False, ("estante", "predio", "prédio", "bay", "modulo")),
-    "structure": (N_("Estrutura (código; \"remover\" tira a estrutura)"), True, ("estrutura", "codigodaestrutura", "structure")),
+    "structure": (N_("Estrutura (código; \"remover\" tira a estrutura)"), False, ("estrutura", "codigodaestrutura", "structure")),
     "top_gap": (N_("Folga acima da bin (cm)"), False, ("folga", "folgaacimadabin", "folgaacimadabincm", "topgap")),
     "first_level": (N_("Altura do 1º nível (cm)"), False, ("alturado1onivel", "alturado1nivel", "1onivel", "primeironivel", "firstlevel")),
     "create_levels": (N_("Criar níveis que faltam (sim/não)"), False, ("criarniveis", "criarniveisquefaltam", "createlevels")),
     "clear_manual": (N_("Remover limites manuais (sim/não)"), False, ("removerlimites", "removerlimitesmanuais", "clearmanual")),
+    "fixed": (N_("Posição fixa (sim/não)"), False, ("posicaofixa", "posiçãofixa", "fixa", "travada", "fixedposition", "fixed")),
+    "no_recompose": (N_("Não recompor (sim/não)"), False, ("naorecompor", "nãorecompor", "semrecomposicao", "norecompose")),
+    "lock_reason": (N_("Motivo da trava"), False, ("motivodatrava", "motivo", "reason", "lockreason")),
 }
 REMOVE_WORDS = {"remover", "remove", "-", "nenhuma", "sem", "none", "quitar", "retirer", "entfernen"}
 
@@ -434,11 +437,29 @@ def import_bay_structures(db: Session, path: Path, mapping: dict, opts: MasterOp
         if not aisle:
             raise ValueError(_("Corredor vazio"))
         s_raw = str(get_cell(row, mapping.get("structure")) or "").strip()
-        if not s_raw:
-            raise ValueError(_("Informe a estrutura (ou \"remover\")."))
+        fx, nr = _yes(row, mapping, "fixed"), _yes(row, mapping, "no_recompose")
+        r_raw = str(get_cell(row, mapping.get("lock_reason")) or "").strip()[:100]
+        if not s_raw and fx is None and nr is None:
+            raise ValueError(_("Informe a estrutura (ou \"remover\") ou as travas (posição fixa / não recompor)."))
         bays = matching_bays(db, bid, wid, aisle, cond(row, "bay"))
         if not bays:
             raise ValueError(_("Nenhuma estante corresponde a {aisle}/{v} (gere os endereços antes)", aisle=aisle, v=cond(row, "bay") or "*"))
+        if fx is not None or nr is not None:  # travas: posição fixa / não recompor, com o motivo (cadastrado se novo)
+            from models import LockReason
+            from services.bay_locks import set_locks
+
+            rid = None
+            if r_raw:
+                rs = db.scalar(select(LockReason).where(func.lower(LockReason.name) == r_raw.lower()))
+                if rs is None:
+                    rs = LockReason(name=r_raw, notes="")
+                    db.add(rs)
+                    db.flush()
+                    res.inc(N_("Motivos cadastrados"))
+                rid = rs.id
+            res.inc(N_("Estantes com trava alterada"), set_locks(db, bays, fx, nr, rid, keep_reason=not r_raw))
+        if not s_raw:
+            return
         if _plain(s_raw) in REMOVE_WORDS:
             res.inc(N_("Estantes sem estrutura"), remove_structure(db, bays))
             return
@@ -517,7 +538,10 @@ STRUCTURE_KINDS = {
                  "ou faixa (01-04); vazio = todas. \"remover\" na coluna Estrutura tira a estrutura das estantes."),
                  N_("Aplicar grava o vão de cada nível e a capacidade passa a ser calculada pelas medidas (com a folga "
                  "acima da bin informada; vazio = 5 cm). Os limites manuais ficam, a não ser com Remover limites manuais = sim."),
-                 N_("Filiais, armazéns, endereços e estruturas precisam existir (importe os endereços e as estruturas antes).")],
-        "sample": "Filial;Armazem;Corredor;Estante;Estrutura;Folga acima da bin (cm);Altura do 1o nivel (cm);Criar niveis que faltam\n"
-                  "01;CD1;A;01-10;EST-100;5;;nao\n01;CD1;P;;PP-270;10;;sim\n"},
+                 N_("Filiais, armazéns, endereços e estruturas precisam existir (importe os endereços e as estruturas antes)."),
+                 N_("Travas (opcionais): Posição fixa e Não recompor (sim/não; vazio = não mexe) com o Motivo da trava (o "
+                 "motivo que não existe é cadastrado). Uma linha só com as travas, sem estrutura, também vale.")],
+        "sample": "Filial;Armazem;Corredor;Estante;Estrutura;Folga acima da bin (cm);Altura do 1o nivel (cm);Criar niveis que faltam;"
+                  "Posicao fixa;Nao recompor;Motivo da trava\n"
+                  "01;CD1;A;01-10;EST-100;5;;nao;;;\n01;CD1;P;;PP-270;10;;sim;;;\n01;CD1;R;01;;;;;sim;sim;Câmara com tomadas\n"},
 }

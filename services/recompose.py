@@ -219,7 +219,10 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     prog(0, 4, _("Lendo estantes, níveis e bins"))
     ctx = _Ctx(db)
     bays = _bays(db, branch_id, wid)
-    skipped = {"floor": 0, "no_levels": 0}
+    skipped = {"floor": 0, "no_levels": 0, "locked": 0}
+    from services.bay_locks import no_recompose_bays
+
+    locked = no_recompose_bays(db, branch_id, wid)  # estantes travadas: "não recompor"
     hmax = max([float(b["st"].height) for b in bays] or [0.0])
     count_all: dict[int, int] = defaultdict(int)
     for b in bays:
@@ -250,8 +253,8 @@ def propose(db: Session, branch_id: int, wid: Optional[int], pieces: str = "exis
     fixed = {}  # estantes que não entram na escolha (palete no chão, sem níveis): só a vizinhança das laterais
     for b in bays:
         st = b["st"]
-        if ctx.floor(st) or not b["levels"]:
-            skipped["floor" if ctx.floor(st) else "no_levels"] += 1
+        if ctx.floor(st) or not b["levels"] or (b["aisle"], b["bay"]) in locked:
+            skipped["locked" if (b["aisle"], b["bay"]) in locked else ("floor" if ctx.floor(st) else "no_levels")] += 1
             fixed[(b["aisle"], b["bay"])] = parts(st, len(b["vaos"]))
             continue
         cnt: dict[int, int] = defaultdict(int)

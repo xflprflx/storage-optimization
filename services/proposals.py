@@ -108,6 +108,12 @@ def apply_combined(db: Session, res: dict, idx: int) -> tuple[str, str]:
         lay = get_layout(db, bid, wid)
         if lay is None:
             return _("A filial não tem planta desenhada."), "warning"
+        from services.bay_locks import moved_fixed
+
+        moved = moved_fixed(db, bid, wid, clean(v["data"]))
+        if moved:
+            return (_("Estante(s) com posição fixa mudariam de lugar ({list}): gere a proposta de novo.",
+                      list=", ".join(moved[:12])), "warning")
         prev = {k: x for k, x in (lay.data or {}).items() if k != "_prev"}
         lay.data = {**clean(v["data"]), "_prev": prev}
         db.commit()

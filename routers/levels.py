@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import FormData
 
 from database import get_db
-from models import (BinType, Branch, LevelCapacity, LocationBin, ShelfLevel, StorageLocation, StructureType, Warehouse,
+from models import (BinType, Branch, LevelCapacity, LocationBin, LockReason, ShelfLevel, StorageLocation, StructureType, Warehouse,
                     branch_warehouse)
 from routers.common import f_int, f_str, form_data, redirect, render, to_int
 from services.addressing import normalize_code
@@ -37,6 +37,7 @@ def _lookups(db: Session) -> dict:
         "wh_branches": wh_branches,
         "bin_types": list(db.scalars(select(BinType).order_by(BinType.code))),
         "structures": list(db.scalars(select(StructureType).order_by(StructureType.code))),
+        "lock_reasons": list(db.scalars(select(LockReason).order_by(LockReason.name))),
     }
 
 
@@ -97,16 +98,20 @@ def levels_page(request: Request, branch_id: str = "", warehouse_id: str = "", a
     from services.structure_service import bay_structures
 
     bay_st = bay_structures(db, bid, wid)
+    from services.bay_locks import lock_rows, locks
+
+    bay_lk = locks(db, bid, wid)
     rows = []
     for k in page_keys:
         sl = levels[k]
         u = usage[k]
         tallest = max((bt_h[t][1] for t, n in u.used.items() if n and t in bt_h), default=None)
         rows.append({"key": k, "code": "-".join(k[2:]), "level": sl, "usage": u, "tallest": tallest,
-                     "locations": loc_counts.get(k[2:], 0), "struct": bay_st.get(k[2:4])})
+                     "locations": loc_counts.get(k[2:], 0), "struct": bay_st.get(k[2:4]), "lock": bay_lk.get(k[2:4])})
     from services.recompose import last_log
 
-    ctx.update(rows=rows, total=total, page_no=page, pages=pages, recomp_log=last_log(db, bid, wid))
+    ctx.update(rows=rows, total=total, page_no=page, pages=pages, recomp_log=last_log(db, bid, wid),
+               bay_locks=lock_rows(db, bid, wid))
     return render(request, "levels/index.html", **ctx)
 
 
@@ -280,6 +285,40 @@ def delete_level(level_id: int, form: FormData = Depends(form_data), db: Session
     if n_locs:
         return redirect(_back(form), _("Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).", code=code))
     return redirect(_back(form), _("Nível reservado {code} excluído.", code=code))
+
+
+@router.post("/locks")
+def set_bay_locks(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Trava ou destrava as estantes que atendem às condições: posição fixa e/ou não recompor, com o motivo."""
+    from services.bay_locks import set_locks
+    from services.structure_service import matching_bays
+
+    bid = f_int(form, "f_branch_id")
+    wid = _wid(form.get("f_warehouse_id"))
+    if not bid:
+        return redirect(_back(form), _("Selecione a filial."), "danger")
+    try:
+        bays = matching_bays(db, bid, wid, f_str(form, "k_aisle"), f_str(form, "k_bay"))
+    except ValueError as exc:
+        return redirect(_back(form), str(exc), "danger")
+    if not bays:
+        return redirect(_back(form), _("Nenhuma estante corresponde às condições."), "warning")
+    on = lambda k: str(form.get(k) or "").lower() in {"1", "on", "true"}  # noqa: E731
+    act = form.get("action") or "lock"
+    if act == "unlock":  # destravar: tira as travas marcadas (ou as duas)
+        both = not (on("fixed") or on("no_recompose"))
+        n = set_locks(db, bays, False if (both or on("fixed")) else None, False if (both or on("no_recompose")) else None,
+                      keep_reason=True)
+        db.commit()
+        return redirect(_back(form), _("{n} estante(s) destravada(s).", n=n))
+    if not (on("fixed") or on("no_recompose")):
+        return redirect(_back(form), _("Marque posição fixa e/ou não recompor."), "warning")
+    rid = f_int(form, "reason_id")
+    if rid and db.get(LockReason, rid) is None:
+        rid = None
+    n = set_locks(db, bays, True if on("fixed") else None, True if on("no_recompose") else None, rid)
+    db.commit()
+    return redirect(_back(form), _("{n} estante(s) travada(s).", n=n))
 
 
 @router.post("/structure")

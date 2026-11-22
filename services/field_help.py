@@ -369,6 +369,15 @@ R(PLOC, r"bin_content.*|content_.*|c_.*", "Conteúdo da bin", "Qual produto e qu
 
 # =========================================================================== capacidade dos níveis
 PLEV = r"/levels"
+R(PLEV, "k_aisle", "Corredor das estantes a travar", "Corredor (valor, lista A,B ou faixa A-C) das estantes a travar ou destravar.", "addr:aisle")
+R(PLEV, "k_bay", "Estantes a travar", "Estante (valor, lista 01,03 ou faixa 01-04); vazio = todas do corredor.", "addr:bay")
+R(PLEV, "fixed", "Posição fixa", "A estante não sai do lugar: o rearranjo descarta passagens que a fariam andar e não troca o corredor dela de lugar; no editor da planta a fileira não se move, e a planta gerada (automática, pela IA ou do projeto) a mantém onde está.", "plan:x")
+R(PLEV, "no_recompose", "Não recompor", "A recomposição das estruturas não mexe nesta estante (nem nos níveis, nem na estrutura); ela só conta como vizinha para as laterais compartilhadas.", "rack:levels")
+R(PLEV, "reason_id", "Motivo da trava", "Por que a estante está travada (cadastro de motivos): cravada no chão, câmara com tomadas…", "rack:levels")
+PLKR = r"/lock-reasons"
+R(PLKR, "name", "Motivo", "Nome do motivo de estante travada (ex.: Cravada no chão, Câmara com tomadas). Aparece no cadeado das estantes.", "rack:levels")
+R(PLKR, "notes", "Observações", "Detalhes do motivo (quem libera, cuidados).", "rack:levels")
+R(PLKR, "q", "Buscar", "Busca pelo nome ou pela observação do motivo.", "rack:levels")
 R(PLEV, "pieces", "Peças da recomposição", "Só as das estruturas existentes (as liberadas por uma estante servem para outra) ou ilimitadas (o que faltar é comprado, pelo custo da peça).", "rack:levels")
 R(PLEV, "min_gain", "Ganho mínimo por estante", "Só propõe mexer numa estante quando ela ganha pelo menos este número de bins.", "rack:levels")
 R(PLEV, "aisle", "Corredor", "Filtra os níveis de um corredor.", "addr:aisle")

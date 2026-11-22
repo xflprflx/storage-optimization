@@ -1,5 +1,6 @@
 from models.entities import (  # noqa: F401
     AppSetting,
+    BayLock,
     BayStructure,
     BinContent,
     BinType,
@@ -7,6 +8,7 @@ from models.entities import (  # noqa: F401
     BranchLayout,
     Dimensions,
     LevelCapacity,
+    LockReason,
     LocationBin,
     OptimizationRun,
     PickHistory,
@@ -29,6 +31,7 @@ from models.entities import (  # noqa: F401
 
 __all__ = [
     "AppSetting",
+    "BayLock",
     "BayStructure",
     "BinContent",
     "BinType",
@@ -36,6 +39,7 @@ __all__ = [
     "BranchLayout",
     "LevelCapacity",
     "LocationBin",
+    "LockReason",
     "OptimizationRun",
     "PickHistory",
     "RecompositionLog",

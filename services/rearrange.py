@@ -198,7 +198,8 @@ def _overlap(a, b, eps: float = 1.0) -> bool:
     return a[0] < b[0] + b[2] - eps and b[0] < a[0] + a[2] - eps and a[1] < b[1] + b[3] - eps and b[1] < a[1] + a[3] - eps
 
 
-def add_passages(data: dict, g, orient: str, cuts: list[float], gap: float = PASSAGE_CM) -> tuple[Optional[dict], str]:
+def add_passages(data: dict, g, orient: str, cuts: list[float], gap: float = PASSAGE_CM,
+                 fixed: Optional[dict] = None) -> tuple[Optional[dict], str]:
     """Abre passagens transversais de `gap` cm nas posições `cuts` (cm, ao longo de X para fileiras "h", de Y para
     "v"), atravessando todas as fileiras dessa orientação. Cada fileira cortada vira duas (lista fixa de estantes);
     o que fica depois do corte anda para a frente. (nova planta, "") ou (None, motivo)."""
@@ -224,6 +225,11 @@ def add_passages(data: dict, g, orient: str, cuts: list[float], gap: float = PAS
             for i in range(idx, len(parts)):
                 starts[i] += sh
                 ends[i] += sh
+        for i, p in enumerate(parts):  # estante com posição fixa não anda
+            k_ = (p.bay.aisle, p.bay.bay)
+            if fixed and k_ in fixed and abs(starts[i] - (p.x if orient == "h" else p.y)) > 1e-6:
+                why = f" ({fixed[k_]})" if fixed[k_] else ""
+                return None, _("não cabe: a estante fixa {bay} teria de andar{why}", bay=f"{k_[0]}-{k_[1]}", why=why)
         breaks = [0] + [i for i in range(1, len(parts)) if starts[i] > ends[i - 1] + 1e-6] + [len(parts)]
         if len(breaks) == 2 and abs(starts[0] - (parts[0].x if orient == "h" else parts[0].y)) < 1e-6:
             out_rows.append(r)  # a fileira não cruza nenhuma passagem
@@ -287,7 +293,8 @@ def _unit_sig(data: dict, g, cor) -> tuple:
     return (cor.orient, tuple(sorted(shapes)))
 
 
-def swap_corridors(data: dict, g, demand: dict[int, float], dist_of: dict[int, float]) -> tuple[Optional[dict], list]:
+def swap_corridors(data: dict, g, demand: dict[int, float], dist_of: dict[int, float],
+                   fixed: Optional[dict] = None) -> tuple[Optional[dict], list]:
     """Troca de corredores: dentro de cada grupo de corredores de mesmo formato, os de mais saídas (`demand`, por
     índice de corredor) vão para as posições mais perto da referência (`dist_of`). Uma fileira só pode estar num
     corredor. (nova planta ou None se nada muda, [(de, para)] em letras)."""
@@ -297,7 +304,9 @@ def swap_corridors(data: dict, g, demand: dict[int, float], dist_of: dict[int, f
         for ri in c.rows:
             owner.setdefault(ri, c.index)
     units = [c for c in g.corridors if c.rows and all(owner.get(ri) == c.index for ri in c.rows)
-             and len(set(c.rows)) == len(c.rows)]
+             and len(set(c.rows)) == len(c.rows)
+             and not any((p.bay.aisle, p.bay.bay) in (fixed or {}) for ri in c.rows for p in _row_parts(g, ri))]
+    # (corredor com estante de posição fixa não troca de lugar)
     groups: dict[tuple, list] = {}
     for c in units:
         groups.setdefault(_unit_sig(data, g, c), []).append(c)
@@ -471,6 +480,9 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         return {"error": _("A proposta usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o "
                            "histórico na etapa Posição pela saída.")}
     data = clean(lay.data)
+    from services.bay_locks import fixed_bays
+
+    fixed = fixed_bays(db, branch_id, wid)  # estantes com posição fixa não andam
     bays = scope_bays(db, branch_id, wid)
     stock = _stock(db, branch_id, wid)
     gold = address_golden(db, branch_id, wid)
@@ -512,7 +524,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         if stop():
             break
         prog(1 + k * 3 // max(1, len(tried)), steps, _("Testando passagens transversais"))
-        new, why = add_passages(data, g, orient, cuts, gap)
+        new, why = add_passages(data, g, orient, cuts, gap, fixed)
         where = ", ".join(f"{fmt_num(c / 100, 1)} m" for c in cuts)
         axis = "X" if orient == "h" else "Y"
         label = _("{n} passagem(ns) transversal(is) de {gap} m em {axis} = {where}", n=len(cuts), gap=fmt_num(gap / 100),
@@ -537,7 +549,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         prog(4, steps, _("Testando troca de corredores"))
         base_nodes = _nodes(db, g, branch_id, wid, stock, gold, assign)
         demand, dist_of = _corridor_demand(g, base_nodes, sample, g.ref_node())
-        new, moves = swap_corridors(data, g, demand, dist_of)
+        new, moves = swap_corridors(data, g, demand, dist_of, fixed)
         blocked = door_block(build(new, bays)) if new is not None else ""
         if new is not None and blocked:
             variants.append({"label": _("Troca de corredores ({n} mudança(s))", n=len(moves)), "error": blocked})
@@ -552,7 +564,7 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
                 prog(5, steps, _("Testando troca de corredores + passagem"))
                 g_sw = build(new, bays)
                 orient, cuts = best_pass["orient"], best_pass["cuts"]
-                both, why = add_passages(new, g_sw, orient, cuts, gap)
+                both, why = add_passages(new, g_sw, orient, cuts, gap, fixed)
                 if both is not None and not door_block(build(both, bays)):
                     wb, _g = measure(both)
                     variants.append({"label": _("Troca de corredores + {label}", label=best_pass["label"]), "data": both,
@@ -560,7 +572,8 @@ def propose_branch(db, branch_id: int, wid: Optional[int], assign: Optional[dict
         else:
             variants.append({"label": _("Troca de corredores"), "error": _("nenhuma troca ajuda: os corredores de mesmo "
                                                                            "formato já estão na ordem das saídas, ou não há "
-                                                                           "corredores de mesmo formato")})
+                                                                           "corredores de mesmo formato (os corredores com "
+                                                                           "estante de posição fixa ficam de fora)")})
     for v in variants:  # passagem no meio de estantes que compartilham a lateral: laterais a mais (peças)
         if v.get("data") is not None and not v.get("current") and not v.get("error"):
             v["laterals"] = lateral_delta(db, branch_id, wid, g, build(v["data"], bays), lat_info)

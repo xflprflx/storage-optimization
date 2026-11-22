@@ -661,6 +661,47 @@ Index(
 )
 
 
+class LockReason(TimestampMixin, Base):
+    """Motivo de uma estante travada (posição fixa ou não recompor): "cravada no chão", "câmara com tomadas"…"""
+
+    __tablename__ = "lock_reasons"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+
+
+class BayLock(TimestampMixin, Base):
+    """Estante (Corredor + Estante) travada: `fixed_position` = não sai do lugar (rearranjo, editor da planta, planta
+    gerada); `no_recompose` = a recomposição das estruturas não mexe nela (níveis e estrutura)."""
+
+    __tablename__ = "bay_locks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    branch_id: Mapped[int] = mapped_column(ForeignKey("branches.id", ondelete="CASCADE"), nullable=False, index=True)
+    warehouse_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    aisle: Mapped[str] = mapped_column(String(20), nullable=False)
+    bay: Mapped[str] = mapped_column(String(20), nullable=False)
+    fixed_position: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    no_recompose: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    reason_id: Mapped[Optional[int]] = mapped_column(ForeignKey("lock_reasons.id", ondelete="RESTRICT"), nullable=True,
+                                                     index=True)
+
+    reason: Mapped[Optional[LockReason]] = relationship()
+
+
+Index(
+    "uq_bay_lock_physical",
+    BayLock.branch_id,
+    func.coalesce(BayLock.warehouse_id, 0),
+    BayLock.aisle,
+    BayLock.bay,
+    unique=True,
+)
+
+
 class BranchLayout(TimestampMixin, Base):
     """Planta desenhada de um depósito existente (filial + armazém): o imóvel, as fileiras de estantes (cada uma com
     um corredor/rua e o lado dos números — ímpares, pares ou todos), os obstáculos e o ponto de referência da

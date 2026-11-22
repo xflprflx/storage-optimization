@@ -119,6 +119,31 @@
           {% if not structures %}<div class="col-12 small text-muted">{{ _h("Nenhuma estrutura cadastrada. <a href=\"/structures/new\">Cadastrar</a>") }}</div>{% endif %}
         </form>
       </div>
+      <div class="col-12 order-last">
+        <form method="post" action="/levels/locks" class="row g-2 align-items-end border-top pt-2" data-tour="bay-locks">
+          {{ hidden_filters() }}
+          <div class="col-12 small fw-semibold"><i class="bi bi-lock"></i> {{ _h("Travar estantes <span class=\"text-muted fw-normal\">— posição fixa: não sai do lugar no rearranjo, no editor da planta nem na planta gerada; não recompor: a recomposição das estruturas não mexe nela (<a href=\"/lock-reasons\">motivos</a>)</span>") }}</div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="k_aisle" placeholder="{{ _("Corredor") }}" value="{{ aisle }}"></div>
+          <div class="col-4 col-md-1"><input class="form-control form-control-sm mono" name="k_bay" placeholder="{{ _("Estante") }}" value="{{ bay }}"></div>
+          <div class="col-auto small d-flex flex-wrap gap-3">
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="fixed" value="1" id="lk_fixed" checked><label class="form-check-label" for="lk_fixed">{{ _("posição fixa") }}</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="no_recompose" value="1" id="lk_norec"><label class="form-check-label" for="lk_norec">{{ _("não recompor") }}</label></div>
+          </div>
+          <div class="col-8 col-md-3">
+            <select class="form-select form-select-sm" name="reason_id">
+              <option value="">{{ _("— motivo —") }}</option>
+              {% for r in lock_reasons %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-auto d-flex gap-1">
+            <button class="btn btn-sm btn-dark" name="action" value="lock"><i class="bi bi-lock-fill"></i> {{ _("Travar") }}</button>
+            <button class="btn btn-sm btn-outline-secondary" name="action" value="unlock" title="{{ _("Tira as travas marcadas (nenhuma marcada = as duas)") }}"><i class="bi bi-unlock"></i> {{ _("Destravar") }}</button>
+          </div>
+          {% if not lock_reasons %}<div class="col-12 small text-muted">{{ _h("Nenhum motivo cadastrado. <a href=\"/lock-reasons/new?back=/levels\">Cadastrar</a>") }}</div>{% endif %}
+          {% if bay_locks %}<div class="col-12"><details class="small"><summary>{{ _h("{n} estante(s) travada(s) neste depósito", n=bay_locks|length) }}</summary>
+            <div class="d-flex flex-wrap gap-1 mt-1">{% for b in bay_locks %}<span class="badge text-bg-light border mono" title="{{ b.reason.name if b.reason else '' }}"><i class="bi bi-lock-fill"></i> {{ b.aisle }}-{{ b.bay }}{% if b.fixed_position %} · {{ _("fixa") }}{% endif %}{% if b.no_recompose %} · {{ _("não recompor") }}{% endif %}{% if b.reason %} · {{ b.reason.name }}{% endif %}</span>{% endfor %}</div></details></div>{% endif %}
+        </form>
+      </div>
       <div class="col-lg-5">
         <form method="post" action="/levels/reserved" class="row g-2 align-items-end">
           {{ hidden_filters() }}
@@ -152,7 +177,8 @@
             <td><input type="checkbox" class="form-check-input bulk-levels" value="{{ r.level.id }}"></td>
             <td class="mono fw-semibold text-nowrap">{{ r.code }}
               {% if not r.locations %}<span class="badge text-bg-secondary ms-1" title="{{ _("Nível sem endereços: só recebe bins de outros níveis") }}">{{ _("reservado") }}</span>{% endif %}</td>
-            <td>{% if r.struct %}<span class="badge bg-primary-subtle text-primary-emphasis border mono" title="{{ _("{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm", name=(r.struct.name), width=(r.struct.width|dec), depth=(r.struct.depth|dec), levels=(r.struct.levels), level_height=(r.struct.level_height|dec)) }}">{{ r.struct.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>{% if r.struct %}<span class="badge bg-primary-subtle text-primary-emphasis border mono" title="{{ _("{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm", name=(r.struct.name), width=(r.struct.width|dec), depth=(r.struct.depth|dec), levels=(r.struct.levels), level_height=(r.struct.level_height|dec)) }}">{{ r.struct.code }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+              {% if r.lock %}<span class="badge text-bg-dark ms-1" title="{{ (_('Posição fixa') if r.lock.fixed else '') ~ (' · ' if r.lock.fixed and r.lock.no_recompose else '') ~ (_('Não recompor') if r.lock.no_recompose else '') ~ ((' — ' ~ r.lock.reason) if r.lock.reason else '') }}"><i class="bi bi-lock-fill"></i>{% if r.lock.fixed %} {{ _("fixa") }}{% endif %}{% if r.lock.no_recompose %} {{ _("não recompor") }}{% endif %}</span>{% endif %}</td>
             <td class="text-end">{% if r.locations %}<a href="/locations?branch_id={{ branch_id }}&warehouse_id={{ warehouse_id }}&q={{ r.code|urlencode }}">{{ r.locations }}</a>{% else %}0{% endif %}</td>
             {% for bt in bin_types %}{% set c = u.calc.get(bt.id) %}{% set lim = bt.id in u.limited %}
             {% set nofit = u.structured and not c and not bt.is_fraction and bt.height is not none and bt.width is not none and bt.length is not none %}

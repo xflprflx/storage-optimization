@@ -217,7 +217,7 @@
   }
   function rowGeom(r) {
     const bs = rowBays(r); let cur = 0; const out = [];
-    bs.forEach(b => { const w = b.w || r.bay_w; out.push({ bay: b.bay, off: cur, w, f: b.f }); cur += w; });
+    bs.forEach(b => { const w = b.w || r.bay_w; out.push({ bay: b.bay, off: cur, w, f: b.f, lock: b.lock }); cur += w; });
     const len = cur || r.bay_w;
     return { bays: out, len, w: r.orient === 'h' ? len : r.depth, d: r.orient === 'h' ? r.depth : len };
   }
@@ -302,7 +302,12 @@
       G.bays.forEach((b, k) => {
         const a = r.orient === 'h' ? { x: r.x + b.off, y: r.y, width: b.w, height: r.depth } : { x: r.x, y: r.y + b.off, width: r.depth, height: b.w };
         const on = sel && sel.kind === 'row' && sel.i === i && pick.has(b.bay);
-        el('rect', { ...a, fill: on ? '#fde68a' : (b.f ? 'url(#nkPalletE)' : 'transparent'), stroke: on ? '#e11d48' : '#7b8a95', 'stroke-width': sw * (on ? 1.5 : 0.6), 'data-bay': b.bay }, g);
+        el('rect', { ...a, fill: on ? '#fde68a' : (b.f ? 'url(#nkPalletE)' : (b.lock ? 'rgba(31,45,51,.18)' : 'transparent')), stroke: on ? '#e11d48' : (b.lock ? '#1f2d33' : '#7b8a95'), 'stroke-width': sw * (on ? 1.5 : (b.lock ? 1.2 : 0.6)), 'data-bay': b.bay }, g);
+        if (b.lock) {  // posição fixa: cadeado
+          const lk = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 - fs * 0.25, 'font-size': fs * 0.7, 'text-anchor': 'middle', 'pointer-events': 'none' }, g);
+          lk.textContent = '🔒';
+          el('title', {}, g.lastChild.previousSibling).textContent = _t('{bay}: posição fixa', { bay: r.aisle + '-' + b.bay }) + (typeof b.lock === 'string' ? ' — ' + b.lock : '');
+        }
         const big = b.w / vb.w * svg.clientWidth > 16;
         if (big || k === 0 || k === G.bays.length - 1) {
           const t = el('text', { x: a.x + a.width / 2, y: a.y + a.height / 2 + fs * 0.22, 'font-size': fs * 0.6, fill: '#1f2d33', 'text-anchor': 'middle', 'pointer-events': 'none' }, g);
@@ -344,6 +349,16 @@
   const pt = e => { const r = svg.getBoundingClientRect(); return { x: vb.x + (e.clientX - r.left) / r.width * vb.w, y: vb.y + (e.clientY - r.top) / r.height * vb.h }; };
 
   // ---------------------------------------------------------------- mouse
+  // posição fixa: fileiras com estante travada não se movem (o servidor também recusa salvar se uma sair do lugar)
+  const rowLocked = r => rowBays(r).some(b => b.lock);
+  function lockedSel() {
+    const ms = (multi.length ? multi : (sel ? [sel] : [])).filter(m => m.kind === 'row' && rowLocked(D.rows[m.i]));
+    if (ms.length) {
+      $('status').innerHTML = '<span class="text-danger"><i class="bi bi-lock-fill"><\/i> ' + esc(_t('Fileira com estante de posição fixa: destrave em Capacidade dos níveis → Travar estantes para mover.')) + '<\/span>';
+      return true;
+    }
+    return false;
+  }
   let drag = null, band = null;
   svg.addEventListener('pointerdown', e => {
     const p = pt(e);
@@ -367,6 +382,7 @@
         pick = new Set(); draw(); props(); return;
       }
       if (!isSel(kind, i)) select(kind, i); else { sel = { kind, i }; props(); }
+      if (lockedSel()) return;
       // arrasta todos os selecionados juntos (a posição de partida de cada um)
       drag = { kind, i, dx: p.x - o.x, dy: p.y - o.y, moved: false, start: multi.map(m => ({ m, x: objOf(m).x, y: objOf(m).y })), ox: o.x, oy: o.y };
     } else if (e.shiftKey) {
@@ -542,7 +558,8 @@
 
   // campos em m (ft no imperial) <-> cm do desenho
   const cm = v => Math.round(nkU.toMetric(parseFloat(String(v).replace(',', '.')), 'm') * 100);
-  const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
+  const MOVES = new Set(['pAisle', 'pSide', 'pX', 'pY', 'pDepth', 'pBayW']);  // mudam o lugar das estantes da fileira
+  const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; if (MOVES.has(id) && lockedSel()) { props(); return; } fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
   bind('pAisle', r => { r.aisle = $('pAisle').value; delete r.bays; });
   bind('pSide', r => { r.side = $('pSide').value; delete r.bays; });
   bind('pX', r => { if (!isNaN(cm($('pX').value))) r.x = cm($('pX').value); });
@@ -557,7 +574,7 @@
   // girar / trocar o lado valem para todas as fileiras selecionadas
   const act = fn => () => {
     const rows = (multi.length ? multi : [sel]).filter(m => m && m.kind === 'row');
-    if (!rows.length) return;
+    if (!rows.length || lockedSel()) return;
     rows.forEach(m => fn(D.rows[m.i])); draw(); props(); changed();
   };
   const rotate = act(r => { r.orient = r.orient === 'h' ? 'v' : 'h'; });
@@ -574,7 +591,7 @@
     D.rows.push(c); select('row', D.rows.length - 1); changed();
   });
   function del() {
-    if (!sel) return;
+    if (!sel || lockedSel()) return;
     const all = multi.length ? multi : [sel];
     if (all.length > 1 && !confirm(_t('Apagar os {all} objetos selecionados?', {all: all.length}))) return;
     ['row', 'obs'].forEach(k => all.filter(m => m.kind === k).map(m => m.i).sort((a, b) => b - a)
@@ -586,6 +603,7 @@
   document.addEventListener('keydown', e => {
     if (!sel || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
     const mv = { ArrowLeft: [-SNAP, 0], ArrowRight: [SNAP, 0], ArrowUp: [0, -SNAP], ArrowDown: [0, SNAP] }[e.key];
+    if ((mv || ['Delete', 'Backspace', 'r', 'R', 'f', 'F'].includes(e.key)) && lockedSel()) { e.preventDefault(); return; }
     if (mv) { e.preventDefault(); (multi.length ? multi : [sel]).forEach(m => { const o = objOf(m); o.x += mv[0]; o.y += mv[1]; }); draw(); props(); changed(); }
     else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); del(); }
     else if (e.key === 'r' || e.key === 'R') rotate();
@@ -651,6 +669,7 @@
     const r = await post('/layout/plan/auto', { mode: $('aMode').value, aisle_w: cm($('aW').value), front: cm($('aF').value), widths: $('aWs').value });
     if (r.error) { alert(r.error); return; }
     load({ ...r, bays: BAYS }); dirty = true; status();
+    if (r.note) alert(r.note);
   });
   $('aiPrompt').addEventListener('click', async () => {
     const r = await (await fetch(`/layout/plan/ai/prompt?branch_id=${SCOPE.branch_id}&warehouse_id=${SCOPE.warehouse_id}`)).json();
@@ -675,6 +694,7 @@
     const r = await post('/layout/plan/from_project', { project_id: +$('prjSel').value });
     if (r.error) { alert(r.error); return; }
     load({ ...r, bays: BAYS }); dirty = true; status();
+    if (r.note) alert(r.note);
   });
   $('btnSave').addEventListener('click', async () => {
     const r = await post('/layout/plan/save', { data: D });

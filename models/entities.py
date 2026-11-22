@@ -59,6 +59,8 @@ class Branch(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(30), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)
+    # unitização na filial: "off" (desligada: tudo em unidades soltas) | "cases" (só caixas) | "full" (caixas e paletes)
+    unitization: Mapped[str] = mapped_column(String(10), nullable=False, default="off", server_default="off")
 
     warehouses: Mapped[list["Warehouse"]] = relationship(
         secondary=branch_warehouse, back_populates="branches", order_by="Warehouse.code"
@@ -395,7 +397,7 @@ class Dimensions:
 
 class PackagingModel(TimestampMixin, Base):
     """Modelo de embalagem (caixa padrão usada por vários produtos): só as medidas e a tara. Cada produto que usa o
-    modelo informa quantas unidades vão nele (Product.case_qty)."""
+    modelo informa quantas unidades vão nele (ProductPackaging.inner_qty)."""
 
     __tablename__ = "packaging_models"
 
@@ -427,23 +429,16 @@ class Product(TimestampMixin, Base):
     width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    # embalagem (unitização): caixa do produto (unidades por caixa + medidas externas e peso da caixa cheia, ou o
-    # modelo de embalagem) e o palete (caixas por camada × camadas, no tipo de bin do palete); tudo opcional
-    case_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    case_model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="RESTRICT"),
-                                                         nullable=True, index=True)
-    case_height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    case_width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    case_length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    case_weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    pallet_type_id: Mapped[Optional[int]] = mapped_column(ForeignKey("bin_types.id", ondelete="SET NULL"),
-                                                          nullable=True)
-    pallet_layer: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # caixas por camada (lastro)
-    pallet_layers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # camadas
+    # unitização do SKU: "branch" (conforme a filial / a rodada) | "never" (sempre unidades soltas)
+    unitization: Mapped[str] = mapped_column(String(10), nullable=False, default="branch", server_default="branch")
+    # embalagens diferentes por bin: False = sempre a embalagem padrão; True = outra embalagem onde a padrão não serve
+    mixed_packs: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     # como guardar nas bins que aceitam unidades e caixas: "auto" (caixas inteiras + o resto solto), "units", "cases"
     store_pref: Mapped[str] = mapped_column(String(10), nullable=False, default="auto", server_default="auto")
 
-    case_model: Mapped[Optional[PackagingModel]] = relationship()
+    packagings: Mapped[list["ProductPackaging"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan", passive_deletes=True,
+        order_by="(ProductPackaging.sort, ProductPackaging.id)")
 
     dimensions: Mapped[Dimensions] = composite("height", "width", "length", "weight")
 
@@ -456,6 +451,62 @@ class Product(TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<Product {self.sku}>"
+
+
+class ProductPackaging(TimestampMixin, Base):
+    """Embalagem do produto (N por produto), em hierarquia: cada uma é feita de `inner_qty` unidades da embalagem
+    `inner` (vazio = unidades do produto) — ex.: display de 6 un. → caixa de 4 displays → master de 2 caixas. Medidas
+    externas e peso da embalagem cheia; sem medidas, as do modelo de embalagem. Uma é a padrão do produto."""
+
+    __tablename__ = "product_packagings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(40), nullable=False)
+    inner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("product_packagings.id", ondelete="SET NULL"),
+                                                    nullable=True)
+    inner_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="RESTRICT"),
+                                                    nullable=True, index=True)
+    height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
+    weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # embalagem cheia (kg)
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    product: Mapped["Product"] = relationship(back_populates="packagings")
+    inner: Mapped[Optional["ProductPackaging"]] = relationship(remote_side="ProductPackaging.id")
+    model: Mapped[Optional[PackagingModel]] = relationship()
+    pallets: Mapped[list["PackagingPallet"]] = relationship(
+        back_populates="packaging", cascade="all, delete-orphan", passive_deletes=True,
+        order_by="PackagingPallet.id")
+
+    def units(self, _depth: int = 0) -> Optional[int]:
+        """Unidades do produto numa embalagem cheia (multiplica a hierarquia)."""
+        if not self.inner_qty or _depth > 10:
+            return None
+        if self.inner is None:
+            return int(self.inner_qty)
+        inner = self.inner.units(_depth + 1)
+        return int(self.inner_qty) * inner if inner else None
+
+
+class PackagingPallet(TimestampMixin, Base):
+    """Paletização da embalagem num tipo de palete (tipo de bin com Armazena em = palete): caixas por camada (lastro)
+    × camadas. Várias por embalagem (paletes diferentes, ou o mesmo palete baixo e alto)."""
+
+    __tablename__ = "packaging_pallets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    packaging_id: Mapped[int] = mapped_column(ForeignKey("product_packagings.id", ondelete="CASCADE"), nullable=False,
+                                              index=True)
+    pallet_type_id: Mapped[int] = mapped_column(ForeignKey("bin_types.id", ondelete="CASCADE"), nullable=False)
+    layer: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    layers: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    packaging: Mapped[ProductPackaging] = relationship(back_populates="pallets")
+    pallet_type: Mapped["BinType"] = relationship()
 
 
 class StockPolicy(TimestampMixin, Base):

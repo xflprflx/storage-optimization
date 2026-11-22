@@ -197,12 +197,12 @@ def _add_missing_columns(conn) -> None:
         if "structure_kinds" in tables and col not in kcols:
             conn.execute(text(f"ALTER TABLE structure_kinds ADD COLUMN {col} {ddl}"))
     pc2 = {c["name"] for c in insp.get_columns("products")} if "products" in tables else set()
-    for col, ddl in (("case_qty", "INTEGER"), ("case_model_id", "INTEGER REFERENCES packaging_models(id)"),
-                     ("case_height", "BIGINT"), ("case_width", "BIGINT"), ("case_length", "BIGINT"), ("case_weight", "BIGINT"),
-                     ("pallet_type_id", "INTEGER REFERENCES bin_types(id)"), ("pallet_layer", "INTEGER"),
-                     ("pallet_layers", "INTEGER"), ("store_pref", "VARCHAR(10) NOT NULL DEFAULT 'auto'")):
-        if "products" in tables and pc2 and col not in pc2:  # embalagem (unitização)
+    for col, ddl in (("store_pref", "VARCHAR(10) NOT NULL DEFAULT 'auto'"),
+                     ("unitization", "VARCHAR(10) NOT NULL DEFAULT 'branch'"), ("mixed_packs", "BOOLEAN NOT NULL DEFAULT 0")):
+        if "products" in tables and pc2 and col not in pc2:  # unitização do SKU
             conn.execute(text(f"ALTER TABLE products ADD COLUMN {col} {ddl}"))
+    if "branches" in tables and "unitization" not in {c["name"] for c in insp.get_columns("branches")}:
+        conn.execute(text("ALTER TABLE branches ADD COLUMN unitization VARCHAR(10) NOT NULL DEFAULT 'off'"))
     if "products" in tables and "storage_condition" not in {c["name"] for c in insp.get_columns("products")}:
         conn.execute(text("ALTER TABLE products ADD COLUMN storage_condition VARCHAR(20) NOT NULL DEFAULT ''"))
     if "structure_types" in tables and "kind_id" not in stcols:  # tipo de estrutura cadastrado
@@ -256,6 +256,31 @@ def _migrate_stock_policies(conn) -> None:
                          {"b": b, "p": pid, "l": loc if b == loc_br else None, "mn": mn, "mx": mx})
 
 
+def _migrate_product_cases(conn) -> None:
+    """Versão anterior: a caixa e o palete ficavam no produto (case_qty, case_*, pallet_*). Passam a ser a embalagem
+    padrão do produto (product_packagings) e a paletização dela (packaging_pallets). Roda uma vez por produto."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(conn)
+    if "case_qty" not in {c["name"] for c in insp.get_columns("products")}:
+        return
+    rows = conn.execute(text(
+        "SELECT p.id, p.case_qty, p.case_model_id, p.case_height, p.case_width, p.case_length, p.case_weight, "
+        "p.pallet_type_id, p.pallet_layer, p.pallet_layers FROM products p WHERE p.case_qty IS NOT NULL AND NOT EXISTS "
+        "(SELECT 1 FROM product_packagings k WHERE k.product_id = p.id)")).all()
+    for pid, qty, mid, h, w, ln, wt, pal, lay, lays in rows:
+        res = conn.execute(text(
+            "INSERT INTO product_packagings (product_id, name, inner_qty, model_id, height, width, length, weight, "
+            "is_default, sort, created_at, updated_at) VALUES (:p, 'Caixa', :q, :m, :h, :w, :l, :wt, 1, 0, "
+            "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"), {"p": pid, "q": qty, "m": mid, "h": h, "w": w, "l": ln, "wt": wt})
+        if pal:
+            conn.execute(text(
+                "INSERT INTO packaging_pallets (packaging_id, pallet_type_id, layer, layers, created_at, updated_at) "
+                "VALUES (:k, :t, :a, :b, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {"k": res.lastrowid, "t": pal, "a": lay, "b": lays})
+        conn.execute(text("UPDATE products SET case_qty = NULL WHERE id = :p"), {"p": pid})
+
+
 def init_db() -> None:
     import models  # noqa: F401  (registra os modelos no metadata)
     from sqlalchemy import text
@@ -265,6 +290,7 @@ def init_db() -> None:
     with engine.begin() as conn:
         _add_missing_columns(conn)
         _migrate_location_bins(conn)
+        _migrate_product_cases(conn)
     # O conceito de Vínculo Operacional foi removido: descarta a tabela de versões anteriores.
     with engine.begin() as conn:
         conn.execute(text("DROP TABLE IF EXISTS product_warehouse_locations"))

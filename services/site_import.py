@@ -205,6 +205,7 @@ BUILDING_KEYS = {
     "cap_align": ["posicaodacabeceira", "posicaodacabeceiraencostadaborda", "alinhamentodacabeceira", "cabeceiraposicao"],
     "address_mode": ["enderecamento", "enderecamentocorredorrua", "letradoendereco", "letrasdosenderecos"],
     "serpentine": ["serpentina", "ruasemserpentina", "ruasemserpentinasimnao", "numeracaoemserpentina"],
+    "unitization": ["unitizacao", "unitizacaodesligadasocaixascaixasepaletes", "unitization"],
 }
 ZONE_COLS = {
     "name": ["nome", "zona", "nomedazona"],
@@ -369,23 +370,24 @@ def _pack_cells(row: list[str], cm: dict, it: dict, errs: list, line: int) -> No
 def _pack_notes(db: Session, items: list[dict]) -> list[str]:
     """Avisos da embalagem dos SKUs do projeto: códigos de modelo/palete não cadastrados, unidades que não cabem na
     caixa, lastro que não cabe na base; e quantos tiveram unidades por caixa ou o palete sugeridos pelas medidas."""
-    from services.packaging import catalogs, check, item_has_pack, item_product
+    from services.packaging import catalogs, check, item_has_pack, item_packaging, load_products
 
     with_pack = [it for it in items if item_has_pack(it)]
     if not with_pack:
         return []
     models, pallets = catalogs(db)
-    cat = {p.sku: p for p in db.scalars(select(Product).where(Product.sku.in_([it["sku"] for it in with_pack][:900])))}
+    ids = [p.id for p in db.scalars(select(Product).where(Product.sku.in_([it["sku"] for it in with_pack][:900])))]
+    cat = {p.sku: p for p in load_products(db, ids).values()}
     out, warns, unknown_m, unknown_p, sug_q, sug_p = [], [], set(), set(), 0, 0
     for it in with_pack:
         if it.get("case_model") and it["case_model"] not in models:
             unknown_m.add(it["case_model"])
         if it.get("pallet") and it["pallet"] not in pallets:
             unknown_p.add(it["pallet"])
-        ns, model, pallet, sug = item_product(it, cat.get(it["sku"]), models, pallets)
+        k, prod, sug = item_packaging(it, cat.get(it["sku"]), models, pallets)
         sug_q += "case_qty" in sug
         sug_p += "pallet" in sug
-        for w in check(ns, model, pallet):
+        for w in check(k, prod):
             warns.append(f"{it['sku']}: {w}")
     out.append(_("Embalagem: {n} SKU(s) com caixa ou palete na planilha.", n=len(with_pack)))
     if sug_q:
@@ -534,6 +536,10 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 cfg["building"][key] = "" if normalize_header(val) in {"nao", "n", "0", "false", "naousar"} else "1"
             elif key == "cap_align":
                 cfg["building"][key] = "edge" if any(w in normalize_header(val) for w in ("borda", "edge", "alinh")) else "row"
+            elif key == "unitization":  # vai para a demanda do projeto
+                v = normalize_header(val)
+                cfg["demand"]["unitization"] = ("full" if "palete" in v or "pallet" in v or v.startswith(("full", "ligada"))
+                                                else "cases" if "caixa" in v or "case" in v else "off")
             elif key == "serpentine":
                 cfg["building"][key] = "1" if normalize_header(val) in {"sim", "s", "1", "true", "yes"} else ""
             elif key == "address_mode":
@@ -1067,7 +1073,9 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
              (_("Cabeceiras (sim/não)"), "sim" if b.get("end_caps") else _("não")),
              (_("Posição da cabeceira (encostada/borda)"), "borda" if b.get("cap_align") == "edge" else "encostada"),
              (_("Endereçamento (corredor/rua)"), "rua" if b.get("address_mode") == "row" else "corredor"),
-             (_("Ruas em serpentina (sim/não)"), "sim" if b.get("serpentine") else _("não"))],
+             (_("Ruas em serpentina (sim/não)"), "sim" if b.get("serpentine") else _("não")),
+             (_("Unitização (desligada/só caixas/caixas e paletes)"),
+              {"cases": "só caixas", "full": "caixas e paletes"}.get(cfg["demand"].get("unitization"), "desligada"))],
           {1: 50, 2: 16})
     id_code = {str(s.id): s.code for s in db.scalars(select(StructureType))}
     ori_lbl = {"along": _("ao longo do comprimento"), "across": "perpendicular (ao longo da largura)"}

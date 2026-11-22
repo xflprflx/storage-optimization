@@ -26,7 +26,7 @@ def _chunks(ids, n=900):
 
 
 def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus: Optional[set] = None,
-              bin_source: str = "free"):
+              bin_source: str = "free", unit_run: str = "branch"):
     """Retorna {(filial, armazém): (bins, demandas, endereços reservados, SKUs sem dimensão)} e notas.
     `focus` = ids dos produtos a otimizar (filtro de SKU/material): os demais produtos do escopo ficam onde estão e as
     bins que eles ocupam ficam travadas (fora do pool); as bins livres do escopo inteiro ficam disponíveis."""
@@ -89,9 +89,17 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
             pols[(pol.product_id, pol.branch_id)] = pol
     notes: list[str] = []
     no_level: list[str] = []
-    from services.packaging import load_packs
+    from services.packaging import branch_modes, effective, load_products, product_packs
 
-    packs = load_packs(db, list(prods))  # embalagem (unitização)
+    bmodes = branch_modes(db)  # unitização: o modo da filial do grupo, restringido pela rodada
+    pprods = load_products(db, list(prods))
+    pk_cache: dict = {}
+
+    def packs_of(pid, gk):
+        mode = effective(bmodes.get(gk[0], "off"), unit_run)
+        if (pid, mode) not in pk_cache:
+            pk_cache[(pid, mode)] = product_packs(pprods.get(pid), mode)
+        return pk_cache[(pid, mode)]
 
     def dflt_of(p, gk):
         pol = pols.get((p.id, gk[0]))
@@ -102,14 +110,14 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
         grp = groups.setdefault(gk, {"bins": [], "demands": {}, "reserved": set(), "no_dims": [], "fixed": {}})
         if focus is not None and pid not in focus:
             grp["fixed"][p.sku] = pid  # fora do foco: fica como está, nas bins de hoje
-            u_ = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), packs.get(pid))
+            u_ = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), *packs_of(pid, gk))
             if bin_source == "any" and u_.has_dims and sum(cur.values()) > 0:
                 # pode ser desalojado se o foco usar a bin dele (realocado ou órfão, conforme a opção)
                 grp.setdefault("secondary", []).append(SkuDemand(p.sku, pid, u_, sum(cur.values()), dict(cur), dflt_of(p, gk)))
             else:
                 grp.setdefault("pinned", set()).add(p.sku)
             continue
-        unit = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), packs.get(pid))
+        unit = ProductUnit(p.sku, 0, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), *packs_of(pid, gk))
         dflt = dflt_of(p, gk)
         if not unit.has_dims:
             grp["no_dims"].append(p.sku)
@@ -156,7 +164,10 @@ def _run_pool(db: Session, location_ids: list[int], prm: PoolParams, basis: str 
     if len(location_ids) > MAX_SCOPE:
         raise ValueError(_("O escopo tem {len} endereços (limite {MAX_SCOPE}). Filtre por armazém ou corredor.", len=f"{len(location_ids):,}", MAX_SCOPE=f"{MAX_SCOPE:,}"))
     types = load_types(db)
-    groups, locs, notes = load_pool(db, location_ids, basis, focus, prm.bin_source)
+    groups, locs, notes = load_pool(db, location_ids, basis, focus, prm.bin_source, prm.unitization)
+    from services.packaging import pallet_notes
+
+    notes.extend(pallet_notes([d.unit for grp in groups.values() for d in grp["demands"].values()], types.values()))
     results: list[PoolResult] = []
     groups = _split_by_condition(db, groups)
     for gk, grp in sorted(groups.items(), key=lambda kv: (kv[0][0], kv[0][1] or 0, kv[0][2:] if len(kv[0]) > 2 else ())):

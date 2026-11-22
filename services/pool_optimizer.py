@@ -119,6 +119,7 @@ class PoolParams:
     slot_key: str = ""
     # bins existentes: compartimento -> (bin pai, k) dos tipos com "permitir fracionar a bin pai" (services/pool_family)
     splits: Optional[dict] = None
+    unitization: str = "branch"  # unitização da rodada: "branch" | "off" | "cases" (só restringe a da filial)
 
     @property
     def unlimited(self) -> bool:

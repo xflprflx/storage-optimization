@@ -878,54 +878,70 @@ sobe acima da borda. A bin continua com as próprias medidas para o encaixe no n
 Importação: as colunas opcionais *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* entram na importação de
 tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo marca a bin como aberta).
 
-## 6.0.12 Unitização: unidades, caixas e palete fechado
+## 6.0.12 Unitização: embalagens, paletes e a chave que liga/desliga
+
+**Chave de unitização — vale o mais restrito** (na maioria das filiais a unitização não é viável; por isso vem
+desligada):
+
+| Onde | Opções | Padrão |
+|---|---|---|
+| **Filial** (Cadastros → Filiais) | Desligada / Só caixas / Caixas e paletes | Desligada |
+| **Rodada** (Por endereço e Pool) | Conforme a filial / Desligada / Só caixas — só restringe, nunca liga | Conforme a filial |
+| **Projeto de filial nova** (Demanda, ou a linha *Unitização* da aba Imóvel) | Desligada / Só caixas / Caixas e paletes | Desligada |
+| **SKU** (cadastro do produto) | Conforme a filial / Nunca (sempre unidades soltas) | Conforme a filial |
+
+Desligada: as embalagens e os paletes fechados são ignorados (tudo em unidades soltas, como antes da unitização); o
+desenho das bins não mostra caixas. Só caixas: usa as embalagens, mas nunca o palete fechado.
 
 **Por tipo de bin — Armazena em** (cadastro e importação de tipos de bin, coluna *Armazena em*):
 
 | Valor | Como a capacidade conta |
 |---|---|
 | **Unidades soltas** (padrão) | o arranjo das unidades; um produto marcado *Sempre na caixa* não vai para essa bin |
-| **Caixas do produto** | caixas inteiras × unidades por caixa (o encaixe é feito com as medidas da caixa) |
-| **Unidades ou caixas** | caixas inteiras + o resto solto; a caixa aberta ocupa o espaço de uma caixa inteira (conta como caixa cheia) |
-| **Palete fechado** | caixas por camada (lastro) × camadas, limitadas pelo vão do nível e pelo peso máximo |
+| **Caixas do produto** | embalagens inteiras × unidades por embalagem (o encaixe é feito com as medidas da embalagem) |
+| **Unidades ou caixas** | embalagens inteiras + o resto solto; a aberta ocupa o espaço de uma inteira. A que não cabe na bin fica solta |
+| **Palete fechado** | embalagens por camada (lastro) × camadas, limitadas pelo vão do nível e pelo peso máximo |
 
-Produto sem caixa cadastrada fica em unidades em qualquer tipo.
+**Embalagens do produto** (produto → *Embalagens do produto*, `/products/{id}/packagings`): N embalagens por produto,
+**em hierarquia** — cada uma é *feita de* N unidades do produto ou de N embalagens de dentro (display de 6 un. → caixa
+de 4 displays → master de 2 caixas = 48 un.). Cada uma tem nome, modelo de embalagem (opcional), medidas externas e
+peso cheia (vazio = conteúdo + tara do modelo) e a marca **Padrão** (uma por produto). Para cada embalagem, **X
+paletizações**: tipo de palete (tipo de bin com *Armazena em = Palete fechado*), caixas por camada e camadas — o mesmo
+palete pode ter mais de uma (baixo e alto).
 
-**Por produto — Embalagem (unitização)** no cadastro de produtos: unidades por caixa, modelo de embalagem
-(opcional), medidas e peso da caixa cheia, *Guardar nas bins de unidades ou caixas* (Automático / Sempre em unidades
-soltas / Sempre na caixa), palete (um tipo de bin com *Armazena em = Palete fechado*), caixas por camada e camadas.
+**Escolha na otimização:**
+- a embalagem **padrão** é a primeira opção em toda bin; com **Embalagens diferentes por bin** marcado no SKU, onde a
+  padrão não cabe entra a próxima cadastrada (ex.: caixa no picking, master no palete); desmarcado, onde a padrão não
+  serve o SKU fica em unidades;
+- no palete fechado, entre as paletizações cadastradas para **aquele** palete, a que mais guarda (dentro do vão e do
+  peso); **sem paletização para o palete, o sistema calcula pelas medidas e avisa** (no resultado do Pool e do projeto,
+  e na tela de embalagens do produto: *Sem paletização (calculada)*);
+- *Guardar nas bins de unidades ou caixas* (Automático / Sempre em unidades soltas / Sempre na caixa) continua por SKU.
 
-**Modelos de embalagem** (Cadastros → Modelos de embalagem, `/packaging-models`): caixas-padrão com medidas externas e
-tara, usadas por vários produtos. As medidas do modelo valem quando o produto não tem medidas próprias da caixa; o peso
-da caixa cheia, quando vazio, é unidades × peso da unidade + tara. Um modelo em uso não pode ser excluído.
+**Quantidades: cadastradas, validadas e sugeridas.** Botão *Calcular* (e ao salvar/importar): quantidade vazia = o
+máximo que cabe pelas medidas (unidades ou embalagens de dentro); lastro pelo encaixe na base do palete; camadas pela
+altura máxima de carga (*Máximo acima da borda* do palete ou 150 cm) e pelo peso máximo. Avisa quando o conteúdo não
+cabe, quando o lastro não cabe na base ou quando a embalagem não tem medidas.
 
-**Quantidades: cadastradas, validadas e sugeridas.** As quantidades são do usuário (o fornecedor define), mas o sistema:
-- **sugere** quando vazias (botão *Calcular* no formulário, ao salvar e na importação): o máximo de unidades que cabe na
-  caixa pelas medidas; o lastro pelo encaixe das caixas na base do palete; as camadas pela altura máxima de carga
-  (*Máximo acima da borda* do palete ou 150 cm) e pelo peso máximo do palete;
-- **avisa** quando as unidades informadas não cabem na caixa, quando o lastro não cabe na base do palete ou quando a
-  caixa não tem medidas.
+**Modelos de embalagem** (Cadastros → Modelos de embalagem): caixas-padrão com medidas externas e tara, usadas por
+várias embalagens. Um modelo em uso não pode ser excluído.
 
-Em porta-palete, só contam as camadas que cabem no vão do nível. O desenho da bin (Arranjo das unidades) mostra as
-caixas ("caixas de 12 un.") quando a bin armazena caixas ou palete.
+**Importações:**
+- **6.1 Embalagens do produto** (`/imports/packagings`): uma linha por produto × embalagem × palete — SKU, Embalagem,
+  Feita de, Quantidade, Modelo, medidas, Peso cheia, Padrão, Palete, Caixas por camada, Camadas;
+- **Produtos**: as colunas *Unidades por caixa*, *Modelo de embalagem*, medidas e peso da caixa, *Palete*, *Caixas por
+  camada*, *Camadas* gravam a **embalagem padrão** (e a paletização daquele palete); também *Guardar em*, *Unitização
+  do SKU* (conforme a filial/nunca) e *Embalagens diferentes por bin* (sim/não);
+- **Planilha do projeto**: a aba **SKUs** aceita as mesmas colunas (a embalagem padrão do SKU no projeto, sobre as do
+  cadastro); a aba **Bins** tem *Armazena em*; a aba **Embalagens** cadastra os modelos de caixa; a aba **Imóvel** aceita
+  a linha *Unitização*. Ao criar a filial pelo projeto, a embalagem vai para o cadastro dos produtos.
 
-**Importação de produtos:** colunas opcionais *Unidades por caixa*, *Modelo de embalagem* (código), *Altura/Largura/
-Comprimento da caixa*, *Peso da caixa cheia*, *Palete* (código do tipo de bin), *Caixas por camada*, *Camadas* e
-*Guardar em* (automático/unidades/caixa).
+**Projetos de exemplo:** trazem a aba Embalagens (CX-P, CX-M, CX-G), *Armazena em* nas bins (BIN-8 e CX-50 = ambos;
+PALETE = palete fechado), *Unitização = caixas e paletes* na aba Imóvel e a embalagem de cerca de metade dos SKUs; os
+volumosos (argamassa, tinta, piso, rejunte, cimento) vêm no palete PBR com lastro e camadas calculados.
 
-**Planilha do projeto de filial nova:** a aba **SKUs** aceita as mesmas colunas de embalagem (*Unidades por caixa*,
-*Modelo de embalagem*, *Altura/Largura/Comprimento da caixa (cm)*, *Peso da caixa cheia (kg)*, *Palete (tipo de bin)*,
-*Caixas por camada (lastro)*, *Camadas*, *Guardar em*); vazias = o cadastro do produto. A aba **Bins** tem a coluna
-*Armazena em* (também atualiza tipos já cadastrados) e a aba nova **Embalagens** (código, nome, medidas, tara) cadastra
-ou atualiza os modelos de caixa. Sem unidades por caixa ou sem o padrão do palete, o projeto calcula pelas medidas
-(o resultado avisa quantos); a importação avisa códigos de modelo/palete não cadastrados e unidades que não cabem na
-caixa. Ao criar a filial a partir do projeto, a embalagem da planilha vai para o cadastro dos produtos. A caixa que
-não cabe numa bin *Unidades ou caixas* fica em unidades soltas nela.
-
-**Projetos de exemplo:** as planilhas de exemplo trazem a aba **Embalagens** (CX-P, CX-M, CX-G), *Armazena em* nas bins
-(BIN-8 e CX-50 = ambos; PALETE = palete fechado) e a embalagem de cerca de metade dos SKUs (caixa-padrão com a
-quantidade do fornecedor); os volumosos (argamassa, tinta, piso, rejunte, cimento) vêm no palete PBR com lastro e
-camadas calculados pelas medidas e pelo peso.
+**Migração:** a caixa e o palete gravados no produto pela versão anterior viram a embalagem padrão ("Caixa") e a
+paletização dela, automaticamente ao iniciar.
 
 Limitação: o palete fechado não é forçado a ter um único SKU.
 

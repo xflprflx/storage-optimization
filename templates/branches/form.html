@@ -21,6 +21,13 @@
           <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="150" value="{{ data.get('name', '') }}" required>
           {{ field_error(errors, 'name') }}
         </div>
+        <div class="col-md-6">
+          <label class="form-label">{{ _("Unitização") }}</label>
+          <select class="form-select" name="unitization">
+            {% for k, v in [('off', _('Desligada (tudo em unidades soltas)')), ('cases', _('Só caixas (sem palete fechado)')), ('full', _('Caixas e paletes'))] %}<option value="{{ k }}" {% if (data.get('unitization') or 'off') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+          </select>
+          <div class="form-text">{{ _("Desligada: as otimizações desta filial ignoram as embalagens dos produtos e os paletes fechados.") }}</div>
+        </div>
         <div class="col-12">
           <label class="form-label">{{ _("Armazéns desta filial") }}</label>
           {% if warehouses %}

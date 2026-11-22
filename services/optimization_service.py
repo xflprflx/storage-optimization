@@ -70,7 +70,7 @@ def derive_caps(caps: dict[int, int], types: dict[int, BinSpec],
 
 
 def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
-                   types: Optional[dict[int, BinSpec]] = None):
+                   types: Optional[dict[int, BinSpec]] = None, unit_run: str = "branch"):
     """Retorna (endereços, ledger de níveis). Chave de nível = (filial, armazém, corredor, estante, nível).
 
     `basis` define a quantidade de cada SKU no endereço:
@@ -78,10 +78,21 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
       - "min"/"max": nível mínimo/máximo do produto, no ENDEREÇO PADRÃO dele (o endereço onde ele fica),
         inclusive se ainda não houver saldo lançado. Nunca menos que o saldo físico do endereço. Sem o nível cadastrado (vazio ou 0), usa o saldo atual (com aviso).
         Em endereços que não são o padrão do produto, vale o saldo atual."""
-    from services.packaging import load_packs
+    from models import ProductPackaging
+    from services.packaging import branch_modes, effective, load_products, product_packs
 
-    # embalagem (unitização) dos produtos que têm caixa cadastrada
-    packs = load_packs(db, db.scalars(select(Product.id).where(Product.case_qty.is_not(None))))
+    # unitização: embalagens dos produtos, no modo da filial de cada endereço (restringido pela rodada)
+    bmodes = branch_modes(db)
+    pprods = load_products(db, db.scalars(select(ProductPackaging.product_id).distinct()))
+    pk_cache: dict = {}
+    loc_branch: dict[int, int] = {}
+
+    def packs_of(pid, lid):
+        mode = effective(bmodes.get(loc_branch.get(lid), "off"), unit_run)
+        key = (pid, mode)
+        if key not in pk_cache:
+            pk_cache[key] = product_packs(pprods.get(pid), mode)
+        return pk_cache[key]
     from models import ShelfLevel
 
     out: dict[int, AddressIn] = {}
@@ -93,6 +104,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
                                    StorageLocation.warehouse_id, StorageLocation.aisle, StorageLocation.bay,
                                    StorageLocation.level).where(StorageLocation.id.in_(chunk))):
             a = AddressIn(r.id, r.address, {}, [])
+            loc_branch[r.id] = r.branch_id
             if r.bay and r.level:
                 a.own_level = (r.branch_id, r.warehouse_id, r.aisle, r.bay, r.level)
                 bays.add(a.own_level[:4])
@@ -130,7 +142,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
                     q = max(float(lvl), q)  # nunca menos espaço que o saldo físico do endereço
                 else:
                     missing.setdefault(lid, []).append(sku)
-            out[lid].items.append(ProductUnit(sku, q, _f(h), _f(w), _f(ln), _f(wt), packs.get(pid)))
+            out[lid].items.append(ProductUnit(sku, q, _f(h), _f(w), _f(ln), _f(wt), *packs_of(pid, lid)))
         for lid, pid, sku, h, w, ln, wt, lvl in db.execute(
             select(StockPolicy.default_location_id, Product.id, Product.sku, Product.height, Product.width,
                    Product.length, Product.weight, level_col)
@@ -139,7 +151,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
             out[lid].linked_without_stock = True
             if basis != "stock" and (lid, pid) not in seen and lvl is not None and float(lvl) > 0:
                 # produto que fica aqui mas ainda sem saldo: dimensiona pelo min/max level
-                out[lid].items.append(ProductUnit(sku, float(lvl), _f(h), _f(w), _f(ln), _f(wt), packs.get(pid)))
+                out[lid].items.append(ProductUnit(sku, float(lvl), _f(h), _f(w), _f(ln), _f(wt), *packs_of(pid, lid)))
         label = _("nível mínimo") if basis == "min" else _("nível máximo")
         for lid, skus in missing.items():
             out[lid].notes.append(_("Sem {label} cadastrado (usou o saldo atual): ", label=label) + ", ".join(skus[:5])
@@ -213,13 +225,14 @@ def _run(db: Session, location_ids: list[int], prm: Params, donors: Optional[lis
     if prm.allowed_types is not None:
         prm.allowed_types = {t for t in prm.allowed_types if t in types}
     if not donors:
-        addresses, ledger = load_addresses(db, location_ids, prm.basis, types)
+        addresses, ledger = load_addresses(db, location_ids, prm.basis, types, prm.unitization)
         results, summary = optimize(addresses, types, prm, ledger)
         summary.splits = split_report(results, prm)
         return results, summary, types
     # foco: os endereços filtrados podem usar as bins dos doadores (outros endereços do escopo)
     focus = set(location_ids)
-    every, ledger0 = load_addresses(db, list(location_ids) + [i for i in donors if i not in focus], prm.basis, types)
+    every, ledger0 = load_addresses(db, list(location_ids) + [i for i in donors if i not in focus], prm.basis, types,
+                                   prm.unitization)
     addresses = [a for a in every if a.id in focus]
     dn = [Donor(a) for a in every if a.id not in focus and a.current]
     pbins = _donor_bins(db, [d.a.id for d in dn if d.stocked], {})

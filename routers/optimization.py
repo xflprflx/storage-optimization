@@ -30,11 +30,11 @@ from services.i18n import N_, _, fmt_num
 router = APIRouter(prefix="/optimization", tags=[N_("Otimização de bins")])
 
 PER_PAGE = 200
-ENGINE_KEYS = ("engine", "time_limit", "tl_unlimited", "prio2", "prio3", "prio4", "bin_source", "orphans")
+ENGINE_KEYS = ("engine", "time_limit", "tl_unlimited", "prio2", "prio3", "prio4", "bin_source", "orphans", "unitization")
 PARAM_KEYS = ENGINE_KEYS + ("focus", "staging", "bins_mode", "basis", "objective", "fill_limit", "growth", "geometry", "rotation", "weight", "mix", "single_type",
               "max_bins", "keep_space", "max_width", "max_height", "clear_empty", "levels", "other_levels", "uniform_levels", "types")
 ENGINE_DEFAULTS = {"engine": "or", "time_limit": "15", "tl_unlimited": "", "prio2": "", "prio3": "", "prio4": "", "bin_source": "free",
-                   "orphans": "relocate"}
+                   "orphans": "relocate", "unitization": "branch"}
 BIN_SOURCES = {"free": N_("Só bins livres (sem saldo)"), "any": N_("Qualquer bin (inclusive com saldo de outros itens)")}
 ORPHAN_MODES = {"relocate": N_("Realocar os itens desalojados"), "leave": N_("Deixar fora de bin (órfãos)")}
 DEFAULTS = {**ENGINE_DEFAULTS, "focus": "1", "staging": N_("ÁREA DE ESPERA"), "bins_mode": "existing", "basis": "stock", "objective": "min_volume", "fill_limit": "85", "growth": "0", "geometry": "1", "rotation": "upright",
@@ -121,6 +121,7 @@ def parse_params(src: Mapping) -> tuple[Params, dict, list[str]]:
     prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors)
     prm.bin_source = "any" if raw.get("bin_source") == "any" else "free"
     prm.orphans = "leave" if raw.get("orphans") == "leave" else "relocate"
+    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases") else "branch"
     try:
         prm.validate()
     except ValueError as exc:
@@ -790,6 +791,7 @@ def parse_pool_params(src: Mapping):
     prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors, POOL_CRITERIA)
     prm.bin_source = "any" if raw.get("bin_source") == "any" else "free"
     prm.orphans = "leave" if raw.get("orphans") == "leave" else "relocate"
+    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases") else "branch"
     if prm.unlimited and prm.objective == "min_moves":
         prm.objective = "min_bins"  # sem bins físicas não há movimentação a minimizar
     basis = raw["basis"] if raw["basis"] in BASES else "stock"

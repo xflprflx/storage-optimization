@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import FormData
 
 from database import get_db
-from models import PackagingModel, Product
+from models import PackagingModel, ProductPackaging
 from routers.common import FormErrors, apply_sort, f_dec, f_str, form_data, paginate, redirect, render, text_search
 from services.addressing import normalize_code
 from services.i18n import N_, _
@@ -17,8 +17,8 @@ FIELDS = (("height", N_("Altura")), ("width", N_("Largura")), ("length", N_("Com
 
 
 def _usage(db: Session) -> dict[int, int]:
-    return dict(db.execute(select(Product.case_model_id, func.count(Product.id)).where(Product.case_model_id.is_not(None))
-                           .group_by(Product.case_model_id)).all())
+    return dict(db.execute(select(ProductPackaging.model_id, func.count(func.distinct(ProductPackaging.product_id)))
+                           .where(ProductPackaging.model_id.is_not(None)).group_by(ProductPackaging.model_id)).all())
 
 
 def _validate(db: Session, form: FormData, mid: int | None):

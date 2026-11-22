@@ -337,7 +337,7 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
         "do comprimento e Y ao longo da largura, a partir do canto superior esquerdo da planta.",
         "Estruturas: medidas em cm; Modo = Otimizar, Fixa ou Não usar. Bins: medidas internas em cm, peso em kg, custo "
         "em R$. SKUs: dimensões em cm, peso em kg por unidade, saldo/min/max em unidades.",
-        "Embalagem (unitização): a aba Embalagens traz as caixas-padrão; na aba SKUs, unidades por caixa, modelo de "
+        "Embalagem (unitização, ligada no projeto pela linha Unitização da aba Imóvel): a aba Embalagens traz as caixas-padrão; na aba SKUs, unidades por caixa, modelo de "
         "embalagem (ou medidas próprias da caixa), palete, caixas por camada, camadas e Guardar em. Na aba Bins, "
         "Armazena em: BIN-8 e CX-50 guardam caixas inteiras + o resto solto (ambos), o PALETE é palete fechado.",
         "Ao importar, as estruturas e bins são cadastradas (códigos existentes de bins mantêm as medidas; o custo é "
@@ -354,7 +354,8 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
     bd = ex["building"]
     rows = [(label, bd.get(k)) for k, label, _, _ in BUILDING_FIELDS if k in bd]
     rows += [("Orientação das fileiras", bd["orientation"]), ("Cabeceiras (sim/não)", bd["end_caps"]),
-             ("Posição da cabeceira (encostada/borda)", bd["cap_align"])]
+             ("Posição da cabeceira (encostada/borda)", bd["cap_align"]),
+             ("Unitização (desligada/só caixas/caixas e paletes)", "caixas e paletes")]
     sheet(wb.create_sheet("Imóvel"), ["Campo", "Valor"], rows, {1: 50, 2: 22})
     sheet(wb.create_sheet("Zonas"), ["Nome", "X (m)", "Y (m)", "Comprimento em X (m)", "Largura em Y (m)",
                                      "Orientação das fileiras", "Corredor (m)", "Corredores transversais",

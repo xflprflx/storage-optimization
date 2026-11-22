@@ -46,7 +46,9 @@ def _validate(db: Session, form: FormData, branch_id: int | None):
     if not name:
         errors.add("name", _("Nome é obrigatório."))
     wh_ids = [i for i in (to_int(v) for v in form.getlist("warehouse_ids")) if i]
-    return errors, {"code": code, "name": name, "warehouse_ids": wh_ids}
+    unit = str(form.get("unitization") or "off")
+    return errors, {"code": code, "name": name, "warehouse_ids": wh_ids,
+                    "unitization": unit if unit in ("off", "cases", "full") else "off"}
 
 
 @router.get("")
@@ -83,7 +85,7 @@ def create_branch(request: Request, form: FormData = Depends(form_data), db: Ses
     if errors:
         return render(request, "branches/form.html", status_code=422, branch=None, data=data, errors=errors,
                       warehouses=_all_warehouses(db))
-    branch = Branch(code=data["code"], name=data["name"])
+    branch = Branch(code=data["code"], name=data["name"], unitization=data["unitization"])
     if data["warehouse_ids"]:
         branch.warehouses = list(db.scalars(select(Warehouse).where(Warehouse.id.in_(data["warehouse_ids"]))))
     db.add(branch)
@@ -96,7 +98,8 @@ def edit_branch(branch_id: int, request: Request, db: Session = Depends(get_db))
     branch = db.get(Branch, branch_id)
     if not branch:
         return redirect("/branches", _("Filial não encontrada."), "danger")
-    data = {"code": branch.code, "name": branch.name, "warehouse_ids": [w.id for w in branch.warehouses]}
+    data = {"code": branch.code, "name": branch.name, "warehouse_ids": [w.id for w in branch.warehouses],
+            "unitization": branch.unitization or "off"}
     return render(request, "branches/form.html", branch=branch, data=data, errors={}, warehouses=_all_warehouses(db))
 
 
@@ -119,7 +122,7 @@ def update_branch(branch_id: int, request: Request, form: FormData = Depends(for
     if errors:
         return render(request, "branches/form.html", status_code=422, branch=branch, data=data, errors=errors,
                       warehouses=_all_warehouses(db))
-    branch.code, branch.name = data["code"], data["name"]
+    branch.code, branch.name, branch.unitization = data["code"], data["name"], data["unitization"]
     branch.warehouses = list(db.scalars(select(Warehouse).where(Warehouse.id.in_(data["warehouse_ids"])))) if data["warehouse_ids"] else []
     db.commit()
     return redirect("/branches", _("Filial {code} atualizada.", code=branch.code))

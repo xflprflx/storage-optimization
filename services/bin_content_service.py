@@ -21,7 +21,7 @@ from typing import Iterable, Optional
 from sqlalchemy import delete, insert, select
 from sqlalchemy.orm import Session
 
-from models import BinContent, BinType, LocationBin, Product, ShelfLevel, StockItem
+from models import BinContent, BinType, LocationBin, Product, ShelfLevel, StockItem, StorageLocation
 from services.i18n import _
 
 EPS = Decimal("0.0001")
@@ -63,7 +63,15 @@ def physical_bins(db: Session, location_ids: Iterable[int]) -> dict[int, list[Ph
     return out
 
 
-def _caps(product: Product, bt: BinType, prm=None) -> Optional[int]:
+def _loc_mode(db: Session, location_id: int, prm=None) -> str:
+    """Modo de unitização do endereço: o da filial dele, restringido pela rodada (prm.unitization)."""
+    from services.packaging import branch_mode, effective
+
+    loc = db.get(StorageLocation, location_id)
+    return effective(branch_mode(db, loc.branch_id if loc is not None else None), getattr(prm, "unitization", None))
+
+
+def _caps(product: Product, bt: BinType, prm=None, mode: str = "off") -> Optional[int]:
     """Capacidade de uma bin do tipo para o produto. Sem `prm`: encaixe geométrico, enchimento 100%
     (conteúdo de hoje). Com `prm`: os mesmos parâmetros da otimização (enchimento máximo, rotação...)."""
     from services.bin_optimizer import BinSpec, Params, ProductUnit, capacity
@@ -71,7 +79,7 @@ def _caps(product: Product, bt: BinType, prm=None) -> Optional[int]:
     f = lambda v: float(v) if v is not None else None  # noqa: E731
     from services.packaging import unit_of
 
-    p = unit_of(product)
+    p = unit_of(product, 0, mode)
     b = BinSpec(bt.id, bt.code, f(bt.height), f(bt.width), f(bt.length), f(bt.volume), f(bt.max_weight),
                 open_top=bool(bt.open_top), over_cm=f(bt.over_cm), store_as=bt.store_as or "units")
     if not p.has_dims or b.volume_cm3 is None:
@@ -111,7 +119,7 @@ def split_units(total: Decimal, weights: list[float]) -> list[Decimal]:
 
 
 def presume_distribution(bins: list[PhysBin], stock: dict[int, Decimal], products: dict[int, Product],
-                         types: dict[int, BinType], prm=None) -> list[tuple[PhysBin, int, Decimal]]:
+                         types: dict[int, BinType], prm=None, mode: str = "off") -> list[tuple[PhysBin, int, Decimal]]:
     """Distribuição automática do saldo pelas bins: um SKU por bin, maior volume primeiro. Bins que sobrariam vazias
     vão para os SKUs mais apertados, e cada SKU é dividido entre as suas bins na proporção da capacidade —
     assim nenhuma bin do endereço fica vazia enquanto houver unidades para dividir."""
@@ -119,7 +127,7 @@ def presume_distribution(bins: list[PhysBin], stock: dict[int, Decimal], product
         return []
     vol = lambda pid: float(products[pid].height or 0) * float(products[pid].width or 0) * float(products[pid].length or 0)  # noqa: E731
     order = sorted((pid for pid, q in stock.items() if q > 0), key=lambda pid: (-vol(pid) * float(stock[pid]), products[pid].sku))
-    cap = lambda pid, b: _caps(products[pid], types[b.type_id], prm) if b.type_id in types else None  # noqa: E731
+    cap = lambda pid, b: _caps(products[pid], types[b.type_id], prm, mode) if b.type_id in types else None  # noqa: E731
     free = list(bins)
     mine: dict[int, list[PhysBin]] = {}
     for pid in order:
@@ -197,7 +205,7 @@ def refresh_contents(db: Session, location_ids: Optional[Iterable[int]] = None, 
         manual = [c for c in cur if not c.presumed]
         if cur and not manual and not force:
             # presumido igual à distribuição presumida atual: mantém (sem regravar)
-            fresh = sorted((b.type_id, b.seq, pid, round(float(q), 4)) for b, pid, q in presume_distribution(bins, st, products, types, prm))
+            fresh = sorted((b.type_id, b.seq, pid, round(float(q), 4)) for b, pid, q in presume_distribution(bins, st, products, types, prm, _loc_mode(db, lid, prm)))
             if fresh == sorted((c.bin_type_id, c.seq, c.product_id, round(float(c.quantity), 4)) for c in cur):
                 continue
         if manual and not force:
@@ -214,7 +222,7 @@ def refresh_contents(db: Session, location_ids: Optional[Iterable[int]] = None, 
             dropped.append(lid)
         # recalcula a distribuição presumida
         to_delete.append(lid)
-        for b, pid, q in presume_distribution(bins, st, products, types, prm):
+        for b, pid, q in presume_distribution(bins, st, products, types, prm, _loc_mode(db, lid, prm)):
             to_insert.append({"location_id": lid, "bin_type_id": b.type_id, "seq": b.seq, "product_id": pid,
                               "quantity": q, "presumed": prm is None})  # com prm: distribuição do plano aplicado (fica)
     for ch in _chunks(to_delete):
@@ -262,6 +270,7 @@ def set_contents(db: Session, location_id: int, rows: list[tuple[int, int, int, 
 def contents_view(db: Session, location_id: int) -> list[dict]:
     """Para a tela do endereço: cada bin física com o que tem dentro e a ocupação estimada."""
     bins = physical_bins(db, [location_id]).get(location_id, [])
+    umode = _loc_mode(db, location_id)
     types = {t.id: t for t in db.scalars(select(BinType))}
     rows = db.scalars(select(BinContent).where(BinContent.location_id == location_id)).all()
     by_bin: dict[tuple, list[BinContent]] = {}
@@ -273,7 +282,7 @@ def contents_view(db: Session, location_id: int) -> list[dict]:
         fill = 0.0
         known = True
         for c in items:
-            cap = _caps(c.product, types[b.type_id]) if b.type_id in types else None
+            cap = _caps(c.product, types[b.type_id], None, umode) if b.type_id in types else None
             if cap:
                 fill += float(c.quantity) / cap
             else:
@@ -326,7 +335,7 @@ def content_changes(db: Session, changes: dict[int, tuple], prm=None) -> dict[in
     for lid, (cfg, own) in changes.items():
         after = planned_bins(lid, cfg, own)
         after_c: dict[tuple, list] = {}
-        for b, pid, q in presume_distribution(after, stock.get(lid, {}), products, types, prm):
+        for b, pid, q in presume_distribution(after, stock.get(lid, {}), products, types, prm, _loc_mode(db, lid, prm)):
             after_c.setdefault((b.type_id, b.seq), []).append((pid, q))
         before_c = cur.get(lid, {})
         norm = lambda items: sorted((p, round(float(q), 4)) for p, q in items)  # noqa: E731
@@ -377,7 +386,7 @@ def arrangement_rows(db: Session, results, prm=None) -> dict[int, dict]:
             cfg = r.placement if r.placement else {own: dict(r.suggested or {})}
             nb = planned_bins(r.id, cfg, own)
             dist: dict[tuple, list] = {}
-            for b, pid, q in presume_distribution(nb, stock.get(r.id, {}), products, types, prm):
+            for b, pid, q in presume_distribution(nb, stock.get(r.id, {}), products, types, prm, _loc_mode(db, r.id, prm)):
                 dist.setdefault((b.type_id, b.seq), []).append((sku(pid), q))
             after = [(b, dist.get((b.type_id, b.seq), [])) for b in nb]
         out[r.id] = {"before": before, "after": after}
@@ -406,7 +415,7 @@ def address_scenario(db: Session, r, planned: dict[str, float], prm=None):
     own = r.own_level if r.own_level is not None else "own"
     cfg = r.placement if r.placement else {own: dict(r.suggested or {})}
     nb = planned_bins(r.id, cfg, own)
-    dist = presume_distribution(nb, want, products, types, prm)
+    dist = presume_distribution(nb, want, products, types, prm, _loc_mode(db, r.id, prm))
     # saldo físico dividido entre as bins planejadas do SKU na proporção do planejado (nenhuma fica só com reserva
     # enquanto houver unidades para dividir); o que falta para o planejado é reserva
     per_pid: dict[int, list] = {}

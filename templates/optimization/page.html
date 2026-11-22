@@ -151,6 +151,13 @@
         </div>
         <div class="form-text mb-2">{{ _("Min/max valem no endereço padrão do produto; vazio ou 0 usa o saldo; nunca abaixo do saldo físico.") }}</div>
         </div>
+        <div>
+        <div class="small fw-semibold mb-1">{{ _("Unitização") }}</div>
+        <select class="form-select form-select-sm mb-1" name="unitization">
+          {% for k, v in [('branch', _('Conforme a filial')), ('off', _('Desligada (tudo em unidades soltas)')), ('cases', _('Só caixas (sem palete fechado)'))] %}<option value="{{ k }}" {% if (params.unitization or 'branch') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+        </select>
+        <div class="form-text mb-2">{{ _("Só restringe: a rodada nunca liga a unitização numa filial em que ela está desligada (Cadastros → Filiais).") }}</div>
+        </div>
         <div data-tour="opt-objective">
         <div class="small fw-semibold mb-1">{{ _("Objetivo") }}</div>
         {% for key, label in objectives.items() %}

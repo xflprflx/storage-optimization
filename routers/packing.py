@@ -39,24 +39,34 @@ def parent_info(bt, seq: Optional[int] = None) -> Optional[dict]:
             "slot": slot + 1, "n": ((seq or 1) - 1) // k + 1, "label": bt.fraction_label, "code": p.code}
 
 
-def _item(bt, p, sku: str, q, res=0) -> tuple:
-    """Item do desenho: unidades soltas ou, quando a bin guarda caixas/palete (unitização), as caixas do produto
-    (medidas da caixa e a quantidade em caixas, arredondada para cima)."""
+def _item(bt, p, sku: str, q, res=0, mode: str = "off") -> tuple:
+    """Item do desenho: unidades soltas ou, quando a bin guarda caixas/palete e a unitização está ligada, as
+    embalagens escolhidas para a bin (medidas da embalagem e a quantidade em embalagens, arredondada para cima)."""
     import math
 
-    from services.bin_optimizer import BinSpec, handling
-    from services.packaging import case_dims, unit_of
+    from services.bin_optimizer import BinSpec, choose
+    from services.packaging import unit_of
 
     if p is None or None in (p.height, p.width, p.length):
         return (sku, q, None, res)
     d = (_f(p.height), _f(p.width), _f(p.length))
-    if bt is not None and (bt.store_as or "units") != "units":
-        u = unit_of(p)
-        if handling(u, BinSpec(bt.id, bt.code, store_as=bt.store_as)) in ("cases", "pallet"):
-            k = int(p.case_qty)
+    if bt is not None and (bt.store_as or "units") != "units" and mode != "off":
+        u = unit_of(p, 0, mode)
+        ch = choose(u, BinSpec(bt.id, bt.code, _f(bt.height), _f(bt.width), _f(bt.length), store_as=bt.store_as,
+                               unit_h=(_f(bt.height) + _f(bt.over_cm)) if bt.open_top and bt.over_cm else None))
+        if ch.how in ("cases", "pallet"):
+            k = ch.pack.qty
             cq = lambda v: math.ceil(float(v or 0) / k - 1e-9)  # noqa: E731
-            return (sku, cq(q), case_dims(p), cq(res), _("caixas de {k} un.", k=k))
+            label = (ch.pack.name or _("caixas")).lower()
+            return (sku, cq(q), (ch.pack.h, ch.pack.w, ch.pack.l), cq(res), _("{name} de {k} un.", name=label, k=k))
     return (sku, q, d, res)
+
+
+def _unit_mode(db: Session) -> str:
+    """Modo de unitização do desenho sem endereço: o mais amplo entre as filiais."""
+    from services.packaging import scope_mode
+
+    return scope_mode(db, None)
 
 
 def _arrange_bt(bt, data, rotation, seq=None):
@@ -95,8 +105,9 @@ def bin_arrangement(db: Session, bin_type_id: int, items: list[tuple[str, float]
     skus = [i[0] for i in items]
     prods = {p.sku: p for p in db.scalars(select(Product).where(Product.sku.in_(skus)))} if skus else {}
     data = []
+    mode = _unit_mode(db)
     for sku, q, *res in items:
-        data.append(_item(bt, prods.get(sku), sku, q, res[0] if res else 0))
+        data.append(_item(bt, prods.get(sku), sku, q, res[0] if res else 0, mode))
     return _arrange_bt(bt, data, rotation, seq)
 
 
@@ -126,6 +137,7 @@ class Arranger:
         self.rotation = "any" if rotation == "any" else "upright"
         self.types = {t.id: t for t in db.scalars(select(BinType))}
         self.products: dict[str, Product] = {}
+        self.unit_mode = _unit_mode(db)  # quem souber a filial do escopo pode trocar (restringir)
 
     def _load(self, skus):
         missing = [s for s in skus if s not in self.products]
@@ -140,7 +152,7 @@ class Arranger:
         bt = self.types.get(type_id)
         data = []
         for sku, q, *res in items:
-            data.append(_item(bt, self.products.get(sku), sku, q, res[0] if res else 0))
+            data.append(_item(bt, self.products.get(sku), sku, q, res[0] if res else 0, self.unit_mode))
         arr = _arrange_bt(bt, data, self.rotation, seq)
         q = [("bt", type_id), ("rot", self.rotation), ("title", title)] + [("i", _tok(i)) for i in items]
         return {"svg": svg_mini(arr, size) if arr.ok else "", "url": "/packing/3d?" + self._urlencode(q),
@@ -164,7 +176,7 @@ def bin_card(arranger: "Arranger", type_id: int, label: str, items: list, seq: O
     arranger._load([i[0] for i in items])
     data = []
     for sku, q, *res in items:
-        data.append(_item(bt, arranger.products.get(sku), sku, q, res[0] if res else 0))
+        data.append(_item(bt, arranger.products.get(sku), sku, q, res[0] if res else 0, arranger.unit_mode))
     arr = _arrange_bt(bt, data, arranger.rotation, seq)
     return {"label": label, "arr": arr, "svg": svg_mini(arr, 150) if arr.ok and (items or arr.parent) else "",
             "json": json.dumps(arr.as_json()) if arr.dims else "null", "empty": not items}

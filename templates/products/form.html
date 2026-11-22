@@ -46,54 +46,29 @@
         {% endfor %}
       </div>
       <hr class="my-4">
-      <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-box2"></i> {{ _h("Embalagem (unitização) <span class=\"text-lowercase fw-normal\">— opcional</span>") }}</h6>
-      <div class="form-text mt-0 mb-2">{{ _("A caixa do produto e o palete. As bins que guardam caixas ou palete fechado (Tipos de bin → Armazena em) contam caixas inteiras. Medidas vazias = as do modelo de embalagem. Calcular preenche os campos vazios pelas medidas (quantas unidades cabem na caixa; caixas por camada e camadas no palete).") }}</div>
+      <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-box2"></i> {{ _("Unitização do SKU") }}</h6>
+      <div class="form-text mt-0 mb-2">{{ _("As embalagens (caixa, display, master…) e os paletes ficam em Embalagens do produto. Elas só entram nas otimizações das filiais com a unitização ligada.") }}{% if product %} <a href="/products/{{ product.id }}/packagings">{{ _("Embalagens do produto") }} ({{ product.packagings|length }})</a>{% endif %}</div>
       <div class="row g-3">
-        <div class="col-md-2">
-          <label class="form-label">{{ _("Unidades por caixa") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'case_qty') }}" name="case_qty" id="case_qty" inputmode="numeric" value="{{ data.get('case_qty') or '' }}">
-          {{ field_error(errors, 'case_qty') }}
-        </div>
         <div class="col-md-4">
-          <label class="form-label">{{ _("Modelo de embalagem") }}</label>
-          <select class="form-select" name="case_model_id" id="case_model_id">
-            <option value="">{{ _("— medidas próprias —") }}</option>
-            {% for m in packaging_models %}<option value="{{ m.id }}" data-h="{{ m.height|dec_input }}" data-w="{{ m.width|dec_input }}" data-l="{{ m.length|dec_input }}" {% if (data.get('case_model_id')|string) == (m.id|string) %}selected{% endif %}>{{ m.code }} — {{ m.name }}</option>{% endfor %}
+          <label class="form-label">{{ _("Unitização do SKU") }}</label>
+          <select class="form-select" name="unitization" id="unitization">
+            {% for v, lbl in [('branch', _('Conforme a filial')), ('never', _('Nunca (sempre unidades soltas)'))] %}
+            <option value="{{ v }}" {% if (data.get('unitization') or 'branch') == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
           </select>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-5">
           <label class="form-label">{{ _("Guardar nas bins de unidades ou caixas") }}</label>
           <select class="form-select" name="store_pref" id="store_pref">
             {% for v, lbl in [('auto', _('Automático: caixas inteiras + o resto solto')), ('units', _('Sempre em unidades soltas')), ('cases', _('Sempre na caixa (não vai para bin de unidades)'))] %}
             <option value="{{ v }}" {% if (data.get('store_pref') or 'auto') == v %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
           </select>
         </div>
-        {% for key, label in [('case_height', _('Altura da caixa')), ('case_width', _('Largura da caixa')), ('case_length', _('Comprimento da caixa')), ('case_weight', _('Peso da caixa cheia'))] %}
-        <div class="col-md-3">
-          <label class="form-label">{{ label }} <small class="text-muted">({{ 'kg' if key == 'case_weight' else 'cm' }})</small></label>
-          <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" id="{{ key }}" data-u="{{ 'kg' if key == 'case_weight' else 'cm' }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
-          {{ field_error(errors, key) }}
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="mixed_packs" value="1" id="mixed_packs" {% if data.get('mixed_packs') %}checked{% endif %}>
+            <label class="form-check-label" for="mixed_packs">{{ _("Embalagens diferentes por bin") }}</label>
+          </div>
         </div>
-        {% endfor %}
-        <div class="col-md-4">
-          <label class="form-label">{{ _("Palete (tipo de bin)") }}</label>
-          <select class="form-select" name="pallet_type_id" id="pallet_type_id">
-            <option value="">{{ _("— sem palete —") }}</option>
-            {% for b in pallet_types %}<option value="{{ b.id }}" {% if (data.get('pallet_type_id')|string) == (b.id|string) %}selected{% endif %}>{{ b.code }} — {{ b.name }}</option>{% endfor %}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label" title="{{ _("Caixas por camada (lastro)") }}">{{ _("Caixas por camada") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'pallet_layer') }}" name="pallet_layer" id="pallet_layer" inputmode="numeric" value="{{ data.get('pallet_layer') or '' }}">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">{{ _("Camadas") }}</label>
-          <input class="form-control text-end {{ invalid(errors, 'pallet_layers') }}" name="pallet_layers" id="pallet_layers" inputmode="numeric" value="{{ data.get('pallet_layers') or '' }}">
-        </div>
-        <div class="col-md-4 d-flex align-items-end gap-2">
-          <button type="button" class="btn btn-outline-primary" id="packCalc"><i class="bi bi-calculator"></i> {{ _("Calcular") }}</button>
-        </div>
-        <div class="col-12 small" id="packInfo">{% for w in pack_warnings or [] %}<div class="text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}</div>
       </div>
       <hr class="my-4">
       <h6 class="text-muted text-uppercase small mb-1"><i class="bi bi-diagram-3"></i> {{ _("Política de estoque por filial") }}</h6>
@@ -148,26 +123,6 @@
   const add = () => { tb.insertAdjacentHTML('beforeend', tpl.innerHTML.replaceAll('__i__', 'n' + (n++))); if (window.nkAutocomplete) nkAutocomplete(); };
   document.getElementById('addPolicy')?.addEventListener('click', add);
   if (tb && !tb.querySelector('tr')) add();  // produto sem política: já mostra uma linha
-})();
-</script>
-<script>
-(() => {
-  const $ = id => document.getElementById(id);
-  $('packCalc').addEventListener('click', async () => {
-    const f = new FormData($('packCalc').closest('form'));
-    const body = new URLSearchParams();
-    ['height', 'width', 'length', 'weight', 'case_qty', 'case_model_id', 'case_height', 'case_width', 'case_length', 'case_weight',
-     'pallet_type_id', 'pallet_layer', 'pallet_layers'].forEach(k => {
-      const el = document.querySelector(`[name="${k}"]`);  // medidas em cm/kg (o campo pode estar em polegadas/libras)
-      const v = el && el.dataset.u && window.nkU ? nkU.get(el) : f.get(k);
-      body.append(k, v == null || Number.isNaN(v) ? '' : String(v));
-    });
-    const r = await (await fetch('/products/packaging-calc', { method: 'POST', body })).json();
-    const fill = (id, v) => { if (v && !$(id).value) $(id).value = v; };
-    fill('case_qty', r.case_qty); fill('pallet_layer', r.pallet_layer); fill('pallet_layers', r.pallet_layers);
-    $('packInfo').innerHTML = (r.info || []).map(t => `<div class="text-muted"><i class="bi bi-info-circle"></i> ${t}</div>`).join('')
-      + (r.warnings || []).map(t => `<div class="text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> ${t}</div>`).join('');
-  });
 })();
 </script>
 {% endblock %}

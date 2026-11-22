@@ -301,6 +301,10 @@
             <input class="form-control form-control-sm text-end" name="d_factor" inputmode="decimal" value="{{ d.factor }}"></div>
           <div class="col-6"><label class="form-label small mb-0">{{ _("Margem de crescimento (%)") }}</label>
             <input class="form-control form-control-sm text-end" name="d_growth" inputmode="decimal" value="{{ d.growth }}"></div>
+          <div class="col-12"><label class="form-label small mb-0">{{ _("Unitização") }}</label>
+            <select class="form-select form-select-sm" name="d_unitization">
+              {% for k, v in [('off', _('Desligada (tudo em unidades soltas)')), ('cases', _('Só caixas (sem palete fechado)')), ('full', _('Caixas e paletes'))] %}<option value="{{ k }}" {% if (d.get('unitization') or 'off') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select></div>
         </div>
         <div class="form-text">{{ _("Com o arquivo, valem os saldos e min/max levels da filial nova informados na planilha; dimensões vazias vêm do cadastro de produtos. Min/max level sem valor usa o saldo. Filtros de SKU e material valem para as duas fontes.") }}</div>
         {% if d.get('caps') %}

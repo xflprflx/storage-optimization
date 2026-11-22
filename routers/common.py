@@ -172,7 +172,8 @@ HELP_VERSION = _help_version()
 
 def render(request: Request, name: str, status_code: int = 200, **context):
     context.setdefault("flash_msg", request.query_params.get("msg"))
-    context.setdefault("flash_level", request.query_params.get("level", "success"))
+    # o nível do aviso vai em `msg_level` (não em `level`: telas com filtro de nível, como Capacidade dos níveis)
+    context.setdefault("flash_level", request.query_params.get("msg_level", "success"))
     context.setdefault("help_version", HELP_VERSION)
     return templates.TemplateResponse(request, name, context, status_code=status_code)
 
@@ -180,7 +181,7 @@ def render(request: Request, name: str, status_code: int = 200, **context):
 def redirect(url: str, msg: Optional[str] = None, level: str = "success") -> RedirectResponse:
     if msg:
         sep = "&" if "?" in url else "?"
-        url = f"{url}{sep}{urlencode({'msg': msg, 'level': level})}"
+        url = f"{url}{sep}{urlencode({'msg': msg, 'msg_level': level})}"
     return RedirectResponse(url, status_code=303)
 
 

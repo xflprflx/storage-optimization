@@ -21,7 +21,7 @@
 {% macro filter_buttons(request) -%}
 <div class="col-auto d-flex gap-2">
   <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> {{ _("Filtrar") }}</button>
-  {% set active = request.query_params.items()|rejectattr('0', 'in', ['sort', 'dir', 'per_page', 'page', 'msg', 'level'])|selectattr('1')|list %}
+  {% set active = request.query_params.items()|rejectattr('0', 'in', ['sort', 'dir', 'per_page', 'page', 'msg', 'msg_level'])|selectattr('1')|list %}
   {% if active %}
   <a class="btn btn-link text-danger" href="{{ request.url.path }}{% if request.query_params.get('sort') %}?sort={{ request.query_params.get('sort') }}&dir={{ request.query_params.get('dir', 'asc') }}{% endif %}"><i class="bi bi-x-circle"></i> {{ _("Limpar filtros") }}</a>
   {% endif %}

@@ -53,7 +53,7 @@
  },
  " Atenção: ainda não há endereços na estante {aisle}-{bay}.": {
   "src": [
-   "routers/levels.py:259"
+   "routers/levels.py:268"
   ]
  },
  " Desenhe a planta da filial para medir pelos corredores reais e ver as rotas.": {
@@ -583,7 +583,7 @@
  },
  "({v} emprest.)": {
   "src": [
-   "templates/levels/index.html:197"
+   "templates/levels/index.html:199"
   ],
   "html": true
  },
@@ -628,7 +628,7 @@
  },
  ", 1º nível a {fl} cm do piso nessas estantes": {
   "src": [
-   "routers/levels.py:362"
+   "routers/levels.py:369"
   ]
  },
  ", com o mínimo de movimentação) ou ficam <b>fora de bin</b> no mesmo endereço (órfãos, para tratar à mão).": {
@@ -654,7 +654,7 @@
  },
  ", {n} criados": {
   "src": [
-   "routers/levels.py:361"
+   "routers/levels.py:368"
   ]
  },
  ", {stock_units} unidade(s) de saldo lançadas": {
@@ -1613,7 +1613,7 @@
   "src": [
    "routers/layout.py:506",
    "routers/layout.py:633",
-   "routers/levels.py:459",
+   "routers/levels.py:466",
    "routers/site.py:431"
   ]
  },
@@ -1903,7 +1903,7 @@
   "src": [
    "routers/layout.py:538",
    "routers/layout.py:688",
-   "routers/levels.py:476",
+   "routers/levels.py:483",
    "services/proposals.py:101"
   ]
  },
@@ -2453,7 +2453,7 @@
  },
  "Altura do 1º nível inválida.": {
   "src": [
-   "routers/levels.py:355"
+   "routers/levels.py:362"
   ]
  },
  "Altura do 1º nível nessas estantes (cm), quando foram montadas diferente da estrutura — vazio = a da estrutura": {
@@ -2463,32 +2463,32 @@
  },
  "Altura do 1º nível não pode ser negativa.": {
   "src": [
-   "routers/levels.py:357"
+   "routers/levels.py:364"
   ]
  },
  "Altura do vão de {height} cm definida em {n} nível(is).": {
   "src": [
-   "routers/levels.py:227"
+   "routers/levels.py:236"
   ]
  },
  "Altura do vão deve estar entre 0 e 5000 cm.": {
   "src": [
-   "routers/levels.py:196"
+   "routers/levels.py:205"
   ]
  },
  "Altura do vão inválida.": {
   "src": [
-   "routers/levels.py:194"
+   "routers/levels.py:203"
   ]
  },
  "Altura do vão removida de {n} nível(is).": {
   "src": [
-   "routers/levels.py:228"
+   "routers/levels.py:237"
   ]
  },
  "Altura fora do intervalo (0–5000 cm): {raw}": {
   "src": [
-   "routers/levels.py:158"
+   "routers/levels.py:167"
   ]
  },
  "Altura interna útil da bin. Precisa caber no vão do nível, com a folga para tirá-la.": {
@@ -2499,7 +2499,7 @@
  },
  "Altura inválida: {raw}": {
   "src": [
-   "routers/levels.py:155"
+   "routers/levels.py:164"
   ]
  },
  "Altura livre de cada nível. Vale para os níveis sem vão próprio.": {
@@ -3372,6 +3372,11 @@
    "templates/imports/mapping_history.html:39"
   ]
  },
+ "As estantes filtradas têm travas diferentes: Salvar travas grava o que estiver marcado em todas elas.": {
+  "src": [
+   "templates/levels/index.html:143"
+  ]
+ },
  "As estruturas candidatas. Para cada uma: deixar o sistema escolher a quantidade (com mínimo e máximo opcionais), fixar uma quantidade ou não usar.": {
   "src": [
    "services/onboarding.py:223"
@@ -3450,7 +3455,7 @@
  },
  "Atenção: 1º nível a {fl} cm + vãos ({sum} cm) passam da altura da estrutura ({float} cm).": {
   "src": [
-   "routers/levels.py:366"
+   "routers/levels.py:373"
   ]
  },
  "Atenção: sem as medidas do item, a IA só tem as proporções da foto — preencha largura, altura e profundidade e copie de novo para um desenho fiel.": {
@@ -3461,7 +3466,7 @@
  },
  "Atenção: {extra_levels} nível(is) além dos {levels} da estrutura.": {
   "src": [
-   "routers/levels.py:368"
+   "routers/levels.py:375"
   ]
  },
  "Atingiu o máximo de {max_bins} bin(s) por SKU.": {
@@ -3993,7 +3998,7 @@
  },
  "Bins no nível": {
   "src": [
-   "templates/levels/index.html:171"
+   "templates/levels/index.html:173"
   ]
  },
  "Bins no pool": {
@@ -4175,7 +4180,7 @@
   "src": [
    "routers/layout.py:509",
    "routers/layout.py:636",
-   "routers/levels.py:462",
+   "routers/levels.py:469",
    "routers/site.py:434"
   ]
  },
@@ -4299,7 +4304,7 @@
  },
  "Cabem<br><span class=\"mono\">{code}</span>": {
   "src": [
-   "templates/levels/index.html:169"
+   "templates/levels/index.html:171"
   ],
   "html": true
  },
@@ -4424,7 +4429,7 @@
  },
  "Cadastrar": {
   "src": [
-   "templates/levels/index.html:154",
+   "templates/levels/index.html:156",
    "templates/site/project.html:257"
   ]
  },
@@ -4555,7 +4560,7 @@
  },
  "Calculado pela estrutura": {
   "src": [
-   "templates/levels/index.html:190"
+   "templates/levels/index.html:192"
   ]
  },
  "Calculado pelas dimensões": {
@@ -4824,7 +4829,7 @@
  },
  "Capacidade informada (sem cálculo)": {
   "src": [
-   "templates/levels/index.html:189"
+   "templates/levels/index.html:191"
   ]
  },
  "Capacidade nesta orientação: {per_bin} un. ({nx} × {nz} × {ny})": {
@@ -4835,12 +4840,12 @@
  },
  "Capacidades calculadas pela frente × profundidade do módulo e pela altura das bins; elas se atualizam sozinhas quando a estrutura, o vão ou os tipos de bin mudam.": {
   "src": [
-   "routers/levels.py:363"
+   "routers/levels.py:370"
   ]
  },
  "Capacidades do nível {code} removidas (o nível continua existindo pelos seus endereços).": {
   "src": [
-   "routers/levels.py:286"
+   "routers/levels.py:295"
   ]
  },
  "Capacidades removidas": {
@@ -6700,7 +6705,7 @@
  },
  "Códigos com no máximo 20 caracteres.": {
   "src": [
-   "routers/levels.py:250"
+   "routers/levels.py:259"
   ]
  },
  "Códigos das estruturas que podem ser usadas nesta zona; vazio = todas.": {
@@ -7175,7 +7180,7 @@
  },
  "Destravar": {
   "src": [
-   "templates/levels/index.html:140"
+   "templates/levels/index.html:141"
   ]
  },
  "Detalhes": {
@@ -7357,7 +7362,7 @@
  },
  "Distância até o nível de cima (cm). Nunca fica menor que a bin mais alta do nível: a estrutura acompanha a bin.": {
   "src": [
-   "templates/levels/index.html:193"
+   "templates/levels/index.html:195"
   ]
  },
  "Distância até o nível de cima. Nunca fica menor que a bin mais alta do nível.": {
@@ -7404,7 +7409,7 @@
  },
  "Distância entre este nível e o de cima (cm)": {
   "src": [
-   "templates/levels/index.html:170"
+   "templates/levels/index.html:172"
   ]
  },
  "Distância entre este nível e o de cima (cm). Ex.: porta-paletes: 150": {
@@ -8510,7 +8515,7 @@
  },
  "Escolha a filial.": {
   "src": [
-   "routers/levels.py:411",
+   "routers/levels.py:418",
    "routers/optimization.py:1337"
   ]
  },
@@ -8533,7 +8538,7 @@
  },
  "Escolha o modelo de estrutura.": {
   "src": [
-   "routers/levels.py:346"
+   "routers/levels.py:353"
   ]
  },
  "Escolha o objetivo \"Menor tempo de separação\": os SKUs da curva A vão para perto da expedição e para a zona de ouro. O resultado compara hoje × proposta em caminhada e horas.": {
@@ -9470,7 +9475,7 @@
  },
  "Excluir nível reservado": {
   "src": [
-   "templates/levels/index.html:213"
+   "templates/levels/index.html:215"
   ]
  },
  "Excluir o armazém ": {
@@ -9496,7 +9501,7 @@
  },
  "Excluir o nível reservado {code}?": {
   "src": [
-   "templates/levels/index.html:231"
+   "templates/levels/index.html:233"
   ]
  },
  "Excluir o produto {sku}? Os saldos dele também serão excluídos.": {
@@ -10503,7 +10508,7 @@
  },
  "Folga acima da bin inválida.": {
   "src": [
-   "routers/levels.py:351"
+   "routers/levels.py:358"
   ]
  },
  "Folga entre as paredes e as estruturas.": {
@@ -10966,6 +10971,11 @@
  "Grava esta orientação e estes transversais no projeto e otimiza de novo": {
   "src": [
    "templates/site/layout_proposal.html:55"
+  ]
+ },
+ "Grava nas estantes exatamente o que está marcado (desmarcado = sem essa trava)": {
+  "src": [
+   "templates/levels/index.html:140"
   ]
  },
  "Gravar a recomposição no cadastro (estrutura das estantes, vão e capacidade dos níveis, níveis novos)? Dá para desfazer em Capacidade dos níveis.": {
@@ -11623,7 +11633,7 @@
  },
  "Informe corredor, estante e nível.": {
   "src": [
-   "routers/levels.py:248"
+   "routers/levels.py:257"
   ]
  },
  "Informe código (até 30 caracteres) e nome da filial nova.": {
@@ -11660,7 +11670,7 @@
  },
  "Informe um tipo de bin com a quantidade e/ou a altura do vão.": {
   "src": [
-   "routers/levels.py:202"
+   "routers/levels.py:211"
   ]
  },
  "Iniciar / pausar (barra de espaço)": {
@@ -12314,17 +12324,17 @@
  },
  "Limite de {code} removido de {n} nível(is) (nas estantes com estrutura vale a capacidade calculada).": {
   "src": [
-   "routers/levels.py:216"
+   "routers/levels.py:225"
   ]
  },
  "Limite de {max_bins}× {code} definido em {n} nível(is).": {
   "src": [
-   "routers/levels.py:215"
+   "routers/levels.py:224"
   ]
  },
  "Limite manual (calculado: {c})": {
   "src": [
-   "templates/levels/index.html:188"
+   "templates/levels/index.html:190"
   ]
  },
  "Limite manual de bins do tipo por nível. Nas estantes com estrutura, vale o menor entre ele e a capacidade calculada; sem estrutura, ele é a capacidade. Vazio ou 0 remove o limite.": {
@@ -12340,12 +12350,12 @@
  },
  "Limites e vão do nível {code} removidos: vale a capacidade calculada pela estrutura da estante.": {
   "src": [
-   "routers/levels.py:283"
+   "routers/levels.py:292"
   ]
  },
  "Limites manuais removidos.": {
   "src": [
-   "routers/levels.py:364"
+   "routers/levels.py:371"
   ]
  },
  "Limites por SKU removidos.": {
@@ -12880,7 +12890,7 @@
  },
  "Marque as estantes a recompor.": {
   "src": [
-   "routers/levels.py:480"
+   "routers/levels.py:487"
   ]
  },
  "Marque as filiais que usam este armazém. Ele passa a aparecer nos filtros de escopo dessas filiais.": {
@@ -12949,11 +12959,6 @@
  "Marque os resultados a excluir.": {
   "src": [
    "routers/runs.py:55"
-  ]
- },
- "Marque posição fixa e/ou não recompor.": {
-  "src": [
-   "routers/levels.py:315"
   ]
  },
  "Marque se a 1ª linha tem os nomes das colunas.": {
@@ -13341,7 +13346,7 @@
  },
  "Modelo": {
   "src": [
-   "templates/levels/index.html:168"
+   "templates/levels/index.html:170"
   ]
  },
  "Modelo 3D": {
@@ -13383,7 +13388,7 @@
  },
  "Modelo de estrutura da estante": {
   "src": [
-   "templates/levels/index.html:168"
+   "templates/levels/index.html:170"
   ]
  },
  "Modelo de estrutura das estantes": {
@@ -13410,12 +13415,12 @@
  },
  "Modelo removido de {n} estante(s). Vão e capacidades dos níveis foram mantidos (as capacidades passam a ser limites manuais).": {
   "src": [
-   "routers/levels.py:343"
+   "routers/levels.py:350"
   ]
  },
  "Modelo {code} aplicado a {bays} estante(s) ({levels} níveis": {
   "src": [
-   "routers/levels.py:360"
+   "routers/levels.py:367"
   ]
  },
  "Modelo {code} aplicado a {len} estante(s).": {
@@ -14106,7 +14111,7 @@
  },
  "Nas estantes com estrutura, a capacidade de cada tipo é <b>calculada</b> (frente × profundidade × vão do nível) e se atualiza sozinha. Um número digitado vira <span class=\"badge text-bg-warning\">limite manual</span> e vale quando é menor que o calculado; apagar o número volta ao calculado. Sem estrutura, o número digitado é a capacidade.": {
   "src": [
-   "templates/levels/index.html:163"
+   "templates/levels/index.html:165"
   ],
   "html": true
  },
@@ -14268,7 +14273,7 @@
  },
  "Nenhum motivo cadastrado. <a href=\"/lock-reasons/new?back=/levels\">Cadastrar</a>": {
   "src": [
-   "templates/levels/index.html:142"
+   "templates/levels/index.html:144"
   ],
   "html": true
  },
@@ -14279,12 +14284,12 @@
  },
  "Nenhum nível corresponde às condições.": {
   "src": [
-   "routers/levels.py:210"
+   "routers/levels.py:219"
   ]
  },
  "Nenhum nível encontrado.": {
   "src": [
-   "templates/levels/index.html:217"
+   "templates/levels/index.html:219"
   ]
  },
  "Nenhum nível tem a altura de pega dentro da faixa.": {
@@ -14465,8 +14470,8 @@
  },
  "Nenhuma estante corresponde às condições.": {
   "src": [
-   "routers/levels.py:305",
-   "routers/levels.py:338"
+   "routers/levels.py:314",
+   "routers/levels.py:345"
   ]
  },
  "Nenhuma estante deste corredor/lado nos endereços.": {
@@ -15000,7 +15005,7 @@
  },
  "Não cabe neste nível (pela estrutura e pelo vão)": {
   "src": [
-   "templates/levels/index.html:187"
+   "templates/levels/index.html:189"
   ]
  },
  "Não definir o endereço padrão": {
@@ -15093,7 +15098,7 @@
  },
  "Não há recomposição para desfazer.": {
   "src": [
-   "routers/levels.py:495"
+   "routers/levels.py:502"
   ]
  },
  "Não precisa saber otimização nem pesquisa operacional: estes são os termos que aparecem nas telas.": {
@@ -15104,7 +15109,7 @@
  "Não recompor": {
   "src": [
    "services/field_help.py:375",
-   "templates/levels/index.html:181"
+   "templates/levels/index.html:183"
   ],
   "help": true
  },
@@ -15341,7 +15346,7 @@
  },
  "Nível não encontrado.": {
   "src": [
-   "routers/levels.py:267"
+   "routers/levels.py:276"
   ]
  },
  "Nível onde estas bins ficam fisicamente": {
@@ -15351,13 +15356,13 @@
  },
  "Nível reservado <span class=\"text-muted fw-normal\">(sem endereço, só recebe bins de outros níveis da estante)</span>": {
   "src": [
-   "templates/levels/index.html:150"
+   "templates/levels/index.html:152"
   ],
   "html": true
  },
  "Nível reservado {code} excluído.": {
   "src": [
-   "routers/levels.py:287"
+   "routers/levels.py:296"
   ]
  },
  "Nível sem capacidade cadastrada: não dá para garantir que as bins cabem (cadastre em Capacidade dos níveis).": {
@@ -15373,12 +15378,12 @@
  },
  "Nível sem endereços: só recebe bins de outros níveis": {
   "src": [
-   "templates/levels/index.html:179"
+   "templates/levels/index.html:181"
   ]
  },
  "Nível {aisle}-{bay}-{level} cadastrado.": {
   "src": [
-   "routers/levels.py:257"
+   "routers/levels.py:266"
   ]
  },
  "Nível {code} acima da capacidade: {parts} = {v}% (cabem {caps}).": {
@@ -15634,7 +15639,7 @@
  },
  "O nível {code} guarda bins de outros endereços ({n_bins} linha(s)). Mova-as antes de excluir.": {
   "src": [
-   "routers/levels.py:270"
+   "routers/levels.py:279"
   ]
  },
  "O objetivo de caminhada/zona de ouro usa o histórico de saídas da filial: envie a aba Pedidos (ou a coluna Saída) na etapa Posição pela saída.": {
@@ -15867,7 +15872,7 @@
  },
  "O sistema monta, para cada estante com estrutura, as opções de reespaçar os níveis e de trocar a estrutura, e escolhe com o otimizador o maior ganho de espaço dentro das peças. Leva alguns segundos.": {
   "src": [
-   "routers/levels.py:430"
+   "routers/levels.py:437"
   ]
  },
  "O sistema responde a três perguntas do estoque: quais bins usar em cada endereço, onde guardar cada produto e quanto o separador anda para montar os pedidos. Avance pelos botões ou pelas setas do teclado; Esc fecha.": {
@@ -16013,7 +16018,7 @@
    "services/site_report.py:350",
    "services/site_report.py:604",
    "services/structure_importer.py:65",
-   "templates/levels/index.html:171",
+   "templates/levels/index.html:173",
    "templates/site/project.html:673"
   ],
   "lazy": true
@@ -18060,7 +18065,7 @@
  "Posição fixa": {
   "src": [
    "services/field_help.py:374",
-   "templates/levels/index.html:181"
+   "templates/levels/index.html:183"
   ],
   "help": true
  },
@@ -19046,7 +19051,7 @@
  },
  "Quantidade de bins inválida.": {
   "src": [
-   "routers/levels.py:204"
+   "routers/levels.py:213"
   ]
  },
  "Quantidade de bins inválida: {raw}": {
@@ -19336,12 +19341,12 @@
  },
  "Recomposição aplicada em {bays} estante(s): {created} nível(is) criado(s), {removed} removido(s). Use Desfazer a última recomposição para voltar.": {
   "src": [
-   "routers/levels.py:483"
+   "routers/levels.py:490"
   ]
  },
  "Recomposição das estruturas": {
   "src": [
-   "routers/levels.py:427",
+   "routers/levels.py:434",
    "services/onboarding.py:145",
    "templates/levels/index.html:20",
    "templates/levels/recompose.html:2",
@@ -19352,7 +19357,7 @@
  },
  "Recomposição desfeita: {n} estante(s) voltaram à estrutura, aos vãos e às capacidades de antes.": {
   "src": [
-   "routers/levels.py:497"
+   "routers/levels.py:504"
   ]
  },
  "Recomposição na variação: {label}": {
@@ -19546,7 +19551,7 @@
  },
  "Remover as capacidades do nível {code}?": {
   "src": [
-   "templates/levels/index.html:231"
+   "templates/levels/index.html:233"
   ]
  },
  "Remover bins de endereços vazios": {
@@ -19557,7 +19562,7 @@
  },
  "Remover capacidades": {
   "src": [
-   "templates/levels/index.html:213"
+   "templates/levels/index.html:215"
   ]
  },
  "Remover este tipo dos endereços": {
@@ -20251,7 +20256,7 @@
  },
  "Salvar alterações": {
   "src": [
-   "templates/levels/index.html:226"
+   "templates/levels/index.html:228"
   ]
  },
  "Salvar conteúdo": {
@@ -20282,6 +20287,11 @@
    "templates/layout/plan.html:28"
   ],
   "lazy": true
+ },
+ "Salvar travas": {
+  "src": [
+   "templates/levels/index.html:140"
+  ]
  },
  "Saída": {
   "src": [
@@ -20411,7 +20421,7 @@
   "src": [
    "templates/bin_types/list.html:22",
    "templates/branches/list.html:22",
-   "templates/levels/index.html:167",
+   "templates/levels/index.html:169",
    "templates/products/list.html:30",
    "templates/stock/list.html:42",
    "templates/structure_kinds/list.html:26"
@@ -20425,9 +20435,9 @@
  },
  "Selecione a filial.": {
   "src": [
-   "routers/levels.py:198",
-   "routers/levels.py:299",
-   "routers/levels.py:332",
+   "routers/levels.py:207",
+   "routers/levels.py:308",
+   "routers/levels.py:339",
    "routers/locations.py:521"
   ]
  },
@@ -21979,7 +21989,7 @@
  },
  "Tipo de bin inválido.": {
   "src": [
-   "routers/levels.py:200",
+   "routers/levels.py:209",
    "services/bin_service.py:70"
   ]
  },
@@ -22206,9 +22216,9 @@
   ],
   "lazy": true
  },
- "Tira as travas marcadas (nenhuma marcada = as duas)": {
+ "Tira as duas travas das estantes": {
   "src": [
-   "templates/levels/index.html:140"
+   "templates/levels/index.html:141"
   ]
  },
  "Tirar a divisória: {k}× {child} (vazios) voltam a ser 1× {parent}": {
@@ -22422,11 +22432,6 @@
   ],
   "help": true
  },
- "Travar": {
-  "src": [
-   "templates/levels/index.html:139"
-  ]
- },
  "Travar estantes <span class=\"text-muted fw-normal\">— posição fixa: não sai do lugar no rearranjo, no editor da planta nem na planta gerada; não recompor: a recomposição das estruturas não mexe nela (<a href=\"/lock-reasons\">motivos</a>)</span>": {
   "src": [
    "templates/levels/index.html:125"
@@ -22438,6 +22443,11 @@
    "services/structure_importer.py:542"
   ],
   "lazy": true
+ },
+ "Travas salvas: {n} estante(s) alterada(s).": {
+  "src": [
+   "routers/levels.py:328"
+  ]
  },
  "Troca de corredores": {
   "src": [
@@ -22885,7 +22895,7 @@
  },
  "Uso": {
   "src": [
-   "templates/levels/index.html:171",
+   "templates/levels/index.html:173",
    "templates/site/plan.html:143"
   ]
  },
@@ -23012,7 +23022,7 @@
  },
  "Valor inválido: {raw}": {
   "src": [
-   "routers/levels.py:136"
+   "routers/levels.py:145"
   ]
  },
  "Valor sim/não inválido: {raw}": {
@@ -23270,7 +23280,7 @@
  "Voltar": {
   "src": [
    "routers/layout.py:609",
-   "routers/levels.py:429",
+   "routers/levels.py:436",
    "templates/bin_types/form.html:8",
    "templates/branches/form.html:7",
    "templates/imports/history.html:7",
@@ -23517,7 +23527,7 @@
  },
  "Vão<br>(cm)": {
   "src": [
-   "templates/levels/index.html:170"
+   "templates/levels/index.html:172"
   ],
   "html": true
  },
@@ -24255,7 +24265,7 @@
  },
  "bin {tallest}": {
   "src": [
-   "templates/levels/index.html:194"
+   "templates/levels/index.html:196"
   ],
   "html": true
  },
@@ -24321,7 +24331,7 @@
  },
  "calc. {c}": {
   "src": [
-   "templates/levels/index.html:191"
+   "templates/levels/index.html:193"
   ],
   "html": true
  },
@@ -24397,7 +24407,7 @@
  },
  "começa com": {
   "src": [
-   "routers/common.py:245"
+   "routers/common.py:246"
   ],
   "lazy": true
  },
@@ -24452,7 +24462,7 @@
  },
  "contém": {
   "src": [
-   "routers/common.py:245"
+   "routers/common.py:246"
   ],
   "lazy": true
  },
@@ -24491,7 +24501,7 @@
  },
  "de endereços de outros níveis": {
   "src": [
-   "templates/levels/index.html:197"
+   "templates/levels/index.html:199"
   ]
  },
  "de frente para {get}": {
@@ -24882,8 +24892,8 @@
  },
  "fixa": {
   "src": [
-   "templates/levels/index.html:144",
-   "templates/levels/index.html:181"
+   "templates/levels/index.html:146",
+   "templates/levels/index.html:183"
   ]
  },
  "folga lateral": {
@@ -25070,7 +25080,7 @@
  },
  "igual a": {
   "src": [
-   "routers/common.py:245"
+   "routers/common.py:246"
   ],
   "lazy": true
  },
@@ -25618,9 +25628,9 @@
  },
  "não recompor": {
   "src": [
-   "templates/levels/index.html:130",
-   "templates/levels/index.html:144",
-   "templates/levels/index.html:181"
+   "templates/levels/index.html:131",
+   "templates/levels/index.html:146",
+   "templates/levels/index.html:183"
   ]
  },
  "não serve: a porta de {bay} bateria em {what} ao abrir{more}": {
@@ -26162,7 +26172,7 @@
  },
  "posição fixa": {
   "src": [
-   "templates/levels/index.html:129"
+   "templates/levels/index.html:130"
   ]
  },
  "presumido": {
@@ -26335,7 +26345,7 @@
  },
  "reservado": {
   "src": [
-   "templates/levels/index.html:179"
+   "templates/levels/index.html:181"
   ]
  },
  "respeita peso": {
@@ -26419,7 +26429,7 @@
  "sem armazém": {
   "src": [
    "routers/layout.py:84",
-   "routers/levels.py:398"
+   "routers/levels.py:405"
   ]
  },
  "sem bin": {
@@ -26443,7 +26453,7 @@
  },
  "sem capacidade": {
   "src": [
-   "templates/levels/index.html:203"
+   "templates/levels/index.html:205"
   ]
  },
  "sem capacidade cadastrada": {
@@ -26713,7 +26723,7 @@
  },
  "termina com": {
   "src": [
-   "routers/common.py:245"
+   "routers/common.py:246"
   ],
   "lazy": true
  },
@@ -26730,7 +26740,7 @@
  },
  "tipo sem capacidade": {
   "src": [
-   "templates/levels/index.html:203"
+   "templates/levels/index.html:205"
   ]
  },
  "tipos de bin": {
@@ -27134,12 +27144,12 @@
  },
  "{changed} alteração(ões) salva(s). {adj}": {
   "src": [
-   "routers/levels.py:179"
+   "routers/levels.py:188"
   ]
  },
  "{changed} alteração(ões) salva(s). {adj} Ignorados: ": {
   "src": [
-   "routers/levels.py:178"
+   "routers/levels.py:187"
   ]
  },
  "{code} (ainda tem endereços)": {
@@ -27487,7 +27497,7 @@
  },
  "{lent} bin(s) deste nível estão em outro nível": {
   "src": [
-   "templates/levels/index.html:199"
+   "templates/levels/index.html:201"
   ],
   "html": true
  },
@@ -27657,7 +27667,7 @@
  },
  "{name} — frente {width} cm, prof. {depth} cm, {levels} níveis × {level_height} cm": {
   "src": [
-   "templates/levels/index.html:180"
+   "templates/levels/index.html:182"
   ]
  },
  "{name}: comprimento": {
@@ -27752,8 +27762,8 @@
  },
  "{n} capacidade(s) acima do que a estrutura comporta: vale a calculada.": {
   "src": [
-   "routers/levels.py:175",
-   "routers/levels.py:221"
+   "routers/levels.py:184",
+   "routers/levels.py:230"
   ]
  },
  "{n} coluna(s) serão somadas.": {
@@ -27799,7 +27809,8 @@
  },
  "{n} estante(s) destravada(s).": {
   "src": [
-   "routers/levels.py:313"
+   "routers/levels.py:319",
+   "routers/levels.py:327"
   ]
  },
  "{n} estante(s) sem modelo de estrutura (aplique em Capacidade dos níveis → Aplicar modelo)": {
@@ -27810,14 +27821,9 @@
  },
  "{n} estante(s) travada(s) neste depósito": {
   "src": [
-   "templates/levels/index.html:143"
+   "templates/levels/index.html:145"
   ],
   "html": true
- },
- "{n} estante(s) travada(s).": {
-  "src": [
-   "routers/levels.py:321"
-  ]
  },
  "{n} estante(s): {a} → {b} · {len} m": {
   "src": [
@@ -28185,7 +28191,7 @@
  },
  "{total} nível(is)": {
   "src": [
-   "templates/levels/index.html:224"
+   "templates/levels/index.html:226"
   ],
   "html": true
  },
@@ -28465,7 +28471,7 @@
  },
  "· página {page_no}/{pages}": {
   "src": [
-   "templates/levels/index.html:224",
+   "templates/levels/index.html:226",
    "templates/optimization/index.html:198",
    "templates/optimization/page.html:667"
   ],
@@ -28799,7 +28805,7 @@
  },
  "— motivo —": {
   "src": [
-   "templates/levels/index.html:134"
+   "templates/levels/index.html:135"
   ]
  },
  "— nenhum —": {

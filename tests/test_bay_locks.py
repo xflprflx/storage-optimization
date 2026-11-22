@@ -44,18 +44,27 @@ def test_lock_and_unlock_bays_on_the_levels_page(client, db):
     rs = LockReason(name="Câmara com tomadas LKP", notes="")
     db.add(rs)
     db.commit()
-    base = {"f_branch_id": str(bid), "f_warehouse_id": "none"}
-    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "01-03", "fixed": "1", "no_recompose": "1",
-                                       "reason_id": str(rs.id), "action": "lock"})
+    base = {"f_branch_id": str(bid), "f_warehouse_id": "none", "f_level": ""}
+    r = client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "01-03", "fixed": "1", "no_recompose": "1",
+                                           "reason_id": str(rs.id), "action": "save"}, follow_redirects=False)
+    loc = r.headers["location"]
+    assert "msg_level=success" in loc and "&level=" not in loc  # o aviso não vira filtro de nível
     got = {(x.bay, x.fixed_position, x.no_recompose, x.reason_id) for x in db.query(BayLock).filter_by(branch_id=bid)}
     assert got == {("01", True, True, rs.id), ("03", True, True, rs.id)}
     html = client.get(f"/levels?branch_id={bid}&warehouse_id=none").text
     assert "bi-lock-fill" in html and "Câmara com tomadas LKP" in html
-    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "01", "no_recompose": "1", "action": "unlock"})
+    # o formulário abre com o estado das estantes filtradas
+    one = client.get(f"/levels?branch_id={bid}&warehouse_id=none&aisle=S&bay=01").text
+    assert 'id="lk_norec" checked' in one and f'value="{rs.id}" selected' in one
+    # salvar grava exatamente o que está marcado: desmarcar "posição fixa" tira a posição fixa
+    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "01", "no_recompose": "1", "action": "save"})
     db.expire_all()
     assert {(x.bay, x.fixed_position, x.no_recompose) for x in db.query(BayLock).filter_by(branch_id=bid)} == \
-        {("01", True, False), ("03", True, True)}
-    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "", "action": "unlock"})  # as duas travas
+        {("01", False, True), ("03", True, True)}
+    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "03", "action": "save"})  # nada marcado
+    db.expire_all()
+    assert {x.bay for x in db.query(BayLock).filter_by(branch_id=bid)} == {"01"}
+    client.post("/levels/locks", data={**base, "k_aisle": "S", "k_bay": "", "action": "unlock"})
     assert db.query(BayLock).filter_by(branch_id=bid).count() == 0
 
 

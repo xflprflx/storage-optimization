@@ -798,7 +798,8 @@ laranja = a recompor, azul = muda de lugar, lilás = as duas coisas (passe o mou
 **Estantes travadas** (`services/bay_locks.py`, cadastro de motivos em `/lock-reasons`): em **Capacidade dos níveis →
 Travar estantes** (Corredor e Estante aceitam valor, lista ou faixa), marque **Posição fixa** e/ou **Não recompor**, com
 um **motivo** do cadastro *Motivos de estante travada* (criar, editar, excluir; motivo em uso não pode ser excluído).
-**Destravar** tira as travas marcadas (nenhuma marcada = as duas). A tabela dos níveis mostra o cadeado e a lista das
+**Salvar travas** grava exatamente o que está marcado (desmarcado = sem essa trava; nada marcado = destrava); o
+formulário abre com o estado das estantes filtradas. **Destravar** tira as duas travas. A tabela dos níveis mostra o cadeado e a lista das
 estantes travadas do depósito. Também na importação da estrutura das estantes: colunas *Posição fixa*, *Não recompor*
 (sim/não; vazio = não mexe) e *Motivo da trava* (o motivo que não existe é cadastrado); uma linha só com as travas vale.
 - **Posição fixa:** o rearranjo descarta a passagem transversal que faria a estante andar (com o motivo na tabela) e não

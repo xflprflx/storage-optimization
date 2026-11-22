@@ -146,6 +146,7 @@
       <textarea class="form-control form-control-sm font-monospace mb-1" id="aiCode" rows="4" placeholder="{{ _("Cole aqui a resposta da IA (JSON)") }}"></textarea>
       <button type="button" class="btn btn-sm btn-outline-primary w-100" id="aiApply"><i class="bi bi-box-arrow-in-down"></i> {{ _("Carregar no editor") }}</button>
       <div class="small mt-1" id="aiNotes"></div>
+      <div class="small mt-2" id="aiMap"></div>
     </div></div>
 
     <div class="card mb-2" data-tour="plan-rearr"><div class="card-body py-2">
@@ -448,6 +449,11 @@
       const r = D.rows[sel.i], G = rowGeom(r);
       const SIDE = { odd: _t('ímpares'), even: 'pares', all: _t('todas') };
       $('propTitle').textContent = _t('Fileira {aisle} ({SIDE})', {aisle: r.aisle, SIDE: SIDE[r.side]});
+      $('pAisle').querySelectorAll('option[data-ph]').forEach(o => o.remove());
+      if (!BAYS[r.aisle]) {  // fileira sem corredor (planta pela IA): mostra o rótulo até escolher um corredor da filial
+        const o = document.createElement('option'); o.value = r.aisle; o.textContent = r.aisle + ' — ' + _t('sem corredor'); o.dataset.ph = '1';
+        $('pAisle').prepend(o);
+      }
       $('pAisle').value = r.aisle; $('pSide').value = r.side;
       $('pX').value = mv(r.x); $('pY').value = mv(r.y); $('pDepth').value = mv(r.depth); $('pBayW').value = mv(r.bay_w);
       $('pInfo').textContent = (G.bays.length ? _t('{n} estante(s): {a} → {b} · {len} m', {n: G.bays.length, a: G.bays[0].bay, b: G.bays[G.bays.length - 1].bay, len: fmt(G.len / 100)})
@@ -560,7 +566,7 @@
   const cm = v => Math.round(nkU.toMetric(parseFloat(String(v).replace(',', '.')), 'm') * 100);
   const MOVES = new Set(['pAisle', 'pSide', 'pX', 'pY', 'pDepth', 'pBayW']);  // mudam o lugar das estantes da fileira
   const bind = (id, fn) => $(id).addEventListener('change', () => { if (!sel) return; if (MOVES.has(id) && lockedSel()) { props(); return; } fn(sel.kind === 'row' ? D.rows[sel.i] : D.obstacles[sel.i]); draw(); props(); changed(); });
-  bind('pAisle', r => { r.aisle = $('pAisle').value; delete r.bays; });
+  bind('pAisle', r => { assignAisle(r, $('pAisle').value, r.side); });
   bind('pSide', r => { r.side = $('pSide').value; delete r.bays; });
   bind('pX', r => { if (!isNaN(cm($('pX').value))) r.x = cm($('pX').value); });
   bind('pY', r => { if (!isNaN(cm($('pY').value))) r.y = cm($('pY').value); });
@@ -678,6 +684,40 @@
     try { await navigator.clipboard.writeText(r.prompt); $('aiCopied').textContent = _t('Prompt copiado: cole no chat de IA e anexe a planta (imagem ou PDF).'); }
     catch (e) { $('aiPromptText').classList.remove('d-none'); $('aiPromptText').select(); $('aiCopied').textContent = _t('Copie o texto selecionado (Ctrl+C).'); }
   });
+  // fileira sem corredor (planta pela IA) recebe um corredor: a frente das estantes sem estrutura sai do comprimento
+  // desenhado (o comprimento da fileira continua o lido na planta)
+  function assignAisle(r, aisle, side) {
+    const was = rowBays(r).length ? null : rowGeom(r).len;
+    r.aisle = aisle; r.side = side || 'all'; delete r.bays;
+    if (was) {
+      const bs = rowBays(r), fixed = bs.reduce((a, b) => a + (b.w || 0), 0), free = bs.filter(b => !b.w).length;
+      r.bay_w = free && was > fixed ? Math.round((was - fixed) / free * 10) / 10 : 100;
+    }
+  }
+  function mapTable(list) {
+    if (!list.length) { $('aiMap').innerHTML = ''; return; }
+    const sideOpt = s => [['odd', _t('Ímpares')], ['even', _t('Pares')], ['all', _t('Todas')]].map(([v, l]) => `<option value="${v}" ${v === s ? 'selected' : ''}>${esc(l)}</option>`).join('');
+    const aisleOpt = a => `<option value="">${esc(_t('— sem corredor —'))}</option>` + Object.keys(BAYS).map(k => `<option ${k === a ? 'selected' : ''}>${esc(k)}</option>`).join('');
+    $('aiMap').innerHTML = '<div class="fw-semibold mb-1"><i class="bi bi-signpost-split"></i> ' + esc(_t('Corredor de cada fileira sem corredor')) + '<\/div>'
+      + '<div class="text-muted mb-1">' + esc(_t('Sugestão pela ordem da leitura (corredores da filial ainda sem fileira). Passe o mouse para ver a fileira no desenho.')) + '<\/div>'
+      + '<table class="table table-sm mb-1"><tbody>' + list.map(u => `<tr data-rid="${u.row_id}">
+          <td class="mono text-nowrap">#${u.n} ${esc(u.label)}<div class="text-muted">${u.orient === 'h' ? '↔' : '↕'} ${u.length ? fmt(u.length, 1) + ' m' : ''}</div></td>
+          <td><select class="form-select form-select-sm nk-map-a">${aisleOpt(u.suggest_aisle || '')}</select></td>
+          <td><select class="form-select form-select-sm nk-map-s">${sideOpt(u.suggest_side || 'all')}</select></td></tr>`).join('') + '<\/tbody><\/table>'
+      + '<button type="button" class="btn btn-sm btn-primary w-100" id="aiMapApply"><i class="bi bi-check2"><\/i> ' + esc(_t('Aplicar os corredores')) + '<\/button>';
+    $('aiMap').querySelectorAll('tr[data-rid]').forEach(tr => tr.addEventListener('mouseenter', () => {
+      const i = D.rows.findIndex(r => r.id === +tr.dataset.rid); if (i >= 0) { select('row', i); }
+    }));
+    $('aiMapApply').addEventListener('click', () => {
+      let n = 0;
+      $('aiMap').querySelectorAll('tr[data-rid]').forEach(tr => {
+        const r = D.rows.find(r => r.id === +tr.dataset.rid), a = tr.querySelector('.nk-map-a').value;
+        if (r && a) { assignAisle(r, a, tr.querySelector('.nk-map-s').value); n++; }
+      });
+      select(null); draw(); changed();
+      $('aiMap').innerHTML = '<div class="text-success"><i class="bi bi-check2"><\/i> ' + esc(_t('{n} fileira(s) com corredor; confira no desenho e salve a planta.', { n })) + '<\/div>';
+    });
+  }
   $('aiApply').addEventListener('click', async () => {
     const code = $('aiCode').value.trim();
     if (!code) { $('aiNotes').innerHTML = '<span class="text-danger">' + esc(_t('Cole a resposta da IA.')) + '<\/span>'; return; }
@@ -686,6 +726,7 @@
     const notes = (r.notes || []).map(n => `<li>${esc(n)}</li>`).join('');
     if (r.error) { $('aiNotes').innerHTML = `<div class="text-danger">${esc(r.error)}</div>` + (notes ? `<ul class="text-muted ps-3 mb-0">${notes}</ul>` : ''); return; }
     load({ ...r, bays: BAYS }); dirty = true; status();
+    mapTable(r.unmatched || []);
     $('aiNotes').innerHTML = '<div class="text-success"><i class="bi bi-check2"><\/i> ' + esc(_t('Planta carregada no editor: confira e clique em Salvar planta.')) + '<\/div>'
       + (notes ? '<div class="text-warning-emphasis mt-1">' + esc(_t('Consertos e avisos:')) + `</div><ul class="text-muted ps-3 mb-0">${notes}</ul>` : '');
   });

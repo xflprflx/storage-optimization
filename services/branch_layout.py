@@ -248,7 +248,8 @@ def clean(data: dict) -> dict:
                      "orient": "v" if r.get("orient") == "v" else "h", "rev": bool(r.get("rev")),
                      "face": "-" if r.get("face") == "-" else "+",
                      "depth": round(_num(r.get("depth"), DEFAULT_DEPTH, 10, 2000), 1),
-                     "bay_w": round(_num(r.get("bay_w"), DEFAULT_BAY_W, 10, 2000), 1)})
+                     # (fileira sem corredor da planta pela IA: a frente é o comprimento lido, até 100 m)
+                     "bay_w": round(_num(r.get("bay_w"), DEFAULT_BAY_W, 10, 10000), 1)})
     obstacles = []
     for o in data.get("obstacles") or []:
         if isinstance(o, dict):
@@ -508,6 +509,45 @@ def build(data: dict, bays: dict[str, list[Bay]], with_net: bool = False) -> Geo
                      _("{other} sem número", other=other) if other else ""]
             g.unplaced.append(f"{a} ({', '.join(p for p in parts if p)})")
     return g
+
+
+NARROW_AISLE = 100.0  # cm: corredor mais estreito que isso é avisado
+
+
+def conflicts(g: "Geometry", limit: int = 12) -> list[str]:
+    """Avisos da planta: fileira por cima de obstáculo (pilar, parede…), fileiras sobrepostas e corredor mais estreito
+    que NARROW_AISLE entre fileiras frente a frente."""
+    rows = g.data.get("rows") or []
+    obs = g.data.get("obstacles") or []
+
+    def lbl(ri):
+        r = rows[ri]
+        return f"{r['aisle']}{ {'odd': _(' ímp.'), 'even': ' pares', 'all': ''}.get(r.get('side'), '') }"
+
+    def inter(a, b):
+        return max(0.0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0])) * max(0.0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    out = []
+    rects = g.row_rects
+    L, W = g.data.get("L") or 0, g.data.get("W") or 0
+    for x, y, w, h, ri in rects:
+        if x < -1 or y < -1 or x + w > L + 1 or y + h > W + 1:
+            out.append(_("Fileira {row} passa do imóvel (as estantes cadastradas são mais compridas que o desenho?).",
+                         row=lbl(ri)))
+        hit = [o["name"] for o in obs if inter((x, y, w, h), (o["x"], o["y"], o["w"], o["d"])) > 25.0]
+        if hit:
+            names = list(dict.fromkeys(hit))
+            out.append(_("Fileira {row} passa por cima de: {list}.", row=lbl(ri), list=", ".join(names[:4]) + ("…" if len(names) > 4 else "")))
+    for k, a in enumerate(rects):
+        for b in rects[k + 1:]:
+            if inter(a[:4], b[:4]) > 25.0:
+                out.append(_("Fileiras {a} e {b} se sobrepõem.", a=lbl(a[4]), b=lbl(b[4])))
+    for i, j, gap, _m in g.pairs:
+        if gap < NARROW_AISLE - 1e-6:
+            out.append(_("Corredor entre {a} e {b} com {v} m (mais estreito que {min} m).", a=lbl(i), b=lbl(j),
+                         v=f"{gap / 100:.2f}", min=f"{NARROW_AISLE / 100:g}"))
+    if len(out) > limit:
+        out = out[:limit] + [_("… e mais {n} aviso(s).", n=len(out) - limit)]
+    return out
 
 
 def door_hits(g: "Geometry", key: tuple, pb: "PlacedBay") -> Optional[str]:

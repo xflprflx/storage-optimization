@@ -158,7 +158,9 @@ def prompt(bays: dict) -> str:
         "- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do "
         "canto de cima à esquerda, length em x, width em y).\n"
         "- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n"
-        "- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n"
+        "- Use só os corredores da lista. Se a planta não mostrar os códigos dos corredores, use \"aisle\": \"?\" e "
+        "liste as fileiras na ordem da leitura (de cima para baixo, da esquerda para a direita): o software pede para o "
+        "usuário escolher o corredor de cada uma. Não invente códigos.\n"
         "- Se a planta não tiver estantes, devolva \"rows\": [] com o imóvel, os obstáculos e a referência.\n\n"
         "Corredores e estantes cadastrados:\n{aisles}", aisles=summary(bays))
 
@@ -208,13 +210,15 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
     cm = lambda v: None if v is None else v * k  # noqa: E731
 
     by_canon = {canon(a): a for a in bays}
-    rows, skipped = [], []
+    rows, skipped, unmatched = [], [], []
     for i, r in enumerate([r for r in rows_in if isinstance(r, dict)][:MAX_ROWS]):
         a_raw = str(_get(r, "aisle") or "").strip()
         aisle = bays and (a_raw.upper() if a_raw.upper() in bays else by_canon.get(canon(a_raw)))
-        if not aisle:
-            skipped.append(a_raw or f"#{i + 1}")
-            continue
+        ph = not aisle  # corredor que a filial não tem (ou "?"): a fileira entra sem corredor, para escolher depois
+        if ph:
+            if a_raw and a_raw != "?":
+                skipped.append(a_raw)
+            aisle = "?" + (a_raw.upper()[:18] if a_raw and a_raw != "?" else str(i + 1))
         x, y = _xy(r)
         if x is None or y is None:
             notes.append(_("Fileira {n} ({aisle}) sem posição x, y: ficou de fora.", n=i + 1, aisle=aisle))
@@ -251,6 +255,13 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
         rev = str(_get(r, "numbering_from") or "start").strip().lower() in ("end", "fim", "reverse", "reversed", "desc")
         row = {"aisle": aisle, "side": side, "x": cm(x), "y": cm(y), "orient": orient,
                "face": face, "rev": rev, "depth": cm(depth) if depth else None, "bay_w": DEFAULT_BAY_W}
+        if ph:  # sem corredor: desenhada no tamanho lido, sem estantes (o corredor é escolhido no mapeamento)
+            row["depth"] = row["depth"] or DEFAULT_DEPTH
+            row["bay_w"] = round(cm(length), 1) if length else DEFAULT_BAY_W
+            unmatched.append({"idx": len(rows), "n": i + 1, "label": a_raw or "?", "side": side, "orient": orient,
+                              "length": round(cm(length) / 100, 2) if length else None})
+            rows.append(row)
+            continue
         if blist:
             have = {canon(bb.bay): bb.bay for bb in bays[aisle]}
             found = [have[canon(c)] for c in blist if canon(c) in have]
@@ -275,9 +286,10 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
                 notes.append(_("Fileira {n} ({aisle}): na planta tem {a} m, mas as estantes cadastradas somam {b} m.",
                                n=i + 1, aisle=aisle, a=f"{cm(length) / 100:.1f}", b=f"{real / 100:.1f}"))
         rows.append(row)
-    if skipped:
-        notes.append(_("Corredor(es) que não existem nos endereços da filial ficaram de fora: {list}.",
-                       list=", ".join(sorted(set(skipped)))[:300]))
+    if unmatched:
+        notes.append(_("{n} fileira(s) com corredor que não existe nos endereços da filial ({list}): entraram sem corredor "
+                       "(em vermelho); escolha o corredor de cada uma na tabela abaixo ou no editor.", n=len(unmatched),
+                       list=", ".join(dict.fromkeys(u["label"] for u in unmatched))[:300]))
     if not rows:  # planta só do imóvel (sem estantes, ou nenhuma de corredor cadastrado): vale, as fileiras vêm depois
         notes.append(_("Sem fileiras de estantes: a planta fica com o imóvel, os obstáculos e a referência. Desenhe as "
                        "fileiras no editor (+ Fileira) ou use Gerar automaticamente."))
@@ -319,4 +331,50 @@ def parse(text: str, bays: dict) -> tuple[Optional[dict], str, list[str]]:
     label = str(_get(ref, "name") or _get(ref, "label") or "") if isinstance(ref, dict) else ""
     data = clean({"L": L, "W": W, "rows": rows, "obstacles": obstacles,
                   "ref": {"x": cm(rx), "y": cm(ry), "label": label or _("expedição")}})
+    if unmatched:
+        for u in unmatched:
+            u["row_id"] = data["rows"][u.pop("idx")]["id"]
+        suggest(data, bays, unmatched)
+    data["_unmatched"] = unmatched
     return data, "", notes
+
+
+def suggest(data: dict, bays: dict, unmatched: list) -> None:
+    """Sugestão de corredor e lado para as fileiras sem corredor: os corredores da filial que nenhuma fileira usa, na
+    ordem natural, para os grupos de fileiras na ordem da leitura (de cima para baixo, da esquerda para a direita). Um
+    grupo = as fileiras com o mesmo rótulo da IA ou, sem rótulo ("?"), as duas fileiras frente a frente de um corredor
+    (ímpares e pares)."""
+    from services.branch_layout import build, parity
+    from services.layout_service import natural_key
+
+    used = {r["aisle"] for r in data["rows"] if not r["aisle"].startswith("?")}
+    free = [a for a in sorted(bays, key=natural_key) if a not in used]
+    by_id = {r["id"]: (i, r) for i, r in enumerate(data["rows"])}
+    g = build(data, {})
+    pair_of: dict[int, int] = {}
+    for i, j, *_rest in g.pairs:
+        pair_of.setdefault(i, j)
+        pair_of.setdefault(j, i)
+    groups: list[list] = []
+    seen: dict = {}
+    for u in sorted(unmatched, key=lambda u: (round(by_id[u["row_id"]][1]["y"] / 50), by_id[u["row_id"]][1]["x"])):
+        i, _r = by_id[u["row_id"]]
+        if u["label"] != "?":
+            key = ("lbl", u["label"].upper())
+        else:
+            mate = pair_of.get(i)
+            key = ("pair", min(i, mate), max(i, mate)) if mate is not None and \
+                any(v["row_id"] == data["rows"][mate]["id"] for v in unmatched) else ("one", i)
+        if key not in seen:
+            seen[key] = len(groups)
+            groups.append([])
+        groups[seen[key]].append(u)
+    for gi, grp in enumerate(groups):
+        aisle = free[gi] if gi < len(free) else ""
+        for k, u in enumerate(grp):
+            side = u["side"]
+            if side == "all" and len(grp) == 2:
+                side = "odd" if k == 0 else "even"  # duas fileiras frente a frente: ímpares de um lado, pares do outro
+            if aisle and side != "all" and not any(parity(b.bay) == (1 if side == "odd" else 0) for b in bays[aisle]):
+                side = "all"
+            u["suggest_aisle"], u["suggest_side"] = aisle, side

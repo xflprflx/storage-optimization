@@ -215,7 +215,7 @@
  },
  " · palete no chão": {
   "src": [
-   "services/branch_layout.py:617"
+   "services/branch_layout.py:657"
   ]
  },
  " · plano informativo (não pode ser aplicado)": {
@@ -256,8 +256,9 @@
  },
  " ímp.": {
   "src": [
-   "services/branch_layout.py:629",
-   "services/branch_layout.py:944"
+   "services/branch_layout.py:669",
+   "services/branch_layout.py:984",
+   "services/branch_layout.py:525"
   ]
  },
  " — na posição dos SKUs": {
@@ -277,7 +278,7 @@
  },
  "\" fill=\"#2f6db5\" opacity=\".75\"><title>Mão única</title></polygon>": {
   "src": [
-   "services/branch_layout.py:682"
+   "services/branch_layout.py:722"
   ]
  },
  "\"Neste nível cabem X bins do tipo Y\". Tipos diferentes são alternativas: o uso soma as frações (3/6 CX-P + 1/3 CX-M = 83%).": {
@@ -1423,7 +1424,7 @@
  },
  "<b>{multi} objetos selecionados</b> — arraste qualquer um para mover todos; setas movem, Del apaga, R gira as fileiras. O painel abaixo é do último clicado. Shift+clique soma ou tira; Shift+arrastar o fundo seleciona por área.": {
   "src": [
-   "templates/layout/plan.html:443"
+   "templates/layout/plan.html:444"
   ],
   "js": true
  },
@@ -1611,8 +1612,8 @@
  },
  "A busca expirou ou ainda não terminou: rode de novo.": {
   "src": [
-   "routers/layout.py:506",
-   "routers/layout.py:633",
+   "routers/layout.py:516",
+   "routers/layout.py:643",
    "routers/levels.py:466",
    "routers/site.py:431"
   ]
@@ -1687,7 +1688,7 @@
  },
  "A comparação expirou (o servidor foi reiniciado ou houve muitas otimizações depois). Rode a otimização de novo e abra o 3D pelo resultado.": {
   "src": [
-   "routers/layout.py:414"
+   "routers/layout.py:424"
   ]
  },
  "A comprar": {
@@ -1901,8 +1902,8 @@
  },
  "A proposta expirou: gere de novo.": {
   "src": [
-   "routers/layout.py:538",
-   "routers/layout.py:688",
+   "routers/layout.py:548",
+   "routers/layout.py:698",
    "routers/levels.py:483",
    "services/proposals.py:101"
   ]
@@ -1931,13 +1932,13 @@
  },
  "A resposta não descreve uma planta (esperado um objeto com building, rows, obstacles e reference).": {
   "src": [
-   "services/plan_ai.py:181",
-   "services/plan_ai.py:193"
+   "services/plan_ai.py:183",
+   "services/plan_ai.py:195"
   ]
  },
  "A resposta não tem o tamanho do imóvel (building) nem fileiras ou obstáculos para calculá-lo.": {
   "src": [
-   "services/plan_ai.py:306"
+   "services/plan_ai.py:318"
   ]
  },
  "A resposta não é um JSON válido (linha {line}, coluna {col}): {msg}.": {
@@ -1947,7 +1948,7 @@
  },
  "A resposta tinha só a lista de fileiras: o tamanho do imóvel foi calculado por elas.": {
   "src": [
-   "services/plan_ai.py:179"
+   "services/plan_ai.py:181"
   ]
  },
  "A rota otimizada anda <b>{fmt}%</b> menos que a lista.": {
@@ -2380,7 +2381,7 @@
  },
  "Alterações não salvas": {
   "src": [
-   "templates/layout/plan.html:652"
+   "templates/layout/plan.html:658"
   ],
   "js": true
  },
@@ -2749,7 +2750,7 @@
  },
  "Apagar os {all} objetos selecionados?": {
   "src": [
-   "templates/layout/plan.html:596"
+   "templates/layout/plan.html:602"
   ],
   "js": true
  },
@@ -2884,6 +2885,12 @@
  "Aplicar o modelo às estantes que atendem às condições?": {
   "src": [
    "templates/levels/index.html:118"
+  ],
+  "js": true
+ },
+ "Aplicar os corredores": {
+  "src": [
+   "templates/layout/plan.html:707"
   ],
   "js": true
  },
@@ -3503,8 +3510,8 @@
  },
  "Atual": {
   "src": [
-   "routers/layout.py:514",
-   "routers/layout.py:516",
+   "routers/layout.py:524",
+   "routers/layout.py:526",
    "routers/site.py:442"
   ]
  },
@@ -3585,7 +3592,7 @@
  },
  "Automático (a fileira mais perto que olha para esta)": {
   "src": [
-   "templates/layout/plan.html:475"
+   "templates/layout/plan.html:481"
   ],
   "js": true
  },
@@ -4178,8 +4185,8 @@
  },
  "Busca sem resultado.": {
   "src": [
-   "routers/layout.py:509",
-   "routers/layout.py:636",
+   "routers/layout.py:519",
+   "routers/layout.py:646",
    "routers/levels.py:469",
    "routers/site.py:434"
   ]
@@ -4328,7 +4335,7 @@
  },
  "Cada bin é pega pelo corredor do seu lado: as da frente pela face laranja cheia, as do fundo pela tracejada.": {
   "src": [
-   "templates/layout/plan.html:487"
+   "templates/layout/plan.html:493"
   ],
   "js": true
  },
@@ -4475,7 +4482,7 @@
  },
  "Cadastre uma filial e os endereços antes de desenhar a planta.": {
   "src": [
-   "routers/layout.py:112"
+   "routers/layout.py:114"
   ]
  },
  "Cadastro de armazém": {
@@ -5019,8 +5026,8 @@
  },
  "Cole a resposta da IA.": {
   "src": [
-   "services/plan_ai.py:172",
-   "templates/layout/plan.html:683"
+   "services/plan_ai.py:174",
+   "templates/layout/plan.html:723"
   ],
   "js": true
  },
@@ -5775,7 +5782,7 @@
  },
  "Consertos e avisos:": {
   "src": [
-   "templates/layout/plan.html:690"
+   "templates/layout/plan.html:731"
   ],
   "js": true
  },
@@ -5913,7 +5920,7 @@
  "Copie o texto selecionado (Ctrl+C).": {
   "src": [
    "templates/_look.html:135",
-   "templates/layout/plan.html:679"
+   "templates/layout/plan.html:685"
   ],
   "js": true
  },
@@ -6048,6 +6055,12 @@
   ],
   "help": true
  },
+ "Corredor de cada fileira sem corredor": {
+  "src": [
+   "templates/layout/plan.html:701"
+  ],
+  "js": true
+ },
  "Corredor desta fileira": {
   "src": [
    "templates/layout/plan.html:94"
@@ -6058,6 +6071,11 @@
    "services/field_help.py:402"
   ],
   "help": true
+ },
+ "Corredor entre {a} e {b} com {v} m (mais estreito que {min} m).": {
+  "src": [
+   "services/branch_layout.py:546"
+  ]
  },
  "Corredor mais perto da expedição": {
   "src": [
@@ -6096,11 +6114,6 @@
  "Corredor é obrigatório.": {
   "src": [
    "routers/locations.py:180"
-  ]
- },
- "Corredor(es) que não existem nos endereços da filial ficaram de fora: {list}.": {
-  "src": [
-   "services/plan_ai.py:279"
   ]
  },
  "Corredor-Estante-Nível-Posição (ex.: A-01-2-1). Gere em lote a partir das faixas (ex.: corredores A a D, estantes 01 a 20) ou importe.": {
@@ -7056,7 +7069,7 @@
  },
  "Desenhar a planta": {
   "src": [
-   "routers/layout.py:300"
+   "routers/layout.py:310"
   ]
  },
  "Desenhar a planta da filial": {
@@ -7122,7 +7135,7 @@
  },
  "Desfazer rearranjo": {
   "src": [
-   "templates/layout/plan.html:170"
+   "templates/layout/plan.html:171"
   ]
  },
  "Desligada ao abrir: a planta tem muitas peças ({n}).": {
@@ -7588,7 +7601,7 @@
  },
  "Dois sentidos (contra fluxo permitido)": {
   "src": [
-   "templates/layout/plan.html:482"
+   "templates/layout/plan.html:488"
   ],
   "js": true
  },
@@ -7743,7 +7756,7 @@
  },
  "Em mais de uma fileira (vale a primeira): {d}": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -8242,7 +8255,7 @@
  },
  "Endereços dessas estantes usam a caminhada estimada pelo endereço.": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -8779,18 +8792,18 @@
  },
  "Esta filial ainda não tem planta desenhada.": {
   "src": [
-   "routers/layout.py:340",
+   "routers/layout.py:350",
    "services/rearrange.py:476"
   ]
  },
  "Esta filial ainda não tem planta desenhada. Desenhe a planta para ver o 3D.": {
   "src": [
-   "routers/layout.py:319"
+   "routers/layout.py:329"
   ]
  },
  "Esta filial/armazém não tem endereços cadastrados.": {
   "src": [
-   "templates/layout/plan.html:708"
+   "templates/layout/plan.html:749"
   ],
   "js": true
  },
@@ -8876,7 +8889,7 @@
  },
  "Estante sem estrutura cadastrada": {
   "src": [
-   "services/branch_layout.py:844"
+   "services/branch_layout.py:884"
   ]
  },
  "Estante {bay}": {
@@ -8893,12 +8906,12 @@
  },
  "Estante(s) com posição fixa fora do lugar: {list}. Volte-as ao lugar (ou destrave em Capacidade dos níveis → Travar estantes) antes de salvar.": {
   "src": [
-   "routers/layout.py:248"
+   "routers/layout.py:258"
   ]
  },
  "Estante(s) com posição fixa mudariam de lugar ({list}): gere a proposta de novo.": {
   "src": [
-   "routers/layout.py:543",
+   "routers/layout.py:553",
    "services/proposals.py:115"
   ]
  },
@@ -9736,7 +9749,7 @@
  },
  "Faixa laranja = lado do corredor (de onde se pega). Faixas azuis = corredores de caminhada: duas fileiras frente a frente (até 6 m) formam um corredor.": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -9925,7 +9938,7 @@
  },
  "Fileira com estante de posição fixa: destrave em Capacidade dos níveis → Travar estantes para mover.": {
   "src": [
-   "templates/layout/plan.html:357"
+   "templates/layout/plan.html:358"
   ],
   "js": true
  },
@@ -9936,48 +9949,58 @@
  },
  "Fileira {aisle} ({SIDE})": {
   "src": [
-   "templates/layout/plan.html:450"
+   "templates/layout/plan.html:451"
   ],
   "js": true
  },
  "Fileira {n} ({aisle}) sem posição x, y: ficou de fora.": {
   "src": [
-   "services/plan_ai.py:220"
+   "services/plan_ai.py:224"
   ]
  },
  "Fileira {n} ({aisle}): direção \"{v}\" desconhecida, usada {o}.": {
   "src": [
-   "services/plan_ai.py:229"
+   "services/plan_ai.py:233"
   ]
  },
  "Fileira {n} ({aisle}): estante(s) não cadastrada(s) ignorada(s): {list}.": {
   "src": [
-   "services/plan_ai.py:258"
+   "services/plan_ai.py:269"
   ]
  },
  "Fileira {n} ({aisle}): estantes \"{v}\" desconhecidas, usadas todas.": {
   "src": [
-   "services/plan_ai.py:249"
+   "services/plan_ai.py:253"
   ]
  },
  "Fileira {n} ({aisle}): lado do corredor \"{v}\" desconhecido; ajuste no editor (F).": {
   "src": [
-   "services/plan_ai.py:239"
+   "services/plan_ai.py:243"
   ]
  },
  "Fileira {n} ({aisle}): lado do corredor \"{v}\" não combina com a direção; ajuste no editor (F troca o lado).": {
   "src": [
-   "services/plan_ai.py:237"
+   "services/plan_ai.py:241"
   ]
  },
  "Fileira {n} ({aisle}): na planta tem {a} m, mas as estantes cadastradas somam {b} m.": {
   "src": [
-   "services/plan_ai.py:275"
+   "services/plan_ai.py:286"
   ]
  },
  "Fileira {n} ({aisle}): nenhuma estante cadastrada nesse lado; confira no editor.": {
   "src": [
-   "services/plan_ai.py:264"
+   "services/plan_ai.py:275"
+  ]
+ },
+ "Fileira {row} passa do imóvel (as estantes cadastradas são mais compridas que o desenho?).": {
+  "src": [
+   "services/branch_layout.py:534"
+  ]
+ },
+ "Fileira {row} passa por cima de: {list}.": {
+  "src": [
+   "services/branch_layout.py:539"
   ]
  },
  "Fileiras": {
@@ -10024,7 +10047,12 @@
  },
  "Fileiras ou obstáculos passavam do imóvel ({L} × {W} m): o imóvel foi aumentado.": {
   "src": [
-   "services/plan_ai.py:310"
+   "services/plan_ai.py:322"
+  ]
+ },
+ "Fileiras {a} e {b} se sobrepõem.": {
+  "src": [
+   "services/branch_layout.py:543"
   ]
  },
  "Fileiras, da frente para o fundo": {
@@ -10240,8 +10268,8 @@
    "routers/branches.py:107",
    "routers/branches.py:132",
    "routers/imports.py:173",
-   "routers/layout.py:269",
-   "routers/layout.py:293"
+   "routers/layout.py:279",
+   "routers/layout.py:303"
   ]
  },
  "Filial onde os endereços serão criados.": {
@@ -10586,7 +10614,7 @@
  },
  "Fora da planta: {u}": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -12712,7 +12740,7 @@
  "Mapa do estoque": {
   "src": [
    "routers/layout.py:17",
-   "routers/layout.py:296",
+   "routers/layout.py:306",
    "services/onboarding.py:148",
    "services/onboarding.py:36",
    "services/onboarding.py:371",
@@ -13046,7 +13074,7 @@
  },
  "Medidas em centímetros na resposta: convertidas.": {
   "src": [
-   "services/plan_ai.py:204"
+   "services/plan_ai.py:206"
   ]
  },
  "Medidas em massa": {
@@ -13062,7 +13090,7 @@
  },
  "Medidas em milímetros na resposta: convertidas.": {
   "src": [
-   "services/plan_ai.py:207"
+   "services/plan_ai.py:209"
   ]
  },
  "Medidas internas": {
@@ -13102,7 +13130,7 @@
  },
  "Melhor trajeto: {label}": {
   "src": [
-   "routers/layout.py:514",
+   "routers/layout.py:524",
    "routers/site.py:440"
   ]
  },
@@ -13926,7 +13954,7 @@
  },
  "Mão única {h}": {
   "src": [
-   "templates/layout/plan.html:482"
+   "templates/layout/plan.html:488"
   ],
   "js": true
  },
@@ -14418,7 +14446,7 @@
  },
  "Nenhum — fileira sozinha": {
   "src": [
-   "templates/layout/plan.html:475"
+   "templates/layout/plan.html:481"
   ],
   "js": true
  },
@@ -14476,7 +14504,7 @@
  },
  "Nenhuma estante deste corredor/lado nos endereços.": {
   "src": [
-   "templates/layout/plan.html:454"
+   "templates/layout/plan.html:460"
   ],
   "js": true
  },
@@ -15016,7 +15044,7 @@
  },
  "Não dá para desfazer: estante(s) com posição fixa mudariam de lugar ({list}).": {
   "src": [
-   "routers/layout.py:566"
+   "routers/layout.py:576"
   ]
  },
  "Não exceder espaço atual": {
@@ -15093,7 +15121,7 @@
  },
  "Não há rearranjo para desfazer.": {
   "src": [
-   "routers/layout.py:561"
+   "routers/layout.py:571"
   ]
  },
  "Não há recomposição para desfazer.": {
@@ -15737,7 +15765,7 @@
  },
  "O projeto não tem plano válido: ": {
   "src": [
-   "routers/layout.py:180"
+   "routers/layout.py:182"
   ]
  },
  "O projeto é resolvido em ordem: 1º guardar toda a demanda (falta é muito penalizada), 2º o objetivo escolhido, 3º o desempate. Se faltar espaço, o resultado diz quanto não coube.": {
@@ -15852,7 +15880,7 @@
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico na etapa Posição pela saída (Por endereço ou Pool).": {
   "src": [
-   "routers/layout.py:344"
+   "routers/layout.py:354"
   ]
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se ele foi enviado antes desta versão, envie de novo.": {
@@ -15883,12 +15911,12 @@
  },
  "O sistema testa as variações da planta (passagens transversais e troca de corredores) e, em cada uma, a recomposição das estruturas com as estantes vizinhas daquela planta. Leva mais que as propostas separadas: uma recomposição por variação.": {
   "src": [
-   "routers/layout.py:610"
+   "routers/layout.py:620"
   ]
  },
  "O sistema testa obras na planta desenhada — passagens transversais e troca de corredores de lugar — e percorre os pedidos do histórico em cada uma. Leva alguns segundos (mais em plantas grandes).": {
   "src": [
-   "routers/layout.py:465"
+   "routers/layout.py:475"
   ]
  },
  "O solver não achou solução no tempo limite.": {
@@ -16042,17 +16070,17 @@
  },
  "Obstáculo": {
   "src": [
-   "services/branch_layout.py:1013",
-   "services/branch_layout.py:257",
+   "services/branch_layout.py:1053",
+   "services/branch_layout.py:258",
    "templates/layout/plan.html:60",
-   "templates/layout/plan.html:463",
-   "templates/layout/plan.html:569"
+   "templates/layout/plan.html:469",
+   "templates/layout/plan.html:575"
   ],
   "js": true
  },
  "Obstáculo sem posição ou tamanho ignorado: {name}.": {
   "src": [
-   "services/plan_ai.py:293"
+   "services/plan_ai.py:305"
   ]
  },
  "Obstáculo {i}": {
@@ -16768,7 +16796,7 @@
  },
  "Para cada variação da planta, a recomposição das estruturas calculada nela (laterais pelas estantes vizinhas da variação). Um único Aplicar grava as duas.": {
   "src": [
-   "templates/layout/plan.html:161",
+   "templates/layout/plan.html:162",
    "templates/optimization/page.html:479"
   ]
  },
@@ -16879,8 +16907,10 @@
  "Pares": {
   "src": [
    "services/slotting.py:573",
-   "templates/layout/plan.html:74"
-  ]
+   "templates/layout/plan.html:74",
+   "templates/layout/plan.html:699"
+  ],
+  "js": true
  },
  "Pares que mais saem juntos": {
   "src": [
@@ -17472,7 +17502,7 @@
  },
  "Pilar": {
   "src": [
-   "templates/layout/plan.html:626"
+   "templates/layout/plan.html:632"
   ],
   "js": true
  },
@@ -17630,7 +17660,7 @@
  },
  "Planta carregada no editor: confira e clique em Salvar planta.": {
   "src": [
-   "templates/layout/plan.html:689"
+   "templates/layout/plan.html:730"
   ],
   "js": true
  },
@@ -17658,7 +17688,7 @@
  },
  "Planta de um projeto de filial nova": {
   "src": [
-   "templates/layout/plan.html:176"
+   "templates/layout/plan.html:177"
   ]
  },
  "Planta e 3D": {
@@ -17675,12 +17705,12 @@
  },
  "Planta removida: a caminhada volta a ser estimada pelo endereço.": {
   "src": [
-   "routers/layout.py:274"
+   "routers/layout.py:284"
   ]
  },
  "Planta salva": {
   "src": [
-   "templates/layout/plan.html:653"
+   "templates/layout/plan.html:659"
   ],
   "js": true
  },
@@ -18482,7 +18512,7 @@
  },
  "Projeto não encontrado.": {
   "src": [
-   "routers/layout.py:177",
+   "routers/layout.py:179",
    "routers/site.py:236",
    "routers/site.py:250",
    "routers/site.py:355",
@@ -18521,7 +18551,7 @@
  },
  "Prompt copiado: cole no chat de IA e anexe a planta (imagem ou PDF).": {
   "src": [
-   "templates/layout/plan.html:678"
+   "templates/layout/plan.html:684"
   ],
   "js": true
  },
@@ -18557,7 +18587,7 @@
  },
  "Propor": {
   "src": [
-   "templates/layout/plan.html:165"
+   "templates/layout/plan.html:166"
   ]
  },
  "Propor a melhor disposição": {
@@ -18568,7 +18598,7 @@
  },
  "Propor rearranjo": {
   "src": [
-   "templates/layout/plan.html:156"
+   "templates/layout/plan.html:157"
   ]
  },
  "Propor rearranjo das estantes": {
@@ -18607,7 +18637,7 @@
  },
  "Proposta automática (ainda não salva)": {
   "src": [
-   "templates/layout/plan.html:653"
+   "templates/layout/plan.html:659"
   ],
   "js": true
  },
@@ -18624,7 +18654,7 @@
  },
  "Proposta combinada: rearranjo + recomposição": {
   "src": [
-   "routers/layout.py:607",
+   "routers/layout.py:617",
    "templates/layout/combined.html:8"
   ]
  },
@@ -18644,12 +18674,12 @@
  },
  "Proposta de rearranjo": {
   "src": [
-   "templates/layout/plan.html:152"
+   "templates/layout/plan.html:153"
   ]
  },
  "Proposta de rearranjo das estantes": {
   "src": [
-   "routers/layout.py:462",
+   "routers/layout.py:472",
    "templates/layout/rearrange.html:8",
    "templates/optimization/page.html:466"
   ]
@@ -19288,7 +19318,7 @@
  },
  "Rearranjo + recomposição": {
   "src": [
-   "templates/layout/plan.html:160"
+   "templates/layout/plan.html:161"
   ]
  },
  "Rearranjo + recomposição: só as peças das estruturas existentes (as liberadas por uma estante servem para outra; uma passagem que separa estantes vizinhas pede laterais a mais) ou ilimitadas (o que faltar é comprado, pelo custo da peça).": {
@@ -19299,12 +19329,12 @@
  },
  "Rearranjo aplicado à planta: {label}. Use Desfazer rearranjo para voltar à anterior.": {
   "src": [
-   "routers/layout.py:548"
+   "routers/layout.py:558"
   ]
  },
  "Rearranjo desfeito: a planta voltou a ser a anterior.": {
   "src": [
-   "routers/layout.py:570"
+   "routers/layout.py:580"
   ]
  },
  "Recalcular": {
@@ -19426,7 +19456,7 @@
  },
  "Referência: {label}": {
   "src": [
-   "services/branch_layout.py:637",
+   "services/branch_layout.py:677",
    "templates/site/view3d.html:269"
   ],
   "js": true
@@ -19528,13 +19558,13 @@
  },
  "Remover a planta desta filial? A caminhada volta a ser estimada pelo endereço.": {
   "src": [
-   "templates/layout/plan.html:183"
+   "templates/layout/plan.html:184"
   ],
   "js": true
  },
  "Remover a planta salva": {
   "src": [
-   "templates/layout/plan.html:185"
+   "templates/layout/plan.html:186"
   ]
  },
  "Remover a política": {
@@ -19904,7 +19934,7 @@
  },
  "Roxo tracejado = abertura das portas (vermelho: bate em algo).": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -20588,12 +20618,12 @@
  },
  "Sem estrutura": {
   "src": [
-   "services/branch_layout.py:844"
+   "services/branch_layout.py:884"
   ]
  },
  "Sem fileiras de estantes: a planta fica com o imóvel, os obstáculos e a referência. Desenhe as fileiras no editor (+ Fileira) ou use Gerar automaticamente.": {
   "src": [
-   "services/plan_ai.py:282"
+   "services/plan_ai.py:294"
   ]
  },
  "Sem histórico de saídas. Envie a aba <b>Pedidos</b> (pedido, SKU, quantidade) ou a coluna <b>Saída</b>.": {
@@ -20635,12 +20665,12 @@
  },
  "Sem o ponto de referência (expedição): ficou no meio da parede esquerda; marque no editor.": {
   "src": [
-   "services/plan_ai.py:317"
+   "services/plan_ai.py:329"
   ]
  },
  "Sem o tamanho do imóvel: calculado pelas fileiras e obstáculos.": {
   "src": [
-   "services/plan_ai.py:308"
+   "services/plan_ai.py:320"
   ]
  },
  "Sem pares (precisa da aba Pedidos).": {
@@ -20751,7 +20781,7 @@
  },
  "Sem vizinho de frente: o corredor fica a 1 m da face": {
   "src": [
-   "templates/layout/plan.html:480"
+   "templates/layout/plan.html:486"
   ],
   "js": true
  },
@@ -20854,7 +20884,7 @@
  },
  "Separar {pick} em nova fileira": {
   "src": [
-   "templates/layout/plan.html:459"
+   "templates/layout/plan.html:465"
   ],
   "js": true
  },
@@ -21009,7 +21039,7 @@
  },
  "Simulador de trajeto": {
   "src": [
-   "routers/layout.py:298",
+   "routers/layout.py:308",
    "routers/site.py:536",
    "services/onboarding.py:248",
    "services/onboarding.py:365",
@@ -21233,19 +21263,19 @@
  },
  "Substituir a planta em edição pela da IA?": {
   "src": [
-   "templates/layout/plan.html:684"
+   "templates/layout/plan.html:724"
   ],
   "js": true
  },
  "Substituir a planta em edição pela do projeto?": {
   "src": [
-   "templates/layout/plan.html:693"
+   "templates/layout/plan.html:734"
   ],
   "js": true
  },
  "Substituir a planta em edição pela gerada automaticamente?": {
   "src": [
-   "templates/layout/plan.html:668"
+   "templates/layout/plan.html:674"
   ],
   "js": true
  },
@@ -21322,6 +21352,12 @@
    "templates/site/suggest.html:7"
   ],
   "lazy": true
+ },
+ "Sugestão pela ordem da leitura (corredores da filial ainda sem fileira). Passe o mouse para ver a fileira no desenho.": {
+  "src": [
+   "templates/layout/plan.html:702"
+  ],
+  "js": true
  },
  "Sugestões aplicadas em {changed} endereço(s).{extra} A análise abaixo já reflete as novas bins.": {
   "src": [
@@ -21867,7 +21903,7 @@
  },
  "Testa obras na planta salva — passagens transversais atravessando as fileiras e troca de corredores de lugar (os de mais saídas mais perto da referência) — e compara o trajeto dos pedidos do histórico, com os SKUs onde estão hoje.": {
   "src": [
-   "templates/layout/plan.html:153"
+   "templates/layout/plan.html:154"
   ]
  },
  "Testando passagens transversais": {
@@ -22251,12 +22287,13 @@
  "Todas": {
   "src": [
    "templates/layout/plan.html:74",
+   "templates/layout/plan.html:699",
    "templates/levels/index.html:62",
    "templates/optimization/index.html:77",
    "templates/optimization/page.html:97",
-   "templates/optimization/pool.html:57",
-   "templates/runs/list.html:22"
-  ]
+   "templates/optimization/pool.html:57"
+  ],
+  "js": true
  },
  "Todas as abas são opcionais: envie só o que quiser atualizar. Não renomeie as abas.": {
   "src": [
@@ -22270,7 +22307,7 @@
  },
  "Todas as estantes estão na planta.": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -22416,7 +22453,7 @@
    "services/site_planner.py:1202"
   ]
  },
- "Transforme a planta baixa anexada (depósito/armazém) numa descrição para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{{\"building\": {{\"length\": 60, \"width\": 35}},\n \"rows\": [{{\"aisle\": \"A\", \"bays\": \"odd\", \"x\": 4, \"y\": 2, \"direction\": \"horizontal\", \"length\": 20, \"depth\": 1.1, \"corridor_side\": \"below\", \"numbering_from\": \"start\"}}],\n \"obstacles\": [{{\"name\": \"Pilar\", \"x\": 10, \"y\": 10, \"length\": 0.4, \"width\": 0.4}}],\n \"reference\": {{\"x\": 1, \"y\": 17, \"label\": \"Expedição\"}}}}\n\nRegras:\n- Todas as medidas em METROS. Use as cotas da planta; sem cotas, estime pela escala ou pelas medidas das estantes abaixo.\n- Origem no canto de cima à esquerda do imóvel, como a planta aparece: x cresce para a direita, y para baixo. building.length = tamanho em x; building.width = tamanho em y.\n- rows: cada fileira de estantes encostadas lado a lado. x, y = canto de cima à esquerda do retângulo da fileira. direction \"horizontal\" (a fileira corre ao longo de x: length em x, depth em y) ou \"vertical\" (length em y, depth em x).\n- corridor_side = de que lado fica o corredor de onde se pegam os produtos: \"above\" ou \"below\" nas fileiras horizontais, \"left\" ou \"right\" nas verticais. Duas fileiras costas com costas são DUAS rows, cada uma com o seu lado de corredor.\n- aisle = o código do corredor (lista abaixo). bays = \"odd\" (estantes ímpares), \"even\" (pares), \"all\" (todas do corredor) ou a lista dos códigos das estantes daquela fileira, ex.: [\"01\", \"03\", \"05\"]. Normalmente as ímpares ficam de um lado do corredor e as pares do outro.\n- numbering_from = \"start\" se os números das estantes crescem com x (horizontal) ou com y (vertical); \"end\" se crescem no sentido contrário.\n- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do canto de cima à esquerda, length em x, width em y).\n- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n- Use só os corredores da lista; o que não reconhecer na planta, deixe de fora.\n- Se a planta não tiver estantes, devolva \"rows\": [] com o imóvel, os obstáculos e a referência.\n\nCorredores e estantes cadastrados:\n{aisles}": {
+ "Transforme a planta baixa anexada (depósito/armazém) numa descrição para um software de armazém. Responda SOMENTE com um JSON, sem texto antes ou depois, neste formato:\n{{\"building\": {{\"length\": 60, \"width\": 35}},\n \"rows\": [{{\"aisle\": \"A\", \"bays\": \"odd\", \"x\": 4, \"y\": 2, \"direction\": \"horizontal\", \"length\": 20, \"depth\": 1.1, \"corridor_side\": \"below\", \"numbering_from\": \"start\"}}],\n \"obstacles\": [{{\"name\": \"Pilar\", \"x\": 10, \"y\": 10, \"length\": 0.4, \"width\": 0.4}}],\n \"reference\": {{\"x\": 1, \"y\": 17, \"label\": \"Expedição\"}}}}\n\nRegras:\n- Todas as medidas em METROS. Use as cotas da planta; sem cotas, estime pela escala ou pelas medidas das estantes abaixo.\n- Origem no canto de cima à esquerda do imóvel, como a planta aparece: x cresce para a direita, y para baixo. building.length = tamanho em x; building.width = tamanho em y.\n- rows: cada fileira de estantes encostadas lado a lado. x, y = canto de cima à esquerda do retângulo da fileira. direction \"horizontal\" (a fileira corre ao longo de x: length em x, depth em y) ou \"vertical\" (length em y, depth em x).\n- corridor_side = de que lado fica o corredor de onde se pegam os produtos: \"above\" ou \"below\" nas fileiras horizontais, \"left\" ou \"right\" nas verticais. Duas fileiras costas com costas são DUAS rows, cada uma com o seu lado de corredor.\n- aisle = o código do corredor (lista abaixo). bays = \"odd\" (estantes ímpares), \"even\" (pares), \"all\" (todas do corredor) ou a lista dos códigos das estantes daquela fileira, ex.: [\"01\", \"03\", \"05\"]. Normalmente as ímpares ficam de um lado do corredor e as pares do outro.\n- numbering_from = \"start\" se os números das estantes crescem com x (horizontal) ou com y (vertical); \"end\" se crescem no sentido contrário.\n- obstacles: pilares, paredes internas, escritórios, rampas, docas, áreas sem estantes (retângulos: x, y do canto de cima à esquerda, length em x, width em y).\n- reference: o ponto de onde a separação sai e para onde volta (expedição, doca, mesa de conferência).\n- Use só os corredores da lista. Se a planta não mostrar os códigos dos corredores, use \"aisle\": \"?\" e liste as fileiras na ordem da leitura (de cima para baixo, da esquerda para a direita): o software pede para o usuário escolher o corredor de cada uma. Não invente códigos.\n- Se a planta não tiver estantes, devolva \"rows\": [] com o imóvel, os obstáculos e a referência.\n\nCorredores e estantes cadastrados:\n{aisles}": {
   "src": [
    "services/plan_ai.py:134"
   ]
@@ -22796,7 +22833,7 @@
  },
  "Usa as fileiras, as cabeceiras, os obstáculos e a referência do plano do projeto (os endereços precisam ter os mesmos códigos — é o caso da filial criada pelo projeto).": {
   "src": [
-   "templates/layout/plan.html:177"
+   "templates/layout/plan.html:178"
   ]
  },
  "Usa nível(is) extra(s) da estante: ": {
@@ -22861,7 +22898,7 @@
  },
  "Usar a planta do projeto": {
   "src": [
-   "templates/layout/plan.html:179"
+   "templates/layout/plan.html:180"
   ]
  },
  "Usar outros níveis da estante": {
@@ -23279,7 +23316,7 @@
  },
  "Voltar": {
   "src": [
-   "routers/layout.py:609",
+   "routers/layout.py:619",
    "routers/levels.py:436",
    "templates/bin_types/form.html:8",
    "templates/branches/form.html:7",
@@ -23331,15 +23368,15 @@
  },
  "Voltar à planta": {
   "src": [
-   "routers/layout.py:295",
-   "routers/layout.py:464",
+   "routers/layout.py:305",
+   "routers/layout.py:474",
    "templates/layout/combined.html:13",
    "templates/layout/rearrange.html:11"
   ]
  },
  "Voltar à planta de antes do rearranjo?": {
   "src": [
-   "templates/layout/plan.html:168"
+   "templates/layout/plan.html:169"
   ],
   "js": true
  },
@@ -23941,7 +23978,7 @@
  },
  "a fileira {aisle}": {
   "src": [
-   "services/branch_layout.py:521"
+   "services/branch_layout.py:561"
   ]
  },
  "a filial nova criada pelo projeto": {
@@ -23958,7 +23995,7 @@
  },
  "a parede": {
   "src": [
-   "services/branch_layout.py:528"
+   "services/branch_layout.py:568"
   ]
  },
  "a peça nas composições dos tipos de estrutura": {
@@ -23974,7 +24011,7 @@
  },
  "a porta bate em {what} ao abrir": {
   "src": [
-   "templates/layout/plan.html:270"
+   "templates/layout/plan.html:271"
   ],
   "js": true
  },
@@ -23986,7 +24023,7 @@
  },
  "a referência": {
   "src": [
-   "services/branch_layout.py:526"
+   "services/branch_layout.py:566"
   ]
  },
  "a remover": {
@@ -24840,10 +24877,10 @@
  "expedição": {
   "src": [
    "services/branch_layout.py:212",
-   "services/branch_layout.py:261",
-   "services/branch_layout.py:1017",
-   "services/plan_ai.py:321",
-   "templates/layout/plan.html:630",
+   "services/branch_layout.py:262",
+   "services/branch_layout.py:1057",
+   "services/plan_ai.py:333",
+   "templates/layout/plan.html:636",
    "static/field_help.js:170"
   ],
   "js": true
@@ -24904,7 +24941,7 @@
  },
  "fora da planta: {v}{v2}": {
   "src": [
-   "routers/layout.py:325"
+   "routers/layout.py:335"
   ]
  },
  "fora das duas": {
@@ -25046,7 +25083,7 @@
  },
  "hoje × proposta": {
   "src": [
-   "routers/layout.py:306"
+   "routers/layout.py:316"
   ]
  },
  "hoje × {v}": {
@@ -25063,7 +25100,7 @@
  },
  "horizontal": {
   "src": [
-   "services/plan_ai.py:230"
+   "services/plan_ai.py:234"
   ]
  },
  "identificador curto e único": {
@@ -25413,7 +25450,7 @@
  },
  "muda de lugar": {
   "src": [
-   "routers/layout.py:670",
+   "routers/layout.py:680",
    "templates/layout/combined.html:79"
   ]
  },
@@ -25750,7 +25787,7 @@
  },
  "o obstáculo {name}": {
   "src": [
-   "services/branch_layout.py:523"
+   "services/branch_layout.py:563"
   ]
  },
  "o primeiro": {
@@ -26054,7 +26091,7 @@
  },
  "peças existentes": {
   "src": [
-   "templates/layout/plan.html:164"
+   "templates/layout/plan.html:165"
   ]
  },
  "peças fora do ouro × s": {
@@ -26065,7 +26102,7 @@
  },
  "peças ilimitadas": {
   "src": [
-   "templates/layout/plan.html:164"
+   "templates/layout/plan.html:165"
   ]
  },
  "peças × tempo por peça (s)": {
@@ -26256,12 +26293,12 @@
  },
  "recompor": {
   "src": [
-   "routers/layout.py:670"
+   "routers/layout.py:680"
   ]
  },
  "recompor e mudar de lugar": {
   "src": [
-   "routers/layout.py:670"
+   "routers/layout.py:680"
   ]
  },
  "recomposição em {bays} estante(s) ({created} nível(is) criado(s), {removed} removido(s))": {
@@ -26380,7 +26417,7 @@
  },
  "rode a otimização.": {
   "src": [
-   "routers/layout.py:180"
+   "routers/layout.py:182"
   ]
  },
  "ruas em serpentina": {
@@ -26417,7 +26454,7 @@
  },
  "se": {
   "src": [
-   "templates/layout/plan.html:259"
+   "templates/layout/plan.html:260"
   ],
   "js": true
  },
@@ -26460,6 +26497,12 @@
   "src": [
    "routers/locations.py:142"
   ]
+ },
+ "sem corredor": {
+  "src": [
+   "templates/layout/plan.html:454"
+  ],
+  "js": true
  },
  "sem custo cadastrado nas peças": {
   "src": [
@@ -26780,8 +26823,8 @@
  },
  "todas": {
   "src": [
-   "templates/layout/plan.html:449",
-   "templates/layout/plan.html:468"
+   "templates/layout/plan.html:450",
+   "templates/layout/plan.html:474"
   ],
   "js": true
  },
@@ -26953,7 +26996,7 @@
  },
  "vertical": {
   "src": [
-   "services/plan_ai.py:230"
+   "services/plan_ai.py:234"
   ]
  },
  "visto de cima": {
@@ -27072,7 +27115,7 @@
  },
  "{aisle} {side}: pega pelos dois lados ignorada — há fileira ou obstáculo encostado atrás (menos de {v} m)": {
   "src": [
-   "services/branch_layout.py:420"
+   "services/branch_layout.py:421"
   ]
  },
  "{assigned} atribuição(ões) produto → endereço": {
@@ -27116,12 +27159,12 @@
  },
  "{bay}: a porta bate em {what} ao abrir": {
   "src": [
-   "services/branch_layout.py:544"
+   "services/branch_layout.py:584"
   ]
  },
  "{bay}: posição fixa": {
   "src": [
-   "templates/layout/plan.html:309"
+   "templates/layout/plan.html:310"
   ],
   "js": true
  },
@@ -27554,7 +27597,7 @@
  },
  "{len} ímpares": {
   "src": [
-   "services/branch_layout.py:507"
+   "services/branch_layout.py:508"
   ]
  },
  "{levels_free} nível(is) de armazenagem livres": {
@@ -27827,7 +27870,7 @@
  },
  "{n} estante(s): {a} → {b} · {len} m": {
   "src": [
-   "templates/layout/plan.html:453"
+   "templates/layout/plan.html:459"
   ],
   "js": true
  },
@@ -27841,6 +27884,17 @@
   "src": [
    "routers/structure_kinds.py:266"
   ]
+ },
+ "{n} fileira(s) com corredor que não existe nos endereços da filial ({list}): entraram sem corredor (em vermelho); escolha o corredor de cada uma na tabela abaixo ou no editor.": {
+  "src": [
+   "services/plan_ai.py:290"
+  ]
+ },
+ "{n} fileira(s) com corredor; confira no desenho e salve a planta.": {
+  "src": [
+   "templates/layout/plan.html:718"
+  ],
+  "js": true
  },
  "{n} fileira(s) com estante de posição fixa ficaram onde estavam; confira se a planta gerada não passa por cima delas.": {
   "src": [
@@ -28003,7 +28057,7 @@
  },
  "{other} sem número": {
   "src": [
-   "services/branch_layout.py:508"
+   "services/branch_layout.py:509"
   ]
  },
  "{out_count} SKU(s) com saída": {
@@ -28037,7 +28091,7 @@
  },
  "{placed} estante(s) na planta · {corridors} corredor(es) de caminhada": {
   "src": [
-   "templates/layout/plan.html:659"
+   "templates/layout/plan.html:665"
   ],
   "js": true
  },
@@ -28429,7 +28483,7 @@
  },
  "· lista fixa de estantes (mudar o corredor ou o lado volta a usar todas)": {
   "src": [
-   "templates/layout/plan.html:454"
+   "templates/layout/plan.html:460"
   ],
   "js": true
  },
@@ -28631,8 +28685,10 @@
  },
  "Ímpares": {
   "src": [
-   "templates/layout/plan.html:74"
-  ]
+   "templates/layout/plan.html:74",
+   "templates/layout/plan.html:699"
+  ],
+  "js": true
  },
  "Índice alfabético deve ser positivo": {
   "src": [
@@ -28688,15 +28744,15 @@
  },
  "ímp.": {
   "src": [
-   "templates/layout/plan.html:326"
+   "templates/layout/plan.html:327"
   ],
   "js": true
  },
  "ímpares": {
   "src": [
    "services/branch_layout.py:54",
-   "templates/layout/plan.html:449",
-   "templates/layout/plan.html:468"
+   "templates/layout/plan.html:450",
+   "templates/layout/plan.html:474"
   ],
   "lazy": true,
   "js": true
@@ -28868,6 +28924,12 @@
    "templates/locations/form.html:96"
   ]
  },
+ "— sem corredor —": {
+  "src": [
+   "templates/layout/plan.html:700"
+  ],
+  "js": true
+ },
  "— sem filial —": {
   "src": [
    "templates/warehouses/list.html:39"
@@ -28906,6 +28968,11 @@
    "templates/layout/combined.html:50"
   ],
   "html": true
+ },
+ "… e mais {n} aviso(s).": {
+  "src": [
+   "services/branch_layout.py:549"
+  ]
  },
  "… mais {rows} SKUs no Excel.": {
   "src": [

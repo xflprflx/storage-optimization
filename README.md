@@ -544,6 +544,15 @@ A resposta é um JSON em metros, com origem no canto de cima à esquerda:
   ponta a numeração começa;
 - `obstacles` (pilares, escritórios, docas) e `reference` (expedição).
 
+**Planta sem os códigos dos corredores:** o prompt pede `"aisle": "?"` e as fileiras na ordem da leitura. Fileira de
+corredor que a filial não tem (ou `?`) não é descartada: entra **sem corredor** (em vermelho, no tamanho lido, rótulo
+`?A`, `?1`…) e o cartão mostra a tabela **Corredor de cada fileira sem corredor**, já com a sugestão — os corredores da
+filial ainda sem fileira, na ordem natural, para os grupos de fileiras na ordem da leitura (mesmo rótulo da IA ou, com
+`?`, as duas fileiras frente a frente = ímpares e pares). **Aplicar os corredores** liga cada fileira ao corredor (a
+frente das estantes sem estrutura sai do comprimento desenhado); também dá para escolher no campo Corredor/rua da
+fileira. **Avisos de conflito** (na leitura e no cartão *Situação* do editor): fileira por cima de pilar/obstáculo,
+fileiras sobrepostas, fileira que passa do imóvel e corredor mais estreito que 1 m entre fileiras frente a frente.
+
 O app só lê a descrição, nunca executa código, e conserta os erros comuns das IAs com aviso: texto e ``` em volta,
 comentários e vírgula sobrando, números em texto com vírgula decimal, medidas em cm ou mm, chaves em português,
 posição em lista, corredor escrito de outro jeito (`07` = `7`), corredores e estantes que não existem (ficam de fora),

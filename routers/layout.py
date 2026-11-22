@@ -89,12 +89,14 @@ def _plan_qs(br: Branch, wid: Optional[int]) -> str:
 
 
 def _geom_info(g) -> dict:
+    from services.branch_layout import conflicts
+
     rows = g.data.get("rows") or []
     return {"corridors": [{"orient": c.orient, "center": round(c.center, 1), "width": round(c.width, 1), "lo": round(c.lo, 1),
                            "hi": round(c.hi, 1), "ends": [round(e, 1) for e in c.ends], "flow": c.flow,
                            "rows": [rows[ri]["id"] for ri in c.rows]} for c in g.corridors],
             "pairs": [[rows[i]["id"], rows[j]["id"], round(gap, 1), manual] for i, j, gap, manual in g.pairs],
-            "warn": g.warn,
+            "warn": g.warn + conflicts(g),
             "doors": [{"bay": dr["bay"], "hit": dr["hit"], "pts": [[[round(x, 1), round(y, 1)] for x, y in pts] for pts in dr["pts"]]}
                       for dr in g.doors],
             "unplaced": g.unplaced, "dup": g.dup[:50], "placed": len(g.placed)}
@@ -210,12 +212,20 @@ async def plan_ai(request: Request, db: Session = Depends(get_db)):
     data, error, notes = parse(str(body.get("code") or "")[:500000], bays)
     if error:
         return {"error": error, "notes": notes}
+    unmatched = data.pop("_unmatched", [])
     from services.bay_locks import keep_fixed
 
     data, note = keep_fixed(db, br.id, wid, data)
     if note:
         notes.append(note)
-    return {"data": data, "notes": notes, **_geom_info(build(data, bays))}
+    from services.branch_layout import conflicts
+    from services.layout_service import natural_key
+
+    notes += conflicts(build(data, bays))
+    kept_ids = {r["id"] for r in data["rows"]}
+    unmatched = [u for u in unmatched if u["row_id"] in kept_ids]
+    return {"data": data, "notes": notes, "unmatched": unmatched, "aisles": sorted(bays, key=natural_key),
+            **_geom_info(build(data, bays))}
 
 
 @router.post("/layout/plan/check")

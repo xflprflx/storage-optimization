@@ -1,0 +1,14 @@
+{"building": {"length": 37.0, "width": 20.0},
+ "rows": [
+  {"aisle": "A", "bays": "odd", "x": 6.5, "y": 0.5, "direction": "vertical", "length": 8.5, "depth": 0.8, "corridor_side": "right", "numbering_from": "start"},
+  {"aisle": "A", "bays": "even", "x": 8.2, "y": 0.5, "direction": "vertical", "length": 8.5, "depth": 0.8, "corridor_side": "left", "numbering_from": "start"},
+  {"aisle": "B", "bays": "odd", "x": 9.0, "y": 0.5, "direction": "vertical", "length": 8.5, "depth": 0.8, "corridor_side": "right", "numbering_from": "start"},
+  {"aisle": "B", "bays": "even", "x": 10.7, "y": 0.5, "direction": "vertical", "length": 8.5, "depth": 0.8, "corridor_side": "left", "numbering_from": "start"},
+  {"aisle": "J", "bays": "all", "x": 21.5, "y": 10.5, "direction": "vertical", "length": 3.0, "depth": 0.8, "corridor_side": "left", "numbering_from": "start"},
+  {"aisle": "K", "bays": "odd", "x": 24.5, "y": 0.5, "direction": "horizontal", "length": 6.0, "depth": 0.8, "corridor_side": "below", "numbering_from": "start"}
+ ],
+ "obstacles": [
+  {"name": "Doca", "x": 0.0, "y": 0.0, "length": 5.5, "width": 6.0},
+  {"name": "Pilar", "x": 8.0, "y": 5.5, "length": 0.4, "width": 0.4}
+ ],
+ "reference": {"x": 2.7, "y": 8.7, "label": "Expedição"}}

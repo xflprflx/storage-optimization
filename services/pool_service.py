@@ -97,9 +97,9 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
 
     def packs_of(pid, gk):
         mode = effective(bmodes.get(gk[0], "off"), unit_run)
-        if (pid, mode) not in pk_cache:
-            pk_cache[(pid, mode)] = product_packs(pprods.get(pid), mode)
-        return pk_cache[(pid, mode)]
+        if (pid, mode, gk[0]) not in pk_cache:  # só as embalagens habilitadas na filial do grupo
+            pk_cache[(pid, mode, gk[0])] = product_packs(pprods.get(pid), mode, gk[0])
+        return pk_cache[(pid, mode, gk[0])]
 
     def dflt_of(p, gk):
         pol = pols.get((p.id, gk[0]))

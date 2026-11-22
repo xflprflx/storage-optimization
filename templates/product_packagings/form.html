@@ -10,43 +10,47 @@
   {{ form_alert(errors) }}
   <form method="post" autocomplete="off" id="pkForm">
     <div class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label">{{ _("Nome *") }}</label>
-        <input class="form-control {{ invalid(errors, 'name') }}" name="name" maxlength="40" value="{{ data.get('name') or '' }}" required autofocus placeholder="{{ _("Ex.: Caixa, Display, Master") }}">
-        {{ field_error(errors, 'name') }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">{{ _("Feita de") }}</label>
-        <select class="form-select" name="inner_id" id="inner_id">
-          <option value="">{{ _("— unidades do produto —") }}</option>
-          {% for x in inners %}<option value="{{ x.id }}" {% if (data.get('inner_id')|string) == (x.id|string) %}selected{% endif %}>{{ x.name }}{% if x.units() %} ({{ _h("{n} un.", n=x.units()) }}){% endif %}</option>{% endfor %}
+      <div class="col-md-5">
+        <label class="form-label">{{ _("Modelo de embalagem *") }}</label>
+        <select class="form-select {{ invalid(errors, 'model_id') }}" name="model_id" id="model_id" required>
+          <option value="">{{ _("— escolha —") }}</option>
+          {% for m in models %}<option value="{{ m.id }}" {% if (data.get('model_id')|string) == (m.id|string) %}selected{% endif %}>{{ m.code }} — {{ m.name }} ({{ m.height|dec }} × {{ m.width|dec }} × {{ m.length|dec }} cm)</option>{% endfor %}
         </select>
+        {{ field_error(errors, 'model_id') }}
+        <div class="form-text"><a href="/packaging-models/new" target="_blank">{{ _("Novo modelo de embalagem") }}</a></div>
       </div>
       <div class="col-md-2">
         <label class="form-label">{{ _("Quantidade") }}</label>
         <input class="form-control text-end {{ invalid(errors, 'inner_qty') }}" name="inner_qty" id="inner_qty" inputmode="numeric" value="{{ data.get('inner_qty') or '' }}">
         {{ field_error(errors, 'inner_qty') }}
       </div>
-      <div class="col-md-2 d-flex align-items-end">
-        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_default" value="1" id="is_default" {% if data.get('is_default') %}checked{% endif %}>
-          <label class="form-check-label" for="is_default">{{ _("Padrão") }}</label></div>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">{{ _("Modelo de embalagem") }}</label>
-        <select class="form-select" name="model_id" id="model_id">
-          <option value="">{{ _("— medidas próprias —") }}</option>
-          {% for m in models %}<option value="{{ m.id }}" {% if (data.get('model_id')|string) == (m.id|string) %}selected{% endif %}>{{ m.code }} — {{ m.name }}</option>{% endfor %}
+      <div class="col-md-3">
+        <label class="form-label">{{ _("de") }}</label>
+        <select class="form-select" name="inner_id" id="inner_id">
+          <option value="">{{ _("— unidades do produto —") }}</option>
+          {% for x in inners %}<option value="{{ x.id }}" {% if (data.get('inner_id')|string) == (x.id|string) %}selected{% endif %}>{{ x.label }}{% if x.units() %} ({{ _h("{n} un.", n=x.units()) }}){% endif %}</option>{% endfor %}
         </select>
       </div>
-      {% for key, label in dims %}
-      <div class="col-md-2">
-        <label class="form-label">{{ _(label) }} <small class="text-muted">({{ 'kg' if key == 'weight' else 'cm' }})</small></label>
-        <input class="form-control text-end {{ invalid(errors, key) }}" name="{{ key }}" id="{{ key }}" data-u="{{ 'kg' if key == 'weight' else 'cm' }}" inputmode="decimal" value="{{ data.get(key)|dec_input }}">
-        {{ field_error(errors, key) }}
+      <div class="col-md-1">
+        <label class="form-label">{{ _("Ordem") }}</label>
+        <input class="form-control text-end" name="sort" inputmode="numeric" value="{{ data.get('sort') if data.get('sort') is not none else '' }}">
       </div>
-      {% endfor %}
+      <div class="col-md-3">
+        <label class="form-label">{{ _("Peso cheia") }} <small class="text-muted">(kg)</small></label>
+        <input class="form-control text-end {{ invalid(errors, 'weight') }}" name="weight" id="weight" data-u="kg" inputmode="decimal" value="{{ data.get('weight')|dec_input }}">
+        {{ field_error(errors, 'weight') }}
+      </div>
+      <div class="col-md-9">
+        <label class="form-label">{{ _("Habilitada nas filiais") }}</label>
+        <div class="border rounded p-2 d-flex flex-wrap gap-3">
+          {% for b in branches %}
+          <div class="form-check mb-0"><input class="form-check-input" type="checkbox" name="branch_ids" value="{{ b.id }}" id="br{{ b.id }}" {% if b.id in (data.get('branch_ids') or []) %}checked{% endif %}>
+            <label class="form-check-label" for="br{{ b.id }}"><span class="mono">{{ b.code }}</span> {{ b.name }}{% if (b.unitization or 'off') == 'off' %} <span class="text-muted small">({{ _("unitização desligada") }})</span>{% endif %}</label></div>
+          {% else %}<span class="text-muted small">{{ _("Nenhuma filial cadastrada.") }}</span>{% endfor %}
+        </div>
+      </div>
     </div>
-    <div class="form-text mt-2">{{ _("Medidas externas e peso da embalagem cheia. Vazios: as medidas do modelo; o peso = o conteúdo (unidades ou embalagens de dentro) + a tara do modelo. Quantidade vazia: calculada pelo que cabe.") }}</div>
+    <div class="form-text mt-2">{{ _("As medidas e a tara vêm do modelo de embalagem. Quantidade = quantas unidades (ou embalagens de dentro) vão neste modelo; vazia = calculada pelo que cabe. Peso cheia vazio = o conteúdo + a tara do modelo. Só as filiais marcadas usam esta embalagem nas otimizações.") }}</div>
     <h6 class="text-muted text-uppercase small mt-4 mb-1"><i class="bi bi-stack"></i> {{ _("Paletizações") }}</h6>
     <div class="form-text mt-0 mb-2">{{ _("Uma linha por tipo de palete (tipo de bin com Armazena em = palete fechado); o mesmo palete pode ter mais de uma (baixo e alto). Vazios = calculados pelas medidas, pela altura máxima de carga e pelo peso máximo do palete. Num palete sem paletização cadastrada, o sistema calcula e avisa.") }}</div>
     {% if errors.get('pallets') %}<div class="alert alert-danger py-1 small">{{ errors.get('pallets') }}</div>{% endif %}

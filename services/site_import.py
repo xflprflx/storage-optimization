@@ -122,6 +122,20 @@ SKU_COLS = {
     "pallet_layer": ["caixasporcamada", "caixasporcamadalastro", "lastro", "casesperlayer"],
     "pallet_layers": ["camadas", "camadasnopalete", "layers"],
     "store_pref": ["guardarem", "guardaremautomaticounidadescaixa", "guardar", "storepref"],
+    "unitization": ["unitizacaodosku", "unitizacaodoskuconformeafilialnunca", "unitizacao", "unitization"],
+    "mixed_packs": ["embalagensdiferentesporbin", "embalagensdiferentesporbinsimnao", "mixedpacks"],
+}
+SKU_PACK_COLS = {
+    "sku": ["sku", "codigo", "codproduto", "produto", "item"],
+    "model": ["modelodeembalagem", "modelo", "embalagem", "model"],
+    "inner": ["feitade", "feitademodelovaziounidades", "dentro", "inner"],
+    "qty": ["quantidade", "qtd", "qtde", "qty"],
+    "wt": ["pesocheia", "pesocheiakg", "peso", "pesokg"],
+    "enabled": ["habilitada", "habilitadasimnao", "enabled"],
+    "sort": ["ordem", "order"],
+    "pallet": ["palete", "paletetipodebin", "pallet"],
+    "layer": ["caixasporcamada", "caixasporcamadalastro", "lastro"],
+    "layers": ["camadas", "layers"],
 }
 PACK_ORDER = ("case_qty", "case_model", "case_h", "case_w", "case_l", "case_wt", "pallet", "pallet_layer",
               "pallet_layers", "store_pref")
@@ -246,6 +260,7 @@ SHEETS = {"building": ["imovel", "predio", "galpao"], "structures": ["estruturas
           "obstacles": ["obstaculos", "obstaculo", "areasbloqueadas", "bloqueios", "areas bloqueadas"],
           "sectors": ["setores", "setor", "areasoperacionais", "recebimentoeexpedicao"],
           "orders": ["pedidos", "historicodepedidos", "historico", "pedidosdoperiodo", "vendas", "saidas"],
+          "sku_packs": ["embalagensdosskus", "embalagensdossku", "embalagensporsku", "skupackagings"],
           "packaging": ["embalagens", "modelosdeembalagem", "modelosdeembalagens", "caixaspadrao", "packaging",
                         "embalajes", "emballages", "verpackungen", "包装"]}
 
@@ -290,10 +305,10 @@ def _dec(row, idx, label: str, errs: list, line: int) -> Optional[float]:
 BUILDING_COLS = {"field": ["campo", "parametro", "item", "descricao"], "value": ["valor", "value", "medida"]}
 SPECS = {"building": BUILDING_COLS, "structures": STRUCT_COLS, "bins": BIN_COLS, "skus": SKU_COLS,
          "zones": ZONE_COLS, "obstacles": OBSTACLE_COLS, "sectors": SECTOR_COLS, "orders": ORDER_COLS,
-         "packaging": PACKAGING_COLS}
+         "packaging": PACKAGING_COLS, "sku_packs": SKU_PACK_COLS}
 KIND_LABELS = {"building": N_("Imóvel"), "structures": N_("Estruturas"), "bins": N_("Bins"), "skus": "SKUs", "zones": N_("Zonas"),
                "obstacles": N_("Obstáculos"), "sectors": N_("Setores"), "orders": N_("Pedidos (histórico de saídas)"),
-               "packaging": N_("Embalagens (modelos de caixa)")}
+               "packaging": N_("Embalagens (modelos de caixa)"), "sku_packs": N_("Embalagens dos SKUs")}
 FIELD_LABELS = {
     "building": {"field": N_("Campo (nome do parâmetro)"), "value": N_("Valor")},
     "structures": {"code": N_("Código"), "name": N_("Nome"), "kind": N_("Tipo"), "width": N_("Frente (cm)"), "depth": N_("Profundidade (cm)"),
@@ -318,7 +333,13 @@ FIELD_LABELS = {
              "case_w": N_("Largura da caixa (cm)"), "case_l": N_("Comprimento da caixa (cm)"),
              "case_wt": N_("Peso da caixa cheia (kg)"), "pallet": N_("Palete (tipo de bin)"),
              "pallet_layer": N_("Caixas por camada (lastro)"), "pallet_layers": N_("Camadas"),
-             "store_pref": N_("Guardar em (automático/unidades/caixa)")},
+             "store_pref": N_("Guardar em (automático/unidades/caixa)"),
+             "unitization": N_("Unitização do SKU (conforme a filial/nunca)"),
+             "mixed_packs": N_("Embalagens diferentes por bin (sim/não)")},
+    "sku_packs": {"sku": "SKU", "model": N_("Modelo de embalagem"), "inner": N_("Feita de (modelo; vazio = unidades)"),
+                  "qty": N_("Quantidade"), "wt": N_("Peso cheia (kg)"),
+                  "enabled": N_("Habilitada (sim/não)"), "sort": N_("Ordem"), "pallet": N_("Palete (tipo de bin)"),
+                  "layer": N_("Caixas por camada"), "layers": N_("Camadas")},
     "packaging": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
                   "length": N_("Comprimento (cm)"), "tare": N_("Tara (kg)")},
     "zones": {"name": N_("Nome"), "length": N_("Comprimento em X (m)"), "orientation": N_("Orientação das fileiras"),
@@ -334,7 +355,41 @@ FIELD_LABELS = {
 }
 REQUIRED = {"building": ["field", "value"], "structures": ["code"], "bins": ["code"], "skus": ["sku"],
             "zones": ["orientation"], "obstacles": ["x", "y", "length", "width"],
-            "sectors": ["name"], "orders": ["order", "sku", "qty"], "packaging": ["code"]}
+            "sectors": ["name"], "orders": ["order", "sku", "qty"], "packaging": ["code"],
+            "sku_packs": ["sku", "model"]}
+
+
+YES_WORDS = {"sim", "s", "1", "x", "true", "yes", "y", "si", "oui", "ja", "是"}
+
+
+def _sku_packs(rows_all: list[list[str]], cm: dict, errs: list) -> dict:
+    """Aba Embalagens dos SKUs: {sku: [embalagem]} — uma linha por SKU × modelo de embalagem (× palete); repetir a
+    linha com outro palete acrescenta a paletização."""
+    hdr, *rows = rows_all
+    out: dict[str, list] = {}
+    for i, row in enumerate(rows, start=2):
+        sku, model = _cell(row, cm["sku"])[:60], normalize_code(_cell(row, cm["model"]))
+        if not sku or not model:
+            continue
+        e: list[str] = []
+        v = {k: _dec(row, cm.get(k), FIELD_LABELS["sku_packs"][k], e, i) for k in ("qty", "wt", "sort", "layer", "layers")}
+        if e:
+            errs.extend(f"{_('Embalagens dos SKUs')} {x}" for x in e[:3])
+            continue
+        lst = out.setdefault(sku, [])
+        r = next((x for x in lst if x["model"] == model), None)
+        if r is None:
+            en = normalize_header(_cell(row, cm.get("enabled")))
+            inner = normalize_code(_cell(row, cm.get("inner")))
+            r = {"model": model, "inner": "" if inner.casefold() in ("unidade", "unidades", "un", "units", "unit") else inner,
+                 "qty": int(v["qty"]) if v["qty"] else None, "wt": v["wt"],
+                 "enabled": (en in YES_WORDS) if en else True,
+                 "sort": int(v["sort"]) if v["sort"] else len(lst) + 1, "pallets": []}
+            lst.append(r)
+        pal = normalize_code(_cell(row, cm.get("pallet")))
+        if pal:
+            r["pallets"].append([pal, int(v["layer"]) if v["layer"] else None, int(v["layers"]) if v["layers"] else None])
+    return out
 
 
 def _pack_cells(row: list[str], cm: dict, it: dict, errs: list, line: int) -> None:
@@ -358,6 +413,12 @@ def _pack_cells(row: list[str], cm: dict, it: dict, errs: list, line: int) -> No
     for k in ("case_model", "pallet"):
         if cm.get(k) is not None and _cell(row, cm[k]):
             it[k] = normalize_code(_cell(row, cm[k]))
+    un = normalize_header(_cell(row, cm.get("unitization"))) if cm.get("unitization") is not None else ""
+    if un:
+        it["unitization"] = "never" if un.startswith(("nunca", "never", "nao", "no")) else "branch"
+    mx = normalize_header(_cell(row, cm.get("mixed_packs"))) if cm.get("mixed_packs") is not None else ""
+    if mx:
+        it["mixed_packs"] = mx in YES_WORDS
     pref = normalize_header(_cell(row, cm.get("store_pref"))) if cm.get("store_pref") is not None else ""  # aceita o texto traduzido
     if pref:
         v = next((k for k, ws in PREF_WORDS.items() if any(pref.startswith(w) for w in ws)), None)
@@ -400,6 +461,41 @@ def _pack_notes(db: Session, items: list[dict]) -> list[str]:
     if unknown_p:
         out.append(_("Embalagem: palete(s) não cadastrado(s) como tipo de bin com Armazena em = palete fechado, ignorado(s): {codes}.",
                      codes=", ".join(sorted(unknown_p)[:10])))
+    out.extend(warns[:10])
+    if len(warns) > 10:
+        out.append(_("Embalagem: mais {v} aviso(s).", v=len(warns) - 10))
+    return out
+
+
+def _sheet_pack_notes(db: Session, items: list[dict], sku_packs: dict) -> list[str]:
+    """Avisos da aba Embalagens dos SKUs: SKUs fora da aba SKUs, modelos/paletes não cadastrados, conteúdo ou lastro
+    que não cabe; e o que foi calculado pelas medidas."""
+    from types import SimpleNamespace
+
+    from services.packaging import catalogs, check, fill, sheet_packagings
+
+    if not sku_packs:
+        return []
+    models, pallets = catalogs(db)
+    by = {it["sku"]: it for it in items}
+    out, warns, calc = [], [], 0
+    unknown = sorted({r["model"] for rows in sku_packs.values() for r in rows if r["model"] not in models}
+                     | {p[0] for rows in sku_packs.values() for r in rows for p in r["pallets"] if p[0] not in pallets})
+    missing = [sku for sku in sku_packs if sku not in by]
+    for sku, rows in sku_packs.items():
+        it = by.get(sku) or {}
+        prod = SimpleNamespace(height=it.get("h"), width=it.get("w"), length=it.get("l"), weight=it.get("wt"))
+        for k in sheet_packagings(rows, models, pallets):
+            calc += len(fill(k, prod))
+            warns.extend(f"{sku}: {w}" for w in check(k, prod))
+    if calc:
+        out.append(_("Embalagens dos SKUs: {n} valor(es) calculado(s) pelas medidas (quantidade, caixas por camada, camadas).", n=calc))
+    if unknown:
+        out.append(_("Embalagens dos SKUs: códigos não cadastrados (modelo ou palete fechado), ignorados: {codes}.",
+                     codes=", ".join(unknown[:10])))
+    if missing:
+        out.append(_("Embalagens dos SKUs: {n} SKU(s) que não estão na aba SKUs: {skus}.", n=len(missing),
+                     skus=", ".join(missing[:10])))
     out.extend(warns[:10])
     if len(warns) > 10:
         out.append(_("Embalagem: mais {v} aviso(s).", v=len(warns) - 10))
@@ -807,6 +903,12 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                    + ("convertida(s) para valor absoluto." if res["abs"] else _("ignorada(s) (sem a conversão)."))) if res["neg"] else ""
             msgs.append(_("Pedidos: {orders} pedido(s), {lines} linha(s), {skus} SKU(s), {pairs} par(es) que saem juntos.{neg}", orders=res['orders'], lines=res['lines'], skus=len(res['skus']), pairs=len(res['pairs']), neg=neg))
 
+    # ---- Embalagens dos SKUs (várias por SKU, em hierarquia) ----
+    if "sku_packs" in sheets and len(sheets["sku_packs"]) > 1:
+        cfg["sku_packs"] = _sku_packs(sheets["sku_packs"], cms["sku_packs"], errs)
+        n = sum(len(v) for v in cfg["sku_packs"].values())
+        msgs.append(_("Embalagens dos SKUs: {n} embalagem(ns) de {skus} SKU(s).", n=n, skus=len(cfg["sku_packs"])))
+
     # ---- SKUs ----
     if "skus" in sheets:
         if len(sheets["skus"]) < 2:
@@ -856,6 +958,7 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
                 cfg["items"] = list(items.values())
                 cfg["demand"]["source"] = "upload"
                 msgs.extend(_pack_notes(db, cfg["items"]))
+                msgs.extend(_sheet_pack_notes(db, cfg["items"], cfg.get("sku_packs") or {}))
                 msgs.append(_("SKUs: {len} SKU(s) carregado(s) no projeto (fonte da demanda = arquivo).", len=len(items)))
     return cfg, msgs, errs
 
@@ -1132,11 +1235,20 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
     sheet(wb.create_sheet("SKUs"),
           ["SKU", N_("Produto"), _("Material"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso (kg)"), _("Saldo"),
            _("Min level"), _("Max level"), _("Saída (linhas ou unid./período)"), _("Condição de armazenagem"),
-           *(_(FIELD_LABELS["skus"][k]) for k in PACK_ORDER)],
+           *(_(FIELD_LABELS["skus"][k]) for k in PACK_ORDER), _(FIELD_LABELS["skus"]["unitization"]),
+           _(FIELD_LABELS["skus"]["mixed_packs"])],
           [(it["sku"], it.get("name"), it.get("material"), it.get("h"), it.get("w"), it.get("l"), it.get("wt"),
             it.get("stock"), it.get("min"), it.get("max"), it.get("out"), _cond_label(it.get("condition")),
-            *(pref_lbl.get(it.get(k), it.get(k)) if k == "store_pref" else it.get(k) for k in PACK_ORDER))
+            *(pref_lbl.get(it.get(k), it.get(k)) if k == "store_pref" else it.get(k) for k in PACK_ORDER),
+            {"never": "nunca", "branch": "conforme a filial"}.get(it.get("unitization")),
+            None if it.get("mixed_packs") is None else ("sim" if it["mixed_packs"] else "não"))
            for it in cfg.get("items") or []], {2: 36, 11: 18, 12: 22})
+    sp = [_(FIELD_LABELS["sku_packs"][k]) for k in SKU_PACK_COLS]
+    sheet(wb.create_sheet(_("Embalagens dos SKUs")), sp,
+          [(sku, r["model"], r.get("inner") or None, r.get("qty"), r.get("wt"), "sim" if r.get("enabled", True) else "não",
+            r.get("sort"), *(pal or (None, None, None)))
+           for sku, rows in (cfg.get("sku_packs") or {}).items() for r in rows
+           for pal in (r.get("pallets") or [None])], {1: 14, 2: 14, 3: 22})
     # o projeto guarda só o resumo dos pedidos: a aba vem vazia, no formato esperado
     sheet(wb.create_sheet(_("Pedidos")), [_("Pedido"), _("Data"), "SKU", N_("Quantidade"), _("Liberação")], [],
           {1: 14, 2: 12, 5: 16})

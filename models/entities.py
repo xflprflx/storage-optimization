@@ -453,26 +453,31 @@ class Product(TimestampMixin, Base):
         return f"<Product {self.sku}>"
 
 
+packaging_branches = Table(  # filiais em que a embalagem do produto está habilitada (entra na otimização)
+    "packaging_branches",
+    Base.metadata,
+    Column("packaging_id", ForeignKey("product_packagings.id", ondelete="CASCADE"), primary_key=True),
+    Column("branch_id", ForeignKey("branches.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
 class ProductPackaging(TimestampMixin, Base):
-    """Embalagem do produto (N por produto), em hierarquia: cada uma é feita de `inner_qty` unidades da embalagem
-    `inner` (vazio = unidades do produto) — ex.: display de 6 un. → caixa de 4 displays → master de 2 caixas. Medidas
-    externas e peso da embalagem cheia; sem medidas, as do modelo de embalagem. Uma é a padrão do produto."""
+    """Embalagem do produto: um modelo de embalagem (as medidas e a tara vêm dele) + quantas unidades vão nele. Um
+    produto tem uma lista delas, em hierarquia opcional (a quantidade pode ser de outra embalagem do produto: display
+    de 6 un. → caixa com 4 displays → master com 2 caixas). Cada uma é habilitada por filial: só as habilitadas na
+    filial entram na otimização dela, na ordem do cadastro (`sort`)."""
 
     __tablename__ = "product_packagings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
-    name: Mapped[str] = mapped_column(String(40), nullable=False)
+    name: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")  # = código do modelo
     inner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("product_packagings.id", ondelete="SET NULL"),
                                                     nullable=True)
     inner_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="RESTRICT"),
                                                     nullable=True, index=True)
-    height: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    width: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
-    weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # embalagem cheia (kg)
-    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    weight: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # embalagem cheia (kg), opcional
     sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     product: Mapped["Product"] = relationship(back_populates="packagings")
@@ -481,6 +486,16 @@ class ProductPackaging(TimestampMixin, Base):
     pallets: Mapped[list["PackagingPallet"]] = relationship(
         back_populates="packaging", cascade="all, delete-orphan", passive_deletes=True,
         order_by="PackagingPallet.id")
+    branches: Mapped[list[Branch]] = relationship(secondary=packaging_branches, order_by="Branch.code")
+
+    @property
+    def label(self) -> str:
+        m = self.model
+        return f"{m.code} — {m.name}" if m is not None and m.name and m.name != m.code else (m.code if m else self.name)
+
+    @property
+    def branch_ids(self) -> set[int]:
+        return {b.id for b in self.branches}
 
     def units(self, _depth: int = 0) -> Optional[int]:
         """Unidades do produto numa embalagem cheia (multiplica a hierarquia)."""

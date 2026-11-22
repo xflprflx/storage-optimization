@@ -85,17 +85,19 @@ def test_suggestions_hierarchy_and_checks():
 
 
 def test_unitization_switch_branch_run_and_sku(db):
-    """Filial desligada (padrão) ignora as embalagens; a rodada só restringe; SKU "nunca" fica em unidades."""
-    from models import BinType, Branch, LocationBin, Product, ProductPackaging, StockItem, StorageLocation
+    """Filial desligada (padrão) ignora as embalagens; a rodada só restringe; SKU "nunca" fica em unidades; a
+    embalagem só vale nas filiais em que está habilitada."""
+    from models import BinType, Branch, LocationBin, PackagingModel, Product, ProductPackaging, StockItem, StorageLocation
     from services.optimization_service import run
 
     br = Branch(code="PKE", name="Caixas")
     bu = BinType(code="PKE-U", name="U", height=Decimal(40), width=Decimal(40), length=Decimal(40))
     bc = BinType(code="PKE-C", name="C", height=Decimal(40), width=Decimal(40), length=Decimal(40), store_as="cases")
+    m = PackagingModel(code="PKE-CX", name="Caixa", height=Decimal(20), width=Decimal(30), length=Decimal(20))
     pr = Product(sku="PKE-P", name="P", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.5"))
-    pr.packagings.append(ProductPackaging(name="Caixa", inner_qty=12, height=Decimal(20), width=Decimal(30),
-                                          length=Decimal(20), is_default=True))
-    db.add_all([br, bu, bc, pr])
+    k = ProductPackaging(model=m, name="PKE-CX", inner_qty=12)
+    pr.packagings.append(k)
+    db.add_all([br, bu, bc, m, pr])
     db.flush()
     loc = StorageLocation(branch_id=br.id, aisle="K", bay="01", level="1", position="1", compartment="", address="K-01-1-1")
     db.add(loc)
@@ -105,11 +107,17 @@ def test_unitization_switch_branch_run_and_sku(db):
     db.commit()
     base = dict(fill_limit=1.0, objective="min_bins", respect_levels=False, allowed_types={bc.id})
     got = lambda r: (r[0].suggested if r[0].applicable else r[0].current)  # noqa: E731
-    assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 1}  # filial desligada: 60 un. soltas = 1 bin
     br.unitization = "full"
+    db.commit()
+    assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 1}  # embalagem não habilitada na filial: unidades
+    k.branches.append(br)
     db.commit()
     assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 2}  # caixas de 12: 4 por bin = 48 → 2 bins
     assert got(run(db, [loc.id], Params(**base, unitization="off"))[0]) == {bc.id: 1}  # a rodada restringe
+    br.unitization = "off"
+    db.commit()
+    assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 1}  # filial desligada
+    br.unitization = "full"
     pr.unitization = "never"
     db.commit()
     assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 1}  # SKU nunca
@@ -118,15 +126,21 @@ def test_unitization_switch_branch_run_and_sku(db):
 def test_screens_product_packagings_branch_and_models(client, db):
     from models import BinType, Branch, PackagingModel, Product, ProductPackaging
 
-    r = client.post("/packaging-models/new", data={"code": "PK-CX40", "name": "Caixa 40", "height": "20", "width": "30",
-                                                     "length": "20", "tare": "0,5"}, follow_redirects=False)
-    assert r.status_code == 303
+    for code, h, w, ln in (("PK-CX40", "20", "30", "20"), ("PK-MST", "40", "60", "40")):
+        r = client.post("/packaging-models/new", data={"code": code, "name": code, "height": h, "width": w,
+                                                         "length": ln, "tare": "0,5"}, follow_redirects=False)
+        assert r.status_code == 303
     m = db.query(PackagingModel).filter_by(code="PK-CX40").one()
+    mm = db.query(PackagingModel).filter_by(code="PK-MST").one()
     r = client.post("/bin-types/new", data={"code": "PK-PAL", "name": "Palete", "height": "15", "width": "100",
                                              "length": "120", "max_weight": "1000", "store_as": "pallet", "open_top": "1"},
                     follow_redirects=False)
     assert r.status_code == 303
     pal = db.query(BinType).filter_by(code="PK-PAL").one()
+    r = client.post("/branches/new", data={"code": "PKB", "name": "Filial", "unitization": "cases"}, follow_redirects=False)
+    assert r.status_code == 303
+    fb = db.query(Branch).filter_by(code="PKB").one()
+    assert fb.unitization == "cases"
     r = client.post("/products/new", data={"sku": "PK-SKU", "name": "Produto", "height": "10", "width": "10",
                                            "length": "10", "weight": "0,5", "store_pref": "auto",
                                            "unitization": "branch", "mixed_packs": "1"}, follow_redirects=False)
@@ -135,40 +149,43 @@ def test_screens_product_packagings_branch_and_models(client, db):
     assert p.mixed_packs and p.unitization == "branch"
     base = f"/products/{p.id}/packagings"
     assert "Nenhuma embalagem" in client.get(base).text
-    calc = client.post(base + "/calc", data={"name": "Caixa", "model_id": str(m.id), "pal_idx": "n0",
-                                             "pal_type_n0": str(pal.id)}).json()
+    assert f'value="{fb.id}" id="br{fb.id}" checked' in client.get(base + "/new").text  # filial com unitização: marcada
+    calc = client.post(base + "/calc", data={"model_id": str(m.id), "pal_idx": "n0", "pal_type_n0": str(pal.id)}).json()
     assert calc["inner_qty"] == 12 and calc["pallets"]["n0"] == [20, 7]
-    # salvar sem quantidade nem paletização: calculadas pelas medidas do modelo
-    r = client.post(base + "/new", data={"name": "Caixa", "model_id": str(m.id), "pal_idx": "n0",
-                                         "pal_type_n0": str(pal.id)}, follow_redirects=False)
+    # salvar sem quantidade nem paletização: calculadas pelas medidas do modelo; habilitada na filial PKB
+    r = client.post(base + "/new", data={"model_id": str(m.id), "pal_idx": "n0", "sort": "1",
+                                         "pal_type_n0": str(pal.id), "branch_ids": str(fb.id)}, follow_redirects=False)
     assert r.status_code == 303
-    cx = db.query(ProductPackaging).filter_by(product_id=p.id, name="Caixa").one()
+    cx = db.query(ProductPackaging).filter_by(product_id=p.id, model_id=m.id).one()
     db.refresh(cx)
-    assert cx.is_default and cx.inner_qty == 12 and (cx.pallets[0].layer, cx.pallets[0].layers) == (20, 7)
-    r = client.post(base + "/new", data={"name": "Master", "inner_id": str(cx.id), "inner_qty": "4", "height": "40",
-                                         "width": "60", "length": "40", "is_default": "1"}, follow_redirects=False)
+    assert cx.branch_ids == {fb.id} and cx.inner_qty == 12 and (cx.pallets[0].layer, cx.pallets[0].layers) == (20, 7)
+    assert client.post(base + "/new", data={"model_id": str(m.id)}).status_code == 422  # o mesmo modelo de novo
+    r = client.post(base + "/new", data={"model_id": str(mm.id), "inner_id": str(cx.id), "inner_qty": "4", "sort": "2"},
+                    follow_redirects=False)  # master sem filial habilitada
     assert r.status_code == 303
     db.expire_all()
-    ms = db.query(ProductPackaging).filter_by(product_id=p.id, name="Master").one()
-    assert ms.is_default and ms.units() == 48 and not db.get(ProductPackaging, cx.id).is_default
+    ms = db.query(ProductPackaging).filter_by(product_id=p.id, model_id=mm.id).one()
+    assert not ms.branches and ms.units() == 48
     page = client.get(base).text
-    assert "Master" in page and "48" in page
+    assert "PK-MST" in page and "48" in page and "nenhuma (não entra na otimização)" in page
+    from services.packaging import product_packs
+
+    db.expire_all()
+    prod = db.get(Product, p.id)
+    pk, alts = product_packs(prod, "full", fb.id)
+    assert pk.qty == 12 and alts == ()  # só a caixa (habilitada na filial) vai para o otimizador
+    assert product_packs(prod, "full", fb.id + 999) == (None, ())  # outra filial: nenhuma habilitada
     # a caixa está dentro do master: não pode ser excluída; o modelo em uso também não
     client.post(f"{base}/{cx.id}/delete")
     assert db.query(ProductPackaging).filter_by(id=cx.id).count() == 1
     client.post(f"/packaging-models/{m.id}/delete")
     assert db.query(PackagingModel).filter_by(id=m.id).count() == 1
-    assert "Master" in client.get(f"/products/{p.id}").text
-    # filial: unitização
-    r = client.post("/branches/new", data={"code": "PKB", "name": "Filial", "unitization": "cases"}, follow_redirects=False)
-    assert r.status_code == 303 and db.query(Branch).filter_by(code="PKB").one().unitization == "cases"
-    assert db.query(Branch).filter_by(code="PKB").one().unitization != "off"
+    assert "PK-MST" in client.get(f"/products/{p.id}").text
 
 
 def test_imports(db, tmp_path):
-    from models import BinType, PackagingModel, Product
+    from models import BinType, Branch, PackagingModel, Product
     from services.master_importer import MASTER_KINDS, MasterOptions
-    from services.packaging import default_of
     from services.product_importer import PRODUCT_FIELDS, ImportOptions, import_products
     from tests.test_structure_import import _map
 
@@ -179,22 +196,29 @@ def test_imports(db, tmp_path):
     res = k["run"](db, p, _map(text.splitlines()[0], k["fields"]), MasterOptions())
     assert not res.errors
     assert {b.code: b.store_as for b in db.query(BinType).filter(BinType.code.like("PKI-%"))} == {"PKI-CX": "both", "PKI-PAL": "pallet"}
-    db.add(PackagingModel(code="PKI-M", name="M", height=Decimal(20), width=Decimal(30), length=Decimal(20)))
+    for code, h, w, ln in (("PKI-M", 20, 30, 20), ("PKI-D", 10, 30, 20), ("PKI-MS", 20, 60, 40)):
+        db.add(PackagingModel(code=code, name=code, height=Decimal(h), width=Decimal(w), length=Decimal(ln)))
+    if not db.query(Branch).filter_by(code="PKI").count():
+        db.add(Branch(code="PKI", name="Filial PKI"))
     db.commit()
-    # colunas do produto = a embalagem padrão (+ a paletização do palete informado)
-    text = ("SKU;Descricao;Altura;Largura;Comprimento;Peso;Unidades por caixa;Modelo de embalagem;Palete;Caixas por camada;Camadas;Unitizacao do SKU\n"
-            "PKI-1;A;10;10;10;0,5;;PKI-M;PKI-PAL;;;\nPKI-2;B;10;10;10;0,5;30;PKI-M;;;;nunca\n")
+    # colunas do produto = a embalagem do modelo informado (ou de um modelo criado pelas medidas da caixa)
+    text = ("SKU;Descricao;Altura;Largura;Comprimento;Peso;Unidades por caixa;Modelo de embalagem;Altura da caixa;"
+            "Largura da caixa;Comprimento da caixa;Palete;Caixas por camada;Camadas;Unitizacao do SKU\n"
+            "PKI-1;A;10;10;10;0,5;;PKI-M;;;;PKI-PAL;;;\nPKI-2;B;10;10;10;0,5;30;PKI-M;;;;;;;nunca\n"
+            "PKI-3;C;10;10;10;0,5;8;;20;40;20;;;;\n")
     p2 = tmp_path / "p.csv"
     p2.write_text(text, encoding="utf-8")
     r = import_products(db, p2, _map(text.splitlines()[0], PRODUCT_FIELDS), ImportOptions())
-    a, b = db.query(Product).filter_by(sku="PKI-1").one(), db.query(Product).filter_by(sku="PKI-2").one()
-    ka, kb = default_of(a), default_of(b)
-    assert ka.inner_qty == 12 and (ka.pallets[0].layer, ka.pallets[0].layers) == (20, 7)
+    a, b, c = (db.query(Product).filter_by(sku=s).one() for s in ("PKI-1", "PKI-2", "PKI-3"))
+    ka, kb, kc = a.packagings[0], b.packagings[0], c.packagings[0]
+    assert ka.model.code == "PKI-M" and ka.inner_qty == 12 and (ka.pallets[0].layer, ka.pallets[0].layers) == (20, 7)
+    assert {x.code for x in ka.branches} >= {"PKI"}  # nova: habilitada em todas as filiais
     assert kb.inner_qty == 30 and b.unitization == "never" and any("não cabem" in w for _l, w in r.warnings)
-    # importação de embalagens: hierarquia e dois paletes para a mesma embalagem
-    text = ("SKU;Embalagem;Feita de;Quantidade;Altura (cm);Largura (cm);Comprimento (cm);Padrao;Palete;Caixas por camada;Camadas\n"
-            "PKI-1;Display;;6;10;30;20;nao;;;\nPKI-1;Master;Display;4;20;60;40;sim;PKI-PAL;5;3\n"
-            "PKI-1;Master;Display;4;20;60;40;sim;PKI-PAL;5;6\nPKI-1;Errada;Nao existe;2;10;10;10;;;;\n")
+    assert kc.model.code == "EMB-20X40X20" and kc.inner_qty == 8  # modelo criado pelas medidas da caixa
+    # importação de embalagens: hierarquia por modelo, filiais habilitadas e dois paletes para a mesma embalagem
+    text = ("SKU;Modelo de embalagem;Quantidade;Feita de;Filiais habilitadas;Palete;Caixas por camada;Camadas\n"
+            "PKI-1;PKI-D;6;;nenhuma;;;\nPKI-1;PKI-MS;4;PKI-D;PKI;PKI-PAL;5;3\n"
+            "PKI-1;PKI-MS;4;PKI-D;PKI;PKI-PAL;5;6\nPKI-1;PKI-M;2;NAO-EXISTE;;;;\n")
     p3 = tmp_path / "k.csv"
     p3.write_text(text, encoding="utf-8")
     kk = MASTER_KINDS["packagings"]
@@ -202,20 +226,24 @@ def test_imports(db, tmp_path):
     assert len(res.errors) == 1 and "não encontrada" in res.errors[0][1]
     db.expire_all()
     a = db.query(Product).filter_by(sku="PKI-1").one()
-    ms = default_of(a)
-    assert ms.name == "Master" and ms.units() == 24 and sorted(pp.layers for pp in ms.pallets) == [3, 6]
-    assert len(a.packagings) == 3  # Caixa (das colunas), Display e Master
+    by = {x.model.code: x for x in a.packagings}
+    assert not by["PKI-D"].branches and [b.code for b in by["PKI-MS"].branches] == ["PKI"]
+    assert by["PKI-MS"].units() == 24 and sorted(pp.layers for pp in by["PKI-MS"].pallets) == [3, 6]
+    assert len(a.packagings) == 3  # PKI-M (das colunas), PKI-D e PKI-MS
 
 
 def test_migration_of_product_cases(db):
-    """Migração: a caixa e o palete gravados no produto pela versão anterior viram a embalagem padrão."""
+    """Migração: a caixa e o palete gravados no produto pela versão anterior viram uma embalagem do produto, com um
+    modelo criado pelas medidas da caixa, habilitada em todas as filiais."""
     from sqlalchemy import text
 
     from database import _migrate_product_cases, engine
-    from models import Product, ProductPackaging
+    from models import Branch, Product, ProductPackaging
 
     pr = Product(sku="PKM-1", name="M", height=Decimal(10), width=Decimal(10), length=Decimal(10))
     db.add(pr)
+    if not db.query(Branch).filter_by(code="PKM").count():
+        db.add(Branch(code="PKM", name="M"))
     db.commit()
     with engine.begin() as conn:
         cols = {r[1] for r in conn.execute(text("PRAGMA table_info(products)"))}
@@ -225,12 +253,13 @@ def test_migration_of_product_cases(db):
                       "pallet_layer", "pallet_layers"):
                 if c not in cols:
                     conn.execute(text(f"ALTER TABLE products ADD COLUMN {c} BIGINT"))
-        conn.execute(text("UPDATE products SET case_qty = 6, case_height = 200000, case_width = 300000, "
-                          "case_length = 200000 WHERE sku = 'PKM-1'"))
+        conn.execute(text("UPDATE products SET case_qty = 6, case_model_id = NULL, case_height = 210000, "
+                          "case_width = 310000, case_length = 410000 WHERE sku = 'PKM-1'"))
         _migrate_product_cases(conn)
     db.expire_all()
     k = db.query(ProductPackaging).filter_by(product_id=pr.id).one()
-    assert (k.name, k.inner_qty, float(k.height), k.is_default) == ("Caixa", 6, 20.0, True)
+    assert (k.inner_qty, k.model.code, float(k.model.height)) == (6, "EMB-21X31X41", 21.0)
+    assert db.query(Branch).count() == len(k.branches)
 
 
 def test_project_sheet_and_examples_bring_packaging(db, tmp_path):
@@ -273,3 +302,27 @@ def test_project_sheet_and_examples_bring_packaging(db, tmp_path):
     assert "Embalagens" in wb.sheetnames
     head = next(wb["SKUs"].iter_rows(values_only=True))
     assert "Unidades por caixa" in head and "Camadas" in head
+
+
+def test_unitization_example_sku_packagings(db, tmp_path):
+    """Exemplo de unitização: a aba Embalagens dos SKUs vira a lista de embalagens de cada SKU no projeto (hierarquia,
+    habilitada ou não, várias paletizações); SKU "nunca" e embalagem não habilitada ficam em unidades."""
+    from models import BinType
+    from services.site_examples import BY_SLUG, write_workbook
+    from services.site_import import import_file
+    from services.site_service import load_uploaded_demand, merged
+
+    cfg, msgs, errs = import_file(db, write_workbook(BY_SLUG["unitizacao"], tmp_path / "u.xlsx"), merged(None))
+    assert not errs, errs
+    assert cfg["demand"]["unitization"] == "full" and len(cfg["sku_packs"]) == 11
+    assert any("SACO-50" in m and "cabem até 3" in m for m in msgs)  # lastro maior que a base: aviso
+    d = {x.sku: x.unit for x in load_uploaded_demand(db, cfg["items"], cfg["demand"], cfg["sku_packs"])[0]}
+    pal = db.query(BinType).filter_by(code="PALETE").one()
+    p1 = d["UN0001"]
+    assert p1.pack.qty == 24 and [a.qty for a in p1.alts] == [96]  # caixa de 4 displays; master de 4 caixas
+    assert sorted(p1.alts[0].pallets[pal.id]) == [(2, 2), (2, 4)]  # palete baixo e alto
+    assert d["UN0002"].pack.qty == 12 and d["UN0002"].alts == ()  # sem embalagens diferentes por bin
+    assert d["UN0005"].pack is None  # SKU "nunca"
+    assert d["UN0009"].pack is None  # embalagem não habilitada
+    assert d["UN0010"].pack.qty and d["UN0010"].pack.qty > 1  # quantidade calculada pelas medidas
+    assert d["UN0006"].pack.pref == "cases" and d["UN0007"].pack.pref == "units"

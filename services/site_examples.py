@@ -41,11 +41,13 @@ BINS = {
     "BIN-8": ("Caixa bin nº 8", 21, 40, 55, 25, None, 46.00),
     "CX-50": ("Caixa organizadora 50 L", 32, 38, 52, 30, 50, 58.00),
     "PALETE": ("Palete PBR 120 × 100 (aberto em cima, carga até 150 cm)", 15, 120, 100, 1000, None, 85.00),
+    "MEIO-PAL": ("Meio palete 60 × 80 (aberto em cima, carga até 150 cm)", 15, 60, 80, 500, None, 50.00),
+    "BIN-CX": ("Bandeja de caixas 60 × 80", 30, 60, 80, 40, None, 35.00),
 }
 # bins abertas em cima: máximo acima da borda (cm) — o palete de 15 cm leva a carga até 150 cm
-OPEN_BINS = {"PALETE": 135}
+OPEN_BINS = {"PALETE": 135, "MEIO-PAL": 135}
 # unitização: o que cada bin guarda (vazio = unidades soltas)
-STORE_AS = {"BIN-8": "ambos", "CX-50": "ambos", "PALETE": "palete"}
+STORE_AS = {"BIN-8": "ambos", "CX-50": "ambos", "PALETE": "palete", "MEIO-PAL": "palete", "BIN-CX": "caixas"}
 # modelos de embalagem (caixas-padrão): código, nome, altura, largura, comprimento (cm), tara (kg)
 PACKAGING = [("CX-P", "Caixa de papelão pequena 15 × 20 × 30", 15, 20, 30, 0.25),
              ("CX-M", "Caixa de papelão média 25 × 30 × 40", 25, 30, 40, 0.45),
@@ -54,6 +56,66 @@ CASE_QTYS = (6, 10, 12, 20, 24, 50, 100)
 PACK_COLS = ["Unidades por caixa", "Modelo de embalagem", "Altura da caixa (cm)", "Largura da caixa (cm)",
              "Comprimento da caixa (cm)", "Peso da caixa cheia (kg)", "Palete (tipo de bin)", "Caixas por camada (lastro)",
              "Camadas", "Guardar em (automático/unidades/caixa)"]
+
+
+EXTRA_COLS = ["Guardar em (automático/unidades/caixa)", "Unitização do SKU (conforme a filial/nunca)",
+              "Embalagens diferentes por bin (sim/não)"]
+SKU_PACK_HEAD = ["SKU", "Modelo de embalagem", "Feita de (modelo; vazio = unidades)", "Quantidade", "Peso cheia (kg)",
+                 "Habilitada", "Ordem", "Palete (tipo de bin)", "Caixas por camada", "Camadas"]
+
+# --------------------------------------------------------------------------- #
+# Exemplo de unitização: um SKU para cada situação (embalagens em hierarquia, habilitadas ou não, várias
+# paletizações, palete sem paletização, SKU que nunca usa embalagem, "guardar em"…)
+# --------------------------------------------------------------------------- #
+# SKU, produto, material, alt, larg, comp (cm), peso (kg), saldo, min, max
+UNIT_SKUS = [
+    ("UN0001", "Parafuso sextavado M8 (display 6 → caixa 4 displays → master 4 caixas)", "Fixação", 5, 4.5, 4.5, 0.2, 2400, 600, 2400),
+    ("UN0002", "Lâmpada LED 9 W (caixa 12, sem paletização cadastrada)", "Elétrico", 12, 6, 6, 0.08, 480, 120, 480),
+    ("UN0003", "Tinta 18 L (lata no palete inteiro e no meio palete)", "Químico", 36, 32, 32, 23, 180, 60, 180),
+    ("UN0004", "Argamassa 20 kg (saco; palete baixo e alto)", "Construção", 11, 35, 45, 20, 360, 120, 360),
+    ("UN0005", "Fita isolante (tem caixa, mas o SKU nunca usa embalagem)", "Elétrico", 2.5, 9.5, 9.5, 0.05, 300, 80, 300),
+    ("UN0006", "Luva de proteção (guardar sempre na caixa)", "EPI", 3, 13, 26, 0.1, 240, 60, 240),
+    ("UN0007", "Joelho PVC 25 mm (guardar sempre em unidades soltas)", "Hidráulico", 5, 5, 7, 0.05, 400, 100, 400),
+    ("UN0008", "Disjuntor 20 A (sem embalagem cadastrada)", "Elétrico", 8.5, 2, 7, 0.12, 120, 40, 120),
+    ("UN0009", "Cabo flexível 2,5 mm² — rolo (caixa não habilitada)", "Elétrico", 10, 22, 22, 3.5, 60, 20, 60),
+    ("UN0010", "Silicone (display e caixa sem quantidade: calculadas pelas medidas)", "Químico", 5.5, 5.5, 24, 0.33, 288, 72, 288),
+    ("UN0011", "Cimento 50 kg (lastro informado maior que a base: aviso)", "Construção", 12, 40, 61, 50, 200, 80, 200),
+    ("UN0012", "Rejunte 5 kg (caixa 4 sacos; embalagens diferentes por bin)", "Construção", 10, 15, 20, 5, 240, 80, 240),
+]
+UNIT_EXTRA = {"UN0001": ("automático", "conforme a filial", "sim"), "UN0002": ("automático", "conforme a filial", "não"),
+              "UN0005": ("automático", "nunca", "não"), "UN0006": ("caixa", "conforme a filial", "não"),
+              "UN0007": ("unidades", "conforme a filial", "não"), "UN0012": ("automático", "conforme a filial", "sim")}
+# modelos de embalagem do exemplo (além das caixas-padrão): código, nome, altura, largura, comprimento (cm), tara (kg)
+UNIT_MODELS = [("DSP-PAR", "Display de parafusos", 5, 14, 9.5, 0.05),
+               ("MST-60", "Caixa master 31 × 41 × 61", 31, 41, 61, 1.2),
+               ("LATA-18", "Lata de 18 L", 37, 33, 33, 1.0),
+               ("SACO-20", "Saco de 20 kg", 11, 35, 45, 0.1),
+               ("SACO-50", "Saco de 50 kg", 12, 40, 61, 0.2),
+               ("CX-ROLO", "Caixa de 4 rolos", 22, 46, 46, 0.6),
+               ("DSP-SIL", "Display de silicone", 12, 25, 25, 0.15),
+               ("CX-REJ", "Caixa de rejunte (4 sacos)", 21, 31, 41, 0.5),
+               ("MST-REJ", "Master de rejunte (6 caixas)", 42, 62, 82, 1.5)]
+# SKU, modelo, feita de (modelo), quantidade, peso cheia, habilitada, ordem, palete, caixas por camada, camadas
+UNIT_PACKS = [
+    ("UN0001", "DSP-PAR", "", 6, None, "não", 3, None, None, None),  # o display existe, mas não é usado
+    ("UN0001", "CX-P", "DSP-PAR", 4, None, "sim", 1, "PALETE", None, None),  # caixa de 4 displays; lastro calculado
+    ("UN0001", "MST-60", "CX-P", 4, None, "sim", 2, "PALETE", 2, 2),  # master: palete baixo…
+    ("UN0001", "MST-60", "CX-P", 4, None, "sim", 2, "PALETE", 2, 4),  # …e alto
+    ("UN0002", "CX-P", "", 12, None, "sim", 1, None, None, None),  # sem paletização: calculada e avisada
+    ("UN0003", "LATA-18", "", 1, 23.5, "sim", 1, "PALETE", 9, 3),
+    ("UN0003", "LATA-18", "", 1, 23.5, "sim", 1, "MEIO-PAL", 2, 3),
+    ("UN0004", "SACO-20", "", 1, 20, "sim", 1, "PALETE", 6, 5),
+    ("UN0004", "SACO-20", "", 1, 20, "sim", 1, "PALETE", 6, 10),
+    ("UN0005", "CX-P", "", 10, None, "sim", 1, None, None, None),  # o SKU é "nunca": fica em unidades
+    ("UN0006", "CX-M", "", 12, None, "sim", 1, None, None, None),
+    ("UN0007", "CX-M", "", 50, None, "sim", 1, None, None, None),
+    ("UN0009", "CX-ROLO", "", 4, None, "não", 1, "PALETE", None, None),  # não habilitada
+    ("UN0010", "DSP-SIL", "", None, None, "sim", 1, None, None, None),  # quantidades calculadas pelas medidas
+    ("UN0010", "CX-M", "DSP-SIL", None, None, "sim", 2, None, None, None),
+    ("UN0011", "SACO-50", "", 1, 50, "sim", 1, "PALETE", 4, 5),  # lastro maior que a base: aviso
+    ("UN0012", "CX-REJ", "", 4, 20.5, "sim", 1, "PALETE", 6, 5),
+    ("UN0012", "MST-REJ", "CX-REJ", 6, None, "sim", 2, "PALETE", 1, 3),
+]
 
 
 def _packaging(row: tuple) -> tuple:
@@ -225,6 +287,31 @@ EXAMPLES = [
     },
 ]
 EXAMPLES.append({
+    "slug": "unitizacao",
+    "title": N_("Unitização: caixas, masters e paletes"),
+    "description": N_("Depósito de 36 × 22 m com porta-paletes junto às docas e picking em estantes, para ver a "
+                   "unitização: bins de unidades, de caixas e de \"unidades ou caixas\", palete PBR e meio palete. Cada "
+                   "SKU mostra uma situação: embalagens em hierarquia (display → caixa → master), embalagem não "
+                   "habilitada, duas paletizações no mesmo palete (baixo e alto), palete sem paletização (calculada e "
+                   "avisada), SKU que nunca usa embalagem, \"guardar sempre na caixa\" ou \"em unidades soltas\" e "
+                   "quantidades calculadas pelas medidas. Aba Embalagens dos SKUs; unitização ligada (caixas e paletes)."),
+    "tags": ["36 × 22 m", N_("unitização"), N_("hierarquia de embalagens"), N_("paletes"), "~70 SKUs"],
+    "building": {"length_m": 36, "width_m": 22, "clear_height_m": 8, "aisle_m": 1.2, "wall_gap_m": 0.3,
+                 "front_reserved_m": 6, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
+                 "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
+    "zones": [("Porta-paletes", None, None, 14, None, "ao longo do comprimento", 3.2, None, "PP-270-110"),
+              ("Picking", None, None, None, None, "ao longo do comprimento", None, 0, "EST-100-60, EST-120-60")],
+    "obstacles": [],
+    "sectors": [("Recebimento", 30, 4, "docas"), ("Expedição", 25, 4, "docas")],
+    "structures": {"PP-270-110": ("Otimizar", None, None, None), "EST-100-60": ("Otimizar", None, None, None),
+                   "EST-120-60": ("Otimizar", None, None, None)},
+    "bins": ["BIN-5", "BIN-7", "BIN-8", "BIN-CX", "PALETE", "MEIO-PAL"],
+    "skus": lambda rng: list(UNIT_SKUS) + _skus(rng, SMALL, (3, 4), SIZES, start=101, extras=False, prefix="UN"),
+    "sku_extra": UNIT_EXTRA,
+    "sku_packs": UNIT_PACKS,
+    "models": UNIT_MODELS,
+})
+EXAMPLES.append({
     "slug": "loja-camaras",
     "title": N_("Loja com câmaras refrigeradas"),
     "description": N_("Loja/depósito de 24 × 14 m: zona de seco em estantes (corredor de 1,2 m) e, no fundo, zona de "
@@ -375,7 +462,7 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
             SHARED_SIDES.get(STRUCTURES[code][1]))
            for code, mode in ex["structures"].items()], {2: 36, 17: 22, 22: 22})
     sheet(wb.create_sheet("Embalagens"), ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Tara (kg)"],
-          PACKAGING, {2: 40})
+          PACKAGING + list(ex.get("models") or []), {2: 40})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)",
@@ -384,11 +471,17 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
            for code in ex["bins"]], {2: 36, 11: 22})
     skus = ex["skus"](rng)
     cond = any(len(r) > 10 for r in skus)  # condição de armazenagem (só nos exemplos com refrigerados)
+    extra = ex.get("sku_extra")  # Guardar em, Unitização do SKU, Embalagens diferentes por bin
+    pack_cols = not ex.get("sku_packs")  # com a aba Embalagens dos SKUs, as colunas de embalagem da aba SKUs ficam fora
     sheet(wb.create_sheet("SKUs"),
           ["SKU", "Produto", "Material", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso (kg)", "Saldo",
-           "Min level", "Max level"] + (["Condição de armazenagem"] if cond else []) + PACK_COLS,
-          [tuple(r[:10]) + ((tuple(r[10:11]) or (None,)) if cond else ()) + _packaging(r) for r in skus],
+           "Min level", "Max level"] + (["Condição de armazenagem"] if cond else []) + (PACK_COLS if pack_cols else [])
+          + (EXTRA_COLS if extra else []),
+          [tuple(r[:10]) + ((tuple(r[10:11]) or (None,)) if cond else ()) + (_packaging(r) if pack_cols else ())
+           + (tuple(extra.get(r[0], (None, None, None))) if extra else ()) for r in skus],
           {2: 36, 11: 24})
+    if ex.get("sku_packs"):
+        sheet(wb.create_sheet("Embalagens dos SKUs"), SKU_PACK_HEAD, ex["sku_packs"], {1: 12, 2: 12, 3: 12})
     if ex.get("orders"):
         sheet(wb.create_sheet("Pedidos"), ["Pedido", "Data", "SKU", "Quantidade", "Liberação"],
               _orders(random.Random(f"pedidos-{ex['slug']}"), [r[0] for r in skus], ex["orders"],

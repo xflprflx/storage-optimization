@@ -752,7 +752,11 @@ def create_branch_from_plan(pid: int, form: FormData = Depends(form_data), db: S
     items = cfg.get("items") if cfg["demand"].get("source") == "upload" else None
     br, stats = create_branch(db, plan, code, name, wh_code, wh_name, link_skus=on("link_skus"), items=items,
                               create_products=on("create_products"), update_products=on("update_products"),
-                              default_mode=mode, launch_stock=on("launch_stock"))
+                              default_mode=mode, launch_stock=on("launch_stock"),
+                              sku_packs=cfg.get("sku_packs") if items is not None else None)
+    from services.site_service import unit_mode
+
+    br.unitization = unit_mode(cfg["demand"])  # a filial nova nasce com a unitização do projeto
     orders = cfg.get("orders") or {}
     if orders.get("skus"):  # histórico de pedidos do projeto vira o da filial (posição pela saída e simulador)
         from models import PickHistory

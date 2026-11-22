@@ -9,21 +9,22 @@
     <a href="/products/{{ product.id }}/packagings/new" class="btn btn-accent"><i class="bi bi-plus-lg"></i> {{ _("Nova embalagem") }}</a>
   </div>
 </div>
-<div class="small text-muted mb-3">{{ _("Embalagens em hierarquia: cada uma é feita de N unidades do produto ou de N embalagens de dentro (display → caixa → master). A padrão é a primeira opção em toda bin; as outras só entram com Embalagens diferentes por bin marcado no produto. Cada embalagem tem as paletizações por tipo de palete (caixas por camada × camadas); palete sem paletização: calculada pelas medidas. As embalagens só valem nas filiais com a unitização ligada (Cadastros → Filiais).") }}</div>
+<div class="small text-muted mb-3">{{ _h("A lista de <b>modelos de embalagem</b> do produto: as medidas e a tara vêm do modelo; aqui fica quantas unidades (ou embalagens de dentro: display → caixa → master) vão em cada um e as paletizações por tipo de palete. Cada embalagem é <b>habilitada por filial</b>: a otimização de uma filial só usa as habilitadas nela, na ordem — a 1ª é a primeira opção em toda bin; as outras só entram com Embalagens diferentes por bin marcado no produto. Palete sem paletização: calculada pelas medidas (e avisada). A filial também precisa estar com a unitização ligada (Cadastros → Filiais).") }}</div>
 <div class="small mb-3">{{ product.name }} · {{ _("Unitização do SKU") }}: <b>{{ _("Nunca (sempre unidades soltas)") if product.unitization == 'never' else _("Conforme a filial") }}</b>{% if product.mixed_packs %} · {{ _("embalagens diferentes por bin") }}{% endif %} · <a href="/products/{{ product.id }}/edit">{{ _("editar") }}</a></div>
 <div class="card">
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
-      <thead><tr><th>{{ _("Embalagem") }}</th><th>{{ _("Feita de") }}</th><th class="text-end">{{ _("Unidades") }}</th>
-        <th>{{ _("Medidas (cm)") }}</th><th class="text-end">{{ _("Peso cheia (kg)") }}</th><th>{{ _("Paletes") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th></tr></thead>
+      <thead><tr><th>{{ _("Modelo de embalagem") }}</th><th>{{ _("Contém") }}</th><th class="text-end">{{ _("Unidades") }}</th>
+        <th>{{ _("Medidas (cm)") }}</th><th class="text-end">{{ _("Peso cheia (kg)") }}</th><th>{{ _("Habilitada nas filiais") }}</th><th>{{ _("Paletes") }}</th><th class="text-end" style="width:110px">{{ _("Ações") }}</th></tr></thead>
       <tbody>
       {% for r in rows %}{% set k = r.k %}
         <tr>
-          <td class="fw-semibold">{% if k.is_default %}<i class="bi bi-star-fill text-warning" title="{{ _("Padrão") }}"></i> {% endif %}{{ k.name }}{% if k.model %}<div class="small text-muted mono">{{ k.model.code }}</div>{% endif %}</td>
-          <td>{{ k.inner_qty or '?' }} × {{ k.inner.name if k.inner else _("unidades") }}</td>
+          <td class="fw-semibold"><span class="mono">{{ k.model.code if k.model else k.name }}</span>{% if k.model %}<div class="small text-muted fw-normal">{{ k.model.name }}</div>{% endif %}</td>
+          <td>{{ k.inner_qty or '?' }} × {{ k.inner.model.code if k.inner and k.inner.model else (k.inner.name if k.inner else _("unidades")) }}</td>
           <td class="text-end">{{ r.units or '—' }}</td>
           <td>{% if r.dims[0] %}{{ r.dims[0]|dec }} × {{ r.dims[1]|dec }} × {{ r.dims[2]|dec }}{% else %}—{% endif %}</td>
           <td class="text-end">{{ r.weight|dec(3) if r.weight is not none else '—' }}</td>
+          <td class="small">{% for b in k.branches %}<span class="badge text-bg-success fw-normal me-1">{{ b.code }}</span>{% else %}<span class="text-muted">{{ _("nenhuma (não entra na otimização)") }}</span>{% endfor %}</td>
           <td class="small">{% for pp in k.pallets %}<div><span class="mono">{{ pp.pallet_type.code }}</span>: {% if pp.layer and pp.layers %}{{ _h("{a} por camada × {b} camadas", a=pp.layer, b=pp.layers) }}{% else %}{{ _("calculada pelas medidas") }}{% endif %}</div>{% endfor %}
             {% if r.missing and pallet_types %}<div class="text-muted">{{ _h("Sem paletização (calculada): {codes}", codes=r.missing|join(', ')) }}</div>{% endif %}
             {% for w in r.warnings %}<div class="text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}</td>
@@ -33,7 +34,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="text-center text-muted py-4">{{ _("Nenhuma embalagem cadastrada: o produto fica em unidades soltas.") }}</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-4">{{ _("Nenhuma embalagem cadastrada: o produto fica em unidades soltas.") }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

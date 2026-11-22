@@ -314,21 +314,19 @@ def _process_chunk(
                     setattr(prod, f, p[f])
             pack(prod, p)
     db.flush()
-    # embalagem padrão: o que dá para calcular pelas medidas (quantidade, paletizações) e os avisos
-    from services.packaging import check, default_of, fill
+    # embalagens: o que dá para calcular pelas medidas (quantidade, paletizações) e os avisos
+    from services.packaging import check, fill
 
     lines = {p["sku"]: p["line"] for p in parsed}
     packed = {p["sku"] for p in parsed if any(p.get(f) not in (None, "") for f in (
         "case_qty", "case_model", "case_height", "case_width", "case_length", "case_weight", "pallet_type",
         "pallet_layer", "pallet_layers"))}
     for sku, prod in products.items():
-        k = default_of(prod) if sku in packed else None
-        if k is None:
+        if sku not in packed:
             continue
-        for n_ in fill(k, prod):
-            result.warn(lines[sku], f"{sku}: {n_}")
-        for w in check(k, prod):
-            result.warn(lines[sku], f"{sku}: {w}")
+        for k in prod.packagings:
+            for n_ in fill(k, prod) + check(k, prod):
+                result.warn(lines[sku], f"{sku}: {n_}")
 
     # 3) Endereço padrão (filial/armazém, se informados, indicam o depósito do endereço)
     for p in parsed:

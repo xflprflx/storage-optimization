@@ -256,29 +256,73 @@ def _migrate_stock_policies(conn) -> None:
                          {"b": b, "p": pid, "l": loc if b == loc_br else None, "mn": mn, "mx": mx})
 
 
+def _auto_model(conn, h, w, ln) -> Optional[int]:
+    """Modelo de embalagem com essas medidas (valores gravados, escala 10⁴): o existente ou um novo "EMB-AxLxC"."""
+    from sqlalchemy import text
+
+    if not (h and w and ln):
+        return None
+    row = conn.execute(text("SELECT id FROM packaging_models WHERE height = :h AND width = :w AND length = :l "
+                            "ORDER BY id LIMIT 1"), {"h": h, "w": w, "l": ln}).first()
+    if row:
+        return row[0]
+    fmt = lambda v: f"{v / 10000:g}".replace(".", ",")  # noqa: E731
+    code = f"EMB-{fmt(h)}X{fmt(w)}X{fmt(ln)}"[:30]
+    res = conn.execute(text("INSERT INTO packaging_models (code, name, height, width, length, notes, created_at, "
+                            "updated_at) VALUES (:c, :n, :h, :w, :l, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                       {"c": code, "n": f"Caixa {fmt(h)} × {fmt(w)} × {fmt(ln)}", "h": h, "w": w, "l": ln})
+    return res.lastrowid
+
+
 def _migrate_product_cases(conn) -> None:
-    """Versão anterior: a caixa e o palete ficavam no produto (case_qty, case_*, pallet_*). Passam a ser a embalagem
-    padrão do produto (product_packagings) e a paletização dela (packaging_pallets). Roda uma vez por produto."""
+    """Versões anteriores da unitização:
+    - a caixa e o palete ficavam no produto (case_qty, case_*, pallet_*): viram uma embalagem do produto (o modelo é o
+      informado ou um criado com as medidas da caixa), habilitada em todas as filiais, com a paletização;
+    - a embalagem do produto tinha medidas próprias e "habilitada": as medidas viram um modelo de embalagem e a
+      habilitada vale para todas as filiais (as colunas antigas são removidas)."""
     from sqlalchemy import inspect, text
 
     insp = inspect(conn)
-    if "case_qty" not in {c["name"] for c in insp.get_columns("products")}:
-        return
-    rows = conn.execute(text(
-        "SELECT p.id, p.case_qty, p.case_model_id, p.case_height, p.case_width, p.case_length, p.case_weight, "
-        "p.pallet_type_id, p.pallet_layer, p.pallet_layers FROM products p WHERE p.case_qty IS NOT NULL AND NOT EXISTS "
-        "(SELECT 1 FROM product_packagings k WHERE k.product_id = p.id)")).all()
-    for pid, qty, mid, h, w, ln, wt, pal, lay, lays in rows:
-        res = conn.execute(text(
-            "INSERT INTO product_packagings (product_id, name, inner_qty, model_id, height, width, length, weight, "
-            "is_default, sort, created_at, updated_at) VALUES (:p, 'Caixa', :q, :m, :h, :w, :l, :wt, 1, 0, "
-            "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"), {"p": pid, "q": qty, "m": mid, "h": h, "w": w, "l": ln, "wt": wt})
-        if pal:
-            conn.execute(text(
-                "INSERT INTO packaging_pallets (packaging_id, pallet_type_id, layer, layers, created_at, updated_at) "
-                "VALUES (:k, :t, :a, :b, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
-                {"k": res.lastrowid, "t": pal, "a": lay, "b": lays})
-        conn.execute(text("UPDATE products SET case_qty = NULL WHERE id = :p"), {"p": pid})
+    branches = [r[0] for r in conn.execute(text("SELECT id FROM branches"))]
+
+    def enable_all(kid):
+        for bid in branches:
+            conn.execute(text("INSERT OR IGNORE INTO packaging_branches (packaging_id, branch_id) VALUES (:k, :b)"),
+                         {"k": kid, "b": bid})
+    pcols = {c["name"] for c in insp.get_columns("products")}
+    if "case_qty" in pcols:
+        rows = conn.execute(text(
+            "SELECT p.id, p.case_qty, p.case_model_id, p.case_height, p.case_width, p.case_length, p.case_weight, "
+            "p.pallet_type_id, p.pallet_layer, p.pallet_layers FROM products p WHERE p.case_qty IS NOT NULL AND NOT "
+            "EXISTS (SELECT 1 FROM product_packagings k WHERE k.product_id = p.id)")).all()
+        for pid, qty, mid, h, w, ln, wt, pal, lay, lays in rows:
+            mid = mid or _auto_model(conn, h, w, ln)
+            code = conn.execute(text("SELECT code FROM packaging_models WHERE id = :m"), {"m": mid}).scalar() if mid else ""
+            res = conn.execute(text(
+                "INSERT INTO product_packagings (product_id, name, inner_qty, model_id, weight, sort, created_at, "
+                "updated_at) VALUES (:p, :n, :q, :m, :wt, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                {"p": pid, "n": (code or "Caixa")[:40], "q": qty, "m": mid, "wt": wt})
+            kid = res.lastrowid
+            enable_all(kid)
+            if pal:
+                conn.execute(text(
+                    "INSERT INTO packaging_pallets (packaging_id, pallet_type_id, layer, layers, created_at, updated_at) "
+                    "VALUES (:k, :t, :a, :b, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"),
+                    {"k": kid, "t": pal, "a": lay, "b": lays})
+            conn.execute(text("UPDATE products SET case_qty = NULL WHERE id = :p"), {"p": pid})
+    kcols = {c["name"] for c in insp.get_columns("product_packagings")}
+    if "height" in kcols:
+        for kid, mid, h, w, ln in conn.execute(text(
+                "SELECT id, model_id, height, width, length FROM product_packagings")).all():
+            if not mid:
+                conn.execute(text("UPDATE product_packagings SET model_id = :m WHERE id = :k"),
+                             {"m": _auto_model(conn, h, w, ln), "k": kid})
+    if "enabled" in kcols:
+        for (kid,) in conn.execute(text("SELECT id FROM product_packagings WHERE enabled = 1")).all():
+            enable_all(kid)
+    for col in ("height", "width", "length", "enabled", "is_default"):
+        if col in kcols:
+            conn.execute(text(f"ALTER TABLE product_packagings DROP COLUMN {col}"))
 
 
 def init_db() -> None:

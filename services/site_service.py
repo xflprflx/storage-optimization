@@ -108,6 +108,7 @@ def merged(config: Optional[dict]) -> dict:
     out["items"] = list(cfg.get("items") or [])  # SKUs enviados por arquivo (fonte "upload")
     out["import_mapping"] = dict(cfg.get("import_mapping") or {})  # colunas da última importação
     out["orders"] = dict(cfg.get("orders") or {})  # resumo do histórico de pedidos (popularidade e pares)
+    out["sku_packs"] = dict(cfg.get("sku_packs") or {})  # aba Embalagens dos SKUs: {sku: [embalagem]}
     return out
 
 
@@ -386,7 +387,8 @@ def unit_mode(dc: dict) -> str:
     return m if m in ("off", "cases", "full") else "off"
 
 
-def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list[Demand], list[str]]:
+def load_uploaded_demand(db: Session, items: list[dict], dc: dict,
+                         sku_packs: Optional[dict] = None) -> tuple[list[Demand], list[str]]:
     """Demanda a partir dos SKUs enviados no arquivo do projeto (dados da filial NOVA).
     Dimensões/peso/nome vazios vêm do cadastro de produtos quando o SKU existe nele."""
     notes: list[str] = []
@@ -400,9 +402,10 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
         for p in db.scalars(select(Product).where(Product.sku.in_(skus[i:i + 900]))):
             cat[p.sku] = p
     f = lambda v: float(v) if v is not None else None  # noqa: E731
-    from services.packaging import catalogs, item_packs, load_products
+    from services.packaging import ALL, catalogs, item_packs, load_products
 
     mode = unit_mode(dc)
+    ref = int(dc["branch_id"]) if str(dc.get("branch_id") or "").isdigit() else ALL  # embalagens da filial de referência
     models, pallets = catalogs(db)
     withpk = load_products(db, [p.id for p in cat.values()]) if mode != "off" else {}
     out, no_level, from_cat, sug_q, sug_p = [], 0, 0, 0, 0
@@ -432,7 +435,8 @@ def load_uploaded_demand(db: Session, items: list[dict], dc: dict) -> tuple[list
         cond = (it.get("condition") or (p.storage_condition if p is not None else "") or "").strip().lower()
         # embalagens (unitização do projeto): a padrão da planilha (aba SKUs) sobre as do cadastro do produto
         pk, alts, sug = item_packs({**it, "h": dims[0], "w": dims[1], "l": dims[2], "wt": dims[3]},
-                                   withpk.get(p.id) if p is not None else None, models, pallets, mode)
+                                   withpk.get(p.id) if p is not None else None, models, pallets, mode,
+                                   (sku_packs or {}).get(it["sku"]), ref)
         sug_q += "case_qty" in sug
         sug_p += "pallet" in sug
         out.append(Demand(it["sku"], name, material, ProductUnit(it["sku"], q * factor, *dims, pk, alts),
@@ -486,9 +490,10 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
             lq = lq.where(StockPolicy.branch_id == int(bid))
         levels = {pid: float(v or 0) for pid, v in db.execute(lq.group_by(StockPolicy.product_id))}
     out, no_level = [], 0
-    from services.packaging import load_products, product_packs
+    from services.packaging import ALL, load_products, product_packs
 
     mode = unit_mode(dc)
+    ref = int(dc["branch_id"]) if str(dc.get("branch_id") or "").isdigit() else ALL  # embalagens da filial de referência
     withpk = load_products(db, db.scalars(stmt.with_only_columns(Product.id))) if mode != "off" else {}
     for p in db.scalars(stmt.order_by(Product.sku)):
         q = stock.get(p.id, 0.0)
@@ -505,7 +510,7 @@ def load_demand(db: Session, dc: dict) -> tuple[list[Demand], list[str]]:
         f = lambda v: float(v) if v is not None else None  # noqa: E731
         out.append(Demand(p.sku, p.name, p.material_type or "",
                           ProductUnit(p.sku, q * factor, f(p.height), f(p.width), f(p.length), f(p.weight),
-                                      *product_packs(withpk.get(p.id), mode)),
+                                      *product_packs(withpk.get(p.id), mode, ref)),
                           condition=p.storage_condition or ""))
     if no_level:
         label = _("nível mínimo") if basis == "min" else _("nível máximo")
@@ -522,7 +527,7 @@ def run_project(db: Session, cfg: dict) -> tuple[Optional[SitePlan], list[str]]:
     if cfg["demand"].get("source") == "upload":
         if not cfg.get("items"):
             return None, [_("Fonte da demanda = arquivo, mas nenhum SKU foi enviado. Importe a planilha (aba SKUs).")]
-        demands, notes = load_uploaded_demand(db, cfg["items"], cfg["demand"])
+        demands, notes = load_uploaded_demand(db, cfg["items"], cfg["demand"], cfg.get("sku_packs"))
     else:
         demands, notes = load_demand(db, cfg["demand"])
     caps = cfg["demand"].get("caps") or {}
@@ -745,7 +750,7 @@ DEFAULT_LOCATION_MODES = {  # o endereço padrão é da política de estoque da 
 def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: str, wh_name: str,
                   link_skus: bool = True, items: Optional[list] = None, create_products: bool = True,
                   update_products: bool = False, default_mode: str = "empty",
-                  launch_stock: bool = False) -> tuple[Branch, dict]:
+                  launch_stock: bool = False, sku_packs: Optional[dict] = None) -> tuple[Branch, dict]:
     """Cria a filial a partir do plano: armazém (opcional), estantes com a estrutura, níveis com vão e capacidade,
     endereços com as bins e, para os SKUs:
       - `create_products`: cadastra os produtos que ainda não existem (nome, material, dimensões, peso, min/max level,
@@ -783,7 +788,19 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
             products[pr.sku] = pr
     dec = lambda v: Decimal(str(v)) if v is not None else None  # noqa: E731
     sku_set = set(placed)
-    from services.packaging import apply_item_pack, catalogs
+    from services.packaging import apply_item_pack, apply_sheet_packs, catalogs
+
+    sku_packs = sku_packs or {}
+
+    def pack_into(pr, it, sku) -> bool:  # embalagens da planilha -> cadastro do produto
+        changed = False
+        if it.get("unitization") and pr.unitization != it["unitization"]:
+            pr.unitization, changed = it["unitization"], True
+        if it.get("mixed_packs") is not None and bool(pr.mixed_packs) != it["mixed_packs"]:
+            pr.mixed_packs, changed = it["mixed_packs"], True
+        if sku in sku_packs:  # as habilitadas na planilha ficam habilitadas na filial nova
+            return apply_sheet_packs(db, pr, sku_packs[sku], pk_models, pk_pallets, br) or changed
+        return apply_item_pack(db, pr, it, pk_models, pk_pallets, [br]) or changed
 
     pk_models, pk_pallets = catalogs(db)
     pending_levels: dict[str, dict] = {}  # sku -> min/max da filial nova (gravados na política depois)
@@ -803,7 +820,7 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 continue
             pr = Product(sku=sku[:60], **vals)
             db.add(pr)
-            apply_item_pack(db, pr, it, pk_models, pk_pallets)  # embalagem da planilha -> embalagem padrão
+            pack_into(pr, it, sku)
             products[sku] = pr
             stats["products_created"] += 1
             stats["unplaced"] += int(sku not in sku_set)
@@ -816,7 +833,7 @@ def create_branch(db: Session, plan: SitePlan, code: str, name: str, wh_code: st
                 if informed and getattr(pr, k) != v:
                     setattr(pr, k, v)
                     changed = True
-            changed = apply_item_pack(db, pr, it, pk_models, pk_pallets) or changed  # embalagem da planilha
+            changed = pack_into(pr, it, sku) or changed
             stats["products_updated"] += int(changed)
         if any(v is not None for v in levels.values()):
             pending_levels[sku] = levels

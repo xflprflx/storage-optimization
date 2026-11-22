@@ -63,15 +63,16 @@ def physical_bins(db: Session, location_ids: Iterable[int]) -> dict[int, list[Ph
     return out
 
 
-def _loc_mode(db: Session, location_id: int, prm=None) -> str:
-    """Modo de unitização do endereço: o da filial dele, restringido pela rodada (prm.unitization)."""
+def _loc_mode(db: Session, location_id: int, prm=None) -> tuple:
+    """(modo de unitização, filial) do endereço: o modo da filial dele, restringido pela rodada (prm.unitization)."""
     from services.packaging import branch_mode, effective
 
     loc = db.get(StorageLocation, location_id)
-    return effective(branch_mode(db, loc.branch_id if loc is not None else None), getattr(prm, "unitization", None))
+    bid = loc.branch_id if loc is not None else None
+    return effective(branch_mode(db, bid), getattr(prm, "unitization", None)), bid
 
 
-def _caps(product: Product, bt: BinType, prm=None, mode: str = "off") -> Optional[int]:
+def _caps(product: Product, bt: BinType, prm=None, mode=("off", None)) -> Optional[int]:
     """Capacidade de uma bin do tipo para o produto. Sem `prm`: encaixe geométrico, enchimento 100%
     (conteúdo de hoje). Com `prm`: os mesmos parâmetros da otimização (enchimento máximo, rotação...)."""
     from services.bin_optimizer import BinSpec, Params, ProductUnit, capacity
@@ -79,7 +80,7 @@ def _caps(product: Product, bt: BinType, prm=None, mode: str = "off") -> Optiona
     f = lambda v: float(v) if v is not None else None  # noqa: E731
     from services.packaging import unit_of
 
-    p = unit_of(product, 0, mode)
+    p = unit_of(product, 0, *mode)  # embalagens habilitadas na filial do endereço
     b = BinSpec(bt.id, bt.code, f(bt.height), f(bt.width), f(bt.length), f(bt.volume), f(bt.max_weight),
                 open_top=bool(bt.open_top), over_cm=f(bt.over_cm), store_as=bt.store_as or "units")
     if not p.has_dims or b.volume_cm3 is None:
@@ -119,7 +120,7 @@ def split_units(total: Decimal, weights: list[float]) -> list[Decimal]:
 
 
 def presume_distribution(bins: list[PhysBin], stock: dict[int, Decimal], products: dict[int, Product],
-                         types: dict[int, BinType], prm=None, mode: str = "off") -> list[tuple[PhysBin, int, Decimal]]:
+                         types: dict[int, BinType], prm=None, mode=("off", None)) -> list[tuple[PhysBin, int, Decimal]]:
     """Distribuição automática do saldo pelas bins: um SKU por bin, maior volume primeiro. Bins que sobrariam vazias
     vão para os SKUs mais apertados, e cada SKU é dividido entre as suas bins na proporção da capacidade —
     assim nenhuma bin do endereço fica vazia enquanto houver unidades para dividir."""

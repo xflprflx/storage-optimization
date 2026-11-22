@@ -23,7 +23,7 @@
         <dt class="col-5">{{ _("Volume") }}</dt><dd class="col-7">{{ product.dimensions.volume|dec(2) if product.dimensions.volume is not none else '—' }}</dd>
         <dt class="col-5">{{ _("Peso") }}</dt><dd class="col-7">{{ product.dimensions.weight|dec or '—' }}</dd>
         <dt class="col-5">{{ _("Embalagens") }}</dt><dd class="col-7">
-          {% for k in product.packagings %}<div>{% if k.is_default %}<i class="bi bi-star-fill text-warning" title="{{ _("Padrão") }}"></i> {% endif %}{{ k.name }}{% if k.units() %} · {{ _h("{n} un.", n=k.units()) }}{% endif %}{% if k.pallets %} · {{ _h("{n} palete(s)", n=k.pallets|length) }}{% endif %}</div>{% else %}—{% endfor %}
+          {% for k in product.packagings %}<div class="{% if not k.branches %}text-muted{% endif %}"><span class="mono">{{ k.model.code if k.model else k.name }}</span>{% if k.units() %} · {{ _h("{n} un.", n=k.units()) }}{% endif %}{% if k.pallets %} · {{ _h("{n} palete(s)", n=k.pallets|length) }}{% endif %} · {% for b in k.branches %}<span class="badge text-bg-success fw-normal">{{ b.code }}</span> {% else %}<span class="small">{{ _("sem filial habilitada") }}</span>{% endfor %}</div>{% else %}—{% endfor %}
           <a class="small" href="/products/{{ product.id }}/packagings">{{ _("gerenciar") }}</a></dd>
         <dt class="col-5">{{ _("Unitização do SKU") }}</dt><dd class="col-7">{{ _("Nunca (sempre unidades soltas)") if product.unitization == 'never' else _("Conforme a filial") }}{% if product.mixed_packs %} · {{ _("embalagens diferentes por bin") }}{% endif %}</dd>
         <dt class="col-5">{{ _("Saldo total") }}</dt><dd class="col-7 fw-bold">{{ total|dec }}</dd>

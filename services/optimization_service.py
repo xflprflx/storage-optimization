@@ -88,10 +88,11 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
     loc_branch: dict[int, int] = {}
 
     def packs_of(pid, lid):
-        mode = effective(bmodes.get(loc_branch.get(lid), "off"), unit_run)
-        key = (pid, mode)
-        if key not in pk_cache:
-            pk_cache[key] = product_packs(pprods.get(pid), mode)
+        br = loc_branch.get(lid)
+        mode = effective(bmodes.get(br, "off"), unit_run)
+        key = (pid, mode, br)
+        if key not in pk_cache:  # só as embalagens habilitadas na filial do endereço
+            pk_cache[key] = product_packs(pprods.get(pid), mode, br)
         return pk_cache[key]
     from models import ShelfLevel
 

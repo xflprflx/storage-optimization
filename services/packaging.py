@@ -63,8 +63,9 @@ def scope_mode(db: Session, branch_id, run: str = "branch") -> str:
 # Medidas, peso e unidades de uma embalagem
 # --------------------------------------------------------------------------- #
 def dims_of(k) -> tuple:
-    """(altura, largura, comprimento) externas: as da embalagem ou, sem elas, as do modelo."""
-    own = (_f(k.height), _f(k.width), _f(k.length))
+    """(altura, largura, comprimento) externas: as do modelo de embalagem (uma embalagem "virtual" da planilha pode
+    trazer medidas próprias)."""
+    own = (_f(getattr(k, "height", None)), _f(getattr(k, "width", None)), _f(getattr(k, "length", None)))
     if all(own):
         return own
     m = getattr(k, "model", None)
@@ -109,22 +110,39 @@ def pack_from(k, product):
                 getattr(product, "store_pref", None) or "auto", k.name or "", pallets)
 
 
-def ordered(product) -> list:
-    """Embalagens do produto: a padrão primeiro, depois as outras na ordem do cadastro."""
-    ks = list(getattr(product, "packagings", None) or [])
-    return sorted(ks, key=lambda k: (not k.is_default, k.sort or 0, k.id or 0))
+ANY = "any"  # embalagem habilitada em alguma filial
+ALL = "all"  # todas as embalagens do produto
+
+
+def enabled_in(k, branch=ANY) -> bool:
+    """A embalagem entra na otimização da filial (`branch` = id), em alguma filial (ANY) ou sempre (ALL)."""
+    if branch == ALL:
+        return True
+    if hasattr(k, "branches"):
+        ids = {b.id for b in k.branches}
+        return bool(ids) if branch == ANY else branch in ids
+    return bool(getattr(k, "enabled", True))  # embalagem "virtual" (planilha do projeto)
+
+
+def ordered(product, branch=ANY) -> list:
+    """Embalagens do produto na ordem do cadastro, só as habilitadas na filial (`branch` = id; ANY = em alguma
+    filial; ALL = todas)."""
+    ks = [k for k in (getattr(product, "packagings", None) or []) if enabled_in(k, branch)]
+    return sorted(ks, key=lambda k: (k.sort or 0, k.id or 0))
 
 
 def default_of(product):
-    ks = ordered(product)
+    """A primeira embalagem habilitada (sem nenhuma habilitada, a primeira do cadastro)."""
+    ks = ordered(product) or ordered(product, ALL)
     return ks[0] if ks else None
 
 
-def product_packs(product, mode: str) -> tuple:
-    """(embalagem padrão, outras) do otimizador para o modo de unitização; ("off" ou SKU "never") = (None, ())."""
+def product_packs(product, mode: str, branch=ANY) -> tuple:
+    """(1ª embalagem habilitada, as outras habilitadas) do otimizador para o modo de unitização; "off", SKU "never" ou
+    nenhuma habilitada = (None, ()). Sem embalagens diferentes por bin, só a 1ª habilitada vale."""
     if product is None or mode == "off" or getattr(product, "unitization", "branch") == "never":
         return None, ()
-    packs = [pk for pk in (pack_from(k, product) for k in ordered(product)) if pk is not None and pk.ok]
+    packs = [pk for pk in (pack_from(k, product) for k in ordered(product, branch)) if pk is not None and pk.ok]
     if not packs:
         return None, ()
     if mode == "cases":
@@ -141,7 +159,7 @@ def load_products(db: Session, product_ids) -> dict:
     out = {}
     opts = selectinload(Product.packagings).options(
         selectinload(ProductPackaging.pallets), selectinload(ProductPackaging.model),
-        selectinload(ProductPackaging.inner))
+        selectinload(ProductPackaging.inner), selectinload(ProductPackaging.branches))
     for i in range(0, len(ids), 900):
         q = (select(Product).where(Product.id.in_(ids[i:i + 900]), Product.packagings.any()).options(opts))
         for p in db.scalars(q):
@@ -150,7 +168,7 @@ def load_products(db: Session, product_ids) -> dict:
 
 
 def load_packs(db: Session, product_ids, mode: str = "full") -> dict:
-    """{produto: (embalagem padrão, outras)} dos produtos com embalagem, no modo de unitização."""
+    """{produto: (1ª embalagem habilitada, outras)} dos produtos com embalagem, no modo de unitização."""
     if mode == "off":
         return {}
     out = {}
@@ -161,11 +179,11 @@ def load_packs(db: Session, product_ids, mode: str = "full") -> dict:
     return out
 
 
-def unit_of(p, qty: float = 0, mode: str = "full"):
-    """ProductUnit do otimizador com as embalagens do produto no modo de unitização."""
+def unit_of(p, qty: float = 0, mode: str = "full", branch=ANY):
+    """ProductUnit do otimizador com as embalagens do produto habilitadas na filial, no modo de unitização."""
     from services.bin_optimizer import ProductUnit
 
-    pk, alts = product_packs(p, mode)
+    pk, alts = product_packs(p, mode, branch)
     return ProductUnit(p.sku, qty, _f(p.height), _f(p.width), _f(p.length), _f(p.weight), pk, alts)
 
 
@@ -289,11 +307,33 @@ def catalogs(db: Session) -> tuple[dict, dict]:
             {b.code: b for b in db.scalars(select(BinType).where(BinType.store_as == "pallet"))})
 
 
+def model_for_dims(db: Session, models: dict, h, w, ln):
+    """Modelo de embalagem com essas medidas (cm): o existente ou um novo "EMB-AxLxC" (colunas de medidas da caixa das
+    importações, sem código de modelo)."""
+    from decimal import Decimal
+
+    from models import PackagingModel
+
+    if not (h and w and ln):
+        return None
+    dims = (Decimal(str(h)), Decimal(str(w)), Decimal(str(ln)))
+    for m in models.values():
+        if (m.height, m.width, m.length) == dims:
+            return m
+    fmt = lambda v: f"{float(v):g}".replace(".", ",")  # noqa: E731
+    m = PackagingModel(code=f"EMB-{fmt(h)}X{fmt(w)}X{fmt(ln)}"[:30], name=f"Caixa {fmt(h)} × {fmt(w)} × {fmt(ln)}",
+                       height=dims[0], width=dims[1], length=dims[2], notes="")
+    db.add(m)
+    db.flush()
+    models[m.code] = m
+    return m
+
+
 class _K:
     """Embalagem "virtual" (não gravada), com a mesma interface de ProductPackaging."""
 
     def __init__(self, **kw):
-        self.inner, self.pallets, self.is_default, self.sort, self.id = None, [], True, 0, 0
+        self.inner, self.pallets, self.enabled, self.sort, self.id = None, [], True, 0, 0
         self.__dict__.update(kw)
 
     def units(self, _depth: int = 0):
@@ -302,26 +342,30 @@ class _K:
         return int(self.inner_qty) * (self.inner.units(_depth + 1) if self.inner is not None else 1)
 
 
+def _virtual_model(models: dict, code: str, h, w, ln):
+    """O modelo pelo código; sem ele, as medidas informadas (embalagem com medidas próprias, só para o cálculo)."""
+    from types import SimpleNamespace
+
+    m = models.get(code or "")
+    if m is not None:
+        return m
+    if h and w and ln:
+        return SimpleNamespace(code="", name="", height=h, width=w, length=ln, tare=None)
+    return None
+
+
 def item_packaging(it: dict, product, models: dict, pallets: dict):
-    """A embalagem padrão do SKU do projeto: as colunas da planilha sobre a padrão do cadastro do produto.
-    Retorna (embalagem, sugeridos) — sugeridos ⊂ {"case_qty", "pallet"} (calculados pelas medidas)."""
+    """A embalagem do SKU do projeto pelas colunas da aba SKUs, sobre a 1ª habilitada do cadastro do produto.
+    Retorna (embalagem, produto, sugeridos) — sugeridos ⊂ {"case_qty", "pallet"} (calculados pelas medidas)."""
     from types import SimpleNamespace
 
     base = default_of(product) if product is not None else None
-
-    def pick(key, attr):
-        v = it.get(key)
-        return v if v not in (None, "") else (getattr(base, attr) if base is not None else None)
-
-    model = models.get(it.get("case_model") or "") or (base.model if base is not None else None)
-    own = [it.get(k) for k in ("case_h", "case_w", "case_l")]
-    use_own = all(v not in (None, "") for v in own)
-    k = _K(name=(base.name if base is not None else "") or "Caixa", inner=base.inner if base is not None else None,
-           inner_qty=pick("case_qty", "inner_qty"), model=model,
-           height=own[0] if use_own else (base.height if base is not None else None),
-           width=own[1] if use_own else (base.width if base is not None else None),
-           length=own[2] if use_own else (base.length if base is not None else None),
-           weight=pick("case_wt", "weight"))
+    model = _virtual_model(models, it.get("case_model"), it.get("case_h"), it.get("case_w"), it.get("case_l")) or (
+        base.model if base is not None else None)
+    qty = it.get("case_qty") if it.get("case_qty") not in (None, "") else (base.inner_qty if base is not None else None)
+    wt = it.get("case_wt") if it.get("case_wt") not in (None, "") else (base.weight if base is not None else None)
+    k = _K(name=(getattr(model, "code", "") or "Caixa"), inner=base.inner if base is not None else None, inner_qty=qty,
+           model=model, weight=wt)
     k.pallets = list(base.pallets) if base is not None else []
     pal = pallets.get(it.get("pallet") or "")
     if pal is not None:
@@ -332,8 +376,7 @@ def item_packaging(it: dict, product, models: dict, pallets: dict):
                            length=it.get("l") if it.get("l") is not None else _f(getattr(product, "length", None)),
                            weight=it.get("wt") if it.get("wt") is not None else _f(getattr(product, "weight", None)))
     sug = set()
-    before_q = k.inner_qty
-    before_p = [(pp.layer, pp.layers) for pp in k.pallets]
+    before_q, before_p = k.inner_qty, [(pp.layer, pp.layers) for pp in k.pallets]
     fill(k, prod)
     if k.inner_qty and not before_q:
         sug.add("case_qty")
@@ -342,33 +385,64 @@ def item_packaging(it: dict, product, models: dict, pallets: dict):
     return k, prod, sug
 
 
-def item_packs(it: dict, product, models: dict, pallets: dict, mode: str):
-    """(embalagem padrão, outras, sugeridos) do SKU do projeto para o otimizador."""
+def sheet_packagings(rows: list[dict], models: dict, pallets: dict) -> list:
+    """Embalagens do SKU vindas da aba "Embalagens dos SKUs" do projeto: uma por modelo de embalagem, na ordem; "Feita
+    de" é o código de outro modelo da lista do SKU."""
+    from types import SimpleNamespace
+
+    out, by_code = [], {}
+    for r in sorted(rows, key=lambda r: (r.get("sort") or 0)):
+        m = models.get(r["model"])
+        if m is None:
+            continue
+        k = _K(name=m.code, inner=None, inner_qty=r.get("qty"), model=m, weight=r.get("wt"))
+        k.enabled, k.sort, k._inner = r.get("enabled", True), r.get("sort") or 0, (r.get("inner") or "")
+        k.pallets = [SimpleNamespace(pallet_type_id=pallets[c].id, pallet_type=pallets[c], layer=a, layers=b)
+                     for c, a, b in r.get("pallets") or [] if c in pallets]
+        out.append(k)
+        by_code[m.code] = k
+    for k in out:
+        inner = by_code.get(k._inner)
+        k.inner = inner if inner is not k else None
+    return out
+
+
+def item_packs(it: dict, product, models: dict, pallets: dict, mode: str, sheet: Optional[list] = None,
+               branch=ALL):
+    """(1ª embalagem, outras habilitadas, sugeridos) do SKU do projeto para o otimizador. Prioridade: a lista da aba
+    Embalagens dos SKUs (`sheet`), depois as colunas de embalagem da aba SKUs, depois as embalagens do cadastro do
+    produto habilitadas na filial de referência (`branch`; ALL = todas)."""
     from types import SimpleNamespace
 
     if mode == "off":
         return None, (), set()
     pref = it.get("store_pref") or (getattr(product, "store_pref", None) if product is not None else None) or "auto"
-    unitization = getattr(product, "unitization", "branch") if product is not None else "branch"
-    mixed = getattr(product, "mixed_packs", False) if product is not None else False
-    if item_has_pack(it):
+    unitization = it.get("unitization") or (getattr(product, "unitization", "branch") if product is not None else "branch")
+    mixed = it.get("mixed_packs") if it.get("mixed_packs") is not None else (
+        getattr(product, "mixed_packs", False) if product is not None else False)
+    sug: set = set()
+    if sheet:
+        prod = SimpleNamespace(height=it.get("h"), width=it.get("w"), length=it.get("l"), weight=it.get("wt"),
+                               store_pref=pref)
+        ks = sheet_packagings(sheet, models, pallets)
+        for k in ks:
+            before = (k.inner_qty, [(pp.layer, pp.layers) for pp in k.pallets])
+            fill(k, prod)
+            if k.inner_qty and not before[0]:
+                sug.add("case_qty")
+            if [(pp.layer, pp.layers) for pp in k.pallets] != before[1]:
+                sug.add("pallet")
+        ks = [k for k in ks if k.enabled]
+    elif item_has_pack(it):
         k, prod, sug = item_packaging(it, product, models, pallets)
-        others = [x for x in ordered(product)[1:]] if product is not None else []
+        first = default_of(product) if product is not None else None
+        ks = [k] + [x for x in ordered(product, branch) if x is not first] if product is not None else [k]
     elif product is not None and product.packagings:
-        k, prod, sug = None, product, set()
-        others = ordered(product)
+        prod, ks = product, ordered(product, branch)
     else:
         return None, (), set()
-    packs = []
-    if k is not None:
-        pk = pack_from(k, SimpleNamespace(weight=prod.weight, store_pref=pref))
-        if pk is not None:
-            packs.append(pk)
-    for o in others:
-        pk = pack_from(o, SimpleNamespace(weight=_f(product.weight), store_pref=pref))
-        if pk is not None:
-            packs.append(pk)
-    packs = [pk for pk in packs if pk.ok]
+    unit = SimpleNamespace(weight=_f(getattr(prod, "weight", None)), store_pref=pref)
+    packs = [pk for pk in (pack_from(k, unit) for k in ks) if pk is not None and pk.ok]
     if not packs or unitization == "never":
         return None, (), sug
     if mode == "cases":
@@ -376,9 +450,52 @@ def item_packs(it: dict, product, models: dict, pallets: dict, mode: str):
     return packs[0], (tuple(packs[1:]) if mixed else ()), sug
 
 
-def apply_item_pack(db: Session, pr, it: dict, models: dict, pallets: dict) -> bool:
-    """Grava a embalagem das colunas (importação de produtos e planilha do projeto) como a embalagem padrão do
-    produto: cria a padrão se não houver; só os campos preenchidos; a paletização do palete informado."""
+def _all_branches(db: Session) -> list:
+    from models import Branch
+
+    return list(db.scalars(select(Branch)))
+
+
+def apply_sheet_packs(db: Session, pr, rows: list[dict], models: dict, pallets: dict, branch=None) -> bool:
+    """Grava no cadastro do produto a lista da aba Embalagens dos SKUs (cria/atualiza pelo modelo; as paletizações
+    ficam iguais às da aba). As habilitadas na aba ficam habilitadas na filial `branch` (a criada pelo projeto)."""
+    from decimal import Decimal
+
+    from models import PackagingPallet, ProductPackaging
+
+    by_model = {k.model_id: k for k in pr.packagings if k.model_id}
+    for r in sorted(rows, key=lambda r: (r.get("sort") or 0)):
+        m = models.get(r["model"])
+        if m is None:
+            continue
+        k = by_model.get(m.id)
+        if k is None:
+            k = ProductPackaging(model=m, model_id=m.id, name=m.code[:40])
+            pr.packagings.append(k)
+            by_model[m.id] = k
+        k.inner_qty, k.sort = r.get("qty"), r.get("sort") or 0
+        k.weight = Decimal(str(r["wt"])) if r.get("wt") not in (None, "") else None
+        k.pallets[:] = [PackagingPallet(pallet_type_id=pallets[c].id, pallet_type=pallets[c], layer=a, layers=b)
+                        for c, a, b in r.get("pallets") or [] if c in pallets]
+        if branch is not None:
+            if r.get("enabled", True) and branch not in k.branches:
+                k.branches.append(branch)
+            elif not r.get("enabled", True) and branch in k.branches:
+                k.branches.remove(branch)
+    for r in rows:
+        m, inner = models.get(r["model"]), models.get(r.get("inner") or "")
+        if m is not None:
+            k = by_model[m.id]
+            k.inner = by_model.get(inner.id) if inner is not None and inner.id != m.id else None
+    for k in pr.packagings:
+        fill(k, pr)
+    return bool(rows)
+
+
+def apply_item_pack(db: Session, pr, it: dict, models: dict, pallets: dict, branches=None) -> bool:
+    """Grava a embalagem das colunas (importação de produtos e planilha do projeto) no cadastro do produto: a do modelo
+    informado (ou do modelo com as medidas da caixa, criado se preciso); nova = habilitada em `branches` (vazio =
+    todas as filiais); só os campos preenchidos; a paletização do palete informado."""
     from decimal import Decimal
 
     from models import PackagingPallet, ProductPackaging
@@ -389,24 +506,26 @@ def apply_item_pack(db: Session, pr, it: dict, models: dict, pallets: dict) -> b
         changed = True
     if not item_has_pack(it):
         return changed
-    k = default_of(pr)
+    m = models.get(it.get("case_model") or "") or model_for_dims(db, models, it.get("case_h"), it.get("case_w"),
+                                                                  it.get("case_l"))
+    k = next((x for x in pr.packagings if m is not None and x.model_id == m.id), None) if m is not None else None
+    if k is None and m is None:
+        k = default_of(pr)
     if k is None:
-        k = ProductPackaging(name="Caixa", is_default=True, sort=0)
+        if m is None:
+            return changed  # sem modelo nem medidas: não há embalagem para gravar
+        k = ProductPackaging(model=m, model_id=m.id, name=m.code[:40], sort=len(pr.packagings) + 1)
+        k.branches = list(branches) if branches is not None else _all_branches(db)
         pr.packagings.append(k)
         changed = True
-    sets = {"inner_qty": it.get("case_qty"), "height": it.get("case_h"), "width": it.get("case_w"),
-            "length": it.get("case_l"), "weight": it.get("case_wt")}
-    for attr, v in sets.items():
+    for attr, key in (("inner_qty", "case_qty"), ("weight", "case_wt")):
+        v = it.get(key)
         if v in (None, ""):
             continue
         v = int(v) if attr == "inner_qty" else Decimal(str(v))
         if getattr(k, attr) != v:
             setattr(k, attr, v)
             changed = True
-    m = models.get(it.get("case_model") or "")
-    if m is not None and k.model_id != m.id:
-        k.model_id, k.model = m.id, m
-        changed = True
     pal = pallets.get(it.get("pallet") or "")
     if pal is not None:
         pp = next((x for x in k.pallets if x.pallet_type_id == pal.id), None)

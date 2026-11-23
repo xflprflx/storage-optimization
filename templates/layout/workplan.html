@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Plano de obra e movimentação") }}{% endblock %}
+{% block content %}
+{% set S = plan.summary %}
+<div class="page-header d-flex flex-wrap align-items-center gap-2">
+  <h1 class="me-auto"><i class="bi bi-cone-striped"></i> {{ _("Plano de obra e movimentação") }}</h1>
+  <a class="btn btn-sm btn-outline-secondary" href="{{ back }}"><i class="bi bi-arrow-left"></i> {{ _("Voltar à proposta") }}</a>
+</div>
+<div class="small text-muted mb-1">{{ plan.title }}</div>
+<div class="small text-muted mb-3">{{ _("O que fazer fisicamente para executar a proposta, na ordem: estantes que mudam de lugar, estantes a recompor (o endereço de cada bin não muda: ela volta ao mesmo nível), as bins que vão para os níveis ganhos e as movimentações de SKUs da proposta do otimizador. Os tempos são estimativas com os parâmetros abaixo.") }}</div>
+
+<form method="get" class="card mb-3" id="wpForm">
+  {% for k, v in hidden.items() %}{% if v is iterable and v is not string %}{% for x in v %}<input type="hidden" name="{{ k }}" value="{{ x }}">{% endfor %}{% else %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endif %}{% endfor %}
+  <div class="card-body row g-3 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label">{{ _("Segundos por bin") }}</label>
+      <input class="form-control text-end" name="t_bin_s" inputmode="decimal" value="{{ plan.times.bin_s|dec(1) }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label">{{ _("Minutos por estante movida") }}</label>
+      <input class="form-control text-end" name="t_move_min" inputmode="decimal" value="{{ plan.times.move_min|dec(1) }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label">{{ _("Minutos por estante recomposta") }}</label>
+      <input class="form-control text-end" name="t_respace_min" inputmode="decimal" value="{{ plan.times.respace_min|dec(1) }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label">{{ _("Segundos por unidade movida") }}</label>
+      <input class="form-control text-end" name="t_piece_s" inputmode="decimal" value="{{ plan.times.piece_s|dec(1) }}"></div>
+    {% if has_changes %}<div class="col-md-2"><input type="hidden" name="fill" value="0">
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="fill" value="1" id="wpFill" {% if do_fill %}checked{% endif %}>
+        <label class="form-check-label" for="wpFill">{{ _("Ocupar os níveis ganhos") }}</label></div></div>{% endif %}
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-accent"><i class="bi bi-calculator"></i> {{ _("Recalcular") }}</button>
+      <button class="btn btn-outline-secondary" name="fmt" value="xlsx" title="{{ _("Exportar") }}"><i class="bi bi-file-earmark-excel"></i></button>
+    </div>
+  </div>
+</form>
+
+<div class="row g-2 mb-3">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2"><div class="small text-muted">{{ _("Etapas") }}</div><div class="fs-5 fw-semibold">{{ S.steps|dec }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2"><div class="small text-muted">{{ _("Bins manuseadas") }}</div><div class="fs-5 fw-semibold">{{ S.bins|dec }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2"><div class="small text-muted">{{ _("Unidades envolvidas") }}</div><div class="fs-5 fw-semibold">{{ S.units|dec }}</div></div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2"><div class="small text-muted">{{ _("Horas estimadas") }}</div><div class="fs-5 fw-semibold">{{ S.hours|dec(1) }}</div>
+    <div class="small text-muted">{% for st in S.stages %}{{ st.stage }}: {{ st.hours|dec(1) }} h{% if not loop.last %} · {% endif %}{% endfor %}</div></div></div></div>
+</div>
+
+{% if has_changes and do_fill and fill is not none and not fill.rows %}
+<div class="alert alert-info small"><i class="bi bi-info-circle"></i> {{ _h("Nenhuma bin precisa dos {n} nível(is) ganho(s) com o max level de hoje: sobram {f} bin(s) de capacidade. Para ocupá-los, aumente o max level (Plano de ocupação) ou traga SKUs de outros endereços (Pool de bins).", n=fill.created, f=fill.free) }}
+  <a href="/optimization/occupancy" class="alert-link">{{ _("Plano de ocupação") }}</a></div>
+{% endif %}
+{% if not has_cmp %}<div class="small text-muted mb-2"><i class="bi bi-info-circle"></i> {{ _("Sem proposta do otimizador ligada: os SKUs ficam onde estão (só vão junto com as estantes). Gere a proposta a partir do resultado do otimizador para incluir as movimentações de SKUs.") }}</div>{% endif %}
+
+<div class="card">
+  <div class="table-responsive"><table class="table table-sm table-hover mb-0 small align-middle">
+    <thead class="table-light"><tr><th>#</th><th>{{ _("Etapa") }}</th><th>{{ _("Estante") }}</th><th>{{ _("Ação") }}</th>
+      <th class="text-end">{{ _("Endereços") }}</th><th class="text-end">{{ _("Bins") }}</th><th>{{ _("Bins por tipo") }}</th>
+      <th class="text-end">{{ _("Unidades") }}</th><th class="text-end">SKUs</th><th class="text-end">{{ _("Minutos") }}</th></tr></thead>
+    <tbody>
+    {% for s in plan.steps %}
+      <tr><td>{{ s.n }}</td><td class="text-nowrap">{{ s.stage }}</td><td class="mono">{{ s.bay }}</td>
+        <td>{{ s.action }}{% if s.detail %}<div class="text-muted">{{ s.detail }}</div>{% endif %}</td>
+        <td class="text-end">{{ s.addresses if s.addresses is not none else '—' }}</td>
+        <td class="text-end">{{ s.bins if s.bins is not none else '—' }}</td>
+        <td class="text-nowrap">{{ s.types }}</td>
+        <td class="text-end">{{ s.units|dec if s.units is not none else '—' }}</td>
+        <td class="text-end">{{ s.skus if s.skus is not none else '—' }}</td>
+        <td class="text-end">{{ s.minutes|dec(1) }}</td></tr>
+    {% else %}
+      <tr><td colspan="10" class="text-center text-muted py-4">{{ _("Nada a fazer nesta opção: nenhuma estante muda de lugar ou é recomposta.") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

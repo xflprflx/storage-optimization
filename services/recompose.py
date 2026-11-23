@@ -523,15 +523,30 @@ def apply(db: Session, res: dict, idx: Optional[list[int]] = None) -> dict:
     """Grava as recomposições escolhidas (todas ou as de `idx`): estrutura da estante, vão de cada nível, níveis
     novos (reservados, sem endereço) e de cima removidos (sem endereço nem bins), e a capacidade de cada nível.
     Guarda o estado anterior para desfazer. Retorna {bays, levels_created, levels_removed, log_id}."""
-    from decimal import Decimal
-
-    from models import BayStructure, RecompositionLog, StructureType
-    from services.level_service import bay_levels, drop_unused_levels, ensure_level
-    from services.structure_service import _level_codes, recalc_capacities
+    from models import RecompositionLog
 
     b_id, wid = res["branch_id"], res["warehouse_id"]
     chosen = [c for i, c in enumerate(res["changes"]) if idx is None or i in idx]
     snap = [_snapshot_bay(db, b_id, wid, c["aisle"], c["bay"]) for c in chosen]
+    stats, created = apply_changes(db, b_id, wid, chosen)
+    log = RecompositionLog(branch_id=b_id, warehouse_id=wid, data={"before": snap, "created": created,
+                                                                   "summary": {**stats, "gain": sum(c["gain"] for c in chosen)}})
+    db.add(log)
+    db.commit()
+    stats["log_id"] = log.id
+    return stats
+
+
+def apply_changes(db: Session, b_id: int, wid, chosen: list[dict]) -> tuple[dict, dict]:
+    """As mudanças da recomposição no banco, sem gravar (sem commit): estrutura, vãos, níveis novos e removidos e a
+    capacidade dos níveis. Retorna (estatísticas, {"corredor|estante": [níveis criados]}). Usada pelo apply e pela
+    simulação do plano de obra (que desfaz tudo depois)."""
+    from decimal import Decimal
+
+    from models import BayStructure, StructureType
+    from services.level_service import bay_levels, drop_unused_levels, ensure_level
+    from services.structure_service import _level_codes, recalc_capacities
+
     stats = {"bays": 0, "levels_created": 0, "levels_removed": 0}
     touched: set[tuple] = set()
     created: dict[str, list[str]] = {}
@@ -571,12 +586,7 @@ def apply(db: Session, res: dict, idx: Optional[list[int]] = None) -> dict:
         stats["bays"] += 1
     db.flush()
     recalc_capacities(db, touched)  # capacidade de cada nível pelo vão novo (os limites manuais ficam)
-    log = RecompositionLog(branch_id=b_id, warehouse_id=wid, data={"before": snap, "created": created,
-                                                                   "summary": {**stats, "gain": sum(c["gain"] for c in chosen)}})
-    db.add(log)
-    db.commit()
-    stats["log_id"] = log.id
-    return stats
+    return stats, created
 
 
 def last_log(db: Session, branch_id: int, wid: Optional[int]):

@@ -60,7 +60,8 @@
       <form method="post" action="/layout/plan/combined/apply" class="m-0 d-inline" onsubmit="return confirm(_t('Aplicar esta opção: a planta da variação e a recomposição das estruturas calculada nela?'))">
         <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="idx" value="{{ loop.index0 }}">
         <button class="btn btn-sm {{ 'btn-success' if (o.best_walk or o.best_gain) else 'btn-outline-primary' }}"><i class="bi bi-check-lg"></i> {{ _("Aplicar as duas") if not v.current and rc.changes else _("Aplicar") }}</button>
-      </form>{% endif %}</td>
+      </form>{% endif %}
+      {% if o.feasible and (not v.current or rc.changes) %}<a class="btn btn-sm btn-outline-secondary" href="/layout/plan/combined/job/{{ token }}/workplan?idx={{ loop.index0 }}" title="{{ _('Plano de obra e movimentação') }}"><i class="bi bi-cone-striped"></i></a>{% endif %}</td>
   </tr>
   {% endfor %}
   {% for v in res.skipped %}

@@ -227,3 +227,52 @@ def test_recompose_never_swaps_across_storage_conditions(client, db, depot):
         db.delete(db.get(StructureType, alt.id))
         db.delete(db.get(StructureKind, k.id))
         db.commit()
+
+
+def test_work_plan_recompose_fills_gained_levels(client, db, depot):
+    """Plano de obra da recomposição: esvaziar/reespaçar/recarregar por estante com bins, unidades e SKUs; a
+    recomposição é simulada sem gravar e as bins que o max level pede vão para os níveis novos."""
+    from models import Product, ShelfLevel, StockItem, StockPolicy, StorageLocation
+    from services.recompose import propose
+    from services.work_plan import TIMES, build_plan, fill_after_recompose, to_xlsx
+
+    b = depot["b"]
+    loc = db.query(StorageLocation).filter_by(branch_id=b, address="R-03-1-1").one()
+    p = Product(sku="RC-WP", name="Plano de obra", height=Decimal(10), width=Decimal(10), length=Decimal(10),
+                weight=Decimal("0.1"))
+    db.add(p)
+    db.flush()
+    db.add_all([StockItem(location_id=loc.id, product_id=p.id, quantity=Decimal(10)),
+                StockPolicy(branch_id=b, product_id=p.id, default_location_id=loc.id, min_level=Decimal(1),
+                                max_level=Decimal(300))])
+    db.commit()
+    try:
+        res = propose(db, b, None, pieces="unlimited")
+        ch = [c for c in res["changes"] if c["bay"] == "03"]
+        n0 = db.query(ShelfLevel).filter_by(branch_id=b).count()
+        fill = fill_after_recompose(db, b, None, ch)
+        assert db.query(ShelfLevel).filter_by(branch_id=b).count() == n0  # simulação desfeita
+        assert fill["created"] == 2 and fill["rows"]
+        assert all(r["level"] in ("5", "6") and r["address"] == "R-03-1-1" and r["type"] == "RC-BX" for r in fill["rows"])
+        plan = build_plan(db, b, None, set(), ch, dict(TIMES), fill=fill, title="RC")
+        first = plan["steps"][0]
+        assert first["stage"] == "Recomposição" and first["bay"] == "R-03" and first["bins"] == 2
+        assert first["skus"] == 1 and first["units"] == 10
+        assert first["minutes"] == round(2 * 2 * TIMES["bin_s"] / 60 + TIMES["respace_min"], 1)
+        assert any(s["stage"] == "Ocupar níveis ganhos" for s in plan["steps"]) and plan["summary"]["hours"] > 0
+        assert to_xlsx(plan)[:2] == b"PK"
+        # pela tela: proposta em segundo plano, plano de obra das marcadas e a planilha
+        r = client.post("/levels/recompose", data={"branch_id": b, "warehouse_id": "none", "pieces": "unlimited",
+                                                    "min_gain": "1"})
+        base = re.search(r"const base = '([^']+)'", r.text).group(1)
+        assert not _wait(client, base)["error"]
+        assert "/workplan" in client.get(base + "/result").text
+        page = client.get(base + "/workplan", params={"t_bin_s": "30", "pick": ["0"]})
+        assert page.status_code == 200 and "Plano de obra" in page.text and "Recomposição" in page.text
+        x = client.get(base + "/workplan", params={"fmt": "xlsx", "fill": "0"})
+        assert x.status_code == 200 and x.content[:2] == b"PK"
+    finally:
+        db.query(StockItem).filter_by(product_id=p.id).delete()
+        db.query(StockPolicy).filter_by(product_id=p.id).delete()
+        db.delete(db.get(Product, p.id))
+        db.commit()

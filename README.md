@@ -919,6 +919,27 @@ eliminar a ociosidade volumétrica e aumentar o lote de reposição — a filial
 - **Ações**: **Exportar** (planilha com todos os números por SKU) e **Aplicar max levels** (nos SKUs marcados ou em
   todos) — grava na política de estoque da filial.
 
+## 6.0.11.3 Plano de obra e movimentação (rearranjo, recomposição e combinada)
+
+As propostas mudam a planta e as estruturas; o **plano de obra** (`services/work_plan.py`) diz o que fazer fisicamente
+para executá-las, com as bins e os materiais envolvidos. Botão **Plano de obra** em cada variação do **rearranjo**, em
+cada opção da **proposta combinada** e no resultado da **recomposição** (das estantes marcadas). Etapas, na ordem:
+
+1. **Planta** — estante que muda de lugar: esvaziar, mudar de lugar e recarregar (as bins e os SKUs vão com ela);
+2. **Recomposição** — esvaziar, reespaçar os níveis ou trocar a estrutura e recarregar cada bin **no mesmo nível** (o
+   endereço não muda). Estante que muda de lugar **e** é recomposta vira uma etapa só (**Planta + recomposição**:
+   esvazia uma vez);
+3. **Ocupar níveis ganhos** — a recomposição é **simulada sem gravar** e o *Por endereço* roda nas estantes recompostas
+   com o **max level** como base, outros níveis liberados e só os tipos de bin que as estantes já usam: as bins que vão para os níveis novos (de outro nível do
+   próprio endereço ou bins novas). Se nenhum SKU precisa do espaço, a tela diz quantas bins de capacidade sobram e
+   aponta o *Plano de ocupação* (aumentar o max level) ou o *Pool* (trazer SKUs de outros endereços);
+4. **Movimentar SKUs** — com a proposta gerada a partir do resultado do otimizador: cada SKU, de qual endereço para
+   qual (hoje × proposta).
+
+Cada etapa traz endereços, bins (por tipo), unidades, SKUs e **minutos estimados**, com os tempos da tela (segundos por
+bin — tirada e recolocada —, minutos por estante movida, minutos por estante recomposta, segundos por unidade movida).
+Resumo com etapas, bins, unidades e horas por etapa; **Exportar** gera a planilha do plano.
+
 ## 6.0.12 Unitização: embalagens, paletes e a chave que liga/desliga
 
 **Chave de unitização** (na maioria das filiais a unitização não é viável; por isso vem desligada). Vale o modo da

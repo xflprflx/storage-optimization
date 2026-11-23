@@ -685,6 +685,75 @@ def _combined_svgs(db: Session, bid: int, wid: Optional[int], res: dict) -> tupl
     return out, layout_svg(g_cur, 560), sel
 
 
+def _moved_bays(db: Session, bid: int, wid: Optional[int], cur_data, data) -> set:
+    """Estantes que mudam de lugar entre a planta atual e a da variação (posição no desenho)."""
+    from services.branch_layout import build, get_layout, scope_bays
+
+    bays = scope_bays(db, bid, wid)
+    try:
+        g_cur = build(cur_data or get_layout(db, bid, wid).data, bays)
+        g = build(data, bays)
+    except Exception:  # noqa: BLE001 — planta apagada ou inválida
+        return set()
+    pos = {(p.bay.aisle, p.bay.bay): (round(p.x), round(p.y)) for p in g_cur.placed.values()}
+    return {(p.bay.aisle, p.bay.bay) for p in g.placed.values()
+            if pos.get((p.bay.aisle, p.bay.bay)) not in (None, (round(p.x), round(p.y)))}
+
+
+def work_plan_page(request: Request, db: Session, bid: int, wid: Optional[int], title: str, moved: set, changes: list,
+                   cmp: str, back: str, base: str, hidden: dict):
+    """Plano de obra e movimentação (tela ou planilha com ?fmt=xlsx): estantes que mudam de lugar, estantes a
+    recompor, bins para os níveis ganhos e as movimentações de SKUs da proposta do otimizador."""
+    from fastapi.responses import Response
+
+    from services import route_compare
+    from services.work_plan import build_plan, fill_after_recompose, opt_moves, times_from, to_xlsx
+
+    qp = request.query_params
+    times = times_from(qp)
+    do_fill = qp.get("fill", "1") == "1"
+    fill = fill_after_recompose(db, bid, wid, changes) if (changes and do_fill) else None
+    stored = route_compare.load(cmp) if cmp else None
+    moves = opt_moves(db, stored.get("before") or {}, stored.get("after") or {}) \
+        if stored and stored.get("branch_id") == bid else None
+    plan = build_plan(db, bid, wid, moved, changes, times, fill=fill, moves=moves, title=title)
+    if qp.get("fmt") == "xlsx":
+        return Response(to_xlsx(plan), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        headers={"Content-Disposition": 'attachment; filename="plano_de_obra.xlsx"'})
+    return render(request, "layout/workplan.html", plan=plan, back=back, base=base, hidden=hidden, do_fill=do_fill,
+                  fill=fill, has_cmp=moves is not None, has_changes=bool(changes))
+
+
+@router.get("/layout/plan/rearrange/job/{token}/workplan")
+def rearrange_workplan(token: str, request: Request, db: Session = Depends(get_db)):
+    from routers.common import redirect
+
+    br, wid, wlabel, j = _rearr_job(db, token)
+    back = f"/layout/plan/rearrange/job/{token}/result"
+    try:
+        idx = int(request.query_params.get("idx"))
+        res = j["res"]
+        v = res["variants"][idx] if "variants" in res else res["options"][idx]["variant"]
+        changes = [] if "variants" in res else (res["options"][idx]["recomp"].get("changes") or [])
+        opts = "options" in res
+    except (TypeError, ValueError, IndexError, KeyError):
+        return redirect(f"/layout/plan?{_plan_qs(br, wid)}" if br is not None else "/layout",
+                        _("A proposta expirou: gere de novo."), "warning")
+    if opts:
+        back = f"/layout/plan/combined/job/{token}/result"
+    cur = next((x["data"] for x in (res.get("variants") or [o["variant"] for o in res.get("options") or []])
+                if x.get("current") and x.get("data")), None)
+    moved = set() if v.get("current") else _moved_bays(db, br.id, wid, cur, v.get("data"))
+    return work_plan_page(request, db, br.id, wid, _("Plano de obra e movimentação · {label} · {scope}", label=v["label"],
+                                                       scope=f"{br.code} - {br.name} · {wlabel}"),
+                          moved, changes, res.get("cmp") or "", back, request.url.path, {"idx": idx})
+
+
+@router.get("/layout/plan/combined/job/{token}/workplan")
+def combined_workplan(token: str, request: Request, db: Session = Depends(get_db)):
+    return rearrange_workplan(token, request, db)
+
+
 @router.post("/layout/plan/combined/apply")
 async def combined_apply(request: Request, db: Session = Depends(get_db)):
     """Grava a opção escolhida: a planta da variação e a recomposição calculada nela."""

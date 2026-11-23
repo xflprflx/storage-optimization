@@ -49,7 +49,8 @@
       <form method="post" action="/layout/plan/rearrange/apply" class="m-0" onsubmit="return confirm(_t('Gravar esta variação como a planta da filial? A planta atual fica guardada (Desfazer rearranjo).'))">
         <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="idx" value="{{ loop.index0 }}">
         <button class="btn btn-sm {{ 'btn-success' if v.best else 'btn-outline-primary' }}"><i class="bi bi-check-lg"></i> {{ _("Aplicar à planta") }}</button>
-      </form>{% endif %}</td>
+      </form>
+      <a class="btn btn-sm btn-outline-secondary mt-1" href="/layout/plan/rearrange/job/{{ token }}/workplan?idx={{ loop.index0 }}" title="{{ _('Plano de obra e movimentação') }}"><i class="bi bi-cone-striped"></i> {{ _("Plano de obra") }}</a>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>

@@ -56,12 +56,13 @@
       <td class="text-end">{{ p.unit|dec(2) if p.unit is not none else '—' }}</td><td class="text-end">{{ p.cost|dec(2) if p.cost is not none else '—' }}</td></tr>{% endfor %}</tbody>
   </table></div></div>
 {% endif %}
-<form method="post" action="/levels/recompose/apply" onsubmit="return confirm(_t('Gravar a recomposição no cadastro (estrutura das estantes, vão e capacidade dos níveis, níveis novos)? Dá para desfazer em Capacidade dos níveis.'))">
+<form method="post" action="/levels/recompose/apply" onsubmit="return (event.submitter && event.submitter.dataset.plan) || confirm(_t('Gravar a recomposição no cadastro (estrutura das estantes, vão e capacidade dos níveis, níveis novos)? Dá para desfazer em Capacidade dos níveis.'))">
   <input type="hidden" name="token" value="{{ token }}">
   <div class="card mb-3">
     <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center small">
       <span class="fw-semibold"><i class="bi bi-list-check"></i> {{ _h("Estantes a recompor ({n})", n=res.changes|length) }}</span>
       <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" data-plan="1" formmethod="get" formaction="/levels/recompose/job/{{ token }}/workplan" title="{{ _('Plano de obra e movimentação das estantes marcadas') }}"><i class="bi bi-cone-striped"></i> {{ _("Plano de obra") }}</button>
         <button class="btn btn-sm btn-outline-primary" name="only" value="1" {% if res.applied %}disabled{% endif %}><i class="bi bi-check2-square"></i> {{ _("Aplicar as marcadas") }}</button>
         <button class="btn btn-sm btn-primary" {% if res.applied %}disabled{% endif %}><i class="bi bi-check-lg"></i> {{ _("Aplicar todas") }}</button>
       </div>

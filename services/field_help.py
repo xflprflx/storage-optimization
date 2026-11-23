@@ -284,6 +284,13 @@ R(r"/optimization/slotting/skus", "#skuFilter", "Filtrar SKUs", "Mostra só os S
 R(r"/optimization/case", "sc", "Cenários do depois", "Quais quantidades mostrar no arranjo depois da otimização: saldo atual, mínimo ou máximo do produto.", "stock:basis")
 
 # =========================================================================== otimização de bins (Por endereço e Pool)
+PWORK = r"/(?:layout/plan/(?:rearrange|combined)|levels/recompose)/job/[^/]+/workplan"
+R(PWORK, "t_bin_s", "Segundos por bin", "Tempo para tirar uma bin da estante e recolocá-la (conta duas vezes por bin: sai e volta); também o de pôr uma bin num nível ganho.", "bin:h")
+R(PWORK, "t_move_min", "Minutos por estante movida", "Tempo para desmontar/arrastar e reposicionar uma estante vazia no novo lugar da planta.", "scope:link")
+R(PWORK, "t_respace_min", "Minutos por estante recomposta", "Tempo para reespaçar os níveis ou trocar a estrutura de uma estante vazia.", "bin:h")
+R(PWORK, "t_piece_s", "Segundos por unidade movida", "Tempo para movimentar uma unidade de um endereço para outro (movimentações de SKUs da proposta do otimizador).", "stock:basis")
+R(PWORK, "fill", "Ocupar os níveis ganhos", "Simula a recomposição (sem gravar) e roda o Por endereço nas estantes recompostas, com o max level como base e outros níveis liberados: lista as bins que vão para os níveis novos.", "stock:basis")
+R(PWORK, "idx|pick|token|fmt", "Opção da proposta", "A opção (ou as estantes marcadas) da proposta cujo plano de obra é mostrado.", "scope:link")
 POCC = r"/optimization/occupancy"
 R(POCC, "target", "Ocupação desejada (%)", "Teto de ocupação por volume de cada bin: o max level sugerido é o que cabe nas bins atuais do SKU com esse enchimento (e pelo arranjo físico das unidades). Ex.: 85 deixa 15% de folga para pegar.", "bin:h")
 R(POCC, "days", "Dias do histórico", "Período do histórico de pedidos para a saída por dia (cobertura e reposições por mês). Com as datas dos pedidos no histórico, vale o período delas.", "stock:basis")

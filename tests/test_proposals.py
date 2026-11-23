@@ -63,3 +63,35 @@ def test_combined_proposal_applies_plan_and_recomposition(db):
         assert "_prev" in get_layout(db, bid, None).data
     assert stale_reason(db, bid, None, res["stamp"], "combined")  # aplicada: as duas partes mudaram
     assert apply_combined(db, res, 99)[1] == "warning"
+
+
+def test_combined_work_plan_joins_moves_recomposition_and_sku_moves(db):
+    """Plano de obra da proposta combinada: estante que muda de lugar e é recomposta vira uma etapa só; as
+    movimentações de SKUs vêm da proposta do otimizador (hoje × proposta)."""
+    from models import StorageLocation
+    from routers.layout import _moved_bays
+    from services.proposals import propose_combined
+    from services.work_plan import TIMES, build_plan, opt_moves, to_xlsx
+
+    bid = _with_plan(db, "PWP")
+    a = db.query(StorageLocation).filter_by(branch_id=bid, address="S-11-1-1").one()
+    b = db.query(StorageLocation).filter_by(branch_id=bid, address="S-01-1-1").one()
+    res = propose_combined(db, bid, None, assign={"X": [(a.id, 1)]}, pieces="unlimited")
+    cur = next(o for o in res["options"] if o["variant"].get("current"))
+    other = next((o for o in res["options"] if not o["variant"].get("current") and o["feasible"]), None)
+    assert _moved_bays(db, bid, None, cur["variant"]["data"], cur["variant"]["data"]) == set()
+    moves = opt_moves(db, {"X": [(b.id, 2)]}, {"X": [(a.id, 2)]})
+    assert moves == [{"sku": "X", "from": "S-01-1-1", "to": "S-11-1-1", "units": 2}]
+    assert opt_moves(db, {"X": [(a.id, 2)]}, {"X": [(a.id, 2)]}) == []
+    o = other or cur
+    moved = _moved_bays(db, bid, None, cur["variant"]["data"], o["variant"]["data"])
+    changes = o["recomp"].get("changes") or []
+    plan = build_plan(db, bid, None, moved, changes, dict(TIMES), moves=moves, title="PWP")
+    bays = [s["bay"] for s in plan["steps"] if s["bay"]]
+    assert len(bays) == len(set(bays)) == len({(c["aisle"], c["bay"]) for c in changes} | set(moved))
+    if moved & {(c["aisle"], c["bay"]) for c in changes}:
+        assert any(s["stage"] == "Planta + recomposição" for s in plan["steps"])
+    last = plan["steps"][-1]
+    assert last["stage"] == "Movimentar SKUs" and "S-01-1-1" in last["action"]
+    assert last["minutes"] == round(2 * TIMES["piece_s"] / 60, 1)
+    assert to_xlsx(plan)[:2] == b"PK"

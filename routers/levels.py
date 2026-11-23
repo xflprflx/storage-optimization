@@ -473,6 +473,23 @@ def recompose_result(token: str, request: Request, db: Session = Depends(get_db)
                   last=last_log(db, bid, wid), stale=stale_reason(db, bid, wid, res.get("stamp"), "recompose"))
 
 
+@router.get("/recompose/job/{token}/workplan")
+def recompose_workplan(token: str, request: Request, db: Session = Depends(get_db)):
+    """Plano de obra da recomposição: as estantes marcadas (ou todas) e as bins para os níveis ganhos."""
+    from routers.layout import work_plan_page
+
+    bid, wid, j = _recomp_job(db, token)
+    back = f"/levels/recompose/job/{token}/result"
+    if j is None or not j.get("res") or j["res"].get("error"):
+        return redirect("/levels", _("A proposta expirou: gere de novo."), "warning")
+    picks = [to_int(v) for v in request.query_params.getlist("pick")]
+    picks = [i for i in picks if i is not None]
+    changes = [c for i, c in enumerate(j["res"]["changes"]) if not picks or i in picks]
+    return work_plan_page(request, db, bid, wid, _("Plano de obra e movimentação · recomposição · {scope}",
+                                                     scope=_scope_label(db, bid, wid)),
+                          set(), changes, "", back, request.url.path, {"pick": picks})
+
+
 @router.post("/recompose/apply")
 def recompose_apply(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
     from services.recompose import apply

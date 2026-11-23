@@ -201,6 +201,7 @@
       <div class="nk-sec">{{ _("Estoque") }}</div>
       {{ nk_item("/layout", "bi-bricks", _("Mapa do estoque"), p == '/layout', tour="nav-map") }}
       {{ nk_item("/layout/plan", "bi-map", _("Planta da filial"), p.startswith('/layout/plan')) }}
+      {{ nk_item("/insights", "bi-clipboard-data", _("Raio-X da filial"), p.startswith('/insights')) }}
       {{ nk_item("/stock", "bi-boxes", _("Saldos"), p.startswith('/stock'), tour="nav-stock") }}
       <div class="nk-sec">{{ _("Planejamento") }}</div>
       {{ nk_group("nkGrpOpt", "bi-sliders", _("Otimização de bins"), is_opt, "nav-opt") }}

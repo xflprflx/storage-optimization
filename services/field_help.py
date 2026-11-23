@@ -105,6 +105,9 @@ R(PPKG, r"pal_type_.*", "Palete", "Tipo de bin do palete (Armazena em = palete f
 R(PPKG, r"pal_layer_.*", "Caixas por camada", "Lastro: embalagens em cada camada do palete. Vazio = calculado pelo arranjo na base do palete.", "rack:pallet")
 R(PPKG, r"pal_layers_.*", "Camadas", "Camadas no palete. Vazio = pela altura máxima de carga (máximo acima da borda do palete ou 150 cm) e pelo peso máximo. No porta-palete, valem só as que cabem no vão do nível.", "rack:pallet")
 R(PPKG, r"pal_del_.*", "Remover", "Marque para remover esta paletização ao salvar.", "rack:pallet")
+PINS = r"/insights"
+R(PINS, "branch_id", "Filial", "A filial do Raio-X: endereços, bins, ocupação, SKUs, níveis, saídas e os insights do estado atual.", "scope:link")
+R(PINS, "warehouse_id", "Armazém", "Limita o Raio-X a um armazém da filial (vazio = todos).", "scope:link")
 PPKB = r"/packagings"
 R(PPKB, "model_id", "Modelo de embalagem", "O modelo aplicado em todos os SKUs (ou embalagens) marcados: as medidas e a tara vêm dele.", "bin:h")
 R(PPKB, "inner_qty", "Quantidade", "Unidades (ou, no nível acima, embalagens marcadas) em cada embalagem. Vazio = calculada pelo que cabe em cada SKU.", "bin:h")

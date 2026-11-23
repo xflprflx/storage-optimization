@@ -878,6 +878,26 @@ sobe acima da borda. A bin continua com as próprias medidas para o encaixe no n
 Importação: as colunas opcionais *Aberta em cima (sim/não)* e *Máximo acima da borda (cm)* entram na importação de
 tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo marca a bin como aberta).
 
+## 6.0.11.1 Raio-X da filial
+
+**Estoque → Raio-X da filial** (`/insights?branch_id=…&warehouse_id=…`): os dados, as estatísticas e os insights da filial
+(ou de um armazém dela) no estado atual, calculados na hora a partir do cadastro e do saldo (nada é gravado):
+
+- **Insights** (do mais importante para o menos, cada um com o botão para resolver): SKUs sem medidas, endereços com o
+  volume dos SKUs maior que o das bins, níveis acima da capacidade, bins paradas em endereços sem saldo (→ Pool),
+  endereços com menos de 30% do volume das bins (→ Por endereço), SKUs acima do max / abaixo do min level, SKUs
+  espalhados em vários endereços, curva A fora da zona de ouro (→ posição pela saída), SKUs sem giro, falta de histórico
+  de pedidos ou de planta desenhada, unitização desligada com embalagens habilitadas (e o contrário), SKUs sem min/max;
+- **Indicadores**: endereços (com saldo, vazios), bins (por tipo, paradas), ocupação das bins por volume (média,
+  mediana e a distribuição por faixa — palete aberto em cima conta a carga até o máximo acima da borda), SKUs e
+  unidades, uso dos níveis pela capacidade cadastrada, caminhada média por saída (e a de uma posição ao acaso);
+- **Por corredor**: endereços, % com saldo, bins, SKUs e a ocupação das bins;
+- **Listas**: endereços de menor ocupação e acima de 100%, níveis acima da capacidade, SKUs mais espalhados, acima do
+  max e abaixo do min;
+- **Saídas** (com histórico de pedidos): linhas, curva A/B/C, % das saídas na zona de ouro, SKUs sem giro e os mais
+  procurados com onde estão, a caminhada e se estão na zona de ouro;
+- **Unitização**: o modo da filial, as embalagens habilitadas nela e o que as bins guardam.
+
 ## 6.0.12 Unitização: embalagens, paletes e a chave que liga/desliga
 
 **Chave de unitização — vale o mais restrito** (na maioria das filiais a unitização não é viável; por isso vem

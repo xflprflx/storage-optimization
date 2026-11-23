@@ -89,7 +89,7 @@ def _pages(client, ids) -> dict[str, str]:
              "/structures/new", f"/structures/{ids['st']}/edit", "/structure-kinds", "/structure-kinds/new",
              "/structure-kinds/1/edit", "/structure-pieces", "/structure-pieces/new", "/structure-pieces/1/edit", "/products/new", f"/products/{ids['p']}/edit",
              f"/products/{ids['p']}/packagings", f"/products/{ids['p']}/packagings/new", "/imports/packagings",
-             "/packagings",
+             "/packagings", "/insights",
              f"/products/{ids['p']}", "/settings", "/stock", "/stock/new", "/imports", "/imports/history",
              f"/levels?branch_id={b}&warehouse_id={w}", f"/layout?branch_id={b}&warehouse_id={w}",
              f"/layout/plan?branch_id={b}&warehouse_id={w}", f"/layout/plan/3d?branch_id={b}&warehouse_id={w}",

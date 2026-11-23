@@ -40,6 +40,7 @@ from routers import (
     packaging_models,
     product_packagings,
     packagings_bulk,
+    insights,
     locations,
     onboarding,
     optimization,
@@ -256,7 +257,7 @@ def field_help_catalog():
     rules = [{**r, "t": i18n.lookup(r["t"]), "d": i18n.units_in_text(i18n.lookup(r["d"]))} for r in RULES]
     return JSONResponse(rules, headers={"Cache-Control": "public, max-age=3600"})
 
-for r in (auth_routes, appearance, users, dashboard, onboarding, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structure_kinds, structures, lock_reasons, packaging_models, packagings_bulk, product_packagings, products, stock, imports, bulk, settings, simulator, api):
+for r in (auth_routes, appearance, users, dashboard, onboarding, insights, layout, runs, site, optimization, packing, branches, warehouses, locations, levels, bin_types, structure_kinds, structures, lock_reasons, packaging_models, packagings_bulk, product_packagings, products, stock, imports, bulk, settings, simulator, api):
     app.include_router(r.router)
 
 

@@ -476,3 +476,45 @@ def test_model_contents_list_calc_and_example_orders(client, db, tmp_path):
 
     wb = load_workbook(write_workbook(BY_SLUG["unitizacao"], tmp_path / "u.xlsx"), read_only=True)
     assert "Pedidos" in wb.sheetnames and wb["Pedidos"].max_row > 100
+
+
+def test_branch_insights_page(client, db):
+    """Raio-X da filial: indicadores e insights do estado atual (bins ociosas, ocupação baixa/acima de 100%, SKUs sem
+    medida, fragmentados, acima do max, histórico com curva ABC)."""
+    from models import (BinType, Branch, LocationBin, PickHistory, Product, StockItem, StockPolicy,
+                        StorageLocation)
+    from services.branch_insights import build
+
+    br = Branch(code="PKX", name="Raio-X")
+    bt = BinType(code="PKX-B", name="B", height=Decimal(20), width=Decimal(30), length=Decimal(40))
+    db.add_all([br, bt])
+    db.flush()
+    mk = lambda a, n: StorageLocation(branch_id=br.id, aisle=a, bay="01", level="1", position=str(n), compartment="",  # noqa: E731
+                                      address=f"{a}-01-1-{n}")
+    locs = [mk("A", 1), mk("A", 2), mk("A", 3), mk("B", 1)]
+    db.add_all(locs)
+    db.flush()
+    for l in locs:
+        db.add(LocationBin(location_id=l.id, bin_type_id=bt.id, quantity=1))
+    p1 = Product(sku="PKX-1", name="Pequeno", height=Decimal(5), width=Decimal(5), length=Decimal(5))  # 125 cm³
+    p2 = Product(sku="PKX-2", name="Grande", height=Decimal(20), width=Decimal(30), length=Decimal(40))  # = a bin
+    p3 = Product(sku="PKX-3", name="Sem medidas")
+    db.add_all([p1, p2, p3])
+    db.flush()
+    db.add_all([StockItem(product_id=p1.id, location_id=locs[0].id, quantity=Decimal(10)),   # 5%: baixa ocupação
+                 StockItem(product_id=p1.id, location_id=locs[3].id, quantity=Decimal(5)),    # fragmentado
+                 StockItem(product_id=p2.id, location_id=locs[1].id, quantity=Decimal(2)),    # 200%
+                 StockItem(product_id=p3.id, location_id=locs[1].id, quantity=Decimal(1)),
+                 StockPolicy(branch_id=br.id, product_id=p1.id, min_level=Decimal(1), max_level=Decimal(10)),
+                 PickHistory(branch_id=br.id, filename="h.xlsx", data={"skus": {"PKX-1": [50, 80], "PKX-2": [2, 2]}})])
+    db.commit()
+    d = build(db, br.id)
+    assert d["locations"]["total"] == 4 and d["locations"]["idle"] == 1  # A-01-1-3: bin sem saldo
+    assert d["fill"]["low_n"] == 2 and d["fill"]["over_n"] == 1
+    assert d["skus"]["no_dims"] == 1 and d["skus"]["frag"] == 1 and d["skus"]["above"] == 1
+    assert d["history"]["abc"]["A"] >= 1 and d["history"]["dead"] == 1  # PKX-3 não saiu
+    texts = " ".join(i["text"] for i in d["insights"])
+    assert "sem altura" in texts and "acima de 100%" in texts and "sem saldo ainda têm" in texts
+    page = client.get(f"/insights?branch_id={br.id}")
+    assert page.status_code == 200 and "Raio-X da filial" in page.text and "A-01-1-2" in page.text
+    assert client.get("/insights").status_code == 200

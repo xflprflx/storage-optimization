@@ -11,7 +11,7 @@
  },
  " (nível {level})": {
   "src": [
-   "routers/optimization.py:532",
+   "routers/optimization.py:541",
    "services/action_plan.py:341",
    "services/pool_optimizer.py:63"
   ]
@@ -58,17 +58,17 @@
  },
  " Desenhe a planta da filial para medir pelos corredores reais e ver as rotas.": {
   "src": [
-   "routers/optimization.py:1237"
+   "routers/optimization.py:1246"
   ]
  },
  " Foram junto {len} SKU(s) que precisavam sair das bins de destino: ": {
   "src": [
-   "routers/optimization.py:1009"
+   "routers/optimization.py:1018"
   ]
  },
  " a mais (veja Bins por tipo).": {
   "src": [
-   "routers/optimization.py:489"
+   "routers/optimization.py:498"
   ]
  },
  " com os registros relacionados.": {
@@ -110,7 +110,7 @@
  },
  " em serpentina": {
   "src": [
-   "routers/optimization.py:1268"
+   "routers/optimization.py:1277"
   ]
  },
  " linhas por pedido": {
@@ -165,7 +165,7 @@
  },
  " {v} endereço(s) foram junto por liberarem as bins recebidas (bins existentes).": {
   "src": [
-   "routers/optimization.py:570"
+   "routers/optimization.py:579"
   ]
  },
  " {v} já tinham essas medidas.": {
@@ -205,12 +205,12 @@
  },
  " · o planejado é maior que o saldo: o saldo é dividido entre as bins planejadas e o restante fica reservado (tracejado)": {
   "src": [
-   "routers/optimization.py:704"
+   "routers/optimization.py:713"
   ]
  },
  " · o planejado é maior que o saldo: o saldo é dividido entre as bins sugeridas e o restante fica reservado (tracejado)": {
   "src": [
-   "routers/optimization.py:748"
+   "routers/optimization.py:757"
   ]
  },
  " · palete no chão": {
@@ -225,7 +225,7 @@
  },
  " · sem bin: {shortage} un.": {
   "src": [
-   "routers/optimization.py:707"
+   "routers/optimization.py:716"
   ]
  },
  " · sem custo (R$ 0): ": {
@@ -240,7 +240,7 @@
  },
  " · sem limite de tempo": {
   "src": [
-   "routers/optimization.py:543",
+   "routers/optimization.py:552",
    "routers/site.py:199"
   ]
  },
@@ -702,7 +702,7 @@
  },
  ". O plano foi refeito com o que dá para liberar.": {
   "src": [
-   "routers/optimization.py:501"
+   "routers/optimization.py:510"
   ]
  },
  ". Para a solução do solver a qualquer custo, marque \"Sem limite de tempo\" na etapa Objetivo.": {
@@ -2758,8 +2758,8 @@
  },
  "Antes (hoje)": {
   "src": [
-   "routers/optimization.py:689",
-   "routers/optimization.py:737",
+   "routers/optimization.py:698",
+   "routers/optimization.py:746",
    "routers/packing.py:204"
   ]
  },
@@ -3113,7 +3113,7 @@
  },
  "Armazém": {
   "src": [
-   "routers/optimization.py:1023",
+   "routers/optimization.py:1032",
    "services/field_help.py:110",
    "services/field_help.py:165",
    "services/field_help.py:170",
@@ -4015,8 +4015,8 @@
  "Bins": {
   "src": [
    "routers/optimization.py:176",
-   "routers/optimization.py:1050",
-   "routers/optimization.py:1066",
+   "routers/optimization.py:1059",
+   "routers/optimization.py:1075",
    "routers/runs.py:97",
    "routers/site.py:193",
    "services/action_plan.py:123"
@@ -4079,7 +4079,7 @@
  },
  "Bins atuais": {
   "src": [
-   "routers/optimization.py:1031",
+   "routers/optimization.py:1040",
    "services/field_help.py:293",
    "templates/optimization/index.html:75",
    "templates/optimization/index.html:214",
@@ -4096,7 +4096,7 @@
  },
  "Bins como recurso infinito": {
   "src": [
-   "routers/optimization.py:580"
+   "routers/optimization.py:589"
   ],
   "lazy": true
  },
@@ -4155,7 +4155,7 @@
  },
  "Bins existentes no escopo": {
   "src": [
-   "routers/optimization.py:580",
+   "routers/optimization.py:589",
    "services/action_plan.py:297",
    "templates/optimization/pool.html:139"
   ],
@@ -4175,8 +4175,8 @@
  },
  "Bins hoje": {
   "src": [
-   "routers/optimization.py:515",
-   "routers/optimization.py:970"
+   "routers/optimization.py:524",
+   "routers/optimization.py:979"
   ],
   "lazy": true
  },
@@ -4229,13 +4229,13 @@
  },
  "Bins ocupadas": {
   "src": [
-   "routers/optimization.py:469",
-   "routers/optimization.py:938"
+   "routers/optimization.py:478",
+   "routers/optimization.py:947"
   ]
  },
  "Bins plano": {
   "src": [
-   "routers/optimization.py:970"
+   "routers/optimization.py:979"
   ],
   "lazy": true
  },
@@ -4251,7 +4251,7 @@
  },
  "Bins que podem ser usadas": {
   "src": [
-   "routers/optimization.py:1075",
+   "routers/optimization.py:1084",
    "services/field_help.py:296"
   ],
   "help": true
@@ -4280,7 +4280,7 @@
  },
  "Bins sugeridas": {
   "src": [
-   "routers/optimization.py:516"
+   "routers/optimization.py:525"
   ],
   "lazy": true
  },
@@ -4796,6 +4796,7 @@
   "src": [
    "services/branch_insights.py:363",
    "templates/branches/form.html:27",
+   "templates/optimization/page.html:157",
    "templates/site/project.html:306"
   ]
  },
@@ -5141,7 +5142,7 @@
  "Capacidade dos níveis": {
   "src": [
    "routers/levels.py:22",
-   "routers/optimization.py:1058",
+   "routers/optimization.py:1067",
    "services/branch_insights.py:317",
    "services/onboarding.py:138",
    "services/onboarding.py:338",
@@ -5521,7 +5522,7 @@
  },
  "Com alguma bin": {
   "src": [
-   "routers/optimization.py:1031",
+   "routers/optimization.py:1040",
    "templates/locations/list.html:46",
    "templates/optimization/index.html:78",
    "templates/optimization/page.html:98",
@@ -5535,7 +5536,7 @@
  },
  "Com bins como recurso infinito o resultado é um dimensionamento (quantas bins de cada tipo seriam necessárias) e não pode ser aplicado. Use \"Bins existentes no escopo\" para gerar um plano de movimentação.": {
   "src": [
-   "routers/optimization.py:988"
+   "routers/optimization.py:997"
   ]
  },
  "Com bins em outro nível": {
@@ -6130,15 +6131,20 @@
    "templates/products/form.html:55"
   ]
  },
- "Conforme a filial: as embalagens valem onde a filial (e a rodada) ligam a unitização. Nunca: o SKU fica sempre em unidades soltas, mesmo nas filiais com unitização.": {
+ "Conforme a filial (padrão): vale o cadastro da filial (Cadastros → Filiais). Escolher outro modo vale só nesta rodada — para simular com ou sem caixas e paletes; as embalagens usadas continuam sendo as habilitadas na filial.": {
   "src": [
-   "services/field_help.py:95"
+   "templates/optimization/page.html:159"
+  ]
+ },
+ "Conforme a filial (padrão): vale o cadastro de cada filial. Desligada, Só caixas ou Caixas e paletes valem só nesta rodada, para simular — as embalagens usadas continuam sendo as habilitadas em cada filial.": {
+  "src": [
+   "services/field_help.py:297"
   ],
   "help": true
  },
- "Conforme a filial: vale o que está no cadastro de cada filial. Desligada ou Só caixas restringem nesta rodada; a rodada nunca liga a unitização numa filial em que ela está desligada.": {
+ "Conforme a filial: as embalagens valem onde a filial (e a rodada) ligam a unitização. Nunca: o SKU fica sempre em unidades soltas, mesmo nas filiais com unitização.": {
   "src": [
-   "services/field_help.py:297"
+   "services/field_help.py:95"
   ],
   "help": true
  },
@@ -7421,9 +7427,9 @@
  },
  "Depois — {v}": {
   "src": [
-   "routers/optimization.py:709",
-   "routers/optimization.py:751",
-   "routers/optimization.py:695"
+   "routers/optimization.py:718",
+   "routers/optimization.py:760",
+   "routers/optimization.py:704"
   ]
  },
  "Depois, desempatar por <span class=\"fw-normal text-muted\">(ordem de prioridade)</span>": {
@@ -7814,7 +7820,7 @@
  },
  "Dimensionados": {
   "src": [
-   "routers/optimization.py:945"
+   "routers/optimization.py:954"
   ]
  },
  "Dimensões (cm)": {
@@ -7962,12 +7968,12 @@
  },
  "Distância estimada pelo endereço (corredores × distância entre corredores + estantes × frente), como na posição pela saída.": {
   "src": [
-   "routers/optimization.py:1222"
+   "routers/optimization.py:1231"
   ]
  },
  "Distância pelo menor caminho na planta desenhada: pelos corredores (respeitando a mão única), saindo pela ponta da fileira ou por uma passagem para trocar de corredor, contornando fileiras e obstáculos.": {
   "src": [
-   "routers/optimization.py:1284"
+   "routers/optimization.py:1293"
   ]
  },
  "Distância pelo menor caminho no piso livre: pelos corredores, saindo pela ponta ou por um transversal para trocar de corredor, contornando estruturas e obstáculos.": {
@@ -8570,8 +8576,8 @@
  },
  "Encaixe geométrico": {
   "src": [
-   "routers/optimization.py:1055",
-   "routers/optimization.py:1071"
+   "routers/optimization.py:1064",
+   "routers/optimization.py:1080"
   ]
  },
  "Encaixe geométrico confere se as unidades cabem fisicamente em grade, não só pelo volume. A rotação diz se o produto pode deitar (qualquer orientação) ou só girar com a altura para cima.": {
@@ -8618,8 +8624,8 @@
  },
  "Enchimento hoje (%)": {
   "src": [
-   "routers/optimization.py:517",
-   "routers/optimization.py:971"
+   "routers/optimization.py:526",
+   "routers/optimization.py:980"
   ],
   "lazy": true
  },
@@ -8642,9 +8648,9 @@
  },
  "Enchimento máximo": {
   "src": [
-   "routers/optimization.py:773",
-   "routers/optimization.py:1054",
-   "routers/optimization.py:1070",
+   "routers/optimization.py:782",
+   "routers/optimization.py:1063",
+   "routers/optimization.py:1079",
    "services/onboarding.py:283"
   ],
   "lazy": true
@@ -8664,7 +8670,7 @@
  },
  "Enchimento máximo deve estar entre 5% e 100%.": {
   "src": [
-   "routers/optimization.py:776"
+   "routers/optimization.py:785"
   ]
  },
  "Enchimento médio": {
@@ -8675,8 +8681,8 @@
  },
  "Enchimento plano (%)": {
   "src": [
-   "routers/optimization.py:517",
-   "routers/optimization.py:972"
+   "routers/optimization.py:526",
+   "routers/optimization.py:981"
   ],
   "lazy": true
  },
@@ -8711,7 +8717,7 @@
  },
  "Endereço": {
   "src": [
-   "routers/optimization.py:515",
+   "routers/optimization.py:524",
    "routers/products.py:157",
    "services/action_plan.py:195",
    "services/field_help.py:406",
@@ -8755,7 +8761,7 @@
  },
  "Endereço contém": {
   "src": [
-   "routers/optimization.py:1024",
+   "routers/optimization.py:1033",
    "services/field_help.py:290",
    "templates/optimization/index.html:69",
    "templates/optimization/page.html:89",
@@ -8770,7 +8776,7 @@
  },
  "Endereço fora do escopo da otimização.": {
   "src": [
-   "routers/optimization.py:734"
+   "routers/optimization.py:743"
   ]
  },
  "Endereço físico onde esta quantidade do produto está guardada.": {
@@ -8807,7 +8813,7 @@
    "routers/locations.py:684",
    "routers/locations.py:715",
    "routers/locations.py:739",
-   "routers/optimization.py:723"
+   "routers/optimization.py:732"
   ]
  },
  "Endereço não vinculado: {err}": {
@@ -8934,7 +8940,7 @@
  },
  "Endereços a alterar": {
   "src": [
-   "routers/optimization.py:475"
+   "routers/optimization.py:484"
   ]
  },
  "Endereços até esta caminhada da referência; vazio = os 20% mais perto.": {
@@ -8960,8 +8966,8 @@
  },
  "Endereços com bins": {
   "src": [
-   "routers/optimization.py:474",
-   "routers/optimization.py:944"
+   "routers/optimization.py:483",
+   "routers/optimization.py:953"
   ]
  },
  "Endereços com bins gravadas": {
@@ -9249,12 +9255,12 @@
  },
  "Escolha a filial para simular os trajetos.": {
   "src": [
-   "routers/optimization.py:1219"
+   "routers/optimization.py:1228"
   ]
  },
  "Escolha a filial para ver o relatório de SKUs.": {
   "src": [
-   "routers/optimization.py:1201"
+   "routers/optimization.py:1210"
   ]
  },
  "Escolha a filial, o armazém e, se já cadastrou, a estrutura das estantes: ela é associada às estantes geradas e preenche o vão e a capacidade dos níveis.": {
@@ -9266,7 +9272,7 @@
  "Escolha a filial.": {
   "src": [
    "routers/levels.py:418",
-   "routers/optimization.py:1339"
+   "routers/optimization.py:1348"
   ]
  },
  "Escolha ao menos uma aba para importar.": {
@@ -10638,7 +10644,7 @@
  },
  "Faltaram bins nos outros endereços do escopo para o plano dos itens filtrados: ": {
   "src": [
-   "routers/optimization.py:499"
+   "routers/optimization.py:508"
   ]
  },
  "Faltou espaço": {
@@ -10948,7 +10954,7 @@
  },
  "Filial": {
   "src": [
-   "routers/optimization.py:1020",
+   "routers/optimization.py:1029",
    "services/field_help.py:109",
    "services/field_help.py:122",
    "services/field_help.py:164",
@@ -11300,7 +11306,7 @@
  },
  "Foco nos SKUs filtrados": {
   "src": [
-   "routers/optimization.py:1074",
+   "routers/optimization.py:1083",
    "services/field_help.py:294",
    "templates/optimization/page.html:104"
   ],
@@ -12056,7 +12062,7 @@
  },
  "Histórico de saídas removido.": {
   "src": [
-   "routers/optimization.py:1355"
+   "routers/optimization.py:1364"
   ]
  },
  "Histórico de saídas salvo para a filial {code}: {summary_text} (aba {sheet}).{neg}": {
@@ -12671,7 +12677,7 @@
  },
  "Itens desalojados": {
   "src": [
-   "routers/optimization.py:1076"
+   "routers/optimization.py:1085"
   ]
  },
  "Itens nesta bin": {
@@ -12971,8 +12977,8 @@
  },
  "Largura de frente": {
   "src": [
-   "routers/optimization.py:471",
-   "routers/optimization.py:941",
+   "routers/optimization.py:480",
+   "routers/optimization.py:950",
    "services/action_plan.py:125",
    "templates/optimization/index.html:182"
   ]
@@ -13135,7 +13141,7 @@
  },
  "Liberar bins de vazios": {
   "src": [
-   "routers/optimization.py:1062"
+   "routers/optimization.py:1071"
   ]
  },
  "Liberação": {
@@ -13807,7 +13813,7 @@
  },
  "Margem": {
   "src": [
-   "routers/optimization.py:774"
+   "routers/optimization.py:783"
   ]
  },
  "Margem de crescimento": {
@@ -13830,7 +13836,7 @@
  },
  "Margem deve estar entre 0% e 1000%.": {
   "src": [
-   "routers/optimization.py:778"
+   "routers/optimization.py:787"
   ]
  },
  "Margem s/ quantidade (%)": {
@@ -13842,8 +13848,8 @@
  },
  "Margem sobre a quantidade": {
   "src": [
-   "routers/optimization.py:1054",
-   "routers/optimization.py:1070"
+   "routers/optimization.py:1063",
+   "routers/optimization.py:1079"
   ]
  },
  "Margem sobre a quantidade (%)": {
@@ -13984,7 +13990,7 @@
  },
  "Max level": {
   "src": [
-   "routers/optimization.py:587",
+   "routers/optimization.py:596",
    "services/site_import.py:332",
    "services/site_import.py:1258",
    "templates/optimization/index.html:95",
@@ -14287,14 +14293,14 @@
  },
  "Mesmo SKU em mais de um endereço": {
   "src": [
-   "routers/optimization.py:1077",
+   "routers/optimization.py:1086",
    "services/field_help.py:339"
   ],
   "help": true
  },
  "Meta": {
   "src": [
-   "routers/optimization.py:1068"
+   "routers/optimization.py:1077"
   ]
  },
  "Metros": {
@@ -14327,7 +14333,7 @@
  },
  "Min level": {
   "src": [
-   "routers/optimization.py:587",
+   "routers/optimization.py:596",
    "services/site_import.py:331",
    "services/site_import.py:1258",
    "templates/optimization/index.html:95",
@@ -14923,8 +14929,8 @@
  },
  "Movimentações": {
   "src": [
-   "routers/optimization.py:945",
-   "routers/optimization.py:971",
+   "routers/optimization.py:954",
+   "routers/optimization.py:980",
    "services/action_plan.py:325",
    "templates/optimization/pool.html:153"
   ],
@@ -14966,12 +14972,12 @@
  },
  "Máx. bins / larg. / alt.": {
   "src": [
-   "routers/optimization.py:1061"
+   "routers/optimization.py:1070"
   ]
  },
  "Máx. bins por SKU": {
   "src": [
-   "routers/optimization.py:1078",
+   "routers/optimization.py:1087",
    "templates/optimization/page.html:317"
   ]
  },
@@ -15037,7 +15043,7 @@
  "Máximo de bins: número inteiro inválido.": {
   "src": [
    "routers/optimization.py:96",
-   "routers/optimization.py:788"
+   "routers/optimization.py:797"
   ]
  },
  "Máximo de módulos": {
@@ -15310,7 +15316,7 @@
  },
  "Nenhum SKU selecionado.": {
   "src": [
-   "routers/optimization.py:1001",
+   "routers/optimization.py:1010",
    "services/pool_service.py:337"
   ]
  },
@@ -15366,8 +15372,8 @@
  },
  "Nenhum endereço no escopo.": {
   "src": [
-   "routers/optimization.py:565",
-   "routers/optimization.py:996"
+   "routers/optimization.py:574",
+   "routers/optimization.py:1005"
   ]
  },
  "Nenhum endereço no filtro.": {
@@ -15380,7 +15386,7 @@
   "src": [
    "routers/locations.py:383",
    "routers/locations.py:597",
-   "routers/optimization.py:561"
+   "routers/optimization.py:570"
   ]
  },
  "Nenhum histórico para a filial selecionada.": {
@@ -15443,12 +15449,12 @@
  },
  "Nenhum pedido da amostra tem SKUs com saldo em estantes da planta.": {
   "src": [
-   "routers/optimization.py:1294"
+   "routers/optimization.py:1303"
   ]
  },
  "Nenhum pedido da amostra tem SKUs com saldo nesta filial.": {
   "src": [
-   "routers/optimization.py:1271"
+   "routers/optimization.py:1280"
   ]
  },
  "Nenhum pedido da amostra tem SKUs em estantes da planta.": {
@@ -15479,7 +15485,7 @@
  },
  "Nenhum produto corresponde ao filtro de SKU / tipo de material.": {
   "src": [
-   "routers/optimization.py:608"
+   "routers/optimization.py:617"
   ]
  },
  "Nenhum produto ou embalagem selecionado.": {
@@ -16179,7 +16185,7 @@
  },
  "Não": {
   "src": [
-   "routers/optimization.py:1042"
+   "routers/optimization.py:1051"
   ]
  },
  "Não cabe em nenhum tipo de bin do escopo.": {
@@ -16217,7 +16223,7 @@
  },
  "Não exceder espaço atual": {
   "src": [
-   "routers/optimization.py:1060"
+   "routers/optimization.py:1069"
   ]
  },
  "Não exceder o espaço atual": {
@@ -16873,7 +16879,7 @@
  },
  "O objetivo de caminhada/zona de ouro usa o histórico de saídas da filial: envie a aba Pedidos (ou a coluna Saída) na etapa Posição pela saída.": {
   "src": [
-   "routers/optimization.py:861"
+   "routers/optimization.py:870"
   ]
  },
  "O otimizador não achou combinação possível com as peças disponíveis.": {
@@ -17102,7 +17108,7 @@
  },
  "O simulador usa a amostra de pedidos do histórico de saídas da filial (aba Pedidos). Envie o histórico — se ele foi enviado antes desta versão, envie de novo.": {
   "src": [
-   "routers/optimization.py:1228"
+   "routers/optimization.py:1237"
   ]
  },
  "O simulador usa os pedidos da aba Pedidos (uma amostra é guardada na importação). Importe a planilha com a aba Pedidos — se ela já foi importada antes desta versão, importe de novo.": {
@@ -17218,7 +17224,7 @@
  },
  "Objetivo": {
   "src": [
-   "routers/optimization.py:1052",
+   "routers/optimization.py:1061",
    "services/field_help.py:300",
    "services/onboarding.py:184",
    "services/onboarding.py:228",
@@ -17432,8 +17438,8 @@
  },
  "Ocupação das bins": {
   "src": [
-   "routers/optimization.py:472",
-   "routers/optimization.py:942",
+   "routers/optimization.py:481",
+   "routers/optimization.py:951",
    "routers/site.py:180",
    "services/site_report.py:146",
    "templates/insights/branch.html:48",
@@ -17906,7 +17912,7 @@
  },
  "Outros níveis da estante": {
   "src": [
-   "routers/optimization.py:1060"
+   "routers/optimization.py:1069"
   ]
  },
  "Padrão da simulação de separação: velocidade média do separador. Cada tela de simulação pode mudar na hora.": {
@@ -18693,8 +18699,8 @@
  },
  "Peso máximo da bin": {
   "src": [
-   "routers/optimization.py:1057",
-   "routers/optimization.py:1073"
+   "routers/optimization.py:1066",
+   "routers/optimization.py:1082"
   ]
  },
  "Peso máximo que a bin suporta.": {
@@ -18956,7 +18962,7 @@
  },
  "Plano aplicado: {n} SKU(s) movimentado(s) em {nl} endereço(s).{extra} A análise abaixo já reflete os novos saldos.": {
   "src": [
-   "routers/optimization.py:1011"
+   "routers/optimization.py:1020"
   ]
  },
  "Plano de ação": {
@@ -19512,7 +19518,7 @@
  },
  "Posição pela saída ligada: o pool usou o motor heurístico (é nele que os SKUs mais procurados escolhem os endereços mais fáceis).": {
   "src": [
-   "routers/optimization.py:873"
+   "routers/optimization.py:882"
   ]
  },
  "Posição/endereço vazio": {
@@ -20314,8 +20320,8 @@
  },
  "Qualquer orientação": {
   "src": [
-   "routers/optimization.py:1056",
-   "routers/optimization.py:1072",
+   "routers/optimization.py:1065",
+   "routers/optimization.py:1081",
    "templates/site/project.html:348"
   ]
  },
@@ -20404,7 +20410,7 @@
  },
  "Quantidade": {
   "src": [
-   "routers/optimization.py:970",
+   "routers/optimization.py:979",
    "routers/packaging_models.py:63",
    "routers/packagings_bulk.py:129",
    "routers/product_packagings.py:56",
@@ -20427,8 +20433,8 @@
  },
  "Quantidade considerada": {
   "src": [
-   "routers/optimization.py:1051",
-   "routers/optimization.py:1067",
+   "routers/optimization.py:1060",
+   "routers/optimization.py:1076",
    "services/field_help.py:225",
    "templates/site/project.html:296"
   ],
@@ -20821,17 +20827,17 @@
  },
  "Recurso infinito: mesmo sem limite de quantidade, o plano cabe nas bins que já existem no escopo.": {
   "src": [
-   "routers/optimization.py:491"
+   "routers/optimization.py:500"
   ]
  },
  "Recurso infinito: o plano pode usar bins que não existem hoje no escopo (providencie as bins a mais antes de executar; veja Bins por tipo).": {
   "src": [
-   "routers/optimization.py:1112"
+   "routers/optimization.py:1121"
   ]
  },
  "Recurso infinito: o plano usa bins que não existem no escopo — ": {
   "src": [
-   "routers/optimization.py:487"
+   "routers/optimization.py:496"
   ]
  },
  "Redução da demanda — {name}": {
@@ -21307,8 +21313,8 @@
  },
  "Rotação": {
   "src": [
-   "routers/optimization.py:1056",
-   "routers/optimization.py:1072"
+   "routers/optimization.py:1065",
+   "routers/optimization.py:1081"
   ]
  },
  "Rotação / tipo único / peso": {
@@ -21416,7 +21422,7 @@
  },
  "SKU fora do plano neste cenário.": {
   "src": [
-   "routers/optimization.py:696"
+   "routers/optimization.py:705"
   ]
  },
  "SKU não encontrado.": {
@@ -21436,7 +21442,7 @@
  },
  "SKU ou produto": {
   "src": [
-   "routers/optimization.py:1024",
+   "routers/optimization.py:1033",
    "services/field_help.py:222",
    "services/field_help.py:291",
    "services/field_help.py:407",
@@ -21533,8 +21539,8 @@
  },
  "SKUs na mesma bin": {
   "src": [
-   "routers/optimization.py:1057",
-   "routers/optimization.py:1073"
+   "routers/optimization.py:1066",
+   "routers/optimization.py:1082"
   ]
  },
  "SKUs não alocados": {
@@ -21642,7 +21648,7 @@
  },
  "Saldo atual": {
   "src": [
-   "routers/optimization.py:587",
+   "routers/optimization.py:596",
    "services/bin_optimizer.py:209",
    "templates/optimization/index.html:95",
    "templates/optimization/page.html:149",
@@ -21947,10 +21953,10 @@
  },
  "Selecione ao menos a filial do escopo.": {
   "src": [
-   "routers/optimization.py:1084",
-   "routers/optimization.py:420",
-   "routers/optimization.py:671",
-   "routers/optimization.py:840"
+   "routers/optimization.py:1093",
+   "routers/optimization.py:429",
+   "routers/optimization.py:680",
+   "routers/optimization.py:849"
   ]
  },
  "Selecione ao menos um endereço (ou escolha \"todos os filtrados\").": {
@@ -22023,13 +22029,13 @@
  },
  "Sem armazém": {
   "src": [
-   "routers/optimization.py:1023"
+   "routers/optimization.py:1032"
   ]
  },
  "Sem bin": {
   "src": [
    "routers/optimization.py:164",
-   "routers/optimization.py:1031",
+   "routers/optimization.py:1040",
    "templates/locations/list.html:47",
    "templates/optimization/index.html:79",
    "templates/optimization/page.html:99",
@@ -22298,7 +22304,7 @@
  },
  "Sem tipo de material": {
   "src": [
-   "routers/optimization.py:1027"
+   "routers/optimization.py:1036"
   ]
  },
  "Sem vizinho de frente: o corredor fica a 1 m da face": {
@@ -22320,7 +22326,7 @@
  },
  "Sem {label} cadastrado (usou o saldo): ": {
   "src": [
-   "routers/optimization.py:651"
+   "routers/optimization.py:660"
   ]
  },
  "Sempre em 1º lugar: guardar toda a demanda (falta de bins).": {
@@ -22340,7 +22346,7 @@
  },
  "Sempre respeitada": {
   "src": [
-   "routers/optimization.py:1058"
+   "routers/optimization.py:1067"
   ]
  },
  "Senha": {
@@ -22540,7 +22546,7 @@
  },
  "Sim": {
   "src": [
-   "routers/optimization.py:1042"
+   "routers/optimization.py:1051"
   ]
  },
  "Simula a separação de um pedido da aba Pedidos: a caminhada pela lista de separação, em serpentina e pela rota otimizada (e grava em vídeo)": {
@@ -22699,8 +22705,8 @@
  },
  "Situação": {
   "src": [
-   "routers/optimization.py:515",
-   "routers/optimization.py:969",
+   "routers/optimization.py:524",
+   "routers/optimization.py:978",
    "routers/site.py:193",
    "services/action_plan.py:195",
    "services/field_help.py:409",
@@ -22893,7 +22899,7 @@
  },
  "Sugestões aplicadas em {changed} endereço(s).{extra} A análise abaixo já reflete as novas bins.": {
   "src": [
-   "routers/optimization.py:572"
+   "routers/optimization.py:581"
   ]
  },
  "Sugestões por endereço": {
@@ -22982,8 +22988,8 @@
  },
  "Só girar no plano": {
   "src": [
-   "routers/optimization.py:1056",
-   "routers/optimization.py:1072"
+   "routers/optimization.py:1065",
+   "routers/optimization.py:1081"
   ]
  },
  "Só muda o desenho no 3D (projeto de filial nova e planta das filiais); os cálculos usam as medidas acima. Escolha um modelo da biblioteca ou cole o código que um chat de IA (Claude, Gemini, ChatGPT…) gera a partir de uma foto.": {
@@ -23065,11 +23071,6 @@
  "Só recebe produtos com a mesma condição (cadastro do produto). Ambiente = produtos sem condição especial.": {
   "src": [
    "templates/structure_kinds/form.html:37"
-  ]
- },
- "Só restringe: a rodada nunca liga a unitização numa filial em que ela está desligada (Cadastros → Filiais).": {
-  "src": [
-   "templates/optimization/page.html:159"
   ]
  },
  "Só sai do mapa o nível que ficar <b>sem nenhum endereço</b> e sem bins de outros endereços guardadas nele. Sem esta opção, o nível continua no mapa como espaço reservado (vazio).": {
@@ -23688,7 +23689,7 @@
  },
  "Tipo de material": {
   "src": [
-   "routers/optimization.py:1024",
+   "routers/optimization.py:1033",
    "routers/products.py:157",
    "services/field_help.py:223",
    "services/field_help.py:292",
@@ -23787,8 +23788,8 @@
  },
  "Tipos de bin permitidos": {
   "src": [
-   "routers/optimization.py:1053",
-   "routers/optimization.py:1069",
+   "routers/optimization.py:1062",
+   "routers/optimization.py:1078",
    "services/field_help.py:240",
    "services/field_help.py:330"
   ],
@@ -23911,8 +23912,8 @@
  },
  "Todos": {
   "src": [
-   "routers/optimization.py:1037",
-   "routers/optimization.py:1023",
+   "routers/optimization.py:1046",
+   "routers/optimization.py:1032",
    "templates/layout/index.html:54",
    "templates/layout/index.html:143",
    "templates/optimization/index.html:65",
@@ -24251,12 +24252,12 @@
  },
  "Um tipo por SKU": {
   "src": [
-   "routers/optimization.py:1077"
+   "routers/optimization.py:1086"
   ]
  },
  "Um tipo por endereço": {
   "src": [
-   "routers/optimization.py:1058"
+   "routers/optimization.py:1067"
   ]
  },
  "Um tour rápido pelo menu e pelo painel.": {
@@ -24288,7 +24289,7 @@
  },
  "Um único tipo de bin por nível": {
   "src": [
-   "routers/optimization.py:1059",
+   "routers/optimization.py:1068",
    "templates/optimization/page.html:332"
   ]
  },
@@ -25139,8 +25140,8 @@
  },
  "Volume de bins": {
   "src": [
-   "routers/optimization.py:470",
-   "routers/optimization.py:940",
+   "routers/optimization.py:479",
+   "routers/optimization.py:949",
    "templates/optimization/index.html:181"
   ]
  },
@@ -26049,12 +26050,12 @@
  },
  "bins dos endereços do escopo": {
   "src": [
-   "routers/optimization.py:469"
+   "routers/optimization.py:478"
   ]
  },
  "bins novas necessárias": {
   "src": [
-   "routers/optimization.py:939"
+   "routers/optimization.py:948"
   ]
  },
  "bins pai que sobram": {
@@ -26320,7 +26321,7 @@
  },
  "de {bins} bins no pool": {
   "src": [
-   "routers/optimization.py:939"
+   "routers/optimization.py:948"
   ]
  },
  "depois": {
@@ -26503,7 +26504,7 @@
  "endereço {address}": {
   "src": [
    "routers/locations.py:661",
-   "routers/optimization.py:724"
+   "routers/optimization.py:733"
   ]
  },
  "endereços": {
@@ -26830,7 +26831,7 @@
  },
  "heurística (escolhida)": {
   "src": [
-   "routers/optimization.py:540"
+   "routers/optimization.py:549"
   ]
  },
  "heurístico": {
@@ -27028,7 +27029,7 @@
  },
  "letras por rua": {
   "src": [
-   "routers/optimization.py:1268"
+   "routers/optimization.py:1277"
   ]
  },
  "liberação": {
@@ -27207,7 +27208,7 @@
  },
  "max level": {
   "src": [
-   "routers/optimization.py:650"
+   "routers/optimization.py:659"
   ]
  },
  "mediana {m}% · {n} endereços medidos": {
@@ -27246,7 +27247,7 @@
  },
  "min level": {
   "src": [
-   "routers/optimization.py:650"
+   "routers/optimization.py:659"
   ]
  },
  "modelo": {
@@ -27916,7 +27917,7 @@
  },
  "pesquisa operacional": {
   "src": [
-   "routers/optimization.py:542",
+   "routers/optimization.py:551",
    "static/field_help.js:312"
   ],
   "js": true
@@ -28028,7 +28029,7 @@
  },
  "ponta do corredor {ref}": {
   "src": [
-   "routers/optimization.py:1267"
+   "routers/optimization.py:1276"
   ]
  },
  "pool de bins": {
@@ -28199,7 +28200,7 @@
  },
  "recurso infinito: só simulação": {
   "src": [
-   "routers/optimization.py:947"
+   "routers/optimization.py:956"
   ]
  },
  "referência": {
@@ -28779,7 +28780,7 @@
  },
  "trocas de bins": {
   "src": [
-   "routers/optimization.py:475"
+   "routers/optimization.py:484"
   ]
  },
  "tudo vale para esta filial": {
@@ -28807,7 +28808,7 @@
  },
  "uma letra por corredor": {
   "src": [
-   "routers/optimization.py:1269"
+   "routers/optimization.py:1278"
   ]
  },
  "uma letra por corredor (ímpares/pares)": {
@@ -28983,8 +28984,8 @@
  },
  "volume dos produtos ÷ volume das bins": {
   "src": [
-   "routers/optimization.py:473",
-   "routers/optimization.py:943"
+   "routers/optimization.py:482",
+   "routers/optimization.py:952"
   ]
  },
  "volume dos produtos ÷ volume útil das bins": {
@@ -29486,7 +29487,7 @@
  "{label}: número inválido.": {
   "src": [
    "routers/optimization.py:87",
-   "routers/optimization.py:770",
+   "routers/optimization.py:779",
    "services/site_service.py:85"
   ]
  },
@@ -29664,7 +29665,7 @@
  },
  "{name} no palete {code}: {a} por camada × {b} camadas (calculado pelas medidas).": {
   "src": [
-   "services/packaging.py:337"
+   "services/packaging.py:343"
   ]
  },
  "{name} · caminhada {fmt} m/s · {fmt2} s por parada + {fmt3} s por peça + {fmt4} s/item e {fmt5} s/peça fora do ouro · vídeo {speed}×": {
@@ -29747,17 +29748,17 @@
  },
  "{name}: peso cheia calculado: {w} kg.": {
   "src": [
-   "services/packaging.py:328"
+   "services/packaging.py:334"
   ]
  },
  "{name}: quantidade calculada pelas medidas: {n}.": {
   "src": [
-   "services/packaging.py:321"
+   "services/packaging.py:327"
   ]
  },
  "{name}: sem medidas — informe altura, largura e comprimento (ou um modelo de embalagem).": {
   "src": [
-   "services/packaging.py:349"
+   "services/packaging.py:355"
   ]
  },
  "{name}: zona posicionada precisa do comprimento em X.": {
@@ -29772,12 +29773,12 @@
  },
  "{name}: {n} por camada não cabem na base do palete {code}: cabem até {fit}.": {
   "src": [
-   "services/packaging.py:363"
+   "services/packaging.py:369"
   ]
  },
  "{name}: {qty} não cabem pelas medidas; cabem até {fit}.": {
   "src": [
-   "services/packaging.py:355"
+   "services/packaging.py:361"
   ]
  },
  "{name}: área": {
@@ -29844,7 +29845,7 @@
  },
  "{n} SKU(s) sem paletização cadastrada para o palete {code}: calculada pelas medidas.": {
   "src": [
-   "services/packaging.py:204"
+   "services/packaging.py:210"
   ]
  },
  "{n} bin(s)": {
@@ -30143,7 +30144,7 @@
  },
  "{n} unidades": {
   "src": [
-   "routers/optimization.py:947",
+   "routers/optimization.py:956",
    "templates/optimization/pool.html:153"
   ],
   "html": true
@@ -30773,8 +30774,8 @@
  "ÁREA DE ESPERA": {
   "src": [
    "routers/optimization.py:40",
-   "routers/optimization.py:581",
-   "routers/optimization.py:1046",
+   "routers/optimization.py:590",
+   "routers/optimization.py:1055",
    "services/action_plan.py:117",
    "services/action_plan.py:223",
    "services/action_plan.py:279"
@@ -30806,8 +30807,8 @@
  },
  "Área de espera": {
   "src": [
-   "routers/optimization.py:1062",
-   "routers/optimization.py:1078",
+   "routers/optimization.py:1071",
+   "routers/optimization.py:1087",
    "services/field_help.py:333"
   ],
   "help": true

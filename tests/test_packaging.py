@@ -85,8 +85,8 @@ def test_suggestions_hierarchy_and_checks():
 
 
 def test_unitization_switch_branch_run_and_sku(db):
-    """Filial desligada (padrão) ignora as embalagens; a rodada só restringe; SKU "nunca" fica em unidades; a
-    embalagem só vale nas filiais em que está habilitada."""
+    """Filial desligada (padrão) ignora as embalagens; a rodada pode escolher outro modo (simulação); SKU "nunca" fica
+    em unidades; a embalagem só vale nas filiais em que está habilitada."""
     from models import BinType, Branch, LocationBin, PackagingModel, Product, ProductPackaging, StockItem, StorageLocation
     from services.optimization_service import run
 
@@ -117,6 +117,7 @@ def test_unitization_switch_branch_run_and_sku(db):
     br.unitization = "off"
     db.commit()
     assert got(run(db, [loc.id], Params(**base))[0]) == {bc.id: 1}  # filial desligada
+    assert got(run(db, [loc.id], Params(**base, unitization="full"))[0]) == {bc.id: 2}  # a rodada simula com caixas
     br.unitization = "full"
     pr.unitization = "never"
     db.commit()

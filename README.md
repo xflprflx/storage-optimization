@@ -900,13 +900,14 @@ tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo ma
 
 ## 6.0.12 Unitização: embalagens, paletes e a chave que liga/desliga
 
-**Chave de unitização — vale o mais restrito** (na maioria das filiais a unitização não é viável; por isso vem
-desligada):
+**Chave de unitização** (na maioria das filiais a unitização não é viável; por isso vem desligada). Vale o modo da
+filial; a rodada pode escolher outro modo só para ela (simulação); o SKU "nunca" fica sempre em unidades soltas; e só
+entram as embalagens habilitadas na filial:
 
 | Onde | Opções | Padrão |
 |---|---|---|
 | **Filial** (Cadastros → Filiais) | Desligada / Só caixas / Caixas e paletes | Desligada |
-| **Rodada** (Por endereço e Pool) | Conforme a filial / Desligada / Só caixas — só restringe, nunca liga | Conforme a filial |
+| **Rodada** (Por endereço e Pool) | Conforme a filial / Desligada / Só caixas / Caixas e paletes — o modo escolhido vale só nesta rodada (simulação) | Conforme a filial |
 | **Projeto de filial nova** (Demanda, ou a linha *Unitização* da aba Imóvel) | Desligada / Só caixas / Caixas e paletes | Desligada |
 | **SKU** (cadastro do produto) | Conforme a filial / Nunca (sempre unidades soltas) | Conforme a filial |
 

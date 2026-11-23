@@ -294,7 +294,7 @@ R(POPT, "bin_type_id", "Bins atuais", "Entram só os endereços que hoje têm es
 R(POPT, "focus", "Foco nos SKUs filtrados", "O filtro de produto escolhe o que otimizar; as bins podem vir do resto do escopo.", "swap:focus")
 R(POPT, "bins_mode", "Bins disponíveis", "Existentes: só as bins que há hoje. Recurso infinito: o plano pode usar bins que ainda não existem.", "swap:unlimited")
 R(POPT, "bin_source", "Bins que podem ser usadas", "Só bins livres (sem saldo) ou qualquer bin, mesmo com saldo de outros itens.", "swap:any")
-R(POPT, "unitization", "Unitização da rodada", "Conforme a filial: vale o que está no cadastro de cada filial. Desligada ou Só caixas restringem nesta rodada; a rodada nunca liga a unitização numa filial em que ela está desligada.", "bin:h")
+R(POPT, "unitization", "Unitização da rodada", "Conforme a filial (padrão): vale o cadastro de cada filial. Desligada, Só caixas ou Caixas e paletes valem só nesta rodada, para simular — as embalagens usadas continuam sendo as habilitadas em cada filial.", "bin:h")
 R(POPT, "orphans", "Itens que perderem a bin", "Realocar esses itens em outras bins ou deixá-los fora de bin para tratar à mão.", "swap:orphans")
 R(POPT, "basis", "Quantidade considerada por SKU", "Dimensiona as bins pelo saldo atual, pelo mínimo ou pelo máximo do produto.", "stock:basis")
 R(POPT, "objective", "Objetivo", "O que o plano deve melhorar primeiro: menos bins, menor volume (= maior ocupação das bins), menor largura, menos trocas, menor custo, menor caminhada, mais saídas na zona de ouro ou menor tempo de separação.", "swap:objective")

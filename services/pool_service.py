@@ -89,14 +89,14 @@ def load_pool(db: Session, location_ids: list[int], basis: str = "stock", focus:
             pols[(pol.product_id, pol.branch_id)] = pol
     notes: list[str] = []
     no_level: list[str] = []
-    from services.packaging import branch_modes, effective, load_products, product_packs
+    from services.packaging import branch_modes, load_products, product_packs, run_mode
 
     bmodes = branch_modes(db)  # unitização: o modo da filial do grupo, restringido pela rodada
     pprods = load_products(db, list(prods))
     pk_cache: dict = {}
 
     def packs_of(pid, gk):
-        mode = effective(bmodes.get(gk[0], "off"), unit_run)
+        mode = run_mode(bmodes.get(gk[0], "off"), unit_run)
         if (pid, mode, gk[0]) not in pk_cache:  # só as embalagens habilitadas na filial do grupo
             pk_cache[(pid, mode, gk[0])] = product_packs(pprods.get(pid), mode, gk[0])
         return pk_cache[(pid, mode, gk[0])]

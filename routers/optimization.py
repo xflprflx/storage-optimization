@@ -121,7 +121,7 @@ def parse_params(src: Mapping) -> tuple[Params, dict, list[str]]:
     prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors)
     prm.bin_source = "any" if raw.get("bin_source") == "any" else "free"
     prm.orphans = "leave" if raw.get("orphans") == "leave" else "relocate"
-    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases") else "branch"
+    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases", "full") else "branch"
     try:
         prm.validate()
     except ValueError as exc:
@@ -404,7 +404,16 @@ def _common_ctx(db: Session, mode: str, filters: dict, raw: dict, errors: list, 
             "orphan_modes": ORPHAN_MODES, "orphans": [], "displaced": 0, "filters": filters, "params": raw, "errors": errors, "objectives": objectives, "bases": BASES,
             "bins_modes": BINS_MODES, "unlimited": unlimited, "results": None,
             "base_url": "/optimization" if mode == "address" else "/optimization/pool", **_lookups(db),
-            "slot_info": _slot_setup(db, filters, raw), "slot": None}
+            "slot_info": _slot_setup(db, filters, raw), "slot": None, "unit_branch_label": _unit_branch_label(db, filters)}
+
+
+def _unit_branch_label(db: Session, filters: dict) -> str:
+    """O modo de unitização da filial filtrada (para a opção "Conforme a filial"); sem filial: vazio."""
+    from services.branch_insights import unit_label
+    from services.packaging import branch_mode
+
+    bid = to_int(filters.get("branch_id"))
+    return unit_label(branch_mode(db, bid)) if bid else ""
 
 
 @router.get("")
@@ -791,7 +800,7 @@ def parse_pool_params(src: Mapping):
     prm.engine, prm.time_limit, prm.priority = parse_engine(raw, errors, POOL_CRITERIA)
     prm.bin_source = "any" if raw.get("bin_source") == "any" else "free"
     prm.orphans = "leave" if raw.get("orphans") == "leave" else "relocate"
-    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases") else "branch"
+    prm.unitization = raw.get("unitization") if raw.get("unitization") in ("branch", "off", "cases", "full") else "branch"
     if prm.unlimited and prm.objective == "min_moves":
         prm.objective = "min_bins"  # sem bins físicas não há movimentação a minimizar
     basis = raw["basis"] if raw["basis"] in BASES else "stock"

@@ -79,7 +79,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
         inclusive se ainda não houver saldo lançado. Nunca menos que o saldo físico do endereço. Sem o nível cadastrado (vazio ou 0), usa o saldo atual (com aviso).
         Em endereços que não são o padrão do produto, vale o saldo atual."""
     from models import ProductPackaging
-    from services.packaging import branch_modes, effective, load_products, product_packs
+    from services.packaging import branch_modes, load_products, product_packs, run_mode
 
     # unitização: embalagens dos produtos, no modo da filial de cada endereço (restringido pela rodada)
     bmodes = branch_modes(db)
@@ -89,7 +89,7 @@ def load_addresses(db: Session, location_ids: list[int], basis: str = "stock",
 
     def packs_of(pid, lid):
         br = loc_branch.get(lid)
-        mode = effective(bmodes.get(br, "off"), unit_run)
+        mode = run_mode(bmodes.get(br, "off"), unit_run)
         key = (pid, mode, br)
         if key not in pk_cache:  # só as embalagens habilitadas na filial do endereço
             pk_cache[key] = product_packs(pprods.get(pid), mode, br)

@@ -64,12 +64,12 @@ def physical_bins(db: Session, location_ids: Iterable[int]) -> dict[int, list[Ph
 
 
 def _loc_mode(db: Session, location_id: int, prm=None) -> tuple:
-    """(modo de unitização, filial) do endereço: o modo da filial dele, restringido pela rodada (prm.unitization)."""
-    from services.packaging import branch_mode, effective
+    """(modo de unitização, filial) do endereço: o escolhido na rodada (prm.unitization) ou o da filial dele."""
+    from services.packaging import branch_mode, run_mode
 
     loc = db.get(StorageLocation, location_id)
     bid = loc.branch_id if loc is not None else None
-    return effective(branch_mode(db, bid), getattr(prm, "unitization", None)), bid
+    return run_mode(branch_mode(db, bid), getattr(prm, "unitization", None)), bid
 
 
 def _caps(product: Product, bt: BinType, prm=None, mode=("off", None)) -> Optional[int]:

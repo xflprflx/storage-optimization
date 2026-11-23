@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session, selectinload
 
 PALLET_MAX_H = 150.0  # cm de carga acima da base do palete, quando o tipo não diz (máximo acima da borda)
 MODES = ("off", "cases", "full")  # do mais restrito ao mais amplo
-RUN_MODES = ("branch", "off", "cases")  # rodada: conforme a filial, ou restringe
+RUN_MODES = ("branch", "off", "cases", "full")  # rodada: conforme a filial (padrão) ou o modo escolhido na rodada
 
 
 def _f(v) -> Optional[float]:
@@ -49,6 +49,12 @@ def branch_mode(db: Session, branch_id) -> str:
     return (b.unitization or "off") if b is not None else "off"
 
 
+def run_mode(branch: str, run: Optional[str]) -> str:
+    """Modo de unitização de uma rodada: o escolhido na rodada (desligada, só caixas ou caixas e paletes — simulação)
+    ou, com "Conforme a filial" (padrão), o da filial."""
+    return run if run in MODES else (branch if branch in MODES else "off")
+
+
 def scope_mode(db: Session, branch_id, run: str = "branch") -> str:
     """Modo da rodada: o da filial do escopo (sem filial = o mais amplo entre as filiais) restringido pela rodada."""
     if str(branch_id or "").isdigit():
@@ -56,7 +62,7 @@ def scope_mode(db: Session, branch_id, run: str = "branch") -> str:
     else:
         ms = set(branch_modes(db).values()) or {"off"}
         base = max(ms, key=MODES.index)
-    return effective(base, run if run in MODES else None)
+    return run_mode(base, run)
 
 
 # --------------------------------------------------------------------------- #

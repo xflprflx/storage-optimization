@@ -437,6 +437,8 @@ def choose(p: ProductUnit, b: BinSpec) -> Choice:
     packs = [pk for pk in ((p.pack,) + tuple(p.alts)) if pk is not None and pk.ok]
     pref = p.pack.pref if p.pack is not None else "auto"
     mode = getattr(b, "store_as", "units") or "units"
+    if packs and pref == "units":  # "sempre em unidades soltas": abre a embalagem em qualquer bin (palete inclusive)
+        return Choice("units")
     if mode == "pallet":
         for pk in packs:
             if pk.no_pallet or not _base_fits(pk, b):
@@ -457,6 +459,8 @@ def choose(p: ProductUnit, b: BinSpec) -> Choice:
             return Choice("cases", fit[0])
         if mode == "cases" and packs:  # bin só de caixas e nenhuma embalagem cabe: não guarda
             return Choice("cases", packs[0])
+        if packs and pref == "cases":  # "sempre na caixa" e a caixa não cabe: o SKU não vai para esta bin
+            return Choice("none")
         return Choice("units")  # "ambos": a caixa que não cabe fica solta
     return Choice("none") if (packs and pref == "cases") else Choice("units")
 

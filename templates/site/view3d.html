@@ -52,6 +52,7 @@
       <option value="sku">SKU</option>
       <option value="golden">{{ _("Zonas de ouro (pega e caminhada)") }}</option>
       <option value="abc">{{ _("Curva ABC (saída)") }}</option>
+      <option value="unit">{{ _("Unitização (unidades, caixas, palete fechado)") }}</option>
     </select></div>
   <div class="d-flex align-items-center gap-1"><span class="text-muted">{{ _("Corredor:") }}</span>
     <div class="dropdown">
@@ -69,6 +70,7 @@
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkBins" checked><label class="form-check-label" for="nkBins">{{ _("Bins") }}</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkStructs" checked><label class="form-check-label" for="nkStructs">{{ _("Estruturas") }}</label></div>
   <div class="form-check form-switch mb-0" id="nkGoldWrap"><input class="form-check-input" type="checkbox" id="nkGold" checked><label class="form-check-label" for="nkGold" title="{{ _("Faixa de altura da zona de ouro de cada estrutura") }}">{{ _("Zona de ouro") }}</label></div>
+  <div class="form-check form-switch mb-0" id="nkLoadsWrap" title="{{ _("Desenha as caixas empilhadas nos paletes fechados (lastro × camadas).") }}"><input class="form-check-input" type="checkbox" id="nkLoads" checked><label class="form-check-label" for="nkLoads">{{ _("Caixas nos paletes") }}</label></div>
   <div class="form-check form-switch mb-0" id="nkLookWrap" title="{{ _("Desenha bins e estruturas com a aparência do cadastro (modelo da biblioteca ou código gerado por IA). Desligado: caixas e montantes simples, mais leve em plantas muito grandes.") }}"><input class="form-check-input" type="checkbox" id="nkLook" checked><label class="form-check-label" for="nkLook">{{ _("Aparência detalhada") }}</label></div>
   <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="nkWalls"><label class="form-check-label" for="nkWalls">{{ _("Paredes") }}</label></div>
   <div class="btn-group btn-group-sm" role="group">
@@ -303,6 +305,12 @@ const gold = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ color: '
 gold.count = goldMods.length;
 if (!goldMods.length) { document.getElementById('nkGoldWrap').style.display = 'none'; document.querySelector('#nkColor option[value=golden]').remove(); }
 scene.add(posts, plates, bins, gold);
+// unitização: as caixas empilhadas nos paletes fechados (lastro × camadas), em tons de papelão alternando as camadas
+const LOADS = data.loads || [];
+const loads = new THREE.InstancedMesh(box, new THREE.MeshLambertMaterial(), Math.max(1, LOADS.length));
+scene.add(loads);
+if (!LOADS.length) document.getElementById('nkLoadsWrap').style.display = 'none';
+if (!data.bins.some(b => b[14] && b[14] !== 'u')) document.querySelector('#nkColor option[value=unit]')?.remove();
 // aparência (services/appearance.py): cada peça de um modelo é um InstancedMesh com todos os itens daquele cadastro
 const binsPick = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ visible: false }), Math.max(1, data.bins.length));
 const lookStructs = new THREE.Group(), lookBins = new THREE.Group(), LG = geometries(), LOOKS = [];
@@ -434,6 +442,7 @@ function binColor(b, mode) {
   if (mode === 'sku') return skuColor(b[10]);
   if (mode === 'golden') return b[11] && b[13] ? col.set('#e0a800') : b[11] ? col.set('#f6d365') : b[13] ? col.set('#f39c4a') : col.set('#c3cbd1');
   if (mode === 'abc') return col.set({ A: '#d62728', B: '#ff9f1c', C: '#9fb3c0' }[b[12]] || '#d5dade');
+  if (mode === 'unit') return col.set({ c: '#c8a165', p: '#e07b39' }[b[14]] || '#9fb3c0');
   return col.set(data.types[b[6]]?.color || '#888');
 }
 
@@ -472,6 +481,14 @@ function rebuild() {
     setBox(binsPick, i, b[0] + 0.5, b[1] + 0.5, b[2], b[3] - 1, b[4] - 1, b[5], vis);  // clique: vale também com a aparência
     bins.setColorAt(i, binColor(b, mode));
   });
+  const showLoads = $('nkLoads').checked;
+  LOADS.forEach((c, i) => {
+    const b = data.bins[c[6]], m = mods[b[8]];
+    const vis = showLoads && showMod(m) && c[2] + c[5] <= cut + 0.1;
+    setBox(loads, i, c[0] + 0.4, c[1] + 0.4, c[2], c[3] - 0.8, c[4] - 0.8, c[5] - 0.6, vis);
+    loads.setColorAt(i, col.set(c[7] ? '#b88a4f' : '#d2ab72'));
+  });
+  if (LOADS.length) { loads.instanceMatrix.needsUpdate = true; if (loads.instanceColor) loads.instanceColor.needsUpdate = true; loads.computeBoundingSphere(); }
   [posts, plates, bins, binsPick].forEach(x => { x.instanceMatrix.needsUpdate = true; if (x.instanceColor) x.instanceColor.needsUpdate = true; });
   bins.computeBoundingSphere(); posts.computeBoundingSphere(); plates.computeBoundingSphere(); binsPick.computeBoundingSphere();
   updateLooks(showMod, cut, mode, useLook);
@@ -495,6 +512,11 @@ function legend(mode) {
       '<div>' + _t('{esc}: {fmt}–{fmt2} m · níveis {golden_levels}', {esc: esc(s.code), fmt: fmt(s.golden[0] / 100, 2), fmt2: fmt(s.golden[1] / 100, 2), golden_levels: s.golden_levels.join(', ') || '—'}) + '<\/div>').join('')) + ([['#e0a800', _t('nas duas (pega e caminhada)'), b => b[11] && b[13]], ['#f6d365', _t('só pega (altura)'), b => b[11] && !b[13]],
        ['#f39c4a', _t('só caminhada (perto da referência)'), b => !b[11] && b[13]], ['#c3cbd1', _t('fora das duas'), b => !b[11] && !b[13]]]
         .map(([c, t, f]) => '<div><span class="nk3d-sw" style="background:' + c + '"><\/span>' + _t('{t} · {bins} bins', {t, bins: data.bins.filter(f).length}) + '<\/div>').join(''));
+  } else if (mode === 'unit') {
+    const n = c => data.bins.filter(b => (b[14] || 'u') === c).length;
+    el.innerHTML = '<b>' + _t('Unitização') + '<\/b>' + [['u', '#9fb3c0', _t('unidades soltas')], ['c', '#c8a165', _t('embalagens inteiras (caixas)')], ['p', '#e07b39', _t('palete fechado')]]
+      .map(([c, cl, t]) => '<div><span class="nk3d-sw" style="background:' + cl + '"><\/span>' + _t('{t} · {n} bins', {t, n: n(c)}) + '<\/div>').join('')
+      + (LOADS.length ? '<div class="text-muted">' + _t('{n} caixas desenhadas nos paletes', {n: LOADS.length}) + '<\/div>' : '');
   } else if (mode === 'sku') {
     el.innerHTML = '<b>SKU<\/b> <span class="text-muted">' + _t('uma cor por SKU · {keys} SKUs', {keys: Object.keys(data.skus).length}) + '<\/span>';
   } else {
@@ -537,7 +559,7 @@ function select(i) {
   const b = data.bins[i], m = mods[b[8]], t = data.types[b[6]], s = structById[m.s];
   selBox.scale.set(M(b[3]), M(b[5]), M(b[4])); selBox.position.set(M(b[0] + b[3] / 2), M(b[2] + b[5] / 2), M(b[1] + b[4] / 2)); selBox.visible = true;
   const same = data.bins.filter(x => x[9] === b[9]).length;
-  info.innerHTML = '<div class="d-flex justify-content-between"><b class="mono">' + (esc(b[9])) + '<\/b><button type="button" class="btn-close btn-sm" aria-label="' + _t('Fechar') + '"><\/button><\/div>\n    <div><span class="mono">' + (esc(b[10])) + '<\/span> — ' + (esc(data.skus[b[10]] || '')) + '<\/div>\n    <div class="mt-1">' + _t('Bin <span class="mono">{esc}<\/span> · {same} bin(s) no endereço', {esc: esc(t?.code), same}) + '<\/div>\n    <div>' + _t('Ocupação das bins: <b>{fmt}%<\/b>', {fmt: fmt(b[7])}) + '<\/div>' + (b[11] ? '<div><span class="badge text-bg-warning">' + _t('Zona de ouro') + '<\/span><\/div>' : '') + '\n    <div class="text-muted">' + _t('Estante {esc} · {esc2}{cap} · altura {fmt} m', {esc: esc(m.code), esc2: esc(s?.code), cap: m.cap ? ' · cabeceira' : '', fmt: fmt(b[2] / 100, 2)}) + '<\/div>';
+  info.innerHTML = '<div class="d-flex justify-content-between"><b class="mono">' + (esc(b[9])) + '<\/b><button type="button" class="btn-close btn-sm" aria-label="' + _t('Fechar') + '"><\/button><\/div>\n    <div><span class="mono">' + (esc(b[10])) + '<\/span> — ' + (esc(data.skus[b[10]] || '')) + '<\/div>\n    <div class="mt-1">' + _t('Bin <span class="mono">{esc}<\/span> · {same} bin(s) no endereço', {esc: esc(t?.code), same}) + '<\/div>\n    <div>' + _t('Ocupação das bins: <b>{fmt}%<\/b>', {fmt: fmt(b[7])}) + '<\/div>' + (b[15] ? '<div><i class="bi bi-box2"><\/i> ' + esc(b[15]) + '<\/div>' : '') + (b[11] ? '<div><span class="badge text-bg-warning">' + _t('Zona de ouro') + '<\/span><\/div>' : '') + '\n    <div class="text-muted">' + _t('Estante {esc} · {esc2}{cap} · altura {fmt} m', {esc: esc(m.code), esc2: esc(s?.code), cap: m.cap ? ' · cabeceira' : '', fmt: fmt(b[2] / 100, 2)}) + '<\/div>';
   info.style.display = 'block';
   info.querySelector('.btn-close').addEventListener('click', () => select(null));
 }
@@ -551,6 +573,7 @@ $('nkCut').addEventListener('input', rebuild);
 $('nkBins').addEventListener('change', e => { bins.visible = lookBins.visible = e.target.checked; if (!e.target.checked) select(null); });
 $('nkStructs').addEventListener('change', e => { posts.visible = plates.visible = lookStructs.visible = doorGroup.visible = e.target.checked; });
 $('nkLook').addEventListener('change', rebuild);
+$('nkLoads').addEventListener('change', rebuild);
 $('nkWalls').addEventListener('change', e => { walls.visible = e.target.checked; });
 $('nkGold').addEventListener('change', e => { gold.visible = e.target.checked; });
 let findTimer = null;

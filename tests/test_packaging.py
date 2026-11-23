@@ -319,8 +319,9 @@ def test_unitization_example_sku_packagings(db, tmp_path):
     d = {x.sku: x.unit for x in load_uploaded_demand(db, cfg["items"], cfg["demand"], cfg["sku_packs"])[0]}
     pal = db.query(BinType).filter_by(code="PALETE").one()
     p1 = d["UN0001"]
-    assert p1.pack.qty == 24 and [a.qty for a in p1.alts] == [96]  # caixa de 4 displays; master de 4 caixas
-    assert sorted(p1.alts[0].pallets[pal.id]) == [(2, 2), (2, 4)]  # palete baixo e alto
+    assert p1.pack.qty == 96 and p1.alts == ()  # só o master (4 caixas de 4 displays de 6) habilitado
+    assert sorted(p1.pack.pallets[pal.id]) == [(6, 2), (6, 4)]  # palete baixo e alto
+    assert d["UN0012"].pack.qty == 4 and [a.qty for a in d["UN0012"].alts] == [24]  # master = 6 caixas (do modelo)
     assert d["UN0002"].pack.qty == 12 and d["UN0002"].alts == ()  # sem embalagens diferentes por bin
     assert d["UN0005"].pack is None  # SKU "nunca"
     assert d["UN0009"].pack is None  # embalagem não habilitada
@@ -376,3 +377,55 @@ def test_bulk_apply_skus_then_level_above_and_calc_weight(client, db):
     # Calcular: o peso da embalagem cheia = 24 × 0,2 + tara 0,5
     calc = client.post(f"/products/{b.id}/packagings/calc", data={"model_id": str(cx.id), "inner_qty": "24"}).json()
     assert calc["weight"] == 5.3
+
+
+def test_model_hierarchy_imports_and_3d(client, db, tmp_path):
+    """Hierarquia no modelo (independe dos produtos): aplicar o master cria a caixa no SKU; importação de modelos e de
+    filiais com unitização; o 3D do exemplo traz como cada bin guarda e as caixas dos paletes."""
+    from models import Branch, PackagingModel, Product, SiteProject
+    from services.master_importer import MASTER_KINDS, MasterOptions
+    from tests.test_structure_import import _map
+
+    text = ("Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Tara (kg);Contem;Quantidade\n"
+            "PKH-CX;Caixa;20;30;20;0,5;;\nPKH-MS;Master;40;60;40;1;PKH-CX;\n")
+    p = tmp_path / "m.csv"
+    p.write_text(text, encoding="utf-8")
+    k = MASTER_KINDS["packaging_models"]
+    res = k["run"](db, p, _map(text.splitlines()[0], k["fields"]), MasterOptions())
+    assert not res.errors, res.errors
+    ms = db.query(PackagingModel).filter_by(code="PKH-MS").one()
+    assert ms.inner_model.code == "PKH-CX" and ms.inner_qty == 8  # vazia: quantas cabem
+    text = "Codigo;Nome;Unitizacao\nPKH;Filial H;caixas e paletes\n"
+    p = tmp_path / "b.csv"
+    p.write_text(text, encoding="utf-8")
+    k = MASTER_KINDS["branches"]
+    assert not k["run"](db, p, _map(text.splitlines()[0], k["fields"]), MasterOptions()).errors
+    br = db.query(Branch).filter_by(code="PKH").one()
+    assert br.unitization == "full"
+    pr = Product(sku="PKH-1", name="H", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.5"))
+    db.add(pr)
+    db.commit()
+    r = client.post("/packagings/apply/confirm", data={"mode": "skus", "ids": str(pr.id), "model_id": str(ms.id),
+                                                      "branch_ids": str(br.id)}, follow_redirects=False)
+    assert r.status_code == 303
+    db.expire_all()
+    by = {x.model.code: x for x in db.get(Product, pr.id).packagings}
+    assert set(by) == {"PKH-CX", "PKH-MS"}  # a caixa foi criada pela hierarquia do modelo
+    assert by["PKH-MS"].inner is by["PKH-CX"] and by["PKH-CX"].inner_qty == 12 and by["PKH-MS"].units() == 96
+    assert float(by["PKH-CX"].weight) == 6.5 and float(by["PKH-MS"].weight) == 53.0  # peso cheia gravado
+    assert [b.code for b in by["PKH-CX"].branches] == ["PKH"]
+    # 3D do exemplo de unitização
+    from services.site_examples import BY_SLUG, write_workbook
+    from services.site_import import import_file
+    from services.site_service import merged
+
+    cfg, _m, errs = import_file(db, write_workbook(BY_SLUG["unitizacao"], tmp_path / "u.xlsx"), merged(None))
+    sp = SiteProject(name="PKH-3D", config=cfg)
+    db.add(sp)
+    db.commit()
+    js = client.get(f"/optimization/site/{sp.id}/plan3d.json").json()
+    hows = {b[14] for b in js["bins"]}
+    assert hows == {"u", "c", "p"} and js["loads"]
+    master = [b for b in js["bins"] if b[10] == "UN0001"]
+    assert master and all(b[14] == "p" and "MST-PAR" in b[15] and "cadastrada" in b[15] for b in master)
+    assert any(b[10] == "UN0002" and b[14] == "c" for b in js["bins"])  # sempre na caixa: bandeja de caixas

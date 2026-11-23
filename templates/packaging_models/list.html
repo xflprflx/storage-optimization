@@ -27,7 +27,7 @@
       {% for m in page.items %}
         <tr>
           <td class="mono fw-semibold">{{ m.code }}</td>
-          <td>{{ m.name }}{% if m.notes %}<div class="small text-muted">{{ m.notes }}</div>{% endif %}</td>
+          <td>{{ m.name }}{% if m.inner_model %}<div class="small"><i class="bi bi-diagram-2"></i> {{ _h("contém {n} × <span class=\"mono\">{code}</span>", n=m.inner_qty or '?', code=m.inner_model.code) }}</div>{% endif %}{% if m.notes %}<div class="small text-muted">{{ m.notes }}</div>{% endif %}</td>
           <td class="text-end">{{ m.height|dec }}</td><td class="text-end">{{ m.width|dec }}</td><td class="text-end">{{ m.length|dec }}</td>
           <td class="text-end">{{ m.tare|dec(3) if m.tare is not none else '' }}</td>
           <td class="text-end">{{ usage.get(m.id) or '' }}</td>

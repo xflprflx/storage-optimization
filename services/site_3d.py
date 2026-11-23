@@ -28,6 +28,36 @@ def _r(v: float) -> float:
     return round(v, 1)
 
 
+MAX_LOADS = 30000  # caixas desenhadas nos paletes fechados (limite do desenho)
+
+
+def _unitization(unit, spec, upb: float, bwx: float, bdy: float):
+    """Como o SKU fica nesta bin (unitização): ("u"|"c"|"p", texto, caixas do palete para desenhar)."""
+    from services.bin_optimizer import choose
+    from services.i18n import _
+
+    if unit is None or spec is None:
+        return "u", "", None
+    ch = choose(unit, spec)
+    if ch.how in ("units", "none") or ch.pack is None:
+        return "u", _("unidades soltas"), None
+    pk = ch.pack
+    code = pk.name or _("caixa")
+    n = int(math.ceil(upb / pk.qty - 1e-9)) if pk.qty else 0
+    if ch.how == "cases":
+        return "c", _("{n} × {code} de {k} un. (embalagens inteiras)", n=n, code=code, k=pk.qty), None
+    # palete fechado: o arranjo das caixas na base (o que mais cabe, em pé) e as camadas
+    best = max(((int(bwx // pk.w), int(bdy // pk.l), pk.w, pk.l), (int(bwx // pk.l), int(bdy // pk.w), pk.l, pk.w)),
+               key=lambda g: g[0] * g[1])
+    grid = best[0] * best[1]
+    layer = ch.layer or grid
+    layers = int(math.ceil(n / layer)) if layer else 0
+    src = _("paletização cadastrada") if ch.layer else _("paletização calculada pelas medidas")
+    text = _("palete fechado: {n} × {code} de {k} un. — {a} por camada × {b} camada(s) ({src})", n=n, code=code,
+             k=pk.qty, a=layer, b=layers, src=src)
+    return "p", text, (best, pk.h, min(layer, grid) if grid else 0, n)
+
+
 def plan_3d(plan: SitePlan) -> dict:
     b, fl = plan.building, plan.floor
     specs, parents, prm = plan.specs or {}, plan.parents or {}, plan.params
@@ -36,8 +66,9 @@ def plan_3d(plan: SitePlan) -> dict:
     out: dict = {
         "building": {"L": fl.length_cm, "W": fl.width_cm, "H": clear_h, "name": ""},
         "areas": [], "obstacles": [], "sectors": [], "zones": [], "structs": [], "types": [], "modules": [], "bins": [],
-        "aisles": [],
+        "aisles": [], "loads": [],
     }
+    units = {d.sku: d.unit for d in plan.demands or []}
     for kind, X, Y, w, d, label in fl.shapes():
         if kind == "obstacle":
             out["obstacles"].append({"x": _r(X), "y": _r(Y), "w": _r(w), "d": _r(d), "h": min(OBSTACLE_H, clear_h),
@@ -95,6 +126,7 @@ def plan_3d(plan: SitePlan) -> dict:
             golden = s.is_golden(lv.n)
             for pos in lv.positions:
                 skus.setdefault(pos.sku, pos.name)
+                upb = pos.units / pos.bins if pos.bins else 0
                 for _ in range(pos.bins):
                     slot, part = divmod(k, per)
                     col, row = divmod(slot, deep)
@@ -106,9 +138,20 @@ def plan_3d(plan: SitePlan) -> dict:
                         bx, by, bwx, bdy = X + along, Y + across, cw, bl
                     else:
                         bx, by, bwx, bdy = X + across, Y + along, bl, cw
-                    out["bins"].append([_r(bx), _r(by), _r(z0 + (PALLET_H if is_floor(s.kind) else 2.0)), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
+                    bz = z0 + (PALLET_H if is_floor(s.kind) else 2.0)
+                    how, text, load = _unitization(units.get(pos.sku), spec, upb, bwx, bdy)
+                    bi = len(out["bins"])
+                    out["bins"].append([_r(bx), _r(by), _r(bz), _r(bwx), _r(bdy), _r(bh), tidx.get(lv.type_id, 0),
                                         None if pos.fill is None else round(pos.fill, 1), mi, pos.address, pos.sku,
-                                        golden, abc.get(pos.sku, ""), bool(pos.walk_golden)])
+                                        golden, abc.get(pos.sku, ""), bool(pos.walk_golden), how, text])
+                    if load and load[2] and len(out["loads"]) < MAX_LOADS:  # as caixas empilhadas no palete
+                        (gx, gy, gw, gl), case_h, per_layer, n_cases = load
+                        ox, oy = bx + (bwx - gx * gw) / 2, by + (bdy - gy * gl) / 2
+                        for c in range(min(n_cases, MAX_LOADS - len(out["loads"]))):
+                            lay, j = divmod(c, per_layer)
+                            ix, iy = divmod(j, gy) if gy else (0, 0)
+                            out["loads"].append([_r(ox + ix * gw), _r(oy + iy * gl), _r(bz + bh + lay * case_h),
+                                                 _r(gw), _r(gl), _r(case_h), bi, lay % 2])
                     k += 1
         out["modules"].append(mod)
     out["skus"] = skus

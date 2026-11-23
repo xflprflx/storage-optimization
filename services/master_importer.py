@@ -36,7 +36,25 @@ ALL_WORDS = {"", "*", "TODAS", "TODOS", N_("(TODAS)"), N_("(TODOS)"), "TUDO"}
 BRANCH_FIELDS = {
     "code": (N_("Código da filial"), True, ("codigo", "código", "cod", "filial", "codfilial", "codigofilial", "code", "branch")),
     "name": (N_("Nome"), False, ("nome", "name", "descricao", "descrição", "razaosocial", "nomefilial")),
+    "unitization": (N_("Unitização (desligada/só caixas/caixas e paletes)"), False, ("unitizacao", "unitização",
+                                                                                     "unitization")),
 }
+UNIT_WORDS = {"full": ("caixasepaletes", "caixaspaletes", "paletes", "full", "completa", "ligada", "total"),
+              "cases": ("socaixas", "caixas", "cases", "soloboxes"),
+              "off": ("desligada", "nao", "off", "nenhuma", "unidades")}
+
+
+def parse_unitization(raw: str):
+    """Texto da coluna Unitização (aceita o traduzido) → "off" | "cases" | "full"; vazio = None."""
+    v = normalize_header(raw or "")
+    if not v:
+        return None
+    for mode, words in UNIT_WORDS.items():
+        if any(v.startswith(w) for w in words):
+            return mode
+    raise ValueError(_("Unitização inválida: {v} (use desligada, só caixas ou caixas e paletes)", v=raw))
+
+
 WAREHOUSE_FIELDS = {
     "code": (N_("Código do armazém"), True, ("codigo", "código", "cod", "armazem", "armazém", "codarmazem", "deposito", "code", "warehouse")),
     "name": (N_("Nome"), False, ("nome", "name", "descricao", "descrição", "nomearmazem")),
@@ -186,17 +204,19 @@ def import_branches(db: Session, path: Path, mapping: dict, opts: MasterOptions)
             existing = master.branches.get(code)
         if existing is not None:
             seen.add(existing)
+        unit = parse_unitization(get_cell(row, mapping.get("unitization")))
         if existing is None:
-            b = Branch(code=code, name=name or code)
+            b = Branch(code=code, name=name or code, unitization=unit or "off")
             db.add(b)
             db.flush()
             master.branches[code] = b.id
             seen.add(b.id)
             res.inc(N_("Filiais criadas"))
-        elif opts.update_existing and name:
+        elif opts.update_existing and (name or unit):
             b = db.get(Branch, existing)
-            if b.name != name:
-                b.name = name
+            if (name and b.name != name) or (unit and b.unitization != unit):
+                b.name = name or b.name
+                b.unitization = unit or b.unitization
                 res.inc(N_("Filiais atualizadas"))
 
     _run(db, path, opts, res, handle)
@@ -593,6 +613,93 @@ def import_levels(db: Session, path: Path, mapping: dict, opts: MasterOptions) -
 # --------------------------------------------------------------------------- #
 # Embalagens do produto (hierarquia) e paletizações
 # --------------------------------------------------------------------------- #
+PACKAGING_MODEL_FIELDS = {
+    "code": (N_("Código"), True, ("codigo", "cod", "code", "modelo")),
+    "name": (N_("Nome"), False, ("nome", "name", "descricao")),
+    "height": (N_("Altura (cm)"), False, ("altura", "alturacm", "height")),
+    "width": (N_("Largura (cm)"), False, ("largura", "larguracm", "width")),
+    "length": (N_("Comprimento (cm)"), False, ("comprimento", "comprimentocm", "length")),
+    "tare": (N_("Tara (kg)"), False, ("tara", "tarakg", "pesovazio", "tare")),
+    "inner": (N_("Contém (modelo)"), False, ("contem", "contém", "feitade", "inner")),
+    "inner_qty": (N_("Quantidade"), False, ("quantidade", "qtd", "qtde", "qty")),
+    "notes": (N_("Observações"), False, ("observacoes", "obs", "notas", "notes")),
+}
+
+
+def import_packaging_models(db: Session, path: Path, mapping: dict, opts: MasterOptions) -> MasterResult:
+    """Modelos de embalagem: código, nome, medidas, tara e a hierarquia (contém N de outro modelo — em linha anterior
+    ou já cadastrado; quantidade vazia = quantas cabem pelas medidas)."""
+    from models import PackagingModel
+    from services.packaging import fit_in_case
+
+    res = MasterResult(counters={N_("Modelos criados"): 0, N_("Modelos atualizados"): 0})
+    models = {m.code: m for m in db.scalars(select(PackagingModel))}
+
+    def num(row, key):
+        raw = get_cell(row, mapping.get(key)).strip()
+        if not raw:
+            return None
+        v = parse_decimal(raw)
+        if v is None or v < 0 or (v == 0 and key != "tare"):
+            raise ValueError(_("{label}: número maior que zero", label=_(PACKAGING_MODEL_FIELDS[key][0])))
+        return Decimal(str(v))
+
+    def handle(line, row):
+        code = normalize_code(get_cell(row, mapping.get("code")))
+        if not code:
+            raise ValueError(_("Código vazio"))
+        if len(code) > 30:
+            raise ValueError(_("Código com mais de 30 caracteres"))
+        vals = {k: num(row, k) for k in ("height", "width", "length", "tare")}
+        m = models.get(code)
+        if m is None and not all(vals[k] for k in ("height", "width", "length")):
+            raise ValueError(_("Informe altura, largura e comprimento da caixa."))
+        icode = normalize_code(get_cell(row, mapping.get("inner")))
+        inner = None
+        if icode:
+            inner = models.get(icode)
+            if inner is None:
+                raise ValueError(_("Modelo de embalagem {code} não cadastrado", code=icode))
+            if inner.code == code:
+                raise ValueError(_("A embalagem não pode ser feita dela mesma"))
+        qraw = get_cell(row, mapping.get("inner_qty")).strip()
+        qty = None
+        if qraw:
+            q = parse_decimal(qraw)
+            if q is None or q <= 0 or q != int(q):
+                raise ValueError(_("{v}: número inteiro maior que zero", v=_("Quantidade")))
+            qty = int(q)
+        if m is None:
+            m = PackagingModel(code=code, name="", notes="")
+            db.add(m)
+            models[code] = m
+            res.inc(N_("Modelos criados"))
+        elif opts.update_existing:
+            res.inc(N_("Modelos atualizados"))
+        else:
+            return
+        m.name = (get_cell(row, mapping.get("name")).strip() or m.name or code)[:150]
+        notes = get_cell(row, mapping.get("notes")).strip()
+        if notes:
+            m.notes = notes[:200]
+        for k, v in vals.items():
+            if v is not None:
+                setattr(m, k, v)
+        if inner is not None:
+            m.inner_model = inner
+            if not qty:
+                qty = fit_in_case((float(inner.height), float(inner.width), float(inner.length)), None,
+                                  (float(m.height), float(m.width), float(m.length))) or None
+                if not qty:
+                    raise ValueError(_("O modelo {code} não cabe neste pelas medidas.", code=inner.code))
+            m.inner_qty = qty
+        db.flush()
+
+    _run(db, path, opts, res, handle)
+    db.commit()
+    return res
+
+
 PACKAGING_FIELDS = {
     "sku": (N_("SKU"), True, ("sku", "codigo", "codproduto", "produto", "item")),
     "model": (N_("Modelo de embalagem"), True, ("modelodeembalagem", "modelo", "embalagem", "caixapadrao", "model")),
@@ -616,7 +723,7 @@ def import_packagings(db: Session, path: Path, mapping: dict, opts: MasterOption
     from decimal import Decimal
 
     from models import PackagingModel, PackagingPallet, Product, ProductPackaging
-    from services.packaging import check, fill
+    from services.packaging import check, fill_chain
 
     res = MasterResult(counters={N_("Embalagens criadas"): 0, N_("Embalagens atualizadas"): 0, N_("Paletizações"): 0})
     models = {m.code: m for m in db.scalars(select(PackagingModel))}
@@ -704,6 +811,11 @@ def import_packagings(db: Session, path: Path, mapping: dict, opts: MasterOption
                 k.pallets.append(pp)
             pp.layer, pp.layers = layer or pp.layer, layers or pp.layers
             res.inc(N_("Paletizações"))
+        if k.inner is None:
+            from services.packaging import ensure_chain
+
+            for x in ensure_chain(prod, k):  # o modelo contém outro: a embalagem de dentro é criada no produto
+                res.inc(N_("Embalagens criadas"))
         db.flush()
         touched.setdefault(prod.id, set()).add(k.id)
 
@@ -712,7 +824,7 @@ def import_packagings(db: Session, path: Path, mapping: dict, opts: MasterOption
         prod = db.get(Product, pid)
         for k in prod.packagings:
             if k.id in kids:
-                res.notes.extend(f"{prod.sku} · {n_}" for n_ in fill(k, prod) + check(k, prod))
+                res.notes.extend(f"{prod.sku} · {n_}" for n_ in fill_chain(k, prod) + check(k, prod))
     res.notes = res.notes[:200]
     db.commit()
     return res
@@ -722,8 +834,9 @@ MASTER_KINDS = {
     "branches": {"sync_help": N_("Exclui as filiais que não estão no arquivo. Filial com endereços ou níveis é mantida."),"title": N_("Importação de Filiais"), "fields": BRANCH_FIELDS, "run": import_branches,
                  "back": ("/branches", "filiais"), "scope": False, "bins_option": False,
                  "help": [N_("Só o código é obrigatório; sem nome, o nome fica igual ao código."),
-                          N_("Filiais existentes (mesmo código) têm o nome atualizado, se a opção estiver marcada.")],
-                 "sample": "Codigo;Nome\n01;Matriz São Paulo\n02;Filial Rio de Janeiro\n"},
+                          N_("Filiais existentes (mesmo código) têm o nome atualizado, se a opção estiver marcada."),
+                          N_("Unitização (opcional): desligada (padrão), só caixas ou caixas e paletes — se as otimizações da filial usam as embalagens dos produtos e os paletes fechados.")],
+                 "sample": "Codigo;Nome;Unitizacao\n01;Matriz São Paulo;caixas e paletes\n02;Filial Rio de Janeiro;desligada\n"},
     "warehouses": {"sync_help": N_("Exclui os armazéns que não estão no arquivo; com a coluna Filiais mapeada, as associações filial×armazém ficam iguais às do arquivo. Armazém (ou associação) com endereços ou níveis é mantido."),"title": N_("Importação de Armazéns"), "fields": WAREHOUSE_FIELDS, "run": import_warehouses,
                    "back": ("/warehouses", "armazéns"), "scope": False, "bins_option": False,
                    "help": [N_("Só o código é obrigatório."),
@@ -747,6 +860,14 @@ MASTER_KINDS = {
                   "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Peso max (kg);Volume (L);Bin pai;Divisoes largura;Divisoes comprimento;Aberta em cima;Maximo acima da borda (cm);Permite fracionar a bin pai;Armazena em\n"
                             "CX-P;Caixa pequena;10;20;30;8;;;;;nao;;;unidades\nCX-M;Caixa média;20;30;40;15;;;;;nao;;;ambos\nPAL;Palete PBR;15;100;120;1000;;;;;sim;135;;palete\n"
                             "1/2 CX-P;Meia caixa pequena;;;;;;CX-P;2;1;;;sim;\n1/6 CX-M;Sexto de caixa média;;;;;;CX-M;2;3;;;nao;\n"},
+    "packaging_models": {"title": N_("Importação de Modelos de embalagem"), "fields": PACKAGING_MODEL_FIELDS,
+                         "run": import_packaging_models, "back": ("/packaging-models", "modelos de embalagem"),
+                         "scope": False, "bins_option": False,
+                         "help": [N_("Código e medidas externas (cm) da caixa; tara (kg) opcional. Modelos existentes (mesmo código) são atualizados só nos campos preenchidos."),
+                                  N_("Hierarquia: Contém = o código de outro modelo (em linha anterior ou já cadastrado) e a Quantidade dele; vazia = quantas cabem pelas medidas. Ex.: o MASTER contém 4 CAIXA — ao aplicar o MASTER num produto, a CAIXA dele é criada automaticamente.")],
+                         "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Tara (kg);Contem;Quantidade\n"
+                                   "DSP-6;Display 6 un.;10;15;20;0,05;;\nCX-P;Caixa pequena;20;30;30;0,3;DSP-6;6\n"
+                                   "MST-40;Master 40;42;62;62;1;CX-P;8\n"},
     "packagings": {"title": N_("Importação de Embalagens do produto"), "fields": PACKAGING_FIELDS, "run": import_packagings,
                    "back": ("/products", "produtos"), "scope": False, "bins_option": False,
                    "help": [N_("Uma linha por produto × modelo de embalagem; para mais de um palete na mesma embalagem, repita a linha com outro palete. Os produtos e os modelos de embalagem precisam estar cadastrados (as medidas e a tara vêm do modelo)."),

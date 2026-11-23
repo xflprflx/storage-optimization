@@ -69,39 +69,42 @@ SKU_PACK_HEAD = ["SKU", "Modelo de embalagem", "Feita de (modelo; vazio = unidad
 # --------------------------------------------------------------------------- #
 # SKU, produto, material, alt, larg, comp (cm), peso (kg), saldo, min, max
 UNIT_SKUS = [
-    ("UN0001", "Parafuso sextavado M8 (display 6 → caixa 4 displays → master 4 caixas)", "Fixação", 5, 4.5, 4.5, 0.2, 2400, 600, 2400),
-    ("UN0002", "Lâmpada LED 9 W (caixa 12, sem paletização cadastrada)", "Elétrico", 12, 6, 6, 0.08, 480, 120, 480),
-    ("UN0003", "Tinta 18 L (lata no palete inteiro e no meio palete)", "Químico", 36, 32, 32, 23, 180, 60, 180),
-    ("UN0004", "Argamassa 20 kg (saco; palete baixo e alto)", "Construção", 11, 35, 45, 20, 360, 120, 360),
+    ("UN0001", "Parafuso sextavado M8 (display → caixa → master; só o master habilitado: palete baixo e alto)", "Fixação", 5, 4.5, 4.5, 0.2, 4600, 1200, 4600),
+    ("UN0002", "Lâmpada LED 9 W (sempre na caixa: bandeja de caixas)", "Elétrico", 12, 6, 6, 0.08, 480, 120, 480),
+    ("UN0003", "Tinta 18 L (lata: paletização cadastrada no palete inteiro e no meio palete)", "Químico", 36, 32, 32, 23, 180, 60, 180),
+    ("UN0004", "Argamassa 20 kg (saco: sem paletização no meio palete — calculada e avisada)", "Construção", 11, 35, 45, 20, 360, 120, 360),
     ("UN0005", "Fita isolante (tem caixa, mas o SKU nunca usa embalagem)", "Elétrico", 2.5, 9.5, 9.5, 0.05, 300, 80, 300),
-    ("UN0006", "Luva de proteção (guardar sempre na caixa)", "EPI", 3, 13, 26, 0.1, 240, 60, 240),
-    ("UN0007", "Joelho PVC 25 mm (guardar sempre em unidades soltas)", "Hidráulico", 5, 5, 7, 0.05, 400, 100, 400),
+    ("UN0006", "Luva de proteção (sempre na caixa)", "EPI", 3, 13, 26, 0.1, 240, 60, 240),
+    ("UN0007", "Joelho PVC 25 mm (sempre em unidades soltas)", "Hidráulico", 5, 5, 7, 0.05, 400, 100, 400),
     ("UN0008", "Disjuntor 20 A (sem embalagem cadastrada)", "Elétrico", 8.5, 2, 7, 0.12, 120, 40, 120),
     ("UN0009", "Cabo flexível 2,5 mm² — rolo (caixa não habilitada)", "Elétrico", 10, 22, 22, 3.5, 60, 20, 60),
     ("UN0010", "Silicone (display e caixa sem quantidade: calculadas pelas medidas)", "Químico", 5.5, 5.5, 24, 0.33, 288, 72, 288),
     ("UN0011", "Cimento 50 kg (lastro informado maior que a base: aviso)", "Construção", 12, 40, 61, 50, 200, 80, 200),
-    ("UN0012", "Rejunte 5 kg (caixa 4 sacos; embalagens diferentes por bin)", "Construção", 10, 15, 20, 5, 240, 80, 240),
+    ("UN0012", "Rejunte 5 kg (caixa de 4 sacos na bin \"unidades ou caixas\"; master no palete)", "Construção", 10, 15, 20, 5, 240, 80, 240),
 ]
-UNIT_EXTRA = {"UN0001": ("automático", "conforme a filial", "sim"), "UN0002": ("automático", "conforme a filial", "não"),
+UNIT_EXTRA = {"UN0001": ("caixa", "conforme a filial", "sim"), "UN0002": ("caixa", "conforme a filial", "não"),
               "UN0005": ("automático", "nunca", "não"), "UN0006": ("caixa", "conforme a filial", "não"),
-              "UN0007": ("unidades", "conforme a filial", "não"), "UN0012": ("automático", "conforme a filial", "sim")}
-# modelos de embalagem do exemplo (além das caixas-padrão): código, nome, altura, largura, comprimento (cm), tara (kg)
-UNIT_MODELS = [("DSP-PAR", "Display de parafusos", 5, 14, 9.5, 0.05),
-               ("MST-60", "Caixa master 31 × 41 × 61", 31, 41, 61, 1.2),
-               ("LATA-18", "Lata de 18 L", 37, 33, 33, 1.0),
-               ("SACO-20", "Saco de 20 kg", 11, 35, 45, 0.1),
-               ("SACO-50", "Saco de 50 kg", 12, 40, 61, 0.2),
-               ("CX-ROLO", "Caixa de 4 rolos", 22, 46, 46, 0.6),
-               ("DSP-SIL", "Display de silicone", 12, 25, 25, 0.15),
-               ("CX-REJ", "Caixa de rejunte (4 sacos)", 21, 31, 41, 0.5),
-               ("MST-REJ", "Master de rejunte (6 caixas)", 42, 62, 82, 1.5)]
-# SKU, modelo, feita de (modelo), quantidade, peso cheia, habilitada, ordem, palete, caixas por camada, camadas
+              "UN0007": ("unidades", "conforme a filial", "não"), "UN0012": ("caixa", "conforme a filial", "sim")}
+# modelos de embalagem do exemplo: código, nome, altura, largura, comprimento (cm), tara (kg), contém (modelo), quantidade
+# — a hierarquia fica no modelo (o master contém 4 caixas), sem depender de produto nenhum
+UNIT_MODELS = [("DSP-PAR", "Display de parafusos (6 un.)", 5, 14, 9.5, 0.05, None, None),
+               ("CX-PAR", "Caixa de parafusos (4 displays)", 15, 20, 30, 0.3, "DSP-PAR", 4),
+               ("MST-PAR", "Master de parafusos (4 caixas)", 31, 40, 50, 1.0, "CX-PAR", 4),
+               ("LATA-18", "Lata de 18 L", 37, 33, 33, 1.0, None, None),
+               ("SACO-20", "Saco de 20 kg", 11, 35, 45, 0.1, None, None),
+               ("SACO-50", "Saco de 50 kg", 12, 40, 61, 0.2, None, None),
+               ("CX-ROLO", "Caixa de 4 rolos", 22, 46, 46, 0.6, None, None),
+               ("DSP-SIL", "Display de silicone", 12, 25, 25, 0.15, None, None),
+               ("CX-REJ", "Caixa de rejunte (4 sacos)", 21, 31, 41, 0.5, None, None),
+               ("MST-REJ", "Master de rejunte (6 caixas)", 42, 62, 82, 1.5, "CX-REJ", 6)]
+# SKU, modelo, feita de (modelo; vazio = a do modelo ou unidades), quantidade, peso cheia, habilitada, ordem, palete,
+# caixas por camada, camadas
 UNIT_PACKS = [
-    ("UN0001", "DSP-PAR", "", 6, None, "não", 3, None, None, None),  # o display existe, mas não é usado
-    ("UN0001", "CX-P", "DSP-PAR", 4, None, "sim", 1, "PALETE", None, None),  # caixa de 4 displays; lastro calculado
-    ("UN0001", "MST-60", "CX-P", 4, None, "sim", 2, "PALETE", 2, 2),  # master: palete baixo…
-    ("UN0001", "MST-60", "CX-P", 4, None, "sim", 2, "PALETE", 2, 4),  # …e alto
-    ("UN0002", "CX-P", "", 12, None, "sim", 1, None, None, None),  # sem paletização: calculada e avisada
+    ("UN0001", "DSP-PAR", "", 6, None, "não", 1, None, None, None),
+    ("UN0001", "CX-PAR", "", None, None, "não", 2, None, None, None),  # contém 4 displays (do modelo)
+    ("UN0001", "MST-PAR", "", None, None, "sim", 3, "PALETE", 6, 2),  # contém 4 caixas (do modelo): palete baixo…
+    ("UN0001", "MST-PAR", "", None, None, "sim", 3, "PALETE", 6, 4),  # …e alto
+    ("UN0002", "CX-P", "", 12, None, "sim", 1, None, None, None),
     ("UN0003", "LATA-18", "", 1, 23.5, "sim", 1, "PALETE", 9, 3),
     ("UN0003", "LATA-18", "", 1, 23.5, "sim", 1, "MEIO-PAL", 2, 3),
     ("UN0004", "SACO-20", "", 1, 20, "sim", 1, "PALETE", 6, 5),
@@ -113,8 +116,8 @@ UNIT_PACKS = [
     ("UN0010", "DSP-SIL", "", None, None, "sim", 1, None, None, None),  # quantidades calculadas pelas medidas
     ("UN0010", "CX-M", "DSP-SIL", None, None, "sim", 2, None, None, None),
     ("UN0011", "SACO-50", "", 1, 50, "sim", 1, "PALETE", 4, 5),  # lastro maior que a base: aviso
-    ("UN0012", "CX-REJ", "", 4, 20.5, "sim", 1, "PALETE", 6, 5),
-    ("UN0012", "MST-REJ", "CX-REJ", 6, None, "sim", 2, "PALETE", 1, 3),
+    ("UN0012", "CX-REJ", "", 4, None, "sim", 1, "PALETE", 6, 5),
+    ("UN0012", "MST-REJ", "", None, None, "sim", 2, "PALETE", 1, 3),  # contém 6 caixas (do modelo)
 ]
 
 
@@ -461,8 +464,9 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
           [(code, *STRUCTURES[code], *mode, *GOLDEN.get(code, (None, None)), *KIND_EXTRA.get(code, (None,) * 5),
             SHARED_SIDES.get(STRUCTURES[code][1]))
            for code, mode in ex["structures"].items()], {2: 36, 17: 22, 22: 22})
-    sheet(wb.create_sheet("Embalagens"), ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Tara (kg)"],
-          PACKAGING + list(ex.get("models") or []), {2: 40})
+    sheet(wb.create_sheet("Embalagens"), ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Tara (kg)",
+                                          "Contém (modelo)", "Quantidade"],
+          [tuple(m) + (None,) * (8 - len(m)) for m in PACKAGING + list(ex.get("models") or [])], {2: 40, 7: 16})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",
            "Custo por bin (R$)", "Aberta em cima (sim/não)", "Máximo acima da borda (cm)",

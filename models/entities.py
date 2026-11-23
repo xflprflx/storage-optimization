@@ -409,6 +409,13 @@ class PackagingModel(TimestampMixin, Base):
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     tare: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # peso da caixa vazia (kg)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+    # hierarquia entre modelos (independe dos produtos): este modelo contém `inner_qty` do modelo `inner_model`
+    # (ex.: MASTER contém 4 CAIXA). Ao aplicar este modelo num produto, a embalagem de dentro é criada/ligada nele.
+    inner_model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="SET NULL"),
+                                                          nullable=True)
+    inner_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    inner_model: Mapped[Optional["PackagingModel"]] = relationship(remote_side="PackagingModel.id")
 
 
 class Product(TimestampMixin, Base):

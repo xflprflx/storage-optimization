@@ -238,6 +238,53 @@ def suggest_pallet(case: tuple, weight: Optional[float], pallet) -> tuple[int, i
     return max(0, layer), max(0, layers)
 
 
+def ensure_chain(prod, k, _depth: int = 0) -> list:
+    """Hierarquia do modelo (independe dos produtos): se o modelo da embalagem contém N de outro modelo e a embalagem
+    ainda não tem a de dentro, liga a embalagem do produto com aquele modelo — criada se faltar, nas mesmas filiais — e
+    a quantidade vem do modelo. Vale para a cadeia inteira (master → caixa → display). Retorna as embalagens criadas."""
+    from models import ProductPackaging
+
+    m = getattr(k, "model", None)
+    im = getattr(m, "inner_model", None) if m is not None else None
+    if im is None or _depth > 8:
+        return []
+    created = []
+    if k.inner is None:
+        inner = next((x for x in prod.packagings if x.model_id == im.id), None)
+        if inner is None:
+            inner = ProductPackaging(model=im, model_id=im.id, name=im.code[:40], sort=k.sort or 1)
+            inner.branches = list(getattr(k, "branches", None) or [])
+            k.sort = (k.sort or 1) + 1  # a de dentro antes (1ª opção nas bins menores)
+            prod.packagings.append(inner)
+            created.append(inner)
+        k.inner = inner
+        if m.inner_qty:
+            k.inner_qty = m.inner_qty
+    if k.inner is not None:
+        created += ensure_chain(prod, k.inner, _depth + 1)
+    return created
+
+
+def virtual_chain(k, _depth: int = 0):
+    """O mesmo que ensure_chain para uma embalagem "virtual" (cálculo e planilha do projeto): a de dentro vem do modelo."""
+    m = getattr(k, "model", None)
+    im = getattr(m, "inner_model", None) if m is not None else None
+    if im is None or _depth > 8:
+        return k
+    if k.inner is None:
+        k.inner = _K(name=im.code, inner=None, inner_qty=None, model=im, weight=None)
+        if m.inner_qty:
+            k.inner_qty = m.inner_qty
+    virtual_chain(k.inner, _depth + 1)
+    return k
+
+
+def fill_chain(k, product) -> list[str]:
+    """fill da embalagem e das de dentro (de dentro para fora: quantidade e peso dependem delas)."""
+    out = fill_chain(k.inner, product) if getattr(k, "inner", None) is not None else []
+    return out + fill(k, product)
+
+
 def fill(k, product) -> list[str]:
     """Completa o que ficou vazio pelas medidas (quantidade de dentro; caixas por camada e camadas de cada palete) e
     devolve as notas do que foi calculado."""
@@ -250,6 +297,14 @@ def fill(k, product) -> list[str]:
         if n:
             k.inner_qty = n
             notes.append(_("{name}: quantidade calculada pelas medidas: {n}.", name=k.name, n=n))
+    if k.weight is None:  # peso cheia: o conteúdo + a tara do modelo (gravado: aparece no cadastro e no Calcular)
+        from decimal import Decimal
+
+        w = weight_of(k, product)
+        if w is not None:
+            k.weight = Decimal(str(round(w, 3)))
+            notes.append(_("{name}: peso cheia calculado: {w} kg.", name=k.name,
+                           w=f"{w:.3f}".rstrip("0").rstrip(".").replace(".", ",")))
     for pp in getattr(k, "pallets", None) or []:
         if pp.layer and pp.layers:
             continue
@@ -376,8 +431,10 @@ def item_packaging(it: dict, product, models: dict, pallets: dict):
                            length=it.get("l") if it.get("l") is not None else _f(getattr(product, "length", None)),
                            weight=it.get("wt") if it.get("wt") is not None else _f(getattr(product, "weight", None)))
     sug = set()
+    if base is None:
+        virtual_chain(k)  # o modelo contém outro: a de dentro vem do modelo
     before_q, before_p = k.inner_qty, [(pp.layer, pp.layers) for pp in k.pallets]
-    fill(k, prod)
+    fill_chain(k, prod)
     if k.inner_qty and not before_q:
         sug.add("case_qty")
     if [(pp.layer, pp.layers) for pp in k.pallets] != before_p:
@@ -402,8 +459,13 @@ def sheet_packagings(rows: list[dict], models: dict, pallets: dict) -> list:
         out.append(k)
         by_code[m.code] = k
     for k in out:
-        inner = by_code.get(k._inner)
+        code = k._inner or (k.model.inner_model.code if getattr(k.model, "inner_model", None) is not None else "")
+        inner = by_code.get(code)
         k.inner = inner if inner is not k else None
+        if k.inner is not None and not k._inner and not k.inner_qty and k.model.inner_qty:
+            k.inner_qty = k.model.inner_qty  # hierarquia do modelo
+        if k.inner is None:
+            virtual_chain(k)
     return out
 
 
@@ -487,6 +549,9 @@ def apply_sheet_packs(db: Session, pr, rows: list[dict], models: dict, pallets: 
         if m is not None:
             k = by_model[m.id]
             k.inner = by_model.get(inner.id) if inner is not None and inner.id != m.id else None
+    for k in list(pr.packagings):
+        if k.inner is None:
+            ensure_chain(pr, k)  # hierarquia do modelo
     for k in pr.packagings:
         fill(k, pr)
     return bool(rows)
@@ -538,6 +603,8 @@ def apply_item_pack(db: Session, pr, it: dict, models: dict, pallets: dict, bran
             if v not in (None, "") and getattr(pp, attr) != int(v):
                 setattr(pp, attr, int(v))
                 changed = True
+    if k.inner is None and ensure_chain(pr, k):  # o modelo contém outro: a cadeia é criada no produto
+        changed = True
     return changed
 
 
@@ -577,7 +644,10 @@ def apply_bulk(db: Session, targets: list, model, qty: Optional[int], weight, br
         keep = [pp for pp in k.pallets if pp.pallet_type_id not in {p.id for p, _a, _b in pallet_rows}]
         k.pallets[:] = keep + [PackagingPallet(pallet_type_id=p.id, pallet_type=p, layer=a, layers=b)
                                for p, a, b in pallet_rows]
-        notes = fill(k, prod)
+        if inner is None:
+            created = ensure_chain(prod, k)  # o modelo contém outro: a cadeia é criada no produto
+            out["created"] += len(created)
+        notes = fill_chain(k, prod)
         out["calculated"] += len(notes)
         out["warnings"].extend(f"{prod.sku}: {w}" for w in check(k, prod))
     db.flush()

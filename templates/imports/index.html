@@ -7,9 +7,9 @@
 <div class="row g-3" data-tour="imp-cards">
   <div class="col-12" data-tour="imp-order"><h6 class="text-muted text-uppercase small mb-0">{{ _("Cadastros-base — importe nesta ordem") }}</h6></div>
   {% for kind, icon, title, text in [
-      ('branches', 'bi-building', _('1. Filiais'), _('Código e nome. Atualiza o nome das existentes.')),
+      ('branches', 'bi-building', _('1. Filiais'), _('Código, nome e unitização (desligada, só caixas ou caixas e paletes). Atualiza as existentes.')),
       ('warehouses', 'bi-house-gear', _('2. Armazéns'), _('Código, nome e filiais (lista "01, 02"). Cria filiais inexistentes e as associações.')),
-      ('bin_types', 'bi-inboxes', _('3. Tipos de bin'), _('Código, nome, dimensões (cm), peso máximo (kg), volume (L) e se é aberta em cima.')),
+      ('bin_types', 'bi-inboxes', _('3. Tipos de bin'), _('Código, nome, dimensões (cm), peso máximo (kg), volume (L), se é aberta em cima e o que armazena (unidades, caixas, ambos ou palete).')),
       ('locations', 'bi-grid-3x3-gap', _('4. Endereços'), _('Endereço completo ou corredor/estante/nível/posição/compartimento, com tipo e quantidade de bins.')),
       ('levels', 'bi-layers', _('5. Capacidade dos níveis'), _('Por corredor/estante/nível (aceita faixas): quantas bins de cada tipo cabem e o vão (cm).'))] %}
   <div class="col-md-6 col-xl-4">
@@ -44,6 +44,14 @@
       <p class="text-muted small">{{ _("Cadastra/atualiza produtos por SKU (nome e dimensões) e define o endereço padrão. Filiais e armazéns informados são criados automaticamente pelos códigos.") }}</p>
       <a href="/imports/products" class="btn btn-accent">{{ _("Importar produtos") }}</a>
       <a href="/imports/template/products.csv" class="btn btn-link">{{ _("Baixar modelo CSV") }}</a>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100"><div class="card-body">
+      <h5><i class="bi bi-box2"></i> {{ _("6.0 Modelos de embalagem") }}</h5>
+      <p class="text-muted small">{{ _("Caixas-padrão: código, nome, medidas externas, tara e a hierarquia (o master contém N caixas). Antes das embalagens do produto.") }}</p>
+      <a href="/imports/packaging_models" class="btn btn-accent">{{ _("Importar modelos") }}</a>
+      <a href="/imports/template/packaging_models.csv" class="btn btn-link">{{ _("Baixar modelo CSV") }}</a>
     </div></div>
   </div>
   <div class="col-md-6">

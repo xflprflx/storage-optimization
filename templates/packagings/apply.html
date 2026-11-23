@@ -21,10 +21,10 @@
         <label class="form-label">{{ _("Modelo de embalagem *") }}</label>
         <select class="form-select {{ invalid(errors, 'model_id') }}" name="model_id" required>
           <option value="">{{ _("— escolha —") }}</option>
-          {% for m in models %}<option value="{{ m.id }}" {% if data.get('model_id') == m.id %}selected{% endif %}>{{ m.code }} — {{ m.name }} ({{ m.height|dec }} × {{ m.width|dec }} × {{ m.length|dec }} cm)</option>{% endfor %}
+          {% for m in models %}<option value="{{ m.id }}" {% if data.get('model_id') == m.id %}selected{% endif %}>{{ m.code }} — {{ m.name }} ({{ m.height|dec }} × {{ m.width|dec }} × {{ m.length|dec }} cm){% if m.inner_model %} · {{ _("contém {n} × {code}", n=m.inner_qty or '?', code=m.inner_model.code) }}{% endif %}</option>{% endfor %}
         </select>
         {{ field_error(errors, 'model_id') }}
-        <div class="form-text"><a href="/packaging-models/new" target="_blank">{{ _("Novo modelo de embalagem") }}</a></div>
+        <div class="form-text">{{ _("Modelo que contém outro (hierarquia do modelo): a embalagem de dentro é criada em cada SKU que ainda não a tem, e a quantidade vem do modelo.") }} <a href="/packaging-models/new" target="_blank">{{ _("Novo modelo de embalagem") }}</a></div>
       </div>
       <div class="col-md-3">
         <label class="form-label">{{ _("Quantidade") }} <small class="text-muted">({{ _("de cada embalagem marcada") if mode == 'level' else _("unidades") }})</small></label>

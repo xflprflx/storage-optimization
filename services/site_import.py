@@ -146,6 +146,8 @@ PACKAGING_COLS = {
     "width": ["largura", "larguracm"],
     "length": ["comprimento", "comprimentocm"],
     "tare": ["tara", "tarakg", "pesovazio", "peso", "pesokg"],
+    "inner": ["contem", "contemmodelo", "feitade", "inner"],
+    "inner_qty": ["quantidade", "qtd", "qtde", "qty"],
 }
 ORDER_COLS = {
     "order": ["pedido", "numeropedido", "npedido", "idpedido", "codigopedido", "ordem", "documento", "nf",
@@ -341,7 +343,8 @@ FIELD_LABELS = {
                   "enabled": N_("Habilitada (sim/não)"), "sort": N_("Ordem"), "pallet": N_("Palete (tipo de bin)"),
                   "layer": N_("Caixas por camada"), "layers": N_("Camadas")},
     "packaging": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
-                  "length": N_("Comprimento (cm)"), "tare": N_("Tara (kg)")},
+                  "length": N_("Comprimento (cm)"), "tare": N_("Tara (kg)"), "inner": N_("Contém (modelo)"),
+                  "inner_qty": N_("Quantidade")},
     "zones": {"name": N_("Nome"), "length": N_("Comprimento em X (m)"), "orientation": N_("Orientação das fileiras"),
               "aisle": "Corredor (m)", "cross": N_("Corredores transversais"), "structures": N_("Estruturas permitidas (códigos)"),
               "x": "X (m)", "y": "Y (m)", "width": N_("Largura em Y (m)")},
@@ -733,6 +736,20 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             for k, v in vals.items():
                 if v is not None:
                     setattr(m, k, Decimal(str(v)))
+            inner = normalize_code(_cell(row, cm.get("inner")))
+            if inner:  # hierarquia: este modelo contém N de outro (linha anterior ou já cadastrado)
+                if inner in by_code and inner != code:
+                    q = _dec(row, cm.get("inner_qty"), "inner_qty", errs, i)
+                    m.inner_model = by_code[inner]
+                    m.inner_qty = int(q) if q else None
+                    if not m.inner_qty and all(getattr(m, a) for a in ("height", "width", "length")):
+                        from services.packaging import fit_in_case
+
+                        im = by_code[inner]
+                        m.inner_qty = fit_in_case((float(im.height), float(im.width), float(im.length)), None,
+                                                  (float(m.height), float(m.width), float(m.length))) or None
+                else:
+                    errs.append(_("Embalagens linha {i} ({code}): modelo {v} não cadastrado.", i=i, code=code, v=inner))
         db.flush()
         msgs.append(_("Embalagens: {created} modelo(s) cadastrado(s), {updated} atualizado(s).", created=created, updated=updated))
 
@@ -1219,8 +1236,10 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
     from models import PackagingModel
 
     sheet(wb.create_sheet(_("Embalagens")),
-          [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Tara (kg)")],
-          [(m.code, m.name, *(float(v) if v is not None else None for v in (m.height, m.width, m.length, m.tare)))
+          [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Tara (kg)"),
+           _("Contém (modelo)"), _("Quantidade")],
+          [(m.code, m.name, *(float(v) if v is not None else None for v in (m.height, m.width, m.length, m.tare)),
+            m.inner_model.code if m.inner_model else None, m.inner_qty)
            for m in db.scalars(select(PackagingModel).order_by(PackagingModel.code))], {2: 30})
     sheet(wb.create_sheet(N_("Bins")),
           [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso máx. (kg)"), "Volume (L)",

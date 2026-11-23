@@ -284,6 +284,17 @@ R(r"/optimization/slotting/skus", "#skuFilter", "Filtrar SKUs", "Mostra só os S
 R(r"/optimization/case", "sc", "Cenários do depois", "Quais quantidades mostrar no arranjo depois da otimização: saldo atual, mínimo ou máximo do produto.", "stock:basis")
 
 # =========================================================================== otimização de bins (Por endereço e Pool)
+POCC = r"/optimization/occupancy"
+R(POCC, "target", "Ocupação desejada (%)", "Teto de ocupação por volume de cada bin: o max level sugerido é o que cabe nas bins atuais do SKU com esse enchimento (e pelo arranjo físico das unidades). Ex.: 85 deixa 15% de folga para pegar.", "bin:h")
+R(POCC, "days", "Dias do histórico", "Período do histórico de pedidos para a saída por dia (cobertura e reposições por mês). Com as datas dos pedidos no histórico, vale o período delas.", "stock:basis")
+R(POCC, "unitization", "Unitização", "Conforme a filial (padrão) ou outro modo só para este plano: com caixas, a capacidade conta embalagens inteiras nas bins que guardam caixas.", "bin:h")
+R(POCC, "only_increase", "Só aumentar o max level", "Marcado: o plano nunca reduz o max level atual (só aproveita o espaço que sobra). Desmarcado: reduz quando o max atual não cabe nas bins com X%.", "stock:basis")
+R(POCC, "round_packs", "Arredondar para embalagens inteiras", "O max level sugerido vira múltiplo da 1ª embalagem habilitada na filial (o lote que o CD envia), arredondando para baixo para caber.", "bin:h")
+R(POCC, "branch_id|warehouse_id", "Escopo", "Filial (e armazém) do plano: os endereços com saldo e as bins de cada SKU.", "scope:link")
+R(POCC, "q", "Endereço contém", "Limita o plano aos endereços que contêm o texto (ex.: A-01 = corredor A, estante 01).", "scope:link")
+R(POCC, "sku|material", "Filtro de SKU", "Limita o plano aos SKUs (código ou nome) ou ao tipo de material.", "tag:name")
+R(POCC, r"ids|scope", "Aplicar", "Grava o max level sugerido na política de estoque da filial: nos SKUs marcados ou em todos do plano.", "stock:basis")
+R(POCC, r"p_.*", "Parâmetros do plano", "Os mesmos do formulário acima (o plano é recalculado ao aplicar).", "stock:basis")
 POPT = r"/optimization"
 R(POPT, "branch_id", "Filial", "Filial cujos endereços e bins entram na otimização.", "scope:branch")
 R(POPT, "warehouse_id", "Armazém", "Restringe a otimização a um armazém da filial.", "scope:wh")

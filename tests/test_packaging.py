@@ -519,3 +519,60 @@ def test_branch_insights_page(client, db):
     page = client.get(f"/insights?branch_id={br.id}")
     assert page.status_code == 200 and "Raio-X da filial" in page.text and "A-01-1-2" in page.text
     assert client.get("/insights").status_code == 200
+
+
+def test_occupancy_plan(client, db):
+    """Plano de ocupação X%: max level = o que cabe nas bins atuais do SKU a X% do volume (nunca abaixo do saldo; com
+    "só aumentar", nunca abaixo do max atual; arredondado para embalagens inteiras); reposições por mês com o
+    histórico; aplicar grava o max level na política da filial."""
+    from models import (BinType, Branch, LocationBin, PackagingModel, PickHistory, Product, ProductPackaging,
+                        StockItem, StockPolicy, StorageLocation)
+    from services.occupancy_plan import build
+
+    br = Branch(code="PKO", name="Ocupação")
+    bt = BinType(code="PKO-B", name="B", height=Decimal(20), width=Decimal(30), length=Decimal(40))  # 24 L
+    db.add_all([br, bt])
+    db.flush()
+    locs = [StorageLocation(branch_id=br.id, aisle="O", bay="01", level="1", position=str(n), compartment="",
+                            address=f"O-01-1-{n}") for n in (1, 2)]
+    db.add_all(locs)
+    db.flush()
+    for l in locs:
+        db.add(LocationBin(location_id=l.id, bin_type_id=bt.id, quantity=1))
+    a = Product(sku="PKO-A", name="A", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.1"))
+    b = Product(sku="PKO-B", name="B", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.1"))
+    m = PackagingModel(code="PKO-CX", name="CX", height=Decimal(10), width=Decimal(10), length=Decimal(50))
+    db.add_all([a, b, m])
+    db.flush()
+    kb = ProductPackaging(model=m, name="PKO-CX", inner_qty=5, sort=1)
+    kb.branches.append(br)
+    b.packagings.append(kb)
+    db.add_all([StockItem(product_id=a.id, location_id=locs[0].id, quantity=Decimal(6)),
+                StockItem(product_id=b.id, location_id=locs[1].id, quantity=Decimal(4)),
+                StockPolicy(branch_id=br.id, product_id=a.id, min_level=Decimal(2), max_level=Decimal(10)),
+                StockPolicy(branch_id=br.id, product_id=b.id, max_level=Decimal(30)),
+                PickHistory(branch_id=br.id, filename="h", data={"skus": {"PKO-A": [30, 60]}, "dates": ["2026-01-01", "2026-01-30"]})])
+    db.commit()
+    plan = build(db, br.id, [l.id for l in locs], 80, only_increase=True, round_packs=True)
+    rows = {r.sku: r for r in plan["rows"]}
+    ra, rb = rows["PKO-A"], rows["PKO-B"]
+    assert ra.capacity == 19 and ra.new_max == 19  # 24 cabem pela geometria; 80% do volume = 19
+    assert rb.new_max == 30  # 15 com embalagens de 5 (19 → 15), mas "só aumentar" mantém o max 30
+    plan2 = build(db, br.id, [l.id for l in locs], 80, only_increase=False, round_packs=True)
+    assert {r.sku: r.new_max for r in plan2["rows"]}["PKO-B"] == 15 and plan2["summary"]["lowered"] == 1
+    assert ra.daily == 2.0 and ra.per_month(10) == 7.5 and ra.per_month(19) == round(60 / 17, 2)
+    S = plan["summary"]
+    assert S["history"] and S["repl_new"] < S["repl_now"] and S["fill_new"] > S["fill_max_now"]
+    db.rollback()
+    q = f"branch_id={br.id}&target=80&only_increase=1&round_packs=1&days=30&unitization=branch&run=1"
+    page = client.get(f"/optimization/occupancy?{q}")
+    assert page.status_code == 200 and "PKO-A" in page.text and "Aplicar max levels" in page.text
+    assert client.get(f"/optimization/occupancy/plan.xlsx?{q}").status_code == 200
+    r = client.post("/optimization/occupancy/apply", data={"p_branch_id": str(br.id), "p_target": "80",
+                                                          "p_only_increase": "1", "p_round_packs": "1",
+                                                          "p_days": "30", "p_unitization": "branch",
+                                                          "ids": str(a.id)}, follow_redirects=False)
+    assert r.status_code == 303
+    db.expire_all()
+    assert float(db.query(StockPolicy).filter_by(branch_id=br.id, product_id=a.id).one().max_level) == 19
+    assert float(db.query(StockPolicy).filter_by(branch_id=br.id, product_id=b.id).one().max_level) == 30

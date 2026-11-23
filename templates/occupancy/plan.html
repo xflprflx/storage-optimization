@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Plano de ocupação") }}{% endblock %}
+{% block content %}
+{% macro kpi(label, before, after, unit='', good_up=True, hint='') -%}
+<div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2">
+  <div class="small text-muted" {% if hint %}title="{{ hint }}"{% endif %}>{{ label }}</div>
+  <div class="fs-5 fw-semibold">{{ before|dec if before is not none else '—' }}{{ unit }} <i class="bi bi-arrow-right small text-muted"></i> {{ after|dec if after is not none else '—' }}{{ unit }}</div>
+  {% if before is not none and after is not none and before != after %}
+  {% set d = after - before %}<div class="small {{ 'text-success' if (d > 0) == good_up else 'text-danger' }}">{{ '+' if d > 0 else '' }}{{ d|dec(1) }}{{ unit }}</div>{% endif %}
+</div></div></div>
+{%- endmacro %}
+<div class="page-header">
+  <h1><i class="bi bi-bucket"></i> {{ _("Plano de ocupação") }}</h1>
+</div>
+<div class="small text-muted mb-3">{{ _("Calcula o max level de cada SKU para que as bins que ele já ocupa fiquem com X% do volume: elimina a ociosidade volumétrica e aumenta o lote de reposição — a filial pede menos vezes ao CD que a abastece (menos separação lá e menos frete). As bins e os endereços não mudam; só o max level da política de estoque da filial.") }}</div>
+<form method="get" class="card mb-3" id="ocForm">
+  <input type="hidden" name="run" value="1">
+  <div class="card-body row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label">{{ _("Filial") }}</label>
+      <select class="form-select" name="branch_id" onchange="this.form.warehouse_id.value=''; this.form.run.value=''; this.form.submit()">
+        {% for b in branches %}<option value="{{ b.id }}" {% if (b.id|string) == filters.branch_id %}selected{% endif %}>{{ b.code }} — {{ b.name }}</option>{% endfor %}
+      </select></div>
+    <div class="col-md-3"><label class="form-label">{{ _("Armazém") }}</label>
+      <select class="form-select" name="warehouse_id"><option value="">{{ _("Todos os armazéns") }}</option>
+        {% for w in warehouses %}<option value="{{ w.id }}" {% if (w.id|string) == filters.warehouse_id %}selected{% endif %}>{{ w.code }} — {{ w.name }}</option>{% endfor %}
+      </select></div>
+    <div class="col-md-2"><label class="form-label">{{ _("Endereço contém") }}</label>
+      <input class="form-control" name="q" value="{{ filters.q }}" placeholder="{{ _("Ex.: A-01") }}"></div>
+    <div class="col-md-2"><label class="form-label">SKU</label>
+      <input class="form-control" name="sku" value="{{ filters.sku }}"></div>
+    <div class="col-md-2"><label class="form-label">{{ _("Tipo de material") }}</label>
+      <input class="form-control" name="material" value="{{ filters.material }}"></div>
+    <div class="col-md-2"><label class="form-label fw-semibold">{{ _("Ocupação desejada (%)") }}</label>
+      <input class="form-control text-end fw-semibold" name="target" inputmode="decimal" value="{{ raw.target }}" required></div>
+    <div class="col-md-2"><label class="form-label">{{ _("Dias do histórico") }}</label>
+      <input class="form-control text-end" name="days" inputmode="numeric" value="{{ raw.days }}"></div>
+    <div class="col-md-3"><label class="form-label">{{ _("Unitização") }}</label>
+      <select class="form-select" name="unitization">
+        {% for k, v in [('branch', _('Conforme a filial') ~ (' (' ~ unit_label(branch.unitization or 'off') ~ ')' if branch else '')), ('off', _('Desligada (tudo em unidades soltas)')), ('cases', _('Só caixas (sem palete fechado)')), ('full', _('Caixas e paletes'))] %}<option value="{{ k }}" {% if raw.unitization == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select></div>
+    <div class="col-md-5 d-flex flex-wrap gap-3">
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="only_increase" value="1" id="ocInc" {% if raw.only_increase %}checked{% endif %}>
+        <label class="form-check-label" for="ocInc">{{ _("Só aumentar o max level") }}</label></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" name="round_packs" value="1" id="ocPack" {% if raw.round_packs %}checked{% endif %}>
+        <label class="form-check-label" for="ocPack">{{ _("Arredondar para embalagens inteiras") }}</label></div>
+    </div>
+    <div class="col-md-2"><button class="btn btn-accent w-100"><i class="bi bi-calculator"></i> {{ _("Gerar plano") }}</button></div>
+  </div>
+  {% if errors %}<div class="alert alert-danger m-3 mt-0">{{ errors|join(' ') }}</div>{% endif %}
+</form>
+
+{% if plan %}{% set S = plan.summary %}
+<div class="row g-2 mb-3">
+  {{ kpi(_('Ocupação das bins com o max level'), S.fill_max_now, S.fill_new, '%', True, _('volume das unidades no max level ÷ volume das bins dos SKUs')) }}
+  {{ kpi(_('Soma dos max levels (un.)'), S.max_now, S.max_new) }}
+  {% if S.history %}{{ kpi(_('Reposições por mês'), S.repl_now, S.repl_new, '', False, _('saída por dia × 30 ÷ lote (max − min); só SKUs com saída no histórico')) }}{% endif %}
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body py-2 small">
+    <div>{{ _("SKUs no plano") }}: <b>{{ S.planned|dec }}</b> <span class="text-muted">{{ _("de {n}", n=S.skus|dec) }}</span></div>
+    <div>{{ _("Max level sobe") }}: <b class="text-success">{{ S.raised|dec }}</b>{% if S.lowered %} · {{ _("desce") }}: <b class="text-danger">{{ S.lowered|dec }}</b>{% endif %}</div>
+    <div>{{ _("Sem max level hoje") }}: <b>{{ S.no_max|dec }}</b> · {{ _("fora do plano") }}: <b>{{ S.skipped|dec }}</b></div>
+    <div>{{ _("Ocupação com o saldo atual") }}: <b>{{ (S.fill_stock|dec ~ '%') if S.fill_stock is not none else '—' }}</b></div>
+    <div class="text-muted">{{ _("Histórico: {d} dias", d=S.days) if S.history else _("Sem histórico de pedidos: sem reposições e cobertura.") }}</div>
+  </div></div></div>
+</div>
+
+<div class="small text-muted mb-2"><i class="bi bi-info-circle"></i> {{ _("X% é o teto de ocupação por volume em cada bin; o arranjo físico das unidades (medidas, rotação, peso) também limita — por isso a ocupação final pode ficar abaixo de X% quando unidades rígidas não preenchem o volume.") }}</div>
+<form method="post" action="/optimization/occupancy/apply" id="ocApply">
+  {% for k, v in filters.items() %}<input type="hidden" name="p_{{ k }}" value="{{ v }}">{% endfor %}
+  {% for k, v in raw.items() %}<input type="hidden" name="p_{{ k }}" value="{{ v }}">{% endfor %}
+<div class="card">
+  <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center">
+    <strong class="me-auto">{{ _("Max level por SKU") }} <span class="small text-muted">{{ _("{p}% do volume das bins de cada SKU", p=S.target|dec) }}</span></strong>
+    <a class="btn btn-sm btn-outline-secondary" href="/optimization/occupancy/plan.xlsx?{{ request.url.query }}"><i class="bi bi-file-earmark-excel"></i> {{ _("Exportar") }}</a>
+    <select class="form-select form-select-sm w-auto" name="scope">
+      <option value="selected">{{ _("nos SKUs marcados") }}</option>
+      <option value="all">{{ _h("em todos os {n} SKUs do plano", n=S.planned) }}</option>
+    </select>
+    <button class="btn btn-sm btn-accent" id="ocApplyBtn"><i class="bi bi-check2-all"></i> {{ _("Aplicar max levels") }}</button>
+  </div>
+  <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+    <thead><tr><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".oc-check" title="{{ _("Selecionar todos") }}"></th>
+      <th>SKU</th><th>{{ _("Endereços") }}</th><th class="text-end">{{ _("Bins") }}</th><th class="text-end">{{ _("Saldo") }}</th>
+      <th class="text-end">{{ _("Min") }}</th><th class="text-end">{{ _("Max atual") }}</th><th class="text-end">{{ _("Max sugerido") }}</th>
+      <th class="text-end">{{ _("Ocupação") }}</th><th class="text-end">{{ _("Cobertura (dias)") }}</th><th class="text-end">{{ _("Reposições/mês") }}</th></tr></thead>
+    <tbody>
+    {% for r in plan.rows %}
+      <tr class="{{ 'text-muted' if r.new_max is none else '' }}">
+        <td>{% if r.new_max is not none %}<input type="checkbox" class="form-check-input oc-check" name="ids" value="{{ r.product_id }}">{% endif %}</td>
+        <td><span class="mono">{{ r.sku }}</span><div class="small text-muted text-truncate" style="max-width:240px">{{ r.name }}</div>{% if r.note %}<div class="small text-warning-emphasis">{{ r.note }}</div>{% endif %}</td>
+        <td class="mono small">{{ r.addresses[:3]|join(', ') }}{% if r.addresses|length > 3 %} …{% endif %}</td>
+        <td class="text-end">{{ r.bins }}</td>
+        <td class="text-end">{{ r.stock|dec }}</td>
+        <td class="text-end">{{ r.min_level|dec if r.min_level is not none else '—' }}</td>
+        <td class="text-end">{{ r.max_level|dec if r.max_level is not none else '—' }}</td>
+        <td class="text-end fw-semibold">{% if r.new_max is not none %}{{ r.new_max|dec }}{% if r.delta %} <span class="small {{ 'text-success' if r.delta > 0 else 'text-danger' }}">({{ '+' if r.delta > 0 else '' }}{{ r.delta|dec }})</span>{% endif %}{% if r.pack %}<div class="small text-muted fw-normal">{{ _("embalagem de {k} un.", k=r.pack) }}</div>{% endif %}{% else %}—{% endif %}</td>
+        <td class="text-end small">{{ (r.fill_max_now|dec ~ '%') if r.fill_max_now is not none else '—' }} → <b>{{ (r.fill_new|dec ~ '%') if r.fill_new is not none else '—' }}</b></td>
+        <td class="text-end small">{{ r.coverage(r.max_level)|dec if r.coverage(r.max_level) is not none else '—' }} → {{ r.coverage(r.new_max)|dec if r.coverage(r.new_max) is not none else '—' }}</td>
+        <td class="text-end small">{{ r.per_month(r.max_level)|dec(2) if r.per_month(r.max_level) is not none else '—' }} → {{ r.per_month(r.new_max)|dec(2) if r.per_month(r.new_max) is not none else '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="11" class="text-center text-muted py-4">{{ _("Nenhum SKU com saldo nas bins do escopo.") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('ocApplyBtn')?.addEventListener('click', e => {
+  const f = document.getElementById('ocApply'), all = f.scope.value === 'all';
+  const n = all ? {{ plan.summary.planned if plan else 0 }} : f.querySelectorAll('.oc-check:checked').length;
+  if (!n) { e.preventDefault(); alert(_t('Marque ao menos um SKU (ou escolha aplicar em todos).')); return; }
+  if (!confirm(_t('Gravar o max level sugerido em {n} SKU(s) na política de estoque da filial?', {n}))) e.preventDefault();
+});
+</script>
+{% endblock %}

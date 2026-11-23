@@ -898,6 +898,27 @@ tipos de bin e na aba **Bins** da planilha do projeto (informar só o máximo ma
   procurados com onde estão, a caminhada e se estão na zona de ouro;
 - **Unitização**: o modo da filial, as embalagens habilitadas nela e o que as bins guardam.
 
+## 6.0.11.2 Plano de ocupação X%
+
+**Otimização de bins → Plano de ocupação** (`/optimization/occupancy`): o usuário informa a **ocupação desejada X%** e o
+sistema calcula, para cada SKU, o **max level** que deixa as bins que ele já ocupa com X% do volume. Serve para
+eliminar a ociosidade volumétrica e aumentar o lote de reposição — a filial pede menos vezes ao CD que a abastece
+(menos separação lá e menos frete). As bins e os endereços não mudam; só o max level da política de estoque da filial.
+
+- **Capacidade**: as bins de cada SKU são as do conteúdo por bin (o informado ou o presumido pela distribuição do
+  saldo); em cada bin, o que cabe com enchimento máximo X% — o mesmo cálculo da otimização (medidas, rotação, peso,
+  unitização da filial ou a escolhida no plano). Bin com mais de um SKU: cada um fica com a parte proporcional ao volume
+  que ocupa hoje. O arranjo físico também limita: a ocupação final pode ficar abaixo de X% com unidades rígidas;
+- **Max level sugerido**: a soma das capacidades, arredondada para baixo para **embalagens inteiras** (a 1ª embalagem
+  habilitada na filial — o lote que o CD envia), nunca abaixo do saldo; com **Só aumentar** (padrão), nunca abaixo do
+  max level atual;
+- **Impacto**: ocupação das bins com o max atual → com o novo, soma dos max levels e, com o histórico de pedidos da
+  filial, **cobertura** (dias = max ÷ saída por dia) e **reposições por mês** (saída por dia × 30 ÷ lote, lote = max −
+  min); o período vem das datas dos pedidos ou do campo *Dias do histórico*;
+- **Filtros**: filial, armazém, endereço, SKU e tipo de material;
+- **Ações**: **Exportar** (planilha com todos os números por SKU) e **Aplicar max levels** (nos SKUs marcados ou em
+  todos) — grava na política de estoque da filial.
+
 ## 6.0.12 Unitização: embalagens, paletes e a chave que liga/desliga
 
 **Chave de unitização** (na maioria das filiais a unitização não é viável; por isso vem desligada). Vale o modo da

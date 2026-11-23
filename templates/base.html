@@ -208,6 +208,7 @@
       <div class="collapse{% if is_opt %} show{% endif %}" id="nkGrpOpt">
         {{ nk_item("/optimization", "bi-arrow-left-right", _("Por endereço"), p == '/optimization', sub=True) }}
         {{ nk_item("/optimization/pool", "bi-shuffle", _("Pool de bins"), p.startswith('/optimization/pool'), sub=True) }}
+        {{ nk_item("/optimization/occupancy", "bi-bucket", _("Plano de ocupação"), p.startswith('/optimization/occupancy'), sub=True) }}
         {{ nk_item("/optimization/site", "bi-rulers", _("Projeto de filial nova"), p.startswith('/optimization/site') and not is_sim, sub=True) }}
         {{ nk_item("/optimization/runs", "bi-collection", _("Resultados salvos"), p.startswith('/optimization/runs'), sub=True) }}
       </div>

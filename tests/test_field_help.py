@@ -156,7 +156,7 @@ def test_dynamic_fields_have_help():
                       ("/optimization/site/1", "z_name_0"), ("/optimization/site/1", "o_x_m_2"),
                       ("/optimization/site/1", "sec_area_m2_1"), ("/locations/batch", "exc_cond_bay_3"),
                       ("/products/new", "pol_min_2"), ("/products/1/packagings/new", "pal_layers_n3"),
-                      ("/packagings/apply", "model_id"), ("/packagings/apply", "pal_layers_n2"),
+                      ("/packagings/apply", "model_id"), ("/packaging-models/new", "cont_qty_n2"), ("/packaging-models/new", "cont_model_n0"), ("/packagings/apply", "pal_layers_n2"),
                       ("/packagings/apply", "on_existing"), ("/packagings/apply", "branch_ids"), ("/optimization/site/1", "nkdims1"),
                       ("/optimization/site/1", "nkdims2p"), ("/optimization/site/1", "nk-tool")]:
         assert find(path, key) is not None, (path, key)

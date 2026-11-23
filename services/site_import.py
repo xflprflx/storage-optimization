@@ -343,7 +343,7 @@ FIELD_LABELS = {
                   "enabled": N_("Habilitada (sim/não)"), "sort": N_("Ordem"), "pallet": N_("Palete (tipo de bin)"),
                   "layer": N_("Caixas por camada"), "layers": N_("Camadas")},
     "packaging": {"code": N_("Código"), "name": N_("Nome"), "height": N_("Altura (cm)"), "width": N_("Largura (cm)"),
-                  "length": N_("Comprimento (cm)"), "tare": N_("Tara (kg)"), "inner": N_("Contém (modelo)"),
+                  "length": N_("Comprimento (cm)"), "tare": N_("Tara (kg)"), "inner": N_("Contém (modelos: CX-P:4, CX-M:2)"),
                   "inner_qty": N_("Quantidade")},
     "zones": {"name": N_("Nome"), "length": N_("Comprimento em X (m)"), "orientation": N_("Orientação das fileiras"),
               "aisle": "Corredor (m)", "cross": N_("Corredores transversais"), "structures": N_("Estruturas permitidas (códigos)"),
@@ -709,7 +709,8 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
 
     # ---- Embalagens (modelos de caixa) ----
     if "packaging" in sheets and len(sheets["packaging"]) > 1:
-        from models import PackagingModel
+        from models import PackagingModel, PackagingModelContent
+        from services.packaging import fit_in_case, parse_contents
 
         hdr, *rows = sheets["packaging"]
         cm = cms["packaging"]
@@ -736,20 +737,21 @@ def import_file(db: Session, path: Path, cfg: dict, mapping: Optional[dict] = No
             for k, v in vals.items():
                 if v is not None:
                     setattr(m, k, Decimal(str(v)))
-            inner = normalize_code(_cell(row, cm.get("inner")))
-            if inner:  # hierarquia: este modelo contém N de outro (linha anterior ou já cadastrado)
-                if inner in by_code and inner != code:
-                    q = _dec(row, cm.get("inner_qty"), "inner_qty", errs, i)
-                    m.inner_model = by_code[inner]
-                    m.inner_qty = int(q) if q else None
-                    if not m.inner_qty and all(getattr(m, a) for a in ("height", "width", "length")):
-                        from services.packaging import fit_in_case
-
-                        im = by_code[inner]
-                        m.inner_qty = fit_in_case((float(im.height), float(im.width), float(im.length)), None,
-                                                  (float(m.height), float(m.width), float(m.length))) or None
-                else:
-                    errs.append(_("Embalagens linha {i} ({code}): modelo {v} não cadastrado.", i=i, code=code, v=inner))
+            qv = _dec(row, cm.get("inner_qty"), "inner_qty", errs, i)
+            items = parse_contents(_cell(row, cm.get("inner")), int(qv) if qv else None)
+            for icode, q in items:  # hierarquia: um ou mais modelos (CX-P:4, CX-M:2), em linhas anteriores ou já cadastrados
+                im = by_code.get(icode)
+                if im is None or icode == code:
+                    errs.append(_("Embalagens linha {i} ({code}): modelo {v} não cadastrado.", i=i, code=code, v=icode))
+                    continue
+                c = next((x for x in m.contents if x.inner_model_id == im.id and im.id), None)
+                if c is None:
+                    c = PackagingModelContent(inner_model=im, sort=len(m.contents) + 1)
+                    m.contents.append(c)
+                if not q and all(getattr(m, a_) for a_ in ("height", "width", "length")):
+                    q = fit_in_case((float(im.height), float(im.width), float(im.length)), None,
+                                    (float(m.height), float(m.width), float(m.length))) or None
+                c.qty = q
         db.flush()
         msgs.append(_("Embalagens: {created} modelo(s) cadastrado(s), {updated} atualizado(s).", created=created, updated=updated))
 
@@ -1237,9 +1239,9 @@ def template_xlsx(db: Session, cfg: dict) -> bytes:
 
     sheet(wb.create_sheet(_("Embalagens")),
           [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Tara (kg)"),
-           _("Contém (modelo)"), _("Quantidade")],
+           _("Contém (modelos: CX-P:4, CX-M:2)"), _("Quantidade")],
           [(m.code, m.name, *(float(v) if v is not None else None for v in (m.height, m.width, m.length, m.tare)),
-            m.inner_model.code if m.inner_model else None, m.inner_qty)
+            ", ".join(f"{c.inner_model.code}:{c.qty or ''}".rstrip(":") for c in m.contents) or None, None)
            for m in db.scalars(select(PackagingModel).order_by(PackagingModel.code))], {2: 30})
     sheet(wb.create_sheet(N_("Bins")),
           [_("Código"), _("Nome"), _("Altura (cm)"), _("Largura (cm)"), _("Comprimento (cm)"), _("Peso máx. (kg)"), "Volume (L)",

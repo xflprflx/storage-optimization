@@ -202,9 +202,11 @@ def _add_missing_columns(conn) -> None:
         if "products" in tables and pc2 and col not in pc2:  # unitização do SKU
             conn.execute(text(f"ALTER TABLE products ADD COLUMN {col} {ddl}"))
     mcols = {c["name"] for c in insp.get_columns("packaging_models")} if "packaging_models" in tables else set()
-    for col, ddl in (("inner_model_id", "INTEGER REFERENCES packaging_models(id)"), ("inner_qty", "INTEGER")):
-        if mcols and col not in mcols:  # hierarquia entre modelos de embalagem
-            conn.execute(text(f"ALTER TABLE packaging_models ADD COLUMN {col} {ddl}"))
+    if "inner_model_id" in mcols and "packaging_model_contents" in tables:  # versão anterior: um só "contém"
+        conn.execute(text("INSERT INTO packaging_model_contents (model_id, inner_model_id, qty, sort) SELECT id, "
+                          "inner_model_id, inner_qty, 1 FROM packaging_models WHERE inner_model_id IS NOT NULL AND id "
+                          "NOT IN (SELECT model_id FROM packaging_model_contents)"))
+        conn.execute(text("UPDATE packaging_models SET inner_model_id = NULL, inner_qty = NULL"))
     if "branches" in tables and "unitization" not in {c["name"] for c in insp.get_columns("branches")}:
         conn.execute(text("ALTER TABLE branches ADD COLUMN unitization VARCHAR(10) NOT NULL DEFAULT 'off'"))
     if "products" in tables and "storage_condition" not in {c["name"] for c in insp.get_columns("products")}:

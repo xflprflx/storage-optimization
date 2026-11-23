@@ -238,19 +238,36 @@ def suggest_pallet(case: tuple, weight: Optional[float], pallet) -> tuple[int, i
     return max(0, layer), max(0, layers)
 
 
+def model_contents(m) -> list:
+    """[(modelo de dentro, quantidade)] do "contém" do modelo, na ordem de preferência."""
+    return [(c.inner_model, c.qty) for c in (getattr(m, "contents", None) or []) if c.inner_model is not None]
+
+
+def pick_content(m, have_codes) -> tuple:
+    """O conteúdo do modelo a usar: o 1º da lista que o produto já tem (`have_codes`); senão o 1º da lista."""
+    items = model_contents(m)
+    if not items:
+        return None, None
+    return next(((im, q) for im, q in items if im.code in have_codes), items[0])
+
+
 def ensure_chain(prod, k, _depth: int = 0) -> list:
-    """Hierarquia do modelo (independe dos produtos): se o modelo da embalagem contém N de outro modelo e a embalagem
-    ainda não tem a de dentro, liga a embalagem do produto com aquele modelo — criada se faltar, nas mesmas filiais — e
-    a quantidade vem do modelo. Vale para a cadeia inteira (master → caixa → display). Retorna as embalagens criadas."""
+    """Hierarquia do modelo (independe dos produtos): se o modelo da embalagem contém outro(s) modelo(s) e a embalagem
+    ainda não tem a de dentro, liga a embalagem do produto com o 1º conteúdo que ele já tem — ou cria o 1º da lista,
+    nas mesmas filiais — e a quantidade vem do modelo. Vale para a cadeia inteira (master → caixa → display).
+    Retorna as embalagens criadas."""
     from models import ProductPackaging
 
     m = getattr(k, "model", None)
-    im = getattr(m, "inner_model", None) if m is not None else None
-    if im is None or _depth > 8:
+    if m is None or _depth > 8:
+        return []
+    have = {x.model.code: x for x in prod.packagings if x.model is not None and x is not k}
+    im, qty = pick_content(m, have)
+    if im is None:
         return []
     created = []
     if k.inner is None:
-        inner = next((x for x in prod.packagings if x.model_id == im.id), None)
+        inner = have.get(im.code)
         if inner is None:
             inner = ProductPackaging(model=im, model_id=im.id, name=im.code[:40], sort=k.sort or 1)
             inner.branches = list(getattr(k, "branches", None) or [])
@@ -258,24 +275,29 @@ def ensure_chain(prod, k, _depth: int = 0) -> list:
             prod.packagings.append(inner)
             created.append(inner)
         k.inner = inner
-        if m.inner_qty:
-            k.inner_qty = m.inner_qty
+        if qty and not k.inner_qty:  # a quantidade informada vale; vazia = a do modelo
+            k.inner_qty = qty
     if k.inner is not None:
         created += ensure_chain(prod, k.inner, _depth + 1)
     return created
 
 
-def virtual_chain(k, _depth: int = 0):
-    """O mesmo que ensure_chain para uma embalagem "virtual" (cálculo e planilha do projeto): a de dentro vem do modelo."""
+def virtual_chain(k, _depth: int = 0, have=None):
+    """O mesmo que ensure_chain para uma embalagem "virtual" (cálculo e planilha do projeto): a de dentro vem do modelo
+    (o 1º conteúdo que está em `have` — {código: embalagem} —, senão o 1º da lista)."""
     m = getattr(k, "model", None)
-    im = getattr(m, "inner_model", None) if m is not None else None
-    if im is None or _depth > 8:
+    if m is None or _depth > 8:
+        return k
+    have = have or {}
+    im, qty = pick_content(m, have)
+    if im is None:
         return k
     if k.inner is None:
-        k.inner = _K(name=im.code, inner=None, inner_qty=None, model=im, weight=None)
-        if m.inner_qty:
-            k.inner_qty = m.inner_qty
-    virtual_chain(k.inner, _depth + 1)
+        k.inner = have.get(im.code) or _K(name=im.code, inner=None, inner_qty=None, model=im, weight=None)
+        if qty and not k.inner_qty:
+            k.inner_qty = qty
+    if k.inner is not have.get(getattr(k.inner.model, "code", None)):
+        virtual_chain(k.inner, _depth + 1, have)
     return k
 
 
@@ -459,13 +481,11 @@ def sheet_packagings(rows: list[dict], models: dict, pallets: dict) -> list:
         out.append(k)
         by_code[m.code] = k
     for k in out:
-        code = k._inner or (k.model.inner_model.code if getattr(k.model, "inner_model", None) is not None else "")
-        inner = by_code.get(code)
-        k.inner = inner if inner is not k else None
-        if k.inner is not None and not k._inner and not k.inner_qty and k.model.inner_qty:
-            k.inner_qty = k.model.inner_qty  # hierarquia do modelo
-        if k.inner is None:
-            virtual_chain(k)
+        if k._inner:  # "feita de" informado na planilha
+            inner = by_code.get(k._inner)
+            k.inner = inner if inner is not k else None
+        if k.inner is None:  # hierarquia do modelo: o 1º conteúdo que está na lista do SKU, senão o 1º do modelo
+            virtual_chain(k, 0, {c: x for c, x in by_code.items() if x is not k})
     return out
 
 
@@ -651,4 +671,28 @@ def apply_bulk(db: Session, targets: list, model, qty: Optional[int], weight, br
         out["calculated"] += len(notes)
         out["warnings"].extend(f"{prod.sku}: {w}" for w in check(k, prod))
     db.flush()
+    return out
+
+
+def parse_contents(text: str, qty=None) -> list[tuple[str, Optional[int]]]:
+    """Coluna "Contém" das importações: um ou mais modelos separados por vírgula/ponto e vírgula, cada um "CÓDIGO",
+    "CÓDIGO:QTD" ou "QTD × CÓDIGO" (ex.: "CX-P:4, CX-M:2"). Com um só código, a coluna Quantidade vale."""
+    import re
+
+    from services.addressing import normalize_code
+
+    out = []
+    parts = [p.strip() for p in re.split(r"[,;|/]+", text or "") if p.strip()]
+    for p in parts:
+        m = re.match(r"^(\d+)\s*[x×*]\s*(.+)$", p, re.I) or None
+        if m:
+            code, q = m.group(2), int(m.group(1))
+        elif ":" in p:
+            code, _s, raw = p.rpartition(":")
+            q = int(raw) if raw.strip().isdigit() else None
+        else:
+            code, q = p, None
+        out.append((normalize_code(code), q))
+    if len(out) == 1 and out[0][1] is None and qty:
+        out[0] = (out[0][0], int(qty))
     return out

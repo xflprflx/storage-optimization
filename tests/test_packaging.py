@@ -313,7 +313,7 @@ def test_unitization_example_sku_packagings(db, tmp_path):
     from services.site_service import load_uploaded_demand, merged
 
     cfg, msgs, errs = import_file(db, write_workbook(BY_SLUG["unitizacao"], tmp_path / "u.xlsx"), merged(None))
-    assert not errs, errs
+    assert not [e for e in errs if not e.startswith("Pedidos")], errs  # pedidos: saídas negativas (opção de valor absoluto)
     assert cfg["demand"]["unitization"] == "full" and len(cfg["sku_packs"]) == 11
     assert any("SACO-50" in m and "cabem até 3" in m for m in msgs)  # lastro maior que a base: aviso
     d = {x.sku: x.unit for x in load_uploaded_demand(db, cfg["items"], cfg["demand"], cfg["sku_packs"])[0]}
@@ -394,7 +394,7 @@ def test_model_hierarchy_imports_and_3d(client, db, tmp_path):
     res = k["run"](db, p, _map(text.splitlines()[0], k["fields"]), MasterOptions())
     assert not res.errors, res.errors
     ms = db.query(PackagingModel).filter_by(code="PKH-MS").one()
-    assert ms.inner_model.code == "PKH-CX" and ms.inner_qty == 8  # vazia: quantas cabem
+    assert [(c.inner_model.code, c.qty) for c in ms.contents] == [("PKH-CX", 8)]  # vazia: quantas cabem
     text = "Codigo;Nome;Unitizacao\nPKH;Filial H;caixas e paletes\n"
     p = tmp_path / "b.csv"
     p.write_text(text, encoding="utf-8")
@@ -429,3 +429,50 @@ def test_model_hierarchy_imports_and_3d(client, db, tmp_path):
     master = [b for b in js["bins"] if b[10] == "UN0001"]
     assert master and all(b[14] == "p" and "MST-PAR" in b[15] and "cadastrada" in b[15] for b in master)
     assert any(b[10] == "UN0002" and b[14] == "c" for b in js["bins"])  # sempre na caixa: bandeja de caixas
+
+
+def test_model_contents_list_calc_and_example_orders(client, db, tmp_path):
+    """Contém é uma lista (vale o 1º que o produto já tem; senão o 1º); o Calcular da tela do modelo mostra quantos
+    cabem e avisa o que não cabe; o exemplo de unitização traz pedidos."""
+    from models import PackagingModel, Product, ProductPackaging
+
+    for code, h, w, ln in (("PKL2-P", 20, 30, 20), ("PKL2-M", 20, 30, 40), ("PKL2-G", 50, 50, 50)):
+        db.add(PackagingModel(code=code, name=code, height=Decimal(h), width=Decimal(w), length=Decimal(ln)))
+    db.commit()
+    ids = {m.code: m.id for m in db.query(PackagingModel).filter(PackagingModel.code.like("PKL2-%"))}
+    calc = client.post("/packaging-models/calc", data={
+        "height": "40", "width": "60", "length": "40", "cont_idx": ["a", "b", "c"],
+        "cont_model_a": str(ids["PKL2-P"]), "cont_model_b": str(ids["PKL2-M"]), "cont_qty_b": "9",
+        "cont_model_c": str(ids["PKL2-G"])}).json()
+    assert calc["rows"] == {"a": 8, "b": 4, "c": 0}
+    assert any("9 × PKL2-M" in w for w in calc["warnings"]) and any("PKL2-G" in w and "não cabe" in w for w in calc["warnings"])
+    r = client.post("/packaging-models/new", data={"code": "PKL2-MS", "name": "Master", "height": "40", "width": "60",
+                                                   "length": "40", "cont_idx": ["a", "b"],
+                                                   "cont_model_a": str(ids["PKL2-P"]), "cont_model_b": str(ids["PKL2-M"])},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    ms = db.query(PackagingModel).filter_by(code="PKL2-MS").one()
+    assert [(c.inner_model.code, c.qty) for c in ms.contents] == [("PKL2-P", 8), ("PKL2-M", 4)]
+    assert client.post("/packaging-models/new", data={"code": "PKL2-X", "height": "40", "width": "60", "length": "40",
+                                                       "cont_idx": "a", "cont_model_a": str(ids["PKL2-G"])}).status_code == 422
+    # produto que já tem a PKL2-M: o master usa ela (2ª da lista); produto sem nenhuma: cria a 1ª (PKL2-P)
+    a = Product(sku="PKL2-A", name="A", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.5"))
+    b = Product(sku="PKL2-B", name="B", height=Decimal(10), width=Decimal(10), length=Decimal(10), weight=Decimal("0.5"))
+    a.packagings.append(ProductPackaging(model_id=ids["PKL2-M"], name="PKL2-M", inner_qty=24, sort=1))
+    db.add_all([a, b])
+    db.commit()
+    r = client.post("/packagings/apply/confirm", data={"mode": "skus", "ids": f"{a.id},{b.id}", "model_id": str(ms.id)},
+                    follow_redirects=False)
+    assert r.status_code == 303
+    db.expire_all()
+    ka = next(k for k in db.get(Product, a.id).packagings if k.model_id == ms.id)
+    kb = next(k for k in db.get(Product, b.id).packagings if k.model_id == ms.id)
+    assert (ka.inner.model.code, ka.inner_qty, ka.units()) == ("PKL2-M", 4, 96)
+    assert (kb.inner.model.code, kb.inner_qty) == ("PKL2-P", 8)
+    # exemplo de unitização: tem a aba de pedidos
+    from openpyxl import load_workbook
+
+    from services.site_examples import BY_SLUG, write_workbook
+
+    wb = load_workbook(write_workbook(BY_SLUG["unitizacao"], tmp_path / "u.xlsx"), read_only=True)
+    assert "Pedidos" in wb.sheetnames and wb["Pedidos"].max_row > 100

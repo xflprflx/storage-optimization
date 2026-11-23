@@ -43,36 +43,99 @@ def _validate(db: Session, form: FormData, mid: int | None):
             errors.add(k, _("{label}: deve ser maior que zero.", label=_(label)))
     if not errors and not all(data[k] for k in ("height", "width", "length")):
         errors.add("height", _("Informe altura, largura e comprimento da caixa."))
-    # hierarquia: este modelo contém N de outro (independe dos produtos)
-    inner = to_int(form.get("inner_model_id"))
-    data["inner_model_id"] = inner if inner and inner != mid and db.get(PackagingModel, inner) else None
-    if data["inner_model_id"] and mid and _contains(db, data["inner_model_id"], mid):
-        errors.add("inner_model_id", _("Hierarquia circular: o modelo escolhido já contém este."))
-    raw = f_str(form, "inner_qty", 12)
-    data["inner_qty"] = to_int(raw) if data["inner_model_id"] else None
-    if data["inner_model_id"] and raw and (not data["inner_qty"] or data["inner_qty"] <= 0):
-        errors.add("inner_qty", _("{label}: número inteiro maior que zero.", label=_("Quantidade")))
-    if data["inner_model_id"] and not data["inner_qty"] and not errors:
-        from services.packaging import fit_in_case
-
-        im = db.get(PackagingModel, data["inner_model_id"])
-        n = fit_in_case((float(im.height), float(im.width), float(im.length)), None,
-                        (float(data["height"]), float(data["width"]), float(data["length"])))
-        data["inner_qty"] = n or None  # vazio: quantas cabem pelas medidas
-        if not n:
-            errors.add("inner_qty", _("O modelo {code} não cabe neste pelas medidas.", code=im.code))
+    # hierarquia (independe dos produtos): a lista do que o modelo pode conter, na ordem de preferência
+    rows = []
+    for i in form.getlist("cont_idx"):
+        iid = to_int(form.get(f"cont_model_{i}"))
+        if not iid or form.get(f"cont_del_{i}"):
+            continue
+        raw = f_str(form, f"cont_qty_{i}", 12)
+        q = to_int(raw)
+        row = {"idx": i, "inner_model_id": iid, "qty": q if q and q > 0 else None}
+        im = db.get(PackagingModel, iid)
+        if im is None or iid == mid:
+            errors.add("contents", _("Modelo de dentro inválido."))
+        elif mid and _contains(db, iid, mid):
+            errors.add("contents", _("Hierarquia circular: o modelo {code} já contém este.", code=im.code))
+        elif any(r["inner_model_id"] == iid for r in rows):
+            errors.add("contents", _("O modelo {code} está repetido na lista.", code=im.code))
+        elif raw and not row["qty"]:
+            errors.add("contents", _("{label}: número inteiro maior que zero.", label=_("Quantidade")))
+        rows.append(row)
+    data["contents"] = rows
+    if not errors:  # quantidade vazia = quantas cabem; avisa o que não cabe
+        dims = (float(data["height"]), float(data["width"]), float(data["length"]))
+        for r in rows:
+            im = db.get(PackagingModel, r["inner_model_id"])
+            fit = _fit(im, dims)
+            if not fit:
+                errors.add("contents", _("O modelo {code} não cabe neste pelas medidas.", code=im.code))
+            elif not r["qty"]:
+                r["qty"] = fit
+            elif r["qty"] > fit:
+                errors.add("contents", _("{qty} × {code} não cabem neste pelas medidas: cabem até {fit}.",
+                                         qty=r["qty"], code=im.code, fit=fit))
     return errors, data
 
 
-def _contains(db: Session, mid: int, target: int) -> bool:
+def _fit(im, dims: tuple) -> int:
+    from services.packaging import fit_in_case
+
+    if im is None or not all(v is not None for v in (im.height, im.width, im.length)) or not all(dims):
+        return 0
+    return fit_in_case((float(im.height), float(im.width), float(im.length)), None, dims)
+
+
+def _contains(db: Session, mid: int, target: int, _depth: int = 0) -> bool:
     """O modelo `mid` contém (direta ou indiretamente) o `target`?"""
-    seen, cur = set(), db.get(PackagingModel, mid)
-    while cur is not None and cur.id not in seen:
-        if cur.id == target:
-            return True
-        seen.add(cur.id)
-        cur = cur.inner_model
-    return False
+    if mid == target:
+        return True
+    m = db.get(PackagingModel, mid)
+    if m is None or _depth > 10:
+        return False
+    return any(_contains(db, c.inner_model_id, target, _depth + 1) for c in m.contents)
+
+
+def _save(db: Session, m: PackagingModel, data: dict) -> None:
+    from models import PackagingModelContent
+
+    for k in ("code", "name", "notes", "height", "width", "length", "tare"):
+        setattr(m, k, data[k])
+    m.contents[:] = [PackagingModelContent(inner_model_id=r["inner_model_id"], qty=r["qty"], sort=n)
+                     for n, r in enumerate(data["contents"], start=1)]
+
+
+@router.post("/calc")
+def calc_model(form: FormData = Depends(form_data), db: Session = Depends(get_db)):
+    """Botão Calcular: quantas embalagens de cada modelo da lista cabem neste (sem salvar) e o que não cabe."""
+    from services.file_reader import parse_decimal
+
+    def num(k):
+        try:
+            v = parse_decimal(str(form.get(k) or ""))
+            return float(v) if v is not None and v > 0 else None
+        except ValueError:
+            return None
+    dims = (num("height"), num("width"), num("length"))
+    out = {"rows": {}, "info": [], "warnings": []}
+    if not all(dims):
+        out["warnings"].append(_("Informe altura, largura e comprimento da caixa."))
+        return out
+    for i in form.getlist("cont_idx"):
+        im = db.get(PackagingModel, to_int(form.get(f"cont_model_{i}")) or 0)
+        if im is None or form.get(f"cont_del_{i}"):
+            continue
+        fit = _fit(im, dims)
+        q = to_int(form.get(f"cont_qty_{i}"))
+        out["rows"][i] = fit
+        if not fit:
+            out["warnings"].append(_("O modelo {code} não cabe neste pelas medidas.", code=im.code))
+        elif q and q > fit:
+            out["warnings"].append(_("{qty} × {code} não cabem neste pelas medidas: cabem até {fit}.", qty=q,
+                                     code=im.code, fit=fit))
+        else:
+            out["info"].append(_("Cabem até {fit} × {code}.", fit=fit, code=im.code))
+    return out
 
 
 @router.get("")
@@ -100,7 +163,8 @@ def create_model(request: Request, form: FormData = Depends(form_data), db: Sess
     errors, data = _validate(db, form, None)
     if errors:
         return _form(request, db, None, data, errors, 422)
-    m = PackagingModel(**data)
+    m = PackagingModel(code=data["code"], name=data["name"])
+    _save(db, m, data)
     db.add(m)
     db.commit()
     back = str(form.get("back") or "")
@@ -113,8 +177,9 @@ def edit_model(mid: int, request: Request, db: Session = Depends(get_db)):
     m = db.get(PackagingModel, mid)
     if not m:
         return redirect("/packaging-models", _("Modelo de embalagem não encontrado."), "danger")
-    data = {k: getattr(m, k) for k in ("code", "name", "notes", "height", "width", "length", "tare", "inner_model_id",
-                                       "inner_qty")}
+    data = {k: getattr(m, k) for k in ("code", "name", "notes", "height", "width", "length", "tare")}
+    data["contents"] = [{"idx": f"e{n}", "inner_model_id": c.inner_model_id, "qty": c.qty}
+                        for n, c in enumerate(m.contents)]
     return _form(request, db, m, data, {})
 
 
@@ -126,8 +191,7 @@ def update_model(mid: int, request: Request, form: FormData = Depends(form_data)
     errors, data = _validate(db, form, mid)
     if errors:
         return _form(request, db, m, data, errors, 422)
-    for k, v in data.items():
-        setattr(m, k, v)
+    _save(db, m, data)
     db.commit()
     return redirect("/packaging-models", _("Modelo de embalagem {code} atualizado.", code=m.code))
 

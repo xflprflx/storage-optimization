@@ -909,10 +909,12 @@ display de 6 un. → caixa com 4 displays → master com 2 caixas = 48 un.), o p
 tara), a ordem, as **filiais em que está habilitada** e as **paletizações**: tipo de palete (tipo de bin com *Armazena
 em = Palete fechado*), caixas por camada e camadas — o mesmo palete pode ter mais de uma (baixo e alto).
 
-**Hierarquia no modelo (independe dos produtos):** no cadastro do modelo de embalagem, *Contém* = outro modelo e a
-quantidade (vazia = quantas cabem): o MASTER contém 4 CAIXA, a CAIXA contém 6 DISPLAY. Ao aplicar o MASTER num SKU (tela,
-lote, importação ou planilha do projeto), a CAIXA (e o DISPLAY) é criada nele automaticamente, nas mesmas filiais — não
-é preciso ter a caixa antes.
+**Hierarquia no modelo (independe dos produtos):** no cadastro do modelo de embalagem, **Contém** é uma **lista** de
+modelos com a quantidade de cada um, na ordem de preferência (ex.: o MASTER contém 4 CX-P **ou** 2 CX-M; a CX-P contém 6
+DISPLAY). Ao aplicar o MASTER num SKU (tela, lote, importação ou planilha do projeto), vale o 1º da lista que o SKU já
+tem; se não tiver nenhum, o 1º é criado nele (com a cadeia de baixo), nas mesmas filiais — não é preciso ter a caixa
+antes. O botão **Calcular** da tela do modelo mostra quantos de cada modelo cabem e avisa o que não cabe (quantidade
+vazia = quantas cabem; ao salvar, quantidade maior que a que cabe é recusada).
 
 **Cadastro em lote (o jeito rápido):**
 - **1º nível:** em **Produtos**, marque os SKUs (ou escolha "todos os filtrados") → **Aplicar embalagem**: escolha o
@@ -945,8 +947,8 @@ várias embalagens. Um modelo em uso não pode ser excluído.
 
 **Importações:**
 - **1. Filiais**: coluna opcional *Unitização* (desligada, só caixas, caixas e paletes);
-- **6.0 Modelos de embalagem** (`/imports/packaging_models`): código, nome, medidas, tara, *Contém* (modelo) e
-  *Quantidade* (vazia = quantas cabem);
+- **6.0 Modelos de embalagem** (`/imports/packaging_models`): código, nome, medidas, tara e *Contém* — um ou mais
+  modelos com a quantidade (`CX-P:4, CX-M:2`; com um só, vale também a coluna *Quantidade*; vazia = quantas cabem);
 - **6.1 Embalagens do produto** (`/imports/packagings`): uma linha por produto × modelo de embalagem × palete — SKU,
   Modelo de embalagem, Quantidade, Feita de (outro modelo do produto), Peso cheia, Filiais habilitadas (todas, nenhuma
   ou códigos; nova = todas), Ordem, Palete, Caixas por camada, Camadas;
@@ -967,9 +969,10 @@ fechado; a chave **Caixas nos paletes** desenha as caixas empilhadas em cada pal
 paletização cadastrada ou calculada); o clique numa bin mostra como o SKU está guardado nela (ex.: "palete fechado:
 24 × MST-PAR de 96 un. — 6 por camada × 4 camadas (paletização cadastrada)").
 
-**Projetos de exemplo:** o exemplo **Unitização: caixas, masters e paletes** mostra tudo — no resultado e no 3D — bins de unidades, de caixas
+**Projetos de exemplo:** o exemplo **Unitização: caixas, masters e paletes** (com a aba **Pedidos**: um mês de
+histórico para a posição pela saída e o simulador) mostra tudo — no resultado e no 3D — bins de unidades, de caixas
 (BIN-CX) e de "unidades ou caixas" (BIN-8), palete PBR e meio palete; a hierarquia fica nos modelos (MST-PAR contém 4
-CX-PAR, que contém 4 DSP-PAR); um SKU para cada situação: master de parafusos no palete inteiro com duas paletizações
+CX-PAR ou 4 CX-P; CX-PAR contém 4 DSP-PAR); um SKU para cada situação: master de parafusos no palete inteiro com duas paletizações
 (baixo e alto; display e caixa não habilitados), lâmpada "sempre na caixa" na bandeja de caixas, rejunte em caixas na
 bin "unidades ou caixas" (com o master como alternativa), lata com paletização cadastrada, argamassa no meio palete
 sem paletização (calculada e avisada), lastro maior que a base (aviso), SKU que nunca usa embalagem, embalagem não

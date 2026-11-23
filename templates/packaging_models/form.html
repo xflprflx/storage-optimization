@@ -8,7 +8,7 @@
 </div>
 <div class="card" style="max-width: 820px"><div class="card-body">
   {{ form_alert(errors) }}
-  <form method="post" autocomplete="off">
+  <form method="post" autocomplete="off" id="pmForm">
     {% if request.query_params.get('back') %}<input type="hidden" name="back" value="{{ request.query_params.get('back') }}">{% endif %}
     <div class="row g-3">
       <div class="col-md-4">
@@ -27,24 +27,37 @@
         {{ field_error(errors, key) }}
       </div>
       {% endfor %}
-      <div class="col-md-6">
-        <label class="form-label">{{ _("Contém (hierarquia)") }}</label>
-        <select class="form-select {{ invalid(errors, 'inner_model_id') }}" name="inner_model_id">
-          <option value="">{{ _("— unidades do produto —") }}</option>
-          {% for x in others %}<option value="{{ x.id }}" {% if (data.get('inner_model_id')|string) == (x.id|string) %}selected{% endif %}>{{ x.code }} — {{ x.name }} ({{ x.height|dec }} × {{ x.width|dec }} × {{ x.length|dec }} cm)</option>{% endfor %}
-        </select>
-        {{ field_error(errors, 'inner_model_id') }}
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">{{ _("Quantidade") }}</label>
-        <input class="form-control text-end {{ invalid(errors, 'inner_qty') }}" name="inner_qty" inputmode="numeric" value="{{ data.get('inner_qty') or '' }}" placeholder="{{ _("vazio = calcula") }}">
-        {{ field_error(errors, 'inner_qty') }}
-      </div>
-      <div class="col-12 form-text mt-0">{{ _("Ex.: o MASTER contém 4 CAIXA. Ao aplicar o MASTER num produto, a CAIXA dele é criada (ou ligada) automaticamente — não precisa ter a caixa antes. Vazio = unidades do produto.") }}</div>
       <div class="col-12">
         <label class="form-label">{{ _("Observações") }}</label>
         <input class="form-control" name="notes" maxlength="200" value="{{ data.get('notes') or '' }}" placeholder="{{ _("Fornecedor, material, empilhamento máximo…") }}">
       </div>
+    </div>
+    <h6 class="text-muted text-uppercase small mt-4 mb-1"><i class="bi bi-diagram-2"></i> {{ _("Contém (hierarquia)") }}</h6>
+    <div class="form-text mt-0 mb-2">{{ _("O que este modelo pode conter, na ordem de preferência (ex.: o MASTER contém 4 CX-P ou 2 CX-M). Ao aplicar este modelo num produto, vale o 1º da lista que o produto já tem; se ele não tiver nenhum, o 1º é criado nele — não precisa ter a caixa antes. Sem linhas = unidades do produto. Quantidade vazia = quantos cabem.") }}</div>
+    {% if errors.get('contents') %}<div class="alert alert-danger py-1 small">{{ errors.get('contents') }}</div>{% endif %}
+    <table class="table table-sm align-middle mb-1" id="contTable" data-no-resize>
+      <thead class="small"><tr><th>{{ _("Modelo de dentro") }}</th><th style="width:160px">{{ _("Quantidade") }}</th><th style="width:140px" class="small text-muted">{{ _("Cabem") }}</th><th style="width:70px" class="text-center">{{ _("Remover") }}</th></tr></thead>
+      <tbody>
+      {% for r in data.get('contents') or [] %}{% set i = r.idx %}
+        <tr><td><input type="hidden" name="cont_idx" value="{{ i }}">
+          <select class="form-select form-select-sm" name="cont_model_{{ i }}">{% for x in others %}<option value="{{ x.id }}" {% if r.inner_model_id == x.id %}selected{% endif %}>{{ x.code }} — {{ x.name }} ({{ x.height|dec }} × {{ x.width|dec }} × {{ x.length|dec }} cm)</option>{% endfor %}</select></td>
+          <td><input class="form-control form-control-sm text-end" name="cont_qty_{{ i }}" inputmode="numeric" value="{{ r.qty or '' }}" placeholder="{{ _("vazio = calcula") }}"></td>
+          <td class="small text-muted" data-fit="{{ i }}"></td>
+          <td class="text-center"><input class="form-check-input" type="checkbox" name="cont_del_{{ i }}" value="1"></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <template id="contTpl">
+      <tr><td><input type="hidden" name="cont_idx" value="__i__">
+        <select class="form-select form-select-sm" name="cont_model___i__">{% for x in others %}<option value="{{ x.id }}">{{ x.code }} — {{ x.name }} ({{ x.height|dec }} × {{ x.width|dec }} × {{ x.length|dec }} cm)</option>{% endfor %}</select></td>
+        <td><input class="form-control form-control-sm text-end" name="cont_qty___i__" inputmode="numeric" placeholder="{{ _("vazio = calcula") }}"></td>
+        <td class="small text-muted" data-fit="__i__"></td>
+        <td class="text-center"><input class="form-check-input" type="checkbox" name="cont_del___i__" value="1"></td></tr>
+    </template>
+    <div class="d-flex flex-wrap gap-2 align-items-start">
+      {% if others %}<button type="button" class="btn btn-sm btn-outline-secondary" id="addCont"><i class="bi bi-plus-lg"></i> {{ _("Adicionar modelo de dentro") }}</button>{% endif %}
+      <button type="button" class="btn btn-sm btn-outline-primary" id="modelCalc"><i class="bi bi-calculator"></i> {{ _("Calcular") }}</button>
+      <div class="small" id="modelInfo"></div>
     </div>
     <div class="form-text mt-2">{{ _("Medidas externas da caixa. A tara (caixa vazia) entra no peso da caixa cheia quando o produto não informa o peso da caixa: unidades × peso da unidade + tara.") }}</div>
     <div class="mt-4">
@@ -53,4 +66,31 @@
     </div>
   </form>
 </div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let n = 0;
+  $('addCont')?.addEventListener('click', () => {
+    $('contTable').querySelector('tbody').insertAdjacentHTML('beforeend', $('contTpl').innerHTML.replaceAll('__i__', 'n' + (n++)));
+  });
+  $('modelCalc').addEventListener('click', async () => {
+    const form = $('pmForm'), f = new FormData(form), body = new URLSearchParams();
+    for (const [k, v] of f.entries()) {
+      const el = form.querySelector(`[name="${k}"]`);  // medidas em cm (o campo pode estar em polegadas)
+      const val = el && el.dataset.u && window.nkU ? nkU.get(el) : v;
+      body.append(k, val == null || Number.isNaN(val) ? '' : String(val));
+    }
+    const r = await (await fetch('/packaging-models/calc', { method: 'POST', body })).json();
+    for (const [i, fit] of Object.entries(r.rows || {})) {
+      const cell = form.querySelector(`[data-fit="${i}"]`), q = form.querySelector(`[name="cont_qty_${i}"]`);
+      if (cell) cell.textContent = fit ? _t('até {n}', {n: fit}) : _t('não cabe');
+      if (q && !q.value && fit) q.value = fit;
+    }
+    $('modelInfo').innerHTML = (r.info || []).map(t => `<div class="text-muted"><i class="bi bi-info-circle"></i> ${t}</div>`).join('')
+      + (r.warnings || []).map(t => `<div class="text-danger"><i class="bi bi-exclamation-triangle"></i> ${t}</div>`).join('');
+  });
+})();
+</script>
 {% endblock %}

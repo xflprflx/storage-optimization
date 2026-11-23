@@ -409,13 +409,32 @@ class PackagingModel(TimestampMixin, Base):
     length: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)
     tare: Mapped[Optional[Decimal]] = mapped_column(DecimalType(4), nullable=True)  # peso da caixa vazia (kg)
     notes: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
-    # hierarquia entre modelos (independe dos produtos): este modelo contém `inner_qty` do modelo `inner_model`
-    # (ex.: MASTER contém 4 CAIXA). Ao aplicar este modelo num produto, a embalagem de dentro é criada/ligada nele.
-    inner_model_id: Mapped[Optional[int]] = mapped_column(ForeignKey("packaging_models.id", ondelete="SET NULL"),
-                                                          nullable=True)
-    inner_qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # hierarquia entre modelos (independe dos produtos): a lista do que o modelo pode conter, na ordem de preferência
+    # (ex.: o MASTER contém 4 CX-P ou 2 CX-M). Ao aplicar este modelo num produto, vale o 1º conteúdo que o produto já
+    # tem; se não tiver nenhum, o 1º da lista é criado nele.
+    contents: Mapped[list["PackagingModelContent"]] = relationship(
+        foreign_keys="PackagingModelContent.model_id", back_populates="model", cascade="all, delete-orphan",
+        passive_deletes=True, order_by="(PackagingModelContent.sort, PackagingModelContent.id)")
 
-    inner_model: Mapped[Optional["PackagingModel"]] = relationship(remote_side="PackagingModel.id")
+    @property
+    def contents_label(self) -> str:
+        return " · ".join(f"{c.qty or '?'} × {c.inner_model.code}" for c in self.contents if c.inner_model is not None)
+
+
+class PackagingModelContent(Base):
+    """Um item do "contém" do modelo de embalagem: `qty` do modelo `inner_model` (vazio = quantos cabem)."""
+
+    __tablename__ = "packaging_model_contents"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_id: Mapped[int] = mapped_column(ForeignKey("packaging_models.id", ondelete="CASCADE"), nullable=False,
+                                          index=True)
+    inner_model_id: Mapped[int] = mapped_column(ForeignKey("packaging_models.id", ondelete="CASCADE"), nullable=False)
+    qty: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    model: Mapped[PackagingModel] = relationship(foreign_keys=[model_id], back_populates="contents")
+    inner_model: Mapped[PackagingModel] = relationship(foreign_keys=[inner_model_id])
 
 
 class Product(TimestampMixin, Base):

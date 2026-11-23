@@ -89,7 +89,8 @@ UNIT_EXTRA = {"UN0001": ("caixa", "conforme a filial", "sim"), "UN0002": ("caixa
 # — a hierarquia fica no modelo (o master contém 4 caixas), sem depender de produto nenhum
 UNIT_MODELS = [("DSP-PAR", "Display de parafusos (6 un.)", 5, 14, 9.5, 0.05, None, None),
                ("CX-PAR", "Caixa de parafusos (4 displays)", 15, 20, 30, 0.3, "DSP-PAR", 4),
-               ("MST-PAR", "Master de parafusos (4 caixas)", 31, 40, 50, 1.0, "CX-PAR", 4),
+               # a lista do "contém": o master leva 4 CX-PAR ou 4 CX-P (vale a que o produto já tem; senão a 1ª)
+               ("MST-PAR", "Master de parafusos (4 caixas)", 31, 40, 50, 1.0, "CX-PAR:4, CX-P:4", None),
                ("LATA-18", "Lata de 18 L", 37, 33, 33, 1.0, None, None),
                ("SACO-20", "Saco de 20 kg", 11, 35, 45, 0.1, None, None),
                ("SACO-50", "Saco de 50 kg", 12, 40, 61, 0.2, None, None),
@@ -298,7 +299,7 @@ EXAMPLES.append({
                    "habilitada, duas paletizações no mesmo palete (baixo e alto), palete sem paletização (calculada e "
                    "avisada), SKU que nunca usa embalagem, \"guardar sempre na caixa\" ou \"em unidades soltas\" e "
                    "quantidades calculadas pelas medidas. Aba Embalagens dos SKUs; unitização ligada (caixas e paletes)."),
-    "tags": ["36 × 22 m", N_("unitização"), N_("hierarquia de embalagens"), N_("paletes"), "~70 SKUs"],
+    "tags": ["36 × 22 m", N_("unitização"), N_("hierarquia de embalagens"), N_("paletes"), "~70 SKUs", N_("pedidos")],
     "building": {"length_m": 36, "width_m": 22, "clear_height_m": 8, "aisle_m": 1.2, "wall_gap_m": 0.3,
                  "front_reserved_m": 6, "back_reserved_m": 0, "cross_aisles": 0, "cross_aisle_m": 2,
                  "avenue_m": 3.5, "orientation": "automática", "end_caps": "sim", "cap_align": "encostada"},
@@ -310,6 +311,7 @@ EXAMPLES.append({
                    "EST-120-60": ("Otimizar", None, None, None)},
     "bins": ["BIN-5", "BIN-7", "BIN-8", "BIN-CX", "PALETE", "MEIO-PAL"],
     "skus": lambda rng: list(UNIT_SKUS) + _skus(rng, SMALL, (3, 4), SIZES, start=101, extras=False, prefix="UN"),
+    "orders": 1500,  # aba Pedidos: histórico de um mês (saídas com sinal negativo)
     "sku_extra": UNIT_EXTRA,
     "sku_packs": UNIT_PACKS,
     "models": UNIT_MODELS,
@@ -465,7 +467,7 @@ def write_workbook(ex: dict, path: Optional[Path] = None) -> Path:
             SHARED_SIDES.get(STRUCTURES[code][1]))
            for code, mode in ex["structures"].items()], {2: 36, 17: 22, 22: 22})
     sheet(wb.create_sheet("Embalagens"), ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Tara (kg)",
-                                          "Contém (modelo)", "Quantidade"],
+                                          "Contém (modelos: CX-P:4, CX-M:2)", "Quantidade"],
           [tuple(m) + (None,) * (8 - len(m)) for m in PACKAGING + list(ex.get("models") or [])], {2: 40, 7: 16})
     sheet(wb.create_sheet("Bins"),
           ["Código", "Nome", "Altura (cm)", "Largura (cm)", "Comprimento (cm)", "Peso máx. (kg)", "Volume (L)",

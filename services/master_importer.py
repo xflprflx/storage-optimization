@@ -620,7 +620,7 @@ PACKAGING_MODEL_FIELDS = {
     "width": (N_("Largura (cm)"), False, ("largura", "larguracm", "width")),
     "length": (N_("Comprimento (cm)"), False, ("comprimento", "comprimentocm", "length")),
     "tare": (N_("Tara (kg)"), False, ("tara", "tarakg", "pesovazio", "tare")),
-    "inner": (N_("Contém (modelo)"), False, ("contem", "contém", "feitade", "inner")),
+    "inner": (N_("Contém (modelos: CX-P:4, CX-M:2)"), False, ("contem", "contém", "feitade", "inner")),
     "inner_qty": (N_("Quantidade"), False, ("quantidade", "qtd", "qtde", "qty")),
     "notes": (N_("Observações"), False, ("observacoes", "obs", "notas", "notes")),
 }
@@ -654,21 +654,21 @@ def import_packaging_models(db: Session, path: Path, mapping: dict, opts: Master
         m = models.get(code)
         if m is None and not all(vals[k] for k in ("height", "width", "length")):
             raise ValueError(_("Informe altura, largura e comprimento da caixa."))
-        icode = normalize_code(get_cell(row, mapping.get("inner")))
-        inner = None
-        if icode:
+        from services.packaging import parse_contents
+
+        qraw = get_cell(row, mapping.get("inner_qty")).strip()
+        qv = parse_decimal(qraw) if qraw else None
+        if qraw and (qv is None or qv <= 0 or qv != int(qv)):
+            raise ValueError(_("{v}: número inteiro maior que zero", v=_("Quantidade")))
+        items = parse_contents(get_cell(row, mapping.get("inner")), int(qv) if qv else None)
+        contents = []
+        for icode, q in items:  # "Contém": um ou mais modelos (CX-P:4, CX-M:2), na ordem de preferência
             inner = models.get(icode)
             if inner is None:
                 raise ValueError(_("Modelo de embalagem {code} não cadastrado", code=icode))
             if inner.code == code:
                 raise ValueError(_("A embalagem não pode ser feita dela mesma"))
-        qraw = get_cell(row, mapping.get("inner_qty")).strip()
-        qty = None
-        if qraw:
-            q = parse_decimal(qraw)
-            if q is None or q <= 0 or q != int(q):
-                raise ValueError(_("{v}: número inteiro maior que zero", v=_("Quantidade")))
-            qty = int(q)
+            contents.append((inner, q))
         if m is None:
             m = PackagingModel(code=code, name="", notes="")
             db.add(m)
@@ -685,14 +685,23 @@ def import_packaging_models(db: Session, path: Path, mapping: dict, opts: Master
         for k, v in vals.items():
             if v is not None:
                 setattr(m, k, v)
-        if inner is not None:
-            m.inner_model = inner
-            if not qty:
-                qty = fit_in_case((float(inner.height), float(inner.width), float(inner.length)), None,
-                                  (float(m.height), float(m.width), float(m.length))) or None
-                if not qty:
+        if contents:
+            from models import PackagingModelContent
+
+            have = {c.inner_model_id: c for c in m.contents}
+            for inner, q in contents:
+                fit = fit_in_case((float(inner.height), float(inner.width), float(inner.length)), None,
+                                  (float(m.height), float(m.width), float(m.length)))
+                if not fit:
                     raise ValueError(_("O modelo {code} não cabe neste pelas medidas.", code=inner.code))
-            m.inner_qty = qty
+                if q and q > fit:
+                    raise ValueError(_("{qty} × {code} não cabem neste pelas medidas: cabem até {fit}.", qty=q,
+                                       code=inner.code, fit=fit))
+                c = have.get(inner.id)
+                if c is None:  # linhas repetidas do mesmo modelo acrescentam itens à lista
+                    c = PackagingModelContent(inner_model=inner, sort=len(m.contents) + 1)
+                    m.contents.append(c)
+                c.qty = q or fit
         db.flush()
 
     _run(db, path, opts, res, handle)
@@ -864,10 +873,10 @@ MASTER_KINDS = {
                          "run": import_packaging_models, "back": ("/packaging-models", "modelos de embalagem"),
                          "scope": False, "bins_option": False,
                          "help": [N_("Código e medidas externas (cm) da caixa; tara (kg) opcional. Modelos existentes (mesmo código) são atualizados só nos campos preenchidos."),
-                                  N_("Hierarquia: Contém = o código de outro modelo (em linha anterior ou já cadastrado) e a Quantidade dele; vazia = quantas cabem pelas medidas. Ex.: o MASTER contém 4 CAIXA — ao aplicar o MASTER num produto, a CAIXA dele é criada automaticamente.")],
+                                  N_("Hierarquia: Contém = um ou mais modelos (em linha anterior ou já cadastrados), na ordem de preferência, cada um com a quantidade: CX-P:4, CX-M:2 (com um só modelo, vale também a coluna Quantidade; vazia = quantas cabem). Ao aplicar o modelo num produto, vale o 1º que o produto já tem; se não tiver nenhum, o 1º é criado nele.")],
                          "sample": "Codigo;Nome;Altura (cm);Largura (cm);Comprimento (cm);Tara (kg);Contem;Quantidade\n"
                                    "DSP-6;Display 6 un.;10;15;20;0,05;;\nCX-P;Caixa pequena;20;30;30;0,3;DSP-6;6\n"
-                                   "MST-40;Master 40;42;62;62;1;CX-P;8\n"},
+                                   "CX-G;Caixa grande;40;30;30;0,5;;\nMST-40;Master 40;42;62;62;1;CX-P:8, CX-G:4;\n"},
     "packagings": {"title": N_("Importação de Embalagens do produto"), "fields": PACKAGING_FIELDS, "run": import_packagings,
                    "back": ("/products", "produtos"), "scope": False, "bins_option": False,
                    "help": [N_("Uma linha por produto × modelo de embalagem; para mais de um palete na mesma embalagem, repita a linha com outro palete. Os produtos e os modelos de embalagem precisam estar cadastrados (as medidas e a tara vêm do modelo)."),

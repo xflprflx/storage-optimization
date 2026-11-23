@@ -576,3 +576,30 @@ def test_occupancy_plan(client, db):
     db.expire_all()
     assert float(db.query(StockPolicy).filter_by(branch_id=br.id, product_id=a.id).one().max_level) == 19
     assert float(db.query(StockPolicy).filter_by(branch_id=br.id, product_id=b.id).one().max_level) == 30
+
+
+def test_sheet_packaging_inner_from_model_not_in_sku_list(db):
+    """Aba Embalagens dos SKUs com uma embalagem cujo modelo contém outro que não está na lista do SKU (sem
+    quantidade): a de dentro é calculada pelas medidas (como o Calcular) — antes quebrava a rodada do projeto."""
+    from types import SimpleNamespace
+
+    from models import PackagingModel, PackagingModelContent
+    from services.packaging import _K, item_packs
+
+    inner = PackagingModel(code="ZZ-IN", name="in", height=Decimal(10), width=Decimal(10), length=Decimal(10), notes="")
+    outer = PackagingModel(code="ZZ-OUT", name="out", height=Decimal(30), width=Decimal(30), length=Decimal(30), notes="")
+    db.add_all([inner, outer])
+    db.flush()
+    db.add(PackagingModelContent(model_id=outer.id, inner_model_id=inner.id, qty=None, sort=0))
+    db.commit()
+    db.refresh(outer)
+    pk, _alts, _sug = item_packs({"h": 5, "w": 5, "l": 5, "wt": 0.1}, None, {"ZZ-IN": inner, "ZZ-OUT": outer}, {},
+                                 "full", sheet=[{"model": "ZZ-OUT", "qty": 4, "enabled": True, "sort": 0}])
+    assert pk is not None and pk.qty == 32  # 4 caixas de dentro × 8 unidades (2 × 2 × 2 de 5 cm em 10 cm)
+    # hierarquia com um nível sem quantidade: sem total (None), nunca erro
+    k = _K(name="X", inner=_K(name="Y", inner=None, inner_qty=None, model=SimpleNamespace()), inner_qty=4,
+           model=SimpleNamespace())
+    assert k.units() is None
+    db.delete(outer)
+    db.delete(inner)
+    db.commit()

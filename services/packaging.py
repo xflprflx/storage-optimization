@@ -420,9 +420,14 @@ class _K:
         self.__dict__.update(kw)
 
     def units(self, _depth: int = 0):
-        if not self.inner_qty:
+        """Unidades numa embalagem cheia; None se algum nível da hierarquia não tem a quantidade (como em
+        ProductPackaging.units)."""
+        if not self.inner_qty or _depth > 10:
             return None
-        return int(self.inner_qty) * (self.inner.units(_depth + 1) if self.inner is not None else 1)
+        if self.inner is None:
+            return int(self.inner_qty)
+        inner = self.inner.units(_depth + 1)
+        return int(self.inner_qty) * inner if inner else None
 
 
 def _virtual_model(models: dict, code: str, h, w, ln):
@@ -515,7 +520,7 @@ def item_packs(it: dict, product, models: dict, pallets: dict, mode: str, sheet:
         ks = sheet_packagings(sheet, models, pallets)
         for k in ks:
             before = (k.inner_qty, [(pp.layer, pp.layers) for pp in k.pallets])
-            fill(k, prod)
+            fill_chain(k, prod)  # também a de dentro que vem do modelo e não está na lista do SKU
             if k.inner_qty and not before[0]:
                 sug.add("case_qty")
             if [(pp.layer, pp.layers) for pp in k.pallets] != before[1]:
